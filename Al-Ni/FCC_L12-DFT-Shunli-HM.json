@@ -376,5 +376,11 @@
 	      [ 41033.75   ],
 	      [ 41213.5    ],
 	      [ 41393.5    ]]],
+  "plot": {
+	"name": "Shang 2010 (DFT)",
+	"type": "line",
+	"x": "T",
+	"y": "HM"
+  },
   "reference": "Shunli DFT calculations from Ni-Ni3Al-Fig-8-Shunli.xlsx"
 }

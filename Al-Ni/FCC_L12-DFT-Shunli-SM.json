@@ -448,5 +448,11 @@
 	      [  8.41350000e+01],
 	      [  8.42392500e+01],
 	      [  8.43435000e+01]]],
+  "plot": {
+	"name": "Shang 2010 (DFT)",
+	"type": "line",
+	"x": "T",
+	"y": "SM"
+  },
   "reference": "Shunli DFT calculations from Ni-Ni3Al-Fig-8-Shunli.xlsx"
 }

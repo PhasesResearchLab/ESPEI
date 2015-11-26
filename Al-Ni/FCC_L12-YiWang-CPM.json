@@ -186,6 +186,11 @@
 		[ 35.0501],
 		[ 35.184 ],
 		[ 35.3195]]],
-  "stddev": 10,
+  "plot": {
+	"name": "Y. Wang 2009 (DFT)",
+	"type": "line",
+	"x": "T",
+	"y": "CPM"
+  },
   "reference": "Yi Wang et al 2009"
 }
