@@ -1,7 +1,6 @@
 autograd
 tinydb
 numba
-pytables
 pymc
 corner
 -e git+https://github.com/richardotis/pycalphad.git@develop#egg=pycalphad-develop
