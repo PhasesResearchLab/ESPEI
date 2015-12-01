@@ -20,7 +20,7 @@ def main(parameters):
   trace_path = os.path.join(parameters['results_path'],
 			    'output-traces', parameters['sumatra_label'],
 			    'traces.hdf5')
-  MDL = pymc.MCMC(mod, db='hdf5', dbname=trace_path,
+  MDL = pymc.MCMC(mod, db='hdf5', dbname=str(trace_path),
                   dbcomplevel=4, dbcomplib='bzip2')
   MDL.sample(**parameters['mcmc'])
 
