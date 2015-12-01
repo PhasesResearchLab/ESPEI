@@ -17,8 +17,7 @@ def main(parameters):
     dist = getattr(pymc, paramdist.pop('dist'))
     params.append(dist(str(pname), **paramdist))
   mod, datasets = build_pymc_model(input_database, dataset_names, params)
-  trace_path = os.path.join(parameters['results_path'],
-			    'output-traces', parameters['sumatra_label'])
+  trace_path = os.path.join('Data', 'output-traces', parameters['sumatra_label'])
   os.makedirs(trace_path)
   MDL = pymc.MCMC(mod, db='hdf5', dbname=str(os.path.join(trace_path, 'traces.hdf5')),
                   dbcomplevel=4, dbcomplib='bzip2')
