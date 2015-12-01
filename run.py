@@ -15,7 +15,7 @@ def main(parameters):
   params = []
   for pname, paramdist in parameters['parameters'].items():
     dist = getattr(pymc, paramdist.pop('dist'))
-    params.append(dist(pname, **paramdist))
+    params.append(dist(str(pname), **paramdist))
   mod, datasets = build_pymc_model(input_database, dataset_names, params)
   trace_path = os.path.join(parameters['results_path'],
 			    'output-traces', parameters['sumatra_label'])
