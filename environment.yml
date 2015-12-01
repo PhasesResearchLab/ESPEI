@@ -14,6 +14,8 @@ dependencies:
   - pip:
     - git+https://github.com/richardotis/pycalphad.git@develop#egg=pycalphad-develop
     - corner
+    - sumatra
+    - gitpython
 
 channels:
   - richardotis

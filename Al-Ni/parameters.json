@@ -1,0 +1,28 @@
+{
+  "components": ["AL", "NI", "VA"],
+  "phases": ["FCC_L12"],
+  "input_database": "Al-Ni/Al-Ni-start.tdb",
+  "data_path": "Al-Ni/input_json/FCC_L12/*.json",
+  "results_path": "Al-Ni",
+  "compare_databases": {"Dupin 2001 (CALPHAD)": "Al-Ni/Al-Ni-Dupin-2001.tdb"},
+  "parameters": {
+    "FCCALNI0A": {"dist": "Normal", "mu": 0, "tau": 1e-10},
+    "FCCALNI0B": {"dist": "Normal", "mu": 0, "tau": 1e-4},
+    "FCCALNI1A": {"dist": "Normal", "mu": 0, "tau": 1e-10},
+    "FCCALNI1B": {"dist": "Normal", "mu": 0, "tau": 1e-4},
+    "FCCALNI2A": {"dist": "Normal", "mu": 0, "tau": 1e-10},
+    "FCCALNI2B": {"dist": "Normal", "mu": 0, "tau": 1e-4},
+    "FCCALNI3A": {"dist": "Normal", "mu": 0, "tau": 1e-10},
+    "FCCALNI3B": {"dist": "Normal", "mu": 0, "tau": 1e-4},
+    "FCCBMAGNNI": {"dist": "Gamma", "alpha": 1, "beta": 1},
+    "FCCTCALNI0": {"dist": "Normal", "mu": 0, "tau": 2.5e-5},
+    "FCCTCALNI1": {"dist": "Normal", "mu": 0, "tau": 2.5e-5},
+    "L12UALNI_A": {"dist": "Normal", "mu": 0, "tau": 1e-10},
+    "L12UALNI_B": {"dist": "Normal", "mu": 0, "tau": 1e-4}
+  },
+  "mcmc": {
+    "iter": 20000,
+    "burn": 15000,
+    "thin": 2
+  }
+}
