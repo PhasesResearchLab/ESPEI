@@ -19,6 +19,7 @@ def main(parameters):
   mod, datasets = build_pymc_model(input_database, dataset_names, params)
   trace_path = os.path.join(parameters['results_path'],
 			    'output-traces', parameters['sumatra_label'])
+  print(trace_path+'traces.hdf5')
   MDL = pymc.MCMC(mod, db='hdf5', dbname=trace_path+'traces.hdf5',
                   dbcomplevel=4, dbcomplib='bzip2')
   MDL.sample(**parameters['mcmc'])
