@@ -14,7 +14,7 @@ def main(parameters):
   dataset_names = sorted(glob.glob(parameters['data_path']))
   params = []
   for pname, paramdist in parameters['parameters'].items():
-    dist = getattr(pymc, paramdist['dist'].pop())
+    dist = getattr(pymc, paramdist.pop('dist'))
     params.append(dist(pname, **paramdist))
   mod, datasets = build_pymc_model(input_database, dataset_names, params)
   trace_path = os.path.join(parameters['results_path'],
