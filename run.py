@@ -93,6 +93,7 @@ def analyze(parameters):
     # Generate comparison figures
     input_database = Database(parameters['input_database'])
     dataset_names = sorted(glob.glob(str(parameters['data_path'])))
+    print(dataset_names)
     datasets = []
     for fname in dataset_names:
         with open(fname) as file_:
