@@ -38,19 +38,19 @@ def main(parameters):
 def analyze(parameters):
   trace_file = str(os.path.join('Data', parameters['sumatra_label'], 'traces.hdf5'))
   image_path = os.path.join('Data', parameters['sumatra_label'])
-  data = tables.open_file(trace_file, mode='r')
-  data_dict = OrderedDict()
-  parnames = [x for x in data.root.chain0.PyMCsamples.colnames
-	      if not x.startswith('Metropolis') and x != 'deviance']
-  for param in sorted(parnames):
-      data_dict[param] = np.asarray(data.root.chain0.PyMCsamples.read(field=param), dtype='float')
-      for param, trace in data_dict.items():
-	  figure = plt.figure()
-	  figure.gca().plot(autocorr(trace))
-	  figure.gca().set_title(param+' Autocorrelation')
-	  figure.savefig(str(os.path.join(image_path, param+'-acf.eps')))
-	  figure.savefig(str(os.path.join(image_path, param+'-acf.png')))
-	  plt.close(figure)
+  with tables.open_file(trace_file, mode='r') as data:
+    data_dict = OrderedDict()
+    parnames = [x for x in data.root.chain0.PyMCsamples.colnames
+		if not x.startswith('Metropolis') and x != 'deviance']
+    for param in sorted(parnames):
+	data_dict[param] = np.asarray(data.root.chain0.PyMCsamples.read(field=param), dtype='float')
+	for param, trace in data_dict.items():
+	    figure = plt.figure()
+	    figure.gca().plot(autocorr(trace))
+	    figure.gca().set_title(param+' Autocorrelation')
+	    figure.savefig(str(os.path.join(image_path, param+'-acf.eps')))
+	    figure.savefig(str(os.path.join(image_path, param+'-acf.png')))
+	    plt.close(figure)
 
 parameter_file = sys.argv[1]
 parameters = build_parameters(parameter_file)
