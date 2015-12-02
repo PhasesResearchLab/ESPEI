@@ -92,7 +92,7 @@ def analyze(parameters):
             writer.writerow(row)
     # Generate comparison figures
     input_database = Database(parameters['input_database'])
-    dataset_names = sorted(glob.glob(parameters['data_path']))
+    dataset_names = sorted(glob.glob(str(parameters['data_path'])))
     datasets = []
     for fname in dataset_names:
         with open(fname) as file_:
@@ -126,7 +126,7 @@ analyze(parameters)
 record.duration = time.time() - start_time
 record.input_data = []
 
-for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_path'])):
+for inp in [parameters['input_database']] + sorted(glob.glob(str(parameters['data_path']))):
     input_path = os.path.join('Data', parameters['sumatra_label'], 'input')
     os.makedirs(input_path)
     # copy2 preserves most metadata
