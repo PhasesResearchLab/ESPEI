@@ -49,7 +49,8 @@ def analyze(parameters):
 	  figure.gca().plot(autocorr(trace))
 	  figure.gca().set_title(param+' Autocorrelation')
 	  figure.savefig(str(os.path.join(image_path, param+'-acf.eps')))
-	  figure.close()
+	  figure.savefig(str(os.path.join(image_path, param+'-acf.png')))
+	  plt.close(figure)
 
 parameter_file = sys.argv[1]
 parameters = build_parameters(parameter_file)
