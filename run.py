@@ -2,6 +2,7 @@ from pycalphad.fitting import build_pymc_model, plot_results, setup_dataset, Dat
 from pycalphad import Database
 from sumatra.projects import load_project
 from sumatra.parameters import build_parameters
+from sumatra.datastore.filesystem import DataFile
 from corner import corner
 import tables
 import matplotlib.pyplot as plt
@@ -11,6 +12,7 @@ from pymc import utils
 import numpy as np
 import sys
 import os
+import shutil
 import time
 import glob
 import csv
@@ -105,11 +107,9 @@ def analyze(parameters):
 parameter_file = sys.argv[1]
 parameters = build_parameters(parameter_file)
 
-input_data = [parameters['input_database']] + sorted(glob.glob(parameters['data_path']))
 
 project = load_project()
 record = project.new_record(parameters=parameters,
-                            input_data=input_data,
                             main_file=__file__,
                             reason="Single-phase fitting tests using Sumatra")
 # Add some tags related to the phases and components present
@@ -124,6 +124,18 @@ main(parameters, seed)
 analyze(parameters)
 
 record.duration = time.time() - start_time
+record.input_data = []
+
+for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_path'])):
+    input_path = os.path.join('Data', parameters['sumatra_label'], 'input')
+    os.makedirs(input_path)
+    # copy2 preserves most metadata
+    shutil.copy2(os.path.join(project.data_store.root, str(inp)), input_path)
+    record.input_data.append(DataFile(os.path.join(input_path, str(inp)), project.data_store).generate_key())
+
+
+# the input files shouldn't get detected here because they should
+# have timestamps earlier than this timestamp
 record.output_data = record.datastore.find_new_data(record.timestamp)
 project.add_record(record)
 
