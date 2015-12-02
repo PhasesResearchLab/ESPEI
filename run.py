@@ -92,7 +92,7 @@ def analyze(parameters):
             writer.writerow(row)
     # Generate comparison figures
     input_database = Database(parameters['input_database'])
-    print(str(os.path.join(os.getcwd(), parameters['data_path']))
+    print(str(os.path.join(os.getcwd(), parameters['data_path'])))
     dataset_names = sorted(glob.glob(str(os.path.join(os.getcwd(), parameters['data_path']))))
     print(dataset_names)
     datasets = []
