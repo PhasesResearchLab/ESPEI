@@ -79,7 +79,7 @@ seed = parameters.as_dict().get('seed', np.random.randint(0, 1e5))
 parameters.update({"sumatra_label": record.label, "seed": seed})
 start_time = time.time()
 
-main(parameters)
+main(parameters, seed)
 analyze(parameters)
 
 record.duration = time.time() - start_time
