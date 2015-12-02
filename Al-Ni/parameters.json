@@ -2,7 +2,7 @@
   "components": ["AL", "NI", "VA"],
   "phases": ["FCC_L12"],
   "input_database": "Al-Ni/Al-Ni-start.tdb",
-  "data_path": "Al-Ni/input_json/FCC_L12/*.json",
+  "data_path": "Al-Ni/input-json/FCC_L12/*.json",
   "compare_databases": {"Dupin 2001 (CALPHAD)": "Al-Ni/Al-Ni-Dupin-2001.tdb"},
   "parameters": {
     "FCCALNI0A": {"dist": "Normal", "mu": 0, "tau": 1e-10},
