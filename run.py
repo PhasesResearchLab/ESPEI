@@ -130,8 +130,8 @@ for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_pa
     input_path = os.path.join('Data', parameters['sumatra_label'], 'input')
     os.makedirs(input_path)
     # copy2 preserves most metadata
-    shutil.copy2(os.path.join(project.data_store.root, str(inp)), input_path)
-    record.input_data.append(DataFile(os.path.join(input_path, str(inp)), project.data_store).generate_key())
+    shutil.copy2(str(os.path.join(project.data_store.root, inp)), input_path)
+    record.input_data.append(DataFile(str(os.path.join(input_path, inp)), project.data_store).generate_key())
 
 
 # the input files shouldn't get detected here because they should
