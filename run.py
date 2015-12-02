@@ -22,6 +22,7 @@ def main(parameters):
   MDL = pymc.MCMC(mod, db='hdf5', dbname=str(os.path.join(trace_path, 'traces.hdf5')),
                   dbcomplevel=4, dbcomplib='bzip2')
   MDL.sample(**parameters['mcmc'])
+  MDL.db.close()
 
 parameter_file = sys.argv[1]
 parameters = build_parameters(parameter_file)
