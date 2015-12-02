@@ -62,7 +62,7 @@ def analyze(parameters):
   data = np.vstack(chain([i for i in data_dict.values()])).T
   figure = corner(data, labels=list(data_dict.keys()),
 		  quantiles=[0.16, 0.5, 0.84],
-		  truths=[-1622407.75, 16.212965, 73417.798, -34.914168, 33471.014, -9.8373558,
+		  truths=[-162407.75, 16.212965, 73417.798, -34.914168, 33471.014, -9.8373558,
 			  -30758.01, 10.25267, 0.52, -1112, 1745, -22212.8931, 4.39570389],
 		  show_titles=True, title_args={"fontsize": 40}, rasterized=True)
   figure.savefig(str(os.path.join(image_path, 'cornerplot.png')))
