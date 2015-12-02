@@ -1,13 +1,13 @@
 from pycalphad.fitting import build_pymc_model, plot_results
 from pycalphad import Database
+from sumatra.projects import load_project
+from sumatra.parameters import build_parameters
 import pymc
 import numpy as np
 import sys
 import os
 import time
 import glob
-from sumatra.projects import load_project
-from sumatra.parameters import build_parameters
 
 def main(parameters):
   input_database = Database(parameters['input_database'])
@@ -30,6 +30,7 @@ project = load_project()
 record = project.new_record(parameters=parameters,
                             main_file=__file__,
                             reason="reason for running this simulation")
+record.tags = set([str(i) for i in parameters['phases']+parameters['components']])
 parameters.update({"sumatra_label": record.label})
 start_time = time.time()
 
