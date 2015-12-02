@@ -131,7 +131,7 @@ for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_pa
     os.makedirs(input_path)
     # copy2 preserves most metadata
     shutil.copy2(str(inp), input_path)
-    record.input_data.append(DataFile(str(os.path.join('..', input_path, inp)),
+    record.input_data.append(DataFile(str(os.path.join(parameters['sumatra_label'], 'input', os.path.basename(inp))),
                                       project.data_store).generate_key())
 
 
