@@ -74,8 +74,8 @@ record = project.new_record(parameters=parameters,
                             reason="reason for running this simulation")
 # Add some tags related to the phases and components present
 record.tags = set([str(i) for i in parameters['phases']+parameters['components']])
-# Fix the random seed in case we need it again
-seed = parameters.get('seed', np.random.randint(0, 1e5))
+# Fix a random seed in case we need it again
+seed = parameters.as_dict().get('seed', np.random.randint(0, 1e5))
 parameters.update({"sumatra_label": record.label, "seed": seed})
 start_time = time.time()
 
