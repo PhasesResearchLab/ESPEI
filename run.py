@@ -51,7 +51,6 @@ def analyze(parameters):
 	figure = plt.figure()
 	figure.gca().plot(autocorr(trace))
 	figure.gca().set_title(param+' Autocorrelation')
-	figure.savefig(str(os.path.join(image_path, param+'-acf.eps')))
 	figure.savefig(str(os.path.join(image_path, param+'-acf.png')))
 	plt.close(figure)
 
@@ -61,7 +60,6 @@ def analyze(parameters):
 		  truths=[-1622407.75, 16.212965, 73417.798, -34.914168, 33471.014, -9.8373558,
 			  -30758.01, 10.25267, 0.52, -1112, 1745, -22212.8931, 4.39570389],
 		  show_titles=True, title_args={"fontsize": 40}, rasterized=True)
-  figure.savefig(str(os.path.join(image_path, 'cornerplot.pdf')))
   figure.savefig(str(os.path.join(image_path, 'cornerplot.png')))
   plt.close(figure)
 
