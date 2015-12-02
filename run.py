@@ -2,6 +2,7 @@ from pycalphad.fitting import build_pymc_model, plot_results
 from pycalphad import Database
 from sumatra.projects import load_project
 from sumatra.parameters import build_parameters
+import tables
 import matplotlib.pyplot as plt
 import pymc
 import numpy as np
