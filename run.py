@@ -5,6 +5,8 @@ from sumatra.parameters import build_parameters
 from sumatra.datastore.filesystem import DataFile
 from corner import corner
 import tables
+import matplotlib
+matplotlib.style.use('bmh')
 import matplotlib.pyplot as plt
 import pymc
 from pymc.database.base import batchsd
@@ -126,10 +128,9 @@ analyze(parameters)
 
 record.duration = time.time() - start_time
 record.input_data = []
-
+input_path = os.path.join('Data', parameters['sumatra_label'], 'input')
+os.makedirs(input_path)
 for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_path'])):
-    input_path = os.path.join('Data', parameters['sumatra_label'], 'input')
-    os.makedirs(input_path)
     # copy2 preserves most metadata
     shutil.copy2(str(inp), input_path)
     record.input_data.append(DataFile(str(os.path.join(parameters['sumatra_label'], 'input', os.path.basename(inp))),
