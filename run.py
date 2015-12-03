@@ -91,6 +91,7 @@ def analyze(parameters):
             }
             writer.writerow(row)
     # Generate comparison figures
+    os.makedirs(os.path.join(image_path, 'results'))
     input_database = Database(parameters['input_database'])
     dataset_names = sorted(glob.glob(parameters['data_path']))
     datasets = []
