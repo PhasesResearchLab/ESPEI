@@ -1,5 +1,6 @@
 from pycalphad.fitting import build_pymc_model, plot_results, setup_dataset, Dataset
 from pycalphad import Database
+import sumatra
 from sumatra.projects import load_project
 from sumatra.parameters import build_parameters
 from sumatra.datastore.filesystem import DataFile
