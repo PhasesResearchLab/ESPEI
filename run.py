@@ -1,6 +1,5 @@
 from pycalphad.fitting import build_pymc_model, plot_results, setup_dataset, Dataset
 from pycalphad import Database
-import sumatra
 from sumatra.projects import load_project
 from sumatra.parameters import build_parameters
 from sumatra.datastore.filesystem import DataFile
@@ -21,6 +20,7 @@ import glob
 import csv
 from collections import OrderedDict
 from itertools import chain
+import mimetypes
 
 
 def autocorr(x):
@@ -136,6 +136,7 @@ for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_pa
     shutil.copy2(str(inp), input_path)
     record.input_data.append(DataFile(str(os.path.join(parameters['sumatra_label'], 'input', os.path.basename(inp))),
                                       project.data_store).generate_key())
+    print(record.input_data[-1].metadata)
 
 
 # the input files shouldn't get detected here because they should
