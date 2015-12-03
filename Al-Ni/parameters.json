@@ -22,6 +22,6 @@
   "mcmc": {
     "iter": 10,
     "burn": 0,
-    "thin": 1,
+    "thin": 1
   }
 }
