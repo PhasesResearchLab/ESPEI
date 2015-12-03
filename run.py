@@ -100,7 +100,7 @@ def analyze(parameters):
     compare_databases = {key: Database(value) for key, value in parameters['compare_databases'].items()}
     idx = 1
     for fig in plot_results(input_database, datasets, data_dict, databases=compare_databases):
-        fig.savefig(str(os.path.join('results', 'Figure{}.png' % idx)))
+        fig.savefig(str(os.path.join('results', 'Figure{}.png'.format(idx))))
         plt.close(fig)
         idx += 1
 

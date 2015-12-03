@@ -20,8 +20,8 @@
     "L12UALNI_B": {"dist": "Normal", "mu": 0, "tau": 1e-4}
   },
   "mcmc": {
-    "iter": 20000,
-    "burn": 15000,
+    "iter": 2000,
+    "burn": 1500,
     "thin": 2
   }
 }
