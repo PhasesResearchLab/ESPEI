@@ -140,6 +140,7 @@ for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_pa
     record.input_data.append(DataFile(os.path.join(str(parameters['sumatra_label']), 'input',
                                                    os.path.basename(str(inp))),
                                       project.data_store).generate_key())
+    record.input_data[-1].metadata['mimetype'] = ('text/plain', None)
     print(record.input_data[-1].metadata)
 
 
