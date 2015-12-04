@@ -146,8 +146,8 @@ for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_pa
                                       project.data_store).generate_key())
 
 for outp in output_files:
-    record.output_data.append(DataFile(os.path.join(str(parameters['sumatra_label']), os.path.basename(str(outp))),
-                                        project.data_store).generate_key())
+    record.output_data.append(DataFile(outp,
+                                       project.data_store).generate_key())
 
 # Workaround for broken mime type detection
 for fkey in chain(record.input_data, record.output_data):
