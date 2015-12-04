@@ -67,7 +67,7 @@ def analyze(parameters, datasets):
         plt.close(figure)
 
     data = np.vstack(list(data_dict.values())).T
-    data_truths = [parameters[key].as_dict().get('compare', None) for key in data_dict.keys()]
+    data_truths = [parameters.as_dict()['parameters'].get('compare', None) for key in data_dict.keys()]
     figure = corner(data, labels=list(data_dict.keys()),
                     quantiles=[0.16, 0.5, 0.84],
                     truths=data_truths,
