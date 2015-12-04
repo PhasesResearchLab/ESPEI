@@ -134,14 +134,11 @@ os.makedirs(input_path)
 for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_path'])):
     # copy2 preserves most metadata
     shutil.copy2(str(inp), input_path)
-    file_ = DataFile(os.path.join(str(parameters['sumatra_label']), 'input', os.path.basename(str(inp))),
-                     project.data_store)
-    print(file_.__dict__)
     record.input_data.append(DataFile(os.path.join(str(parameters['sumatra_label']), 'input',
                                                    os.path.basename(str(inp))),
                                       project.data_store).generate_key())
+    # Mime type detection is broken right now so this appears necessary
     record.input_data[-1].metadata['mimetype'] = 'text/plain'
-    print(record.input_data[-1].metadata)
 
 
 # the input files shouldn't get detected here because they should
