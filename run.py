@@ -44,9 +44,10 @@ def main(parameters, seed):
                     dbcomplevel=4, dbcomplib='bzip2')
     mdl.sample(**parameters['mcmc'])
     mdl.db.close()
+    return datasets
 
 
-def analyze(parameters):
+def analyze(parameters, datasets):
     image_path = os.path.join('Data', parameters['sumatra_label'])
     # Save traces
     trace_file = str(os.path.join('Data', parameters['sumatra_label'], 'traces.h5'))
@@ -64,11 +65,11 @@ def analyze(parameters):
         figure.savefig(str(os.path.join(image_path, 'acf', param+'.png')))
         plt.close(figure)
 
-    data = np.vstack(chain([i for i in data_dict.values()])).T
+    data = np.vstack(list(data_dict.values())).T
+    data_truths = [parameters[key].as_dict().get('compare', None) for key in data_dict.keys()]
     figure = corner(data, labels=list(data_dict.keys()),
                     quantiles=[0.16, 0.5, 0.84],
-                    truths=[-162407.75, 16.212965, 73417.798, -34.914168, 33471.014, -9.8373558,
-                            -30758.01, 10.25267, 0.52, -1112, 1745, -22212.8931, 4.39570389],
+                    truths=data_truths,
                     show_titles=True, title_args={"fontsize": 40}, rasterized=True)
     figure.savefig(str(os.path.join(image_path, 'cornerplot.png')))
     plt.close(figure)
@@ -95,11 +96,6 @@ def analyze(parameters):
     # Generate comparison figures
     os.makedirs(os.path.join(image_path, 'results'))
     input_database = Database(parameters['input_database'])
-    dataset_names = sorted(glob.glob(parameters['data_path']))
-    datasets = []
-    for fname in dataset_names:
-        with open(fname) as file_:
-            datasets.append(Dataset(*setup_dataset(file_, input_database, parnames, mode='numpy')))
     compare_databases = {key: Database(value) for key, value in parameters['compare_databases'].items()}
     idx = 1
     for fig in plot_results(input_database, datasets, data_dict, databases=compare_databases):
@@ -123,8 +119,8 @@ seed = parameters.as_dict().get('seed', np.random.randint(0, 1e5))
 parameters.update({"sumatra_label": record.label, "seed": seed})
 start_time = time.time()
 
-main(parameters, seed)
-analyze(parameters)
+datasets = main(parameters, seed)
+analyze(parameters, datasets)
 
 record.duration = time.time() - start_time
 record.input_data = []
