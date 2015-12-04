@@ -145,7 +145,7 @@ for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_pa
                                                    os.path.basename(str(inp))),
                                       project.data_store).generate_key())
 
-for outp in sorted(output_files):
+for outp in output_files:
     record.output_files.append(DataFile(os.path.join(str(parameters['sumatra_label']), os.path.basename(str(outp))),
                                         project.data_store).generate_key())
 
