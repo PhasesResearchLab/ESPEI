@@ -144,6 +144,9 @@ for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_pa
 # the input files shouldn't get detected here because they should
 # have timestamps earlier than this timestamp
 record.output_data = record.datastore.find_new_data(record.timestamp)
+# Workaround for broken mime type detection
+for outp in record.output_data:
+    outp.metadata['mimetype'] = outp.metadata['mimetype'] or 'text/plain'
 project.add_record(record)
 
 project.save()
