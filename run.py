@@ -27,6 +27,8 @@ def autocorr(x):
     result = np.correlate(x, x, mode='full')
     return result[result.size/2:]
 
+output_files = []
+
 
 def main(parameters, seed):
     np.random.seed(seed)
@@ -45,6 +47,7 @@ def main(parameters, seed):
                     dbcomplevel=4, dbcomplib='bzip2')
     mdl.sample(**parameters['mcmc'])
     mdl.db.close()
+    output_files.append(os.path.join(trace_path, 'traces.h5'))
     return datasets
 
 
@@ -65,14 +68,16 @@ def analyze(parameters, datasets):
         figure.gca().set_title(param+' Autocorrelation')
         figure.savefig(str(os.path.join(image_path, 'acf', param+'.png')))
         plt.close(figure)
+        output_files.append(str(os.path.join(image_path, 'acf', param+'.png')))
 
     data = np.vstack(list(data_dict.values())).T
-    data_truths = [parameters.as_dict()['parameters'].get('compare', None) for key in data_dict.keys()]
+    data_truths = [parameters.as_dict()['parameters'][key].get('compare', None) for key in data_dict.keys()]
     figure = corner(data, labels=list(data_dict.keys()),
                     quantiles=[0.16, 0.5, 0.84],
                     truths=data_truths,
                     show_titles=True, title_args={"fontsize": 40}, rasterized=True)
     figure.savefig(str(os.path.join(image_path, 'cornerplot.png')))
+    output_files.append(str(os.path.join(image_path, 'cornerplot.png')))
     plt.close(figure)
     # Write CSV file with parameter summary (should be close to pymc's format)
     with open(str(os.path.join(image_path, 'parameters.csv')), 'w') as csvfile:
@@ -101,6 +106,7 @@ def analyze(parameters, datasets):
     idx = 1
     for fig in plot_results(input_database, datasets, data_dict, databases=compare_databases):
         fig.savefig(str(os.path.join(image_path, 'results', 'Figure{}.png'.format(idx))))
+        output_files.append(str(os.path.join(image_path, 'results', 'Figure{}.png'.format(idx))))
         plt.close(fig)
         idx += 1
 
@@ -130,7 +136,7 @@ os.makedirs(input_path)
 
 mime_exts = defaultdict(lambda: 'text/plain')
 mime_exts.update({'csv': 'text/csv',
-                  'h5': 'application/x-hdf'})
+                  'h5': None})
 
 for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_path'])):
     # copy2 preserves most metadata
@@ -139,10 +145,9 @@ for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_pa
                                                    os.path.basename(str(inp))),
                                       project.data_store).generate_key())
 
-
-# the input files shouldn't get detected here because they should
-# have timestamps earlier than this timestamp
-record.output_data = record.datastore.find_new_data(record.timestamp)
+for outp in sorted(output_files):
+    record.output_files.append(DataFile(os.path.join(str(parameters['sumatra_label']), os.path.basename(str(outp))),
+                                        project.data_store).generate_key())
 
 # Workaround for broken mime type detection
 for fkey in chain(record.input_data, record.output_data):
