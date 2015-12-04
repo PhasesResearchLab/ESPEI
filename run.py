@@ -18,9 +18,8 @@ import shutil
 import time
 import glob
 import csv
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from itertools import chain
-import mimetypes
 
 
 def autocorr(x):
@@ -131,22 +130,26 @@ record.duration = time.time() - start_time
 record.input_data = []
 input_path = os.path.join('Data', parameters['sumatra_label'], 'input')
 os.makedirs(input_path)
+
+mime_exts = {'csv': 'text/csv',
+             'h5': 'application/x-hdf'}
+mime_exts = defaultdict(mime_exts, lambda: 'text/plain')
+
 for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_path'])):
     # copy2 preserves most metadata
     shutil.copy2(str(inp), input_path)
     record.input_data.append(DataFile(os.path.join(str(parameters['sumatra_label']), 'input',
                                                    os.path.basename(str(inp))),
                                       project.data_store).generate_key())
-    # Mime type detection is broken right now so this appears necessary
-    record.input_data[-1].metadata['mimetype'] = 'text/plain'
 
 
 # the input files shouldn't get detected here because they should
 # have timestamps earlier than this timestamp
 record.output_data = record.datastore.find_new_data(record.timestamp)
+
 # Workaround for broken mime type detection
-for outp in record.output_data:
-    outp.metadata['mimetype'] = outp.metadata['mimetype'] or 'text/plain'
+for fkey in chain(record.input_data, record.output_data):
+    fkey.metadata['mimetype'] = fkey.metadata['mimetype'] or mime_exts[os.path.splitext(fkey.path)[-1]]
 project.add_record(record)
 
 project.save()
