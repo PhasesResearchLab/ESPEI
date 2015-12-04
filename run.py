@@ -47,7 +47,7 @@ def main(parameters, seed):
                     dbcomplevel=4, dbcomplib='bzip2')
     mdl.sample(**parameters['mcmc'])
     mdl.db.close()
-    output_files.append(os.path.join(trace_path, 'traces.h5'))
+    output_files.append(os.path.join(parameters['sumatra_label'], 'traces.h5'))
     return datasets
 
 
@@ -68,7 +68,7 @@ def analyze(parameters, datasets):
         figure.gca().set_title(param+' Autocorrelation')
         figure.savefig(str(os.path.join(image_path, 'acf', param+'.png')))
         plt.close(figure)
-        output_files.append(str(os.path.join(image_path, 'acf', param+'.png')))
+        output_files.append(str(os.path.join(parameters['sumatra_label'], 'acf', param+'.png')))
 
     data = np.vstack(list(data_dict.values())).T
     data_truths = [parameters.as_dict()['parameters'][key].get('compare', None) for key in data_dict.keys()]
