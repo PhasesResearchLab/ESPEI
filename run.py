@@ -35,6 +35,7 @@ def main(parameters, seed):
     params = []
     for pname, paramdist in parameters['parameters'].items():
         paramdist = paramdist.copy()  # don't want to modify original
+        paramdist.pop('compare')  # don't pass this as a kwarg
         dist = getattr(pymc, paramdist.pop('dist'))
         params.append(dist(str(pname), **paramdist))
     mod, datasets = build_pymc_model(input_database, dataset_names, params)
