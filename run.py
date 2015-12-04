@@ -43,7 +43,7 @@ def main(parameters, seed):
     mod, datasets = build_pymc_model(input_database, dataset_names, params)
     trace_path = os.path.join('Data', parameters['sumatra_label'])
     os.makedirs(trace_path)
-    mdl = pymc.MCMC(mod, db='hdf5', dbname=str(os.path.join(trace_path, 'traces.h5')),
+    mdl = pymc.NormApprox(mod, db='hdf5', dbname=str(os.path.join(trace_path, 'traces.h5')),
                     dbcomplevel=4, dbcomplib='bzip2')
     mdl.sample(**parameters['mcmc'])
     mdl.db.close()
