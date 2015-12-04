@@ -45,6 +45,7 @@ def main(parameters, seed):
     os.makedirs(trace_path)
     mdl = pymc.NormApprox(mod, db='hdf5', dbname=str(os.path.join(trace_path, 'traces.h5')),
                     dbcomplevel=4, dbcomplib='bzip2')
+    mdl.fit()
     mdl.sample(iter=parameters['mcmc']['iter'])
     mdl.db.close()
     output_files.append(os.path.join(parameters['sumatra_label'], 'traces.h5'))
