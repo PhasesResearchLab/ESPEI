@@ -77,7 +77,7 @@ def analyze(parameters, datasets):
                     truths=data_truths,
                     show_titles=True, title_args={"fontsize": 40}, rasterized=True)
     figure.savefig(str(os.path.join(image_path, 'cornerplot.png')))
-    output_files.append(str(os.path.join(image_path, 'cornerplot.png')))
+    output_files.append(str(os.path.join(parameters['sumatra_label'], 'cornerplot.png')))
     plt.close(figure)
     # Write CSV file with parameter summary (should be close to pymc's format)
     with open(str(os.path.join(image_path, 'parameters.csv')), 'w') as csvfile:
@@ -106,7 +106,7 @@ def analyze(parameters, datasets):
     idx = 1
     for fig in plot_results(input_database, datasets, data_dict, databases=compare_databases):
         fig.savefig(str(os.path.join(image_path, 'results', 'Figure{}.png'.format(idx))))
-        output_files.append(str(os.path.join(image_path, 'results', 'Figure{}.png'.format(idx))))
+        output_files.append(str(os.path.join(parameters['sumatra_label'], 'results', 'Figure{}.png'.format(idx))))
         plt.close(fig)
         idx += 1
 
