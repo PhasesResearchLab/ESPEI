@@ -100,6 +100,7 @@ def analyze(parameters, datasets):
                 'q2.5': q2d5, 'q25': q25, 'q50': q50, 'q75': q75, 'q97.5': q975
             }
             writer.writerow(row)
+    output_files.append(str(os.path.join(parameters['sumatra_label'], 'parameters.csv')))
     # Generate comparison figures
     os.makedirs(os.path.join(image_path, 'results'))
     input_database = Database(parameters['input_database'])
