@@ -136,8 +136,8 @@ input_path = os.path.join('Data', parameters['sumatra_label'], 'input')
 os.makedirs(input_path)
 
 mime_exts = defaultdict(lambda: 'text/plain')
-mime_exts.update({'csv': 'text/csv',
-                  'h5': None})
+mime_exts.update({'.csv': 'text/csv',
+                  '.h5': None})
 
 for inp in [parameters['input_database']] + sorted(glob.glob(parameters['data_path'])):
     # copy2 preserves most metadata
