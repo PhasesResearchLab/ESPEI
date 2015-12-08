@@ -49,7 +49,7 @@ with ridge regression is advisible.
 """
 import pycalphad.variables as v
 from pycalphad import calculate, Model
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import LinearRegression
 import tinydb
 import sympy
 import numpy as np
@@ -66,7 +66,14 @@ def load_datasets(dataset_filenames):
     return ds_database
 
 
-def choose_parameters(dbf, comps, phase_name, sublattice_configuration,
+def _symmetry_filter(x, config):
+    if (x['mode'] == 'manual') & (config in x['sublattice_configuration']):
+        return True
+    else:
+        return False
+
+
+def choose_parameters(dbf, comps, phase_name, configuration,
                       datasets, features=None):
     """
     Find suitable linear model parameters for the given phase.
@@ -84,24 +91,25 @@ def choose_parameters(dbf, comps, phase_name, sublattice_configuration,
         Names of the relevant components.
     phase_name : str
         Name of the desired phase for which the parameters will be found.
-    sublattice_configuration : ndarray
+    configuration : ndarray
         Configuration of the sublattices for the fitting procedure.
     datasets : tinydb of Dataset
         All the datasets desired to fit to.
     features : dict (optional)
         Maps "property" to a list of features for the linear model.
-        e.g., {"CPM": (v.T*sympy.log(v.T), v.T**2, v.T**3)}
+        These will be transformed from "GM" coefficients
+        e.g., {"CPM_FORM": (v.T*sympy.log(v.T), v.T**2, v.T**-1, v.T**3)}
 
     Returns
     =======
     dict of feature: estimated value
     """
     if features is None:
-        features = [("CPM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3))
+        features = [("CPM_FORM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3))
                     ]
         features = OrderedDict(features)
     # Mapping of energy polynomial coefficients to corresponding property coefficients
-    feature_transforms = {"CPM": lambda x: -v.T*sympy.diff(x, v.T, 2)}
+    feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2)}
     mod = Model(dbf, comps, phase_name)
 
     # ENDMEMBERS
@@ -110,6 +118,7 @@ def choose_parameters(dbf, comps, phase_name, sublattice_configuration,
         mod_prop = getattr(mod, prop)
         desired_data = datasets.search((tinydb.where('output') == prop) &
                                        (tinydb.where('components') == comps) &
+                                       (tinydb.where('solver').test(_symmetry_filter, configuration)) &
                                        (tinydb.where('phases') == [phase_name]))
         if len(desired_data) == 0:
             raise ValueError('No datasets for the system of interest were in \'datasets\'')
@@ -118,43 +127,41 @@ def choose_parameters(dbf, comps, phase_name, sublattice_configuration,
         # Note: This section will need to be rewritten when we start fitting over P or other potentials
         target_variables = v.T  #sorted(transformed_features.atoms(v.StateVariable), key=str)
         all_variables = np.concatenate([i['conditions'][str(target_variables)] for i in desired_data], axis=-1)
-        temp_filter = all_variables >= 298.15
+        temp_filter = (all_variables >= 298.15) & (all_variables <= 933)
         all_variables = all_variables[temp_filter]
         # full feature_matrix is built, and we add columns one at a time for our model
         feature_matrix = np.empty((len(all_variables), len(transformed_features)), dtype=np.float)
         feature_matrix[:, :] = [transformed_features.subs({v.T: i}).evalf() for i in all_variables]
         data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
         data_quantities = data_quantities[temp_filter]
-        # Subtract out weighted sum of property since we only fit properties of formation
-        data_quantities -= calculate(dbf, comps, phase_name, points=sublattice_configuration,
-                                     mode='numpy', output=prop, model=mod,
-                                     T=all_variables, P=101325)[prop].values.flatten()
         # Now generate candidate models; add parameters one at a time
         model_scores = []
         param_sets = []
-        clf = Ridge(fit_intercept=False, alpha=0)
+        clf = LinearRegression(fit_intercept=False, normalize=True)
         plt.figure(figsize=(15, 12))
-        variance_array = np.array([1., 1., 1e6, 1.])
         for num_params in range(1, len(transformed_features) + 1):
-            current_matrix = np.multiply(feature_matrix, variance_array)[:, :num_params]
+            current_matrix = feature_matrix[:, :num_params]
             clf.fit(current_matrix, data_quantities)
             # This may not exactly be the correct form for the likelihood
-            error = np.square(np.dot(current_matrix, clf.coef_) - data_quantities).sum() + \
-                clf.alpha * np.square(clf.coef_).sum()
+            # We're missing the "ridge" contribution here which could become relevant for sparse data
+            rss = np.square(np.dot(current_matrix, clf.coef_) - data_quantities).sum()
             # Compute Aikaike Information Criterion
-            score = 2*num_params + 2*np.log(error)
+            # Form valid under assumption all sample variances are equal and unknown
+            score = 2*num_params + current_matrix.shape[-2] * np.log(rss)
             model_scores.append(score)
             param_sets.append(transformed_features[:num_params])
             x_plot = np.linspace(all_variables.min(), all_variables.max(), 100)
             x_pred = [sympy.Matrix(transformed_features[:num_params]).subs({v.T: i}).evalf() for i in x_plot]
-            y_plot = clf.predict(np.multiply(x_pred, variance_array[:num_params]))
+            y_plot = clf.predict(x_pred)
             plt.plot(x_plot, y_plot, label=str(num_params)+' parameters')
-            print(transformed_features[:num_params], 'error:', error, 'AIC:', score)
-            print('Parameters:', np.multiply(clf.coef_, variance_array[:num_params]))
+            print(transformed_features[:num_params], 'rss:', rss, 'AIC:', score)
+            print('Parameters:', clf.coef_)
         plt.scatter(all_variables, data_quantities)
         plt.ylabel('Heat Capacity of Formation (J/mol-K)', fontsize=20)
         plt.xlabel('Temperature (K)', fontsize=20)
         plt.legend()
+        chosen_model = param_sets[np.argmin(model_scores)]
+    # Generate parameter payload based on sublattice configurations
 
 
     # First, fit the heat capacities of formation
