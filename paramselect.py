@@ -55,7 +55,12 @@ import sympy
 import numpy as np
 import json
 from collections import OrderedDict
-import matplotlib.pyplot as plt
+
+
+# Mapping of energy polynomial coefficients to corresponding property coefficients
+feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
+                      "SM_FORM": lambda x: -sympy.diff(x, v.T),
+                      "HM_FORM": lambda x: x - v.T*sympy.diff(x, v.T)}
 
 
 def load_datasets(dataset_filenames):
@@ -73,8 +78,69 @@ def _symmetry_filter(x, config):
         return False
 
 
-def choose_parameters(dbf, comps, phase_name, configuration,
-                      datasets, features=None):
+def _get_data(comps, phase_name, configuration, datasets, prop):
+    desired_data = datasets.search((tinydb.where('output') == prop) &
+                                   (tinydb.where('components') == comps) &
+                                   (tinydb.where('solver').test(_symmetry_filter, configuration)) &
+                                   (tinydb.where('phases') == [phase_name]))
+    if len(desired_data) == 0:
+        raise ValueError('No datasets for the system of interest containing {} were in \'datasets\''.format(prop))
+    return desired_data
+
+
+def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
+    """
+    Solve Ax = b, where 'feature_matrix' is A and 'data_quantities' is b.
+
+    Parameters
+    ==========
+    feature_matrix : ndarray (M*N)
+        Regressor matrix
+    data_quantities : ndarray (M,)
+        Response vector
+    feature_tuple : tuple
+        Polynomial coefficient corresponding to each column of 'feature_matrix'
+
+    Returns
+    =======
+    parameters : OrderedDict
+       Maps 'feature_tuple' to fitted parameter value.
+       If a coefficient is not used, it maps to zero.
+    """
+    # Now generate candidate models; add parameters one at a time
+    model_scores = []
+    results = np.zeros((len(feature_tuple), len(feature_tuple)))
+    clf = LinearRegression(fit_intercept=False, normalize=True)
+    for num_params in range(1, feature_matrix.shape[-1] + 1):
+        current_matrix = feature_matrix[:, :num_params]
+        clf.fit(current_matrix, data_quantities)
+        # This may not exactly be the correct form for the likelihood
+        # We're missing the "ridge" contribution here which could become relevant for sparse data
+        rss = np.square(np.dot(current_matrix, clf.coef_) - data_quantities).sum()
+        # Compute Aikaike Information Criterion
+        # Form valid under assumption all sample variances are equal and unknown
+        score = 2*num_params + current_matrix.shape[-2] * np.log(rss)
+        model_scores.append(score)
+        results[num_params - 1, :num_params] = clf.coef_
+        print(feature_tuple[:num_params], 'rss:', rss, 'AIC:', score)
+    return OrderedDict(zip(feature_tuple, results[np.argmin(model_scores), :]))
+
+
+def _build_feature_matrix(prop, features, desired_data):
+    transformed_features = sympy.Matrix([feature_transforms[prop](i) for i in features])
+    # These are the variables we are linearizing over; for now should just be T
+    # Note: This section will need to be rewritten when we start fitting over P or other potentials
+    target_variables = v.T  #sorted(transformed_features.atoms(v.StateVariable), key=str)
+    all_variables = np.concatenate([i['conditions'][str(target_variables)] for i in desired_data], axis=-1)
+    temp_filter = (all_variables >= 298.15)
+    all_variables = all_variables[temp_filter]
+
+    feature_matrix = np.empty((len(all_variables), len(transformed_features)), dtype=np.float)
+    feature_matrix[:, :] = [transformed_features.subs({v.T: i}).evalf() for i in all_variables]
+    return feature_matrix
+
+def fit_formation_energy(comps, phase_name, configuration,
+                         datasets, features=None):
     """
     Find suitable linear model parameters for the given phase.
     We do this by successively fitting heat capacities, entropies and
@@ -85,8 +151,7 @@ def choose_parameters(dbf, comps, phase_name, configuration,
     Parameters
     ==========
     dbf : Database
-        Database containing the relevant phase. Only Standard Reference
-        terms should be in the phase description!
+        Database containing the relevant phase.
     comps : list of str
         Names of the relevant components.
     phase_name : str
@@ -105,66 +170,49 @@ def choose_parameters(dbf, comps, phase_name, configuration,
     dict of feature: estimated value
     """
     if features is None:
-        features = [("CPM_FORM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3))
+        features = [("CPM_FORM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3)),
+                    ("SM_FORM", (v.T,)),
+                    ("HM_FORM", (1,))
                     ]
         features = OrderedDict(features)
-    # Mapping of energy polynomial coefficients to corresponding property coefficients
-    feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2)}
-    mod = Model(dbf, comps, phase_name)
 
     # ENDMEMBERS
-    for prop in features.keys():
-        # Construct Model and query datasets containing this property
-        mod_prop = getattr(mod, prop)
-        desired_data = datasets.search((tinydb.where('output') == prop) &
-                                       (tinydb.where('components') == comps) &
-                                       (tinydb.where('solver').test(_symmetry_filter, configuration)) &
-                                       (tinydb.where('phases') == [phase_name]))
-        if len(desired_data) == 0:
-            raise ValueError('No datasets for the system of interest were in \'datasets\'')
-        transformed_features = sympy.Matrix([feature_transforms[prop](i) for i in features[prop]])
-        # These are the variables we are linearizing over; for now should just be T
-        # Note: This section will need to be rewritten when we start fitting over P or other potentials
-        target_variables = v.T  #sorted(transformed_features.atoms(v.StateVariable), key=str)
-        all_variables = np.concatenate([i['conditions'][str(target_variables)] for i in desired_data], axis=-1)
-        temp_filter = (all_variables >= 298.15) & (all_variables <= 933)
-        all_variables = all_variables[temp_filter]
-        # full feature_matrix is built, and we add columns one at a time for our model
-        feature_matrix = np.empty((len(all_variables), len(transformed_features)), dtype=np.float)
-        feature_matrix[:, :] = [transformed_features.subs({v.T: i}).evalf() for i in all_variables]
-        data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
-        data_quantities = data_quantities[temp_filter]
-        # Now generate candidate models; add parameters one at a time
-        model_scores = []
-        param_sets = []
-        clf = LinearRegression(fit_intercept=False, normalize=True)
-        plt.figure(figsize=(15, 12))
-        for num_params in range(1, len(transformed_features) + 1):
-            current_matrix = feature_matrix[:, :num_params]
-            clf.fit(current_matrix, data_quantities)
-            # This may not exactly be the correct form for the likelihood
-            # We're missing the "ridge" contribution here which could become relevant for sparse data
-            rss = np.square(np.dot(current_matrix, clf.coef_) - data_quantities).sum()
-            # Compute Aikaike Information Criterion
-            # Form valid under assumption all sample variances are equal and unknown
-            score = 2*num_params + current_matrix.shape[-2] * np.log(rss)
-            model_scores.append(score)
-            param_sets.append(transformed_features[:num_params])
-            x_plot = np.linspace(all_variables.min(), all_variables.max(), 100)
-            x_pred = [sympy.Matrix(transformed_features[:num_params]).subs({v.T: i}).evalf() for i in x_plot]
-            y_plot = clf.predict(x_pred)
-            plt.plot(x_plot, y_plot, label=str(num_params)+' parameters')
-            print(transformed_features[:num_params], 'rss:', rss, 'AIC:', score)
-            print('Parameters:', clf.coef_)
-        plt.scatter(all_variables, data_quantities)
-        plt.ylabel('Heat Capacity of Formation (J/mol-K)', fontsize=20)
-        plt.xlabel('Temperature (K)', fontsize=20)
-        plt.legend()
-        chosen_model = param_sets[np.argmin(model_scores)]
-    # Generate parameter payload based on sublattice configurations
+    #
+    # HEAT CAPACITY OF FORMATION
+    desired_data = _get_data(comps, phase_name, configuration, datasets, "CPM_FORM")
+    cp_matrix = _build_feature_matrix("CPM_FORM", features["CPM_FORM"], desired_data)
+    data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
+    # Some low temperatures may have been removed; index from end of array and slice until we have same length
+    data_quantities = data_quantities[-cp_matrix.shape[0]:]
+    parameters = _fit_parameters(cp_matrix, data_quantities, features["CPM_FORM"])
+    # ENTROPY OF FORMATION
+    desired_data = _get_data(comps, phase_name, configuration, datasets, "SM_FORM")
+    sm_matrix = _build_feature_matrix("SM_FORM", features["SM_FORM"], desired_data)
+    data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
+    # Some low temperatures may have been removed; index from end of array and slice until we have same length
+    data_quantities = data_quantities[-sm_matrix.shape[0]:]
+    # Subtract out the fixed contribution (from CPM_FORM) from our SM_FORM response vector
+    temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
+    temperatures = temperatures[temperatures >= 298.15]
+    fixed_portion = [feature_transforms["SM_FORM"](i).subs({v.T: temp}).evalf()
+                     for temp in temperatures for i in features["CPM_FORM"]]
+    fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(temperatures), len(features["CPM_FORM"]))
+    fixed_portion = np.dot(fixed_portion, list(parameters.values()))
+    parameters.update(_fit_parameters(sm_matrix, data_quantities - fixed_portion, features["SM_FORM"]))
+    # ENTHALPY OF FORMATION
+    desired_data = _get_data(comps, phase_name, configuration, datasets, "HM_FORM")
+    hm_matrix = _build_feature_matrix("HM_FORM", features["HM_FORM"], desired_data)
+    data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
+    # Some low temperatures may have been removed; index from end of array and slice until we have same length
+    data_quantities = data_quantities[-hm_matrix.shape[0]:]
+    # Subtract out the fixed contribution (from CPM_FORM+SM_FORM) from our HM_FORM response vector
+    temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
+    temperatures = temperatures[temperatures >= 298.15]
+    fixed_portion = [feature_transforms["HM_FORM"](i).subs({v.T: temp}).evalf()
+                     for temp in temperatures for i in features["CPM_FORM"]+features["SM_FORM"]]
+    fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(temperatures),
+                                                                    len(features["CPM_FORM"]+features["SM_FORM"]))
+    fixed_portion = np.dot(fixed_portion, list(parameters.values()))
+    parameters.update(_fit_parameters(sm_matrix, data_quantities - fixed_portion, features["HM_FORM"]))
 
-
-    # First, fit the heat capacities of formation
-    # Next, entropies of formation
-    # Finally, enthalpies of formation
-    pass
+    return parameters
