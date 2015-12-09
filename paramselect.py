@@ -139,6 +139,7 @@ def _build_feature_matrix(prop, features, desired_data):
     feature_matrix[:, :] = [transformed_features.subs({v.T: i}).evalf() for i in all_variables]
     return feature_matrix
 
+
 def fit_formation_energy(comps, phase_name, configuration,
                          datasets, features=None):
     """
@@ -213,6 +214,58 @@ def fit_formation_energy(comps, phase_name, configuration,
     fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(temperatures),
                                                                     len(features["CPM_FORM"]+features["SM_FORM"]))
     fixed_portion = np.dot(fixed_portion, list(parameters.values()))
-    parameters.update(_fit_parameters(sm_matrix, data_quantities - fixed_portion, features["HM_FORM"]))
+    parameters.update(_fit_parameters(hm_matrix, data_quantities - fixed_portion, features["HM_FORM"]))
 
     return parameters
+
+
+def plot_parameters(comps, phase_name, configuration,
+                    datasets, parameters):
+    import matplotlib.pyplot as plt
+    # CPM_FORM
+    desired_data = _get_data(comps, phase_name, configuration, datasets, "CPM_FORM")
+    temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
+    temperatures = temperatures[temperatures >= 298.15]
+    data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
+    # Some low temperatures may have been removed; index from end of array and slice until we have same length
+    data_quantities = data_quantities[-len(temperatures):]
+    fit_eq = sympy.Add(*[feature_transforms["CPM_FORM"](x)*y for x, y in parameters.items()])
+    predicted_quantities = [fit_eq.subs({v.T: temp}) for temp in temperatures]
+    fig = plt.figure(figsize=(9, 9))
+    fig.gca().scatter(temperatures, data_quantities)
+    fig.gca().plot(temperatures, predicted_quantities)
+    fig.gca().set_xlabel('Temperature (K)')
+    fig.gca().set_ylabel('Heat Capacity of Formation (J/mol-K)')
+    fig.canvas.draw()
+    # SM_FORM
+    desired_data = _get_data(comps, phase_name, configuration, datasets, "SM_FORM")
+    temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
+    temperatures = temperatures[temperatures >= 298.15]
+    data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
+    # Some low temperatures may have been removed; index from end of array and slice until we have same length
+    data_quantities = data_quantities[-len(temperatures):]
+    fit_eq = sympy.Add(*[feature_transforms["SM_FORM"](x)*y for x, y in parameters.items()])
+    predicted_quantities = [fit_eq.subs({v.T: temp}) for temp in temperatures]
+    fig = plt.figure(figsize=(9, 9))
+    fig.gca().scatter(temperatures, data_quantities)
+    fig.gca().plot(temperatures, predicted_quantities)
+    fig.gca().set_xlabel('Temperature (K)')
+    fig.gca().set_ylabel('Entropy of Formation (J/mol-K)')
+    fig.canvas.draw()
+    # HM_FORM
+    desired_data = _get_data(comps, phase_name, configuration, datasets, "HM_FORM")
+    temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
+    temperatures = temperatures[temperatures >= 298.15]
+    data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
+    # Some low temperatures may have been removed; index from end of array and slice until we have same length
+    data_quantities = data_quantities[-len(temperatures):]
+    fit_eq = sympy.Add(*[feature_transforms["HM_FORM"](x)*y for x, y in parameters.items()])
+    predicted_quantities = [fit_eq.subs({v.T: temp}) for temp in temperatures]
+    fig = plt.figure(figsize=(9, 9))
+    fig.gca().scatter(temperatures, data_quantities)
+    fig.gca().plot(temperatures, predicted_quantities)
+    fig.gca().set_xlabel('Temperature (K)')
+    fig.gca().set_ylabel('Enthalpy of Formation (J/mol)')
+    fig.canvas.draw()
+    pass
+
