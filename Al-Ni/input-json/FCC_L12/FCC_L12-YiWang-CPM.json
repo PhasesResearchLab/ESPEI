@@ -3,7 +3,16 @@
   "phases": ["FCC_L12"],
   "solver": {
 	  "mode": "manual",
-	  "sublattice_configuration": [0, 1, 0, 1, 0, 1, 1, 0, 1],
+	  "sublattice_occupancy": [[0, 1, 0, 1, 0, 1, 1, 0, 1],
+				   [1, 0, 0, 1, 0, 1, 0, 1, 1],
+				   [0, 1, 1, 0, 0, 1, 0, 1, 1],
+			           [0, 1, 0, 1, 1, 0, 0, 1, 1]
+				  ],
+	  "sublattice_configuration": [[["NI"], ["NI"], ["NI"], ["AL"], ["VA"]],
+				       [["AL"], ["NI"], ["NI"], ["NI"], ["VA"]],
+				       [["NI"], ["AL"], ["NI"], ["NI"], ["VA"]],
+				       [["NI"], ["NI"], ["AL"], ["NI"], ["VA"]]
+				      ],
 	  "comment": "Ni3Al sublattice configuration (4SL)"
   },
   "conditions": {

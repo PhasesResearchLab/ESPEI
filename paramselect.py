@@ -59,8 +59,21 @@ from collections import OrderedDict
 
 # Mapping of energy polynomial coefficients to corresponding property coefficients
 feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
+                      "CPM": lambda x: -v.T*sympy.diff(x, v.T, 2),
                       "SM_FORM": lambda x: -sympy.diff(x, v.T),
-                      "HM_FORM": lambda x: x - v.T*sympy.diff(x, v.T)}
+                      "SM": lambda x: -sympy.diff(x, v.T),
+                      "HM_FORM": lambda x: x - v.T*sympy.diff(x, v.T),
+                      "HM": lambda x: x - v.T*sympy.diff(x, v.T)}
+
+plot_mapping = {
+    'T': 'Temperature (K)',
+    'CPM': 'Molar Heat Capacity (J/mol-K-atom)',
+    'HM': 'Molar Enthalpy (J/mol-atom)',
+    'SM': 'Molar Entropy (J/mol-K-atom)',
+    'CPM_FORM': 'Molar Heat Capacity of Formation (J/mol-K-atom)',
+    'HM_FORM': 'Molar Enthalpy of Formation (J/mol-atom)',
+    'SM_FORM': 'Molar Entropy of Formation (J/mol-K-atom)'
+}
 
 
 def load_datasets(dataset_filenames):
@@ -83,8 +96,8 @@ def _get_data(comps, phase_name, configuration, datasets, prop):
                                    (tinydb.where('components') == comps) &
                                    (tinydb.where('solver').test(_symmetry_filter, configuration)) &
                                    (tinydb.where('phases') == [phase_name]))
-    if len(desired_data) == 0:
-        raise ValueError('No datasets for the system of interest containing {} were in \'datasets\''.format(prop))
+    #if len(desired_data) == 0:
+    #    raise ValueError('No datasets for the system of interest containing {} were in \'datasets\''.format(prop))
     return desired_data
 
 
@@ -219,53 +232,57 @@ def fit_formation_energy(comps, phase_name, configuration,
     return parameters
 
 
-def plot_parameters(comps, phase_name, configuration,
-                    datasets, parameters):
+def _compare_data_to_parameters(desired_data, parameters, x, y):
     import matplotlib.pyplot as plt
-    # CPM_FORM
-    desired_data = _get_data(comps, phase_name, configuration, datasets, "CPM_FORM")
-    temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
-    temperatures = temperatures[temperatures >= 298.15]
-    data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
-    # Some low temperatures may have been removed; index from end of array and slice until we have same length
-    data_quantities = data_quantities[-len(temperatures):]
-    fit_eq = sympy.Add(*[feature_transforms["CPM_FORM"](x)*y for x, y in parameters.items()])
-    predicted_quantities = [fit_eq.subs({v.T: temp}) for temp in temperatures]
+    # Bounds for the prediction from the fit
+    x_min, x_max = 0, 1
+    for data in desired_data:
+        x_min = min(x_min, np.asarray(data['conditions'][x]).min())
+        x_max = max(x_max, np.asarray(data['conditions'][x]).max())
+    if x == 'T':
+        x_min = max(300, x_min)
+        x_max = max(1000, x_max)
+    x_vals = np.linspace(x_min, x_max, 100)
+    fit_eq = sympy.Add(*[feature_transforms[y](key)*value for key, value in parameters.items()])
+    predicted_quantities = [fit_eq.subs({v.__dict__[x]: x_val}).evalf() for x_val in x_vals]
     fig = plt.figure(figsize=(9, 9))
-    fig.gca().scatter(temperatures, data_quantities)
-    fig.gca().plot(temperatures, predicted_quantities)
-    fig.gca().set_xlabel('Temperature (K)')
-    fig.gca().set_ylabel('Heat Capacity of Formation (J/mol-K)')
+    for data in desired_data:
+        fig.gca().scatter(np.asarray(data['conditions'][x]).flatten(),
+                          np.asarray(data['values']).flatten(),
+                          label=data.get('reference', None))
+    fig.gca().plot(x_vals, predicted_quantities, label='This work')
+    fig.gca().set_xlabel(plot_mapping.get(x, x))
+    fig.gca().set_ylabel(plot_mapping.get(y, y))
+    fig.gca().legend(loc='best')
     fig.canvas.draw()
-    # SM_FORM
-    desired_data = _get_data(comps, phase_name, configuration, datasets, "SM_FORM")
-    temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
-    temperatures = temperatures[temperatures >= 298.15]
-    data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
-    # Some low temperatures may have been removed; index from end of array and slice until we have same length
-    data_quantities = data_quantities[-len(temperatures):]
-    fit_eq = sympy.Add(*[feature_transforms["SM_FORM"](x)*y for x, y in parameters.items()])
-    predicted_quantities = [fit_eq.subs({v.T: temp}) for temp in temperatures]
-    fig = plt.figure(figsize=(9, 9))
-    fig.gca().scatter(temperatures, data_quantities)
-    fig.gca().plot(temperatures, predicted_quantities)
-    fig.gca().set_xlabel('Temperature (K)')
-    fig.gca().set_ylabel('Entropy of Formation (J/mol-K)')
-    fig.canvas.draw()
-    # HM_FORM
-    desired_data = _get_data(comps, phase_name, configuration, datasets, "HM_FORM")
-    temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
-    temperatures = temperatures[temperatures >= 298.15]
-    data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
-    # Some low temperatures may have been removed; index from end of array and slice until we have same length
-    data_quantities = data_quantities[-len(temperatures):]
-    fit_eq = sympy.Add(*[feature_transforms["HM_FORM"](x)*y for x, y in parameters.items()])
-    predicted_quantities = [fit_eq.subs({v.T: temp}) for temp in temperatures]
-    fig = plt.figure(figsize=(9, 9))
-    fig.gca().scatter(temperatures, data_quantities)
-    fig.gca().plot(temperatures, predicted_quantities)
-    fig.gca().set_xlabel('Temperature (K)')
-    fig.gca().set_ylabel('Enthalpy of Formation (J/mol)')
-    fig.canvas.draw()
-    pass
 
+
+def plot_parameters(comps, phase_name, configuration,
+                    datasets, parameters, plots=None):
+    if plots is None:
+        plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
+                 ('T', 'HM'), ('T', 'HM_FORM')]
+    for x_val, y_val in plots:
+        desired_data = _get_data(comps, phase_name, configuration, datasets, y_val)
+        _compare_data_to_parameters(desired_data, parameters, x_val, y_val)
+
+
+def generate_parameter_file(phase_name, subl_model, datasets):
+    """
+    Generate an initial CALPHAD model for a given phase and
+    sublattice model.
+
+    Parameters
+    ==========
+    phase_name : str
+        Name of the phase.
+    subl_model : list of tuple
+        Sublattice model for the phase of interest.
+    datasets : tinydb of datasets
+        All datasets to consider for the calculation.
+    """
+    # First fit endmembers
+    # Now fit all binary interactions
+    # Now fit ternary interactions
+    # Generate parameter file
+    pass
