@@ -3,8 +3,18 @@
   "phases": ["FCC_L12"],
   "solver": {
 	  "mode": "manual",
-	  "sublattice_configuration": [0, 1, 0, 1, 0, 1, 1, 0, 1],
-	  "comment": "Ni3Al sublattice configuration (4SL)"
+	  "sublattice_occupancy": [[0, 1, 0, 1, 0, 1, 1, 0, 1],
+				   [1, 0, 0, 1, 0, 1, 0, 1, 1],
+				   [0, 1, 1, 0, 0, 1, 0, 1, 1],
+			           [0, 1, 0, 1, 1, 0, 0, 1, 1]
+				  ],
+	  "sublattice_site_ratios": [0.25, 0.25, 0.25, 0.25, 1],
+	  "sublattice_configuration": [["NI", "NI", "NI", "AL", "VA"],
+				       ["AL", "NI", "NI", "NI", "VA"],
+				       ["NI", "AL", "NI", "NI", "VA"],
+				       ["NI", "NI", "AL", "NI", "VA"]
+				      ],
+	"comment": "Ni3Al sublattice configuration (4SL)"
   },
   "conditions": {
 	  "P": 101325,
@@ -382,5 +392,5 @@
 	"x": "T",
 	"y": "HM"
   },
-  "reference": "Shunli DFT calculations from Ni-Ni3Al-Fig-8-Shunli.xlsx"
+  "reference": "Shunli DFT calculations (2010)"
 }

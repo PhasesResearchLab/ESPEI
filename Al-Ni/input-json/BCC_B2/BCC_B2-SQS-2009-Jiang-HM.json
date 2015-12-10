@@ -3,7 +3,7 @@
   "phases": ["BCC_B2"],
   "solver": {
 	  "mode": "manual",
-	  "sublattice_configuration": [[1, 0, 0, 1, 0, 0, 1],
+	  "sublattice_occupancy": [[1, 0, 0, 1, 0, 0, 1],
 				       [0, 1, 0, 0, 1, 0, 1],
 				       [1, 0, 0, 0, 0.5, 0.5, 1],
 				       [1, 0, 0, 0, 0.6, 0.4, 1],
@@ -15,6 +15,7 @@
 				       [0, 1, 0, 0.6, 0, 0.4, 1],
 				       [0, 1, 0, 0.5, 0, 0.5, 1]
 				      ],
+	  "sublattice_configuration": [[]],
 	  "comment": "BCC_B2 sublattice configuration (2SL)"
   },
   "conditions": {

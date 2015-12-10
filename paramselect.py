@@ -49,6 +49,7 @@ with ridge regression is advisible.
 """
 import pycalphad.variables as v
 from pycalphad import calculate, Model
+from pycalphad.refstates import SGTE91
 from sklearn.linear_model import LinearRegression
 import tinydb
 import sympy
@@ -67,12 +68,12 @@ feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
 
 plot_mapping = {
     'T': 'Temperature (K)',
-    'CPM': 'Molar Heat Capacity (J/mol-K-atom)',
+    'CPM': 'Molar Heat Capacity (J/K-mol-atom)',
     'HM': 'Molar Enthalpy (J/mol-atom)',
-    'SM': 'Molar Entropy (J/mol-K-atom)',
-    'CPM_FORM': 'Molar Heat Capacity of Formation (J/mol-K-atom)',
+    'SM': 'Molar Entropy (J/K-mol-atom)',
+    'CPM_FORM': 'Molar Heat Capacity of Formation (J/K-mol-atom)',
     'HM_FORM': 'Molar Enthalpy of Formation (J/mol-atom)',
-    'SM_FORM': 'Molar Entropy of Formation (J/mol-K-atom)'
+    'SM_FORM': 'Molar Entropy of Formation (J/K-mol-atom)'
 }
 
 
@@ -85,10 +86,23 @@ def load_datasets(dataset_filenames):
 
 
 def _symmetry_filter(x, config):
-    if (x['mode'] == 'manual') & (config in x['sublattice_configuration']):
-        return True
-    else:
+    if len(config) != len(x['sublattice_configuration'][0]):
         return False
+    if x['mode'] == 'manual':
+        # All configurations saved should be symmetric
+        # If even one matches, it's a match
+        for data_config in x['sublattice_configuration']:
+            if config == data_config:
+                return True
+            match_flag = True
+            for tc, dc in zip(config, data_config):
+                if (str(tc) in dc) or (str(dc) in tc):
+                    match_flag &= True
+                else:
+                    match_flag = False
+            if match_flag:
+                return True
+    return False
 
 
 def _get_data(comps, phase_name, configuration, datasets, prop):
@@ -189,6 +203,9 @@ def fit_formation_energy(comps, phase_name, configuration,
                     ("HM_FORM", (1,))
                     ]
         features = OrderedDict(features)
+    for idx, config in enumerate(configuration):
+        if not (isinstance(config, list) or isinstance(config, tuple)):
+            configuration[idx] = [config]
 
     # ENDMEMBERS
     #
@@ -232,7 +249,7 @@ def fit_formation_energy(comps, phase_name, configuration,
     return parameters
 
 
-def _compare_data_to_parameters(desired_data, parameters, x, y):
+def _compare_data_to_parameters(desired_data, parameters, x, y, refdata):
     import matplotlib.pyplot as plt
     # Bounds for the prediction from the fit
     x_min, x_max = 0, 1
@@ -244,27 +261,53 @@ def _compare_data_to_parameters(desired_data, parameters, x, y):
         x_max = max(1000, x_max)
     x_vals = np.linspace(x_min, x_max, 100)
     fit_eq = sympy.Add(*[feature_transforms[y](key)*value for key, value in parameters.items()])
+    fit_eq += refdata
     predicted_quantities = [fit_eq.subs({v.__dict__[x]: x_val}).evalf() for x_val in x_vals]
+
     fig = plt.figure(figsize=(9, 9))
     for data in desired_data:
-        fig.gca().scatter(np.asarray(data['conditions'][x]).flatten(),
-                          np.asarray(data['values']).flatten(),
-                          label=data.get('reference', None))
-    fig.gca().plot(x_vals, predicted_quantities, label='This work')
+        indep_var_data = np.array(data['conditions'][x], dtype=np.float).flatten()
+        response_data = np.array(data['values'], dtype=np.float).flatten()
+        if x == 'T':
+            # Most reference states will misbehave below 298.15 K
+            keep_filter = indep_var_data >= 298.15
+            indep_var_data = indep_var_data[keep_filter]
+            response_data = response_data[keep_filter]
+
+        if (data['output'] == 'HM') or (data['output'] == 'GM'):
+            # Shift data by reference state
+            # This assumes that HM data has been shifted to zero at 298.15 K
+            response_data += np.array(fit_eq.subs({v.__dict__[x]: 298.15}).evalf(), dtype=np.float)
+
+        fig.gca().plot(indep_var_data,
+                       response_data,
+                       label=data.get('reference', None))
+    fig.gca().plot(x_vals, predicted_quantities, label='This work', color='k')
     fig.gca().set_xlabel(plot_mapping.get(x, x))
+    fig.gca().set_xlim(x_min, x_max)
     fig.gca().set_ylabel(plot_mapping.get(y, y))
     fig.gca().legend(loc='best')
     fig.canvas.draw()
 
 
-def plot_parameters(comps, phase_name, configuration,
-                    datasets, parameters, plots=None):
+def plot_parameters(comps, phase_name, configuration, subl_ratios,
+                    datasets, parameters, plots=None, refstate=SGTE91):
     if plots is None:
         plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
                  ('T', 'HM'), ('T', 'HM_FORM')]
+    comps = sorted(comps)
+    if sum([len(config) for config in configuration]) != len(configuration):
+        raise NotImplementedError('Plotting non-endmembers is not supported yet')
     for x_val, y_val in plots:
+        refdata = 0
+        if '_FORM' not in y_val:
+            # Add reference state contribution to properties not "of formation"
+            comp_refs = {c.upper(): feature_transforms[y_val](refstate[c.upper()]) for c in comps if c.upper() != 'VA'}
+            comp_refs['VA'] = 0
+            for subl, ratio in zip(configuration, subl_ratios):
+                refdata = refdata + ratio * comp_refs[subl[0]]
         desired_data = _get_data(comps, phase_name, configuration, datasets, y_val)
-        _compare_data_to_parameters(desired_data, parameters, x_val, y_val)
+        _compare_data_to_parameters(desired_data, parameters, x_val, y_val, refdata)
 
 
 def generate_parameter_file(phase_name, subl_model, datasets):
