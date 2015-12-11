@@ -3,13 +3,9 @@
   "phases": ["BCC_B2"],
   "solver": {
 	  "mode": "manual",
-	  "sublattice_occupancy": [[0, 1, 0, 1, 0, 0, 1],
-				   [1, 0, 0, 0, 1, 0, 1]
-				  ],
 	  "sublattice_site_ratios": [0.5, 0.5, 1],
-	  "sublattice_configuration": [["NI", "AL", "VA"],
-				       ["AL", "NI", "VA"]
-				      ],
+	  "sublattice_configurations": [["AL", "NI", "VA"]
+				       ],
 	  "comment": "B2 sublattice configuration (2SL)"
   },
   "conditions": {
@@ -236,11 +232,5 @@
 		[  8.24855000e+01],
 		[  8.27103000e+01],
 		[  8.29357000e+01]]],
-  "plot": {
-	"name": "Y. Wang 2009 (DFT)",
-	"type": "line",
-	"x": "T",
-	"y": "SM"
-  },
   "reference": "Yi Wang et al 2009"
 }

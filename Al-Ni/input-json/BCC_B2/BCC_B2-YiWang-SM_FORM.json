@@ -3,8 +3,8 @@
   "phases": ["BCC_B2"],
   "solver": {
 	  "mode": "manual",
-	  "sublattice_occupancy": [1, 0, 0, 1, 1],
-	  "sublattice_configuration": [["AL", "NI", "VA"]],
+	  "sublattice_site_ratios": [0.5, 0.5, 1],
+	  "sublattice_configurations": [["AL", "NI", "VA"]],
 	  "comment": "NiAl sublattice configuration (2SL)"
   },
   "conditions": {
@@ -113,11 +113,5 @@
 		[-3.7702 ],
 		[-3.80135],
 		[-3.8327 ]]],
-  "plot": {
-	"name": "Y. Wang 2009 (DFT)",
-	"type": "line",
-	"x": "T",
-	"y": "SM_FORM"
-  },
   "reference": "Yi Wang et al 2009"
 }

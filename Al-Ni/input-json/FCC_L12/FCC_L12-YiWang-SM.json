@@ -3,17 +3,8 @@
   "phases": ["FCC_L12"],
   "solver": {
 	  "mode": "manual",
-	  "sublattice_occupancy": [[0, 1, 0, 1, 0, 1, 1, 0, 1],
-				   [1, 0, 0, 1, 0, 1, 0, 1, 1],
-				   [0, 1, 1, 0, 0, 1, 0, 1, 1],
-			           [0, 1, 0, 1, 1, 0, 0, 1, 1]
-				  ],
 	  "sublattice_site_ratios": [0.25, 0.25, 0.25, 0.25, 1],
-	  "sublattice_configuration": [["NI", "NI", "NI", "AL", "VA"],
-				       ["AL", "NI", "NI", "NI", "VA"],
-				       ["NI", "AL", "NI", "NI", "VA"],
-				       ["NI", "NI", "AL", "NI", "VA"]
-				      ],
+	  "sublattice_configurations": [["NI", "NI", "NI", "AL", "VA"]],
 	  "comment": "Ni3Al sublattice configuration (4SL)"
   },
   "conditions": {
@@ -196,11 +187,5 @@
 		[  7.47313000e+01],
 		[  7.49491000e+01],
 		[  7.51664000e+01]]],
-  "plot": {
-	"name": "Y. Wang 2009 (DFT)",
-	"type": "line",
-	"x": "T",
-	"y": "SM"
-  },
   "reference": "Yi Wang et al 2009"
 }

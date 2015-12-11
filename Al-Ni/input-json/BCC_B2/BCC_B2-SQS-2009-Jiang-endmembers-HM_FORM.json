@@ -1,0 +1,23 @@
+{
+  "components": ["AL", "NI", "VA"],
+  "phases": ["BCC_B2"],
+  "solver": {
+	  "mode": "manual",
+	  "sublattice_site_ratios": [0.5, 0.5, 1],
+	  "sublattice_configurations": [["AL", "AL", "VA"],
+				       ["NI", "NI", "VA"],
+				       ["AL", "VA", "VA"],
+				       ["NI", "VA", "VA"],
+				       ["AL", "NI", "VA"]
+				       ],
+	  "comment": "BCC_B2 endmembers (2SL)"
+  },
+  "conditions": {
+	  "P": 101325,
+	  "T": 300
+  },
+  "output": "HM_FORM",
+  "values":   [[[9317.49855, 9060.32543, 32865.03128, 65581.10236,
+	         -63985.67704]]],
+  "reference": "C. Jiang 2009"
+}

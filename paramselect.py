@@ -68,12 +68,12 @@ feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
 
 plot_mapping = {
     'T': 'Temperature (K)',
-    'CPM': 'Molar Heat Capacity (J/K-mol-atom)',
-    'HM': 'Molar Enthalpy (J/mol-atom)',
-    'SM': 'Molar Entropy (J/K-mol-atom)',
-    'CPM_FORM': 'Molar Heat Capacity of Formation (J/K-mol-atom)',
-    'HM_FORM': 'Molar Enthalpy of Formation (J/mol-atom)',
-    'SM_FORM': 'Molar Entropy of Formation (J/K-mol-atom)'
+    'CPM': 'Heat Capacity (J/K-mol-atom)',
+    'HM': 'Enthalpy (J/mol-atom)',
+    'SM': 'Entropy (J/K-mol-atom)',
+    'CPM_FORM': 'Heat Capacity of Formation (J/K-mol-atom)',
+    'HM_FORM': 'Enthalpy of Formation (J/mol-atom)',
+    'SM_FORM': 'Entropy of Formation (J/K-mol-atom)'
 }
 
 
@@ -81,26 +81,21 @@ def load_datasets(dataset_filenames):
     ds_database = tinydb.TinyDB(storage=tinydb.storages.MemoryStorage)
     for fname in dataset_filenames:
         with open(fname) as file_:
-            ds_database.insert(json.load(file_))
+            try:
+                ds_database.insert(json.load(file_))
+            except ValueError as e:
+                print('JSON Error in {}: {}'.format(fname, e))
     return ds_database
 
 
 def _symmetry_filter(x, config):
-    if len(config) != len(x['sublattice_configuration'][0]):
-        return False
     if x['mode'] == 'manual':
-        # All configurations saved should be symmetric
+        if len(config) != len(x['sublattice_configurations'][0]):
+            return False
         # If even one matches, it's a match
-        for data_config in x['sublattice_configuration']:
+        # We do more filtering downstream
+        for data_config in x['sublattice_configurations']:
             if config == data_config:
-                return True
-            match_flag = True
-            for tc, dc in zip(config, data_config):
-                if (str(tc) in dc) or (str(dc) in tc):
-                    match_flag &= True
-                else:
-                    match_flag = False
-            if match_flag:
                 return True
     return False
 
@@ -110,8 +105,14 @@ def _get_data(comps, phase_name, configuration, datasets, prop):
                                    (tinydb.where('components') == comps) &
                                    (tinydb.where('solver').test(_symmetry_filter, configuration)) &
                                    (tinydb.where('phases') == [phase_name]))
-    #if len(desired_data) == 0:
-    #    raise ValueError('No datasets for the system of interest containing {} were in \'datasets\''.format(prop))
+    if len(desired_data) == 0:
+        raise ValueError('No datasets for the system of interest containing {} were in \'datasets\''.format(prop))
+    # Filter output values to only contain data for matching sublattice configurations
+    for idx, data in enumerate(desired_data):
+        matching_configs = np.array([(sblconf == configuration) for sblconf in data['solver']['sublattice_configurations']])
+        output_values = np.array(data['values'], dtype=np.float)[..., matching_configs]
+        # Rewrite output values with filtered data
+        desired_data[idx]['values'] = output_values
     return desired_data
 
 
@@ -158,7 +159,7 @@ def _build_feature_matrix(prop, features, desired_data):
     # These are the variables we are linearizing over; for now should just be T
     # Note: This section will need to be rewritten when we start fitting over P or other potentials
     target_variables = v.T  #sorted(transformed_features.atoms(v.StateVariable), key=str)
-    all_variables = np.concatenate([i['conditions'][str(target_variables)] for i in desired_data], axis=-1)
+    all_variables = np.concatenate([np.atleast_1d(i['conditions'][str(target_variables)]) for i in desired_data], axis=-1)
     temp_filter = (all_variables >= 298.15)
     all_variables = all_variables[temp_filter]
 
@@ -203,9 +204,6 @@ def fit_formation_energy(comps, phase_name, configuration,
                     ("HM_FORM", (1,))
                     ]
         features = OrderedDict(features)
-    for idx, config in enumerate(configuration):
-        if not (isinstance(config, list) or isinstance(config, tuple)):
-            configuration[idx] = [config]
 
     # ENDMEMBERS
     #
@@ -257,7 +255,7 @@ def _compare_data_to_parameters(desired_data, parameters, x, y, refdata):
         x_min = min(x_min, np.asarray(data['conditions'][x]).min())
         x_max = max(x_max, np.asarray(data['conditions'][x]).max())
     if x == 'T':
-        x_min = max(300, x_min)
+        x_min = max(298.15, x_min)
         x_max = max(1000, x_max)
     x_vals = np.linspace(x_min, x_max, 100)
     fit_eq = sympy.Add(*[feature_transforms[y](key)*value for key, value in parameters.items()])
@@ -278,10 +276,13 @@ def _compare_data_to_parameters(desired_data, parameters, x, y, refdata):
             # Shift data by reference state
             # This assumes that HM data has been shifted to zero at 298.15 K
             response_data += np.array(fit_eq.subs({v.__dict__[x]: 298.15}).evalf(), dtype=np.float)
-
-        fig.gca().plot(indep_var_data,
-                       response_data,
-                       label=data.get('reference', None))
+        if len(response_data) < 10:
+            plot_func = 'scatter'
+        else:
+            plot_func = 'plot'
+        getattr(fig.gca(), plot_func)(indep_var_data,
+                                      response_data,
+                                      label=data.get('reference', None))
     fig.gca().plot(x_vals, predicted_quantities, label='This work', color='k')
     fig.gca().set_xlabel(plot_mapping.get(x, x))
     fig.gca().set_xlim(x_min, x_max)
@@ -296,7 +297,7 @@ def plot_parameters(comps, phase_name, configuration, subl_ratios,
         plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
                  ('T', 'HM'), ('T', 'HM_FORM')]
     comps = sorted(comps)
-    if sum([len(config) for config in configuration]) != len(configuration):
+    if any([isinstance(config, list) for config in configuration]):
         raise NotImplementedError('Plotting non-endmembers is not supported yet')
     for x_val, y_val in plots:
         refdata = 0
@@ -305,7 +306,7 @@ def plot_parameters(comps, phase_name, configuration, subl_ratios,
             comp_refs = {c.upper(): feature_transforms[y_val](refstate[c.upper()]) for c in comps if c.upper() != 'VA'}
             comp_refs['VA'] = 0
             for subl, ratio in zip(configuration, subl_ratios):
-                refdata = refdata + ratio * comp_refs[subl[0]]
+                refdata = refdata + ratio * comp_refs[subl]
         desired_data = _get_data(comps, phase_name, configuration, datasets, y_val)
         _compare_data_to_parameters(desired_data, parameters, x_val, y_val, refdata)
 
