@@ -105,8 +105,9 @@ def _get_data(comps, phase_name, configuration, datasets, prop):
                                    (tinydb.where('components') == comps) &
                                    (tinydb.where('solver').test(_symmetry_filter, configuration)) &
                                    (tinydb.where('phases') == [phase_name]))
-    if len(desired_data) == 0:
-        raise ValueError('No datasets for the system of interest containing {} were in \'datasets\''.format(prop))
+    #if len(desired_data) == 0:
+    #    raise ValueError('No datasets for the system of interest containing {} were in \'datasets\''.format(prop))
+
     # Filter output values to only contain data for matching sublattice configurations
     for idx, data in enumerate(desired_data):
         matching_configs = np.array([(sblconf == configuration) for sblconf in data['solver']['sublattice_configurations']])
@@ -204,46 +205,54 @@ def fit_formation_energy(comps, phase_name, configuration,
                     ("HM_FORM", (1,))
                     ]
         features = OrderedDict(features)
-
+    parameters = {}
+    for feature in features.values():
+        for coef in feature:
+            parameters[coef] = 0
     # ENDMEMBERS
     #
     # HEAT CAPACITY OF FORMATION
     desired_data = _get_data(comps, phase_name, configuration, datasets, "CPM_FORM")
-    cp_matrix = _build_feature_matrix("CPM_FORM", features["CPM_FORM"], desired_data)
-    data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
-    # Some low temperatures may have been removed; index from end of array and slice until we have same length
-    data_quantities = data_quantities[-cp_matrix.shape[0]:]
-    parameters = _fit_parameters(cp_matrix, data_quantities, features["CPM_FORM"])
+    if len(desired_data) > 0:
+        cp_matrix = _build_feature_matrix("CPM_FORM", features["CPM_FORM"], desired_data)
+        data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
+        # Some low temperatures may have been removed; index from end of array and slice until we have same length
+        data_quantities = data_quantities[-cp_matrix.shape[0]:]
+        parameters.update(_fit_parameters(cp_matrix, data_quantities, features["CPM_FORM"]))
     # ENTROPY OF FORMATION
     desired_data = _get_data(comps, phase_name, configuration, datasets, "SM_FORM")
-    sm_matrix = _build_feature_matrix("SM_FORM", features["SM_FORM"], desired_data)
-    data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
-    # Some low temperatures may have been removed; index from end of array and slice until we have same length
-    data_quantities = data_quantities[-sm_matrix.shape[0]:]
-    # Subtract out the fixed contribution (from CPM_FORM) from our SM_FORM response vector
-    temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
-    temperatures = temperatures[temperatures >= 298.15]
-    fixed_portion = [feature_transforms["SM_FORM"](i).subs({v.T: temp}).evalf()
-                     for temp in temperatures for i in features["CPM_FORM"]]
-    fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(temperatures), len(features["CPM_FORM"]))
-    fixed_portion = np.dot(fixed_portion, list(parameters.values()))
-    parameters.update(_fit_parameters(sm_matrix, data_quantities - fixed_portion, features["SM_FORM"]))
+    if len(desired_data) > 0:
+        sm_matrix = _build_feature_matrix("SM_FORM", features["SM_FORM"], desired_data)
+        data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
+        # Some low temperatures may have been removed; index from end of array and slice until we have same length
+        data_quantities = data_quantities[-sm_matrix.shape[0]:]
+        # Subtract out the fixed contribution (from CPM_FORM) from our SM_FORM response vector
+        temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
+        temperatures = temperatures[temperatures >= 298.15]
+        fixed_portion = [feature_transforms["SM_FORM"](i).subs({v.T: temp}).evalf()
+                         for temp in temperatures for i in features["CPM_FORM"]]
+        fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(temperatures), len(features["CPM_FORM"]))
+        fixed_portion = np.dot(fixed_portion, [parameters[feature] for feature in features["CPM_FORM"]])
+        parameters.update(_fit_parameters(sm_matrix, data_quantities - fixed_portion, features["SM_FORM"]))
     # ENTHALPY OF FORMATION
     desired_data = _get_data(comps, phase_name, configuration, datasets, "HM_FORM")
-    hm_matrix = _build_feature_matrix("HM_FORM", features["HM_FORM"], desired_data)
-    data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
-    # Some low temperatures may have been removed; index from end of array and slice until we have same length
-    data_quantities = data_quantities[-hm_matrix.shape[0]:]
-    # Subtract out the fixed contribution (from CPM_FORM+SM_FORM) from our HM_FORM response vector
-    temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
-    temperatures = temperatures[temperatures >= 298.15]
-    fixed_portion = [feature_transforms["HM_FORM"](i).subs({v.T: temp}).evalf()
-                     for temp in temperatures for i in features["CPM_FORM"]+features["SM_FORM"]]
-    fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(temperatures),
-                                                                    len(features["CPM_FORM"]+features["SM_FORM"]))
-    fixed_portion = np.dot(fixed_portion, list(parameters.values()))
-    parameters.update(_fit_parameters(hm_matrix, data_quantities - fixed_portion, features["HM_FORM"]))
-
+    if len(desired_data) > 0:
+        print(desired_data)
+        hm_matrix = _build_feature_matrix("HM_FORM", features["HM_FORM"], desired_data)
+        data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
+        # Some low temperatures may have been removed; index from end of array and slice until we have same length
+        data_quantities = data_quantities[-hm_matrix.shape[0]:]
+        print(hm_matrix)
+        print(data_quantities)
+        # Subtract out the fixed contribution (from CPM_FORM+SM_FORM) from our HM_FORM response vector
+        temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
+        temperatures = temperatures[temperatures >= 298.15]
+        fixed_portion = [feature_transforms["HM_FORM"](i).subs({v.T: temp}).evalf()
+                         for temp in temperatures for i in features["CPM_FORM"]+features["SM_FORM"]]
+        fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(temperatures),
+                                                                        len(features["CPM_FORM"]+features["SM_FORM"]))
+        fixed_portion = np.dot(fixed_portion, [parameters[feature] for feature in features["CPM_FORM"]+features["SM_FORM"]])
+        parameters.update(_fit_parameters(hm_matrix, data_quantities - fixed_portion, features["HM_FORM"]))
     return parameters
 
 
