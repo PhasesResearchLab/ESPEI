@@ -56,6 +56,10 @@ import sympy
 import numpy as np
 import json
 from collections import OrderedDict
+import itertools
+import operator
+import copy
+from functools import reduce
 
 
 # Mapping of energy polynomial coefficients to corresponding property coefficients
@@ -105,15 +109,25 @@ def _get_data(comps, phase_name, configuration, datasets, prop):
                                    (tinydb.where('components') == comps) &
                                    (tinydb.where('solver').test(_symmetry_filter, configuration)) &
                                    (tinydb.where('phases') == [phase_name]))
+    # This seems to be necessary because the 'values' member does not modify 'datasets'
+    # But everything else does!
+    desired_data = copy.deepcopy(desired_data)
     #if len(desired_data) == 0:
     #    raise ValueError('No datasets for the system of interest containing {} were in \'datasets\''.format(prop))
 
     # Filter output values to only contain data for matching sublattice configurations
     for idx, data in enumerate(desired_data):
         matching_configs = np.array([(sblconf == configuration) for sblconf in data['solver']['sublattice_configurations']])
-        output_values = np.array(data['values'], dtype=np.float)[..., matching_configs]
+        matching_configs = np.arange(len(data['solver']['sublattice_configurations']))[matching_configs]
         # Rewrite output values with filtered data
-        desired_data[idx]['values'] = output_values
+        desired_data[idx]['values'] = np.array(data['values'], dtype=np.float)[..., matching_configs].tolist()
+        desired_data[idx]['solver']['sublattice_configurations'] = np.array(data['solver']['sublattice_configurations'],
+                                                                            dtype=np.object)[matching_configs].tolist()
+        try:
+            desired_data[idx]['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'],
+                                                                             dtype=np.object)[matching_configs].tolist()
+        except KeyError:
+            pass
     return desired_data
 
 
@@ -155,17 +169,33 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
     return OrderedDict(zip(feature_tuple, results[np.argmin(model_scores), :]))
 
 
+def _get_samples(desired_data):
+    all_samples = []
+    for data in desired_data:
+        temperatures = np.atleast_1d(data['conditions']['T'])
+        site_fractions = data['solver'].get('sublattice_occupancies', [[1]])
+        temp_filter = (temperatures >= 298.15)
+        temperatures = temperatures[temp_filter]
+        site_fraction_product = [reduce(operator.mul, list(itertools.chain(*[np.atleast_1d(f) for f in fracs])), 1)
+                                 for fracs in site_fractions]
+        # TODO: Subtle sorting bug here, if the interactions aren't already in sorted order...
+        # TODO: This also looks like it won't work if we add more than one interaction here
+        interaction_product = [f[0] - f[1] for fracs in site_fractions for f in fracs
+                               if isinstance(f, list) and len(f) == 2]
+        if len(interaction_product) == 0:
+            interaction_product = [0]
+        comp_features = zip(site_fraction_product, interaction_product)
+        all_samples.extend(list(itertools.product(temperatures, comp_features)))
+    return all_samples
+
+
 def _build_feature_matrix(prop, features, desired_data):
     transformed_features = sympy.Matrix([feature_transforms[prop](i) for i in features])
-    # These are the variables we are linearizing over; for now should just be T
-    # Note: This section will need to be rewritten when we start fitting over P or other potentials
-    target_variables = v.T  #sorted(transformed_features.atoms(v.StateVariable), key=str)
-    all_variables = np.concatenate([np.atleast_1d(i['conditions'][str(target_variables)]) for i in desired_data], axis=-1)
-    temp_filter = (all_variables >= 298.15)
-    all_variables = all_variables[temp_filter]
-
-    feature_matrix = np.empty((len(all_variables), len(transformed_features)), dtype=np.float)
-    feature_matrix[:, :] = [transformed_features.subs({v.T: i}).evalf() for i in all_variables]
+    all_samples = _get_samples(desired_data)
+    feature_matrix = np.empty((len(all_samples), len(transformed_features)), dtype=np.float)
+    feature_matrix[:, :] = [transformed_features.subs({v.T: temp, 'YS': compf[0],
+                                                       'Z': compf[1]}).evalf()
+                            for temp, compf in all_samples]
     return feature_matrix
 
 
@@ -205,6 +235,15 @@ def fit_formation_energy(comps, phase_name, configuration,
                     ("HM_FORM", (1,))
                     ]
         features = OrderedDict(features)
+    if any([isinstance(conf, list) for conf in configuration]):
+        # Product of all nonzero site fractions in all sublattices
+        YS = sympy.Symbol('YS')
+        # Product of all binary interaction terms
+        Z = sympy.Symbol('Z')
+        redlich_kister_features = (YS, YS*Z, YS*(Z**2), YS*(Z**3))
+        for feature in features.keys():
+            all_features = list(itertools.product(redlich_kister_features, features[feature]))
+            features[feature] = [i[0]*i[1] for i in all_features]
     parameters = {}
     for feature in features.values():
         for coef in feature:
@@ -216,7 +255,6 @@ def fit_formation_energy(comps, phase_name, configuration,
     if len(desired_data) > 0:
         cp_matrix = _build_feature_matrix("CPM_FORM", features["CPM_FORM"], desired_data)
         data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
-        # Some low temperatures may have been removed; index from end of array and slice until we have same length
         data_quantities = data_quantities[-cp_matrix.shape[0]:]
         parameters.update(_fit_parameters(cp_matrix, data_quantities, features["CPM_FORM"]))
     # ENTROPY OF FORMATION
@@ -227,11 +265,11 @@ def fit_formation_energy(comps, phase_name, configuration,
         # Some low temperatures may have been removed; index from end of array and slice until we have same length
         data_quantities = data_quantities[-sm_matrix.shape[0]:]
         # Subtract out the fixed contribution (from CPM_FORM) from our SM_FORM response vector
-        temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
-        temperatures = temperatures[temperatures >= 298.15]
-        fixed_portion = [feature_transforms["SM_FORM"](i).subs({v.T: temp}).evalf()
-                         for temp in temperatures for i in features["CPM_FORM"]]
-        fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(temperatures), len(features["CPM_FORM"]))
+        all_samples = _get_samples(desired_data)
+        fixed_portion = [feature_transforms["SM_FORM"](i).subs({v.T: temp, 'YS': compf[0],
+                                                                'Z': compf[1]}).evalf()
+                         for temp, compf in all_samples for i in features["CPM_FORM"]]
+        fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(all_samples), len(features["CPM_FORM"]))
         fixed_portion = np.dot(fixed_portion, [parameters[feature] for feature in features["CPM_FORM"]])
         parameters.update(_fit_parameters(sm_matrix, data_quantities - fixed_portion, features["SM_FORM"]))
     # ENTHALPY OF FORMATION
@@ -245,11 +283,11 @@ def fit_formation_energy(comps, phase_name, configuration,
         print(hm_matrix)
         print(data_quantities)
         # Subtract out the fixed contribution (from CPM_FORM+SM_FORM) from our HM_FORM response vector
-        temperatures = np.concatenate([np.asarray(i['conditions']['T']).flatten() for i in desired_data], axis=-1)
-        temperatures = temperatures[temperatures >= 298.15]
-        fixed_portion = [feature_transforms["HM_FORM"](i).subs({v.T: temp}).evalf()
-                         for temp in temperatures for i in features["CPM_FORM"]+features["SM_FORM"]]
-        fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(temperatures),
+        all_samples = _get_samples(desired_data)
+        fixed_portion = [feature_transforms["HM_FORM"](i).subs({v.T: temp, 'YS': compf[0],
+                                                                'Z': compf[1]}).evalf()
+                         for temp, compf in all_samples for i in features["CPM_FORM"]+features["SM_FORM"]]
+        fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(all_samples),
                                                                         len(features["CPM_FORM"]+features["SM_FORM"]))
         fixed_portion = np.dot(fixed_portion, [parameters[feature] for feature in features["CPM_FORM"]+features["SM_FORM"]])
         parameters.update(_fit_parameters(hm_matrix, data_quantities - fixed_portion, features["HM_FORM"]))
