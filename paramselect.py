@@ -115,12 +115,12 @@ def _get_data(comps, phase_name, configuration, datasets, prop):
     #if len(desired_data) == 0:
     #    raise ValueError('No datasets for the system of interest containing {} were in \'datasets\''.format(prop))
 
-    # Filter output values to only contain data for matching sublattice configurations
     for idx, data in enumerate(desired_data):
+        # Filter output values to only contain data for matching sublattice configurations
         matching_configs = np.array([(sblconf == configuration) for sblconf in data['solver']['sublattice_configurations']])
         matching_configs = np.arange(len(data['solver']['sublattice_configurations']))[matching_configs]
         # Rewrite output values with filtered data
-        desired_data[idx]['values'] = np.array(data['values'], dtype=np.float)[..., matching_configs].tolist()
+        desired_data[idx]['values'] = np.array(data['values'], dtype=np.float)[..., matching_configs]
         desired_data[idx]['solver']['sublattice_configurations'] = np.array(data['solver']['sublattice_configurations'],
                                                                             dtype=np.object)[matching_configs].tolist()
         try:
@@ -128,6 +128,11 @@ def _get_data(comps, phase_name, configuration, datasets, prop):
                                                                              dtype=np.object)[matching_configs].tolist()
         except KeyError:
             pass
+        # Filter out temperatures below 298.15 K (for now, until better refstates exist)
+        temp_filter = np.atleast_1d(data['conditions']['T']) >= 298.15
+        desired_data[idx]['conditions']['T'] = np.atleast_1d(data['conditions']['T'])[temp_filter]
+        # Don't use data['values'] because we rewrote it above; not sure what 'data' references now
+        desired_data[idx]['values'] = desired_data[idx]['values'][..., temp_filter, :]
     return desired_data
 
 
@@ -174,8 +179,6 @@ def _get_samples(desired_data):
     for data in desired_data:
         temperatures = np.atleast_1d(data['conditions']['T'])
         site_fractions = data['solver'].get('sublattice_occupancies', [[1]])
-        temp_filter = (temperatures >= 298.15)
-        temperatures = temperatures[temp_filter]
         site_fraction_product = [reduce(operator.mul, list(itertools.chain(*[np.atleast_1d(f) for f in fracs])), 1)
                                  for fracs in site_fractions]
         # TODO: Subtle sorting bug here, if the interactions aren't already in sorted order...
@@ -255,15 +258,12 @@ def fit_formation_energy(comps, phase_name, configuration,
     if len(desired_data) > 0:
         cp_matrix = _build_feature_matrix("CPM_FORM", features["CPM_FORM"], desired_data)
         data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
-        data_quantities = data_quantities[-cp_matrix.shape[0]:]
         parameters.update(_fit_parameters(cp_matrix, data_quantities, features["CPM_FORM"]))
     # ENTROPY OF FORMATION
     desired_data = _get_data(comps, phase_name, configuration, datasets, "SM_FORM")
     if len(desired_data) > 0:
         sm_matrix = _build_feature_matrix("SM_FORM", features["SM_FORM"], desired_data)
         data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
-        # Some low temperatures may have been removed; index from end of array and slice until we have same length
-        data_quantities = data_quantities[-sm_matrix.shape[0]:]
         # Subtract out the fixed contribution (from CPM_FORM) from our SM_FORM response vector
         all_samples = _get_samples(desired_data)
         fixed_portion = [feature_transforms["SM_FORM"](i).subs({v.T: temp, 'YS': compf[0],
@@ -278,8 +278,6 @@ def fit_formation_energy(comps, phase_name, configuration,
         print(desired_data)
         hm_matrix = _build_feature_matrix("HM_FORM", features["HM_FORM"], desired_data)
         data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
-        # Some low temperatures may have been removed; index from end of array and slice until we have same length
-        data_quantities = data_quantities[-hm_matrix.shape[0]:]
         print(hm_matrix)
         print(data_quantities)
         # Subtract out the fixed contribution (from CPM_FORM+SM_FORM) from our HM_FORM response vector
