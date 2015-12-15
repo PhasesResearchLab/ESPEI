@@ -355,8 +355,8 @@ def plot_parameters(comps, phase_name, configuration, subl_ratios,
         desired_data = _get_data(comps, phase_name, configuration, datasets, y_val)
         _compare_data_to_parameters(desired_data, parameters, x_val, y_val, refdata)
 
+
 def _symmetrize(configurations, symmetry):
-    symmetrized = None
     if symmetry == 'B2':
         symmetrized = sorted({tuple(sorted(config[0:2])+list(config[2:])) for config in configurations})
     else:
@@ -404,6 +404,7 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
             refdata = refdata + ratio * sympy.Symbol('GHSER'+subl)
         fit_eq = sympy.Add(*[key*value for key, value in parameters.items()])
         fit_eq += refdata
+        dbf.add_parameter('G', phase_name, list(endmember), 0, fit_eq)
         print(fit_eq)
     # Now fit all binary interactions
     bin_interactions = list(itertools.combinations(endmembers, 2))
@@ -419,6 +420,17 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
     bin_interactions = _symmetrize(transformed_bin_interactions, symmetry)
     print('{0} distinct binary interactions'.format(len(bin_interactions)))
     print(bin_interactions)
+    for interaction in bin_interactions:
+        ixx = []
+        for i in interaction:
+            if isinstance(i, tuple):
+                ixx.append(list(i))
+            else:
+                ixx.append(i)
+        print('INTERACTION: '+str(interaction))
+        parameters = fit_formation_energy(sorted(dbf.elements), phase_name, ixx, datasets)
+        print(parameters)
+        pass
     # Now fit ternary interactions
     # Generate parameter file
     pass
