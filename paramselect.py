@@ -48,7 +48,7 @@ with uninformative priors. With bias of AIC toward complex models, I think doing
 with ridge regression is advisible.
 """
 import pycalphad.variables as v
-from pycalphad import calculate, Model
+from pycalphad import calculate, Database, Model
 from pycalphad.refstates import SGTE91
 from sklearn.linear_model import LinearRegression
 import tinydb
@@ -105,6 +105,7 @@ def _symmetry_filter(x, config):
 
 
 def _get_data(comps, phase_name, configuration, datasets, prop):
+    configuration = list(configuration)
     desired_data = datasets.search((tinydb.where('output') == prop) &
                                    (tinydb.where('components') == comps) &
                                    (tinydb.where('solver').test(_symmetry_filter, configuration)) &
@@ -275,11 +276,8 @@ def fit_formation_energy(comps, phase_name, configuration,
     # ENTHALPY OF FORMATION
     desired_data = _get_data(comps, phase_name, configuration, datasets, "HM_FORM")
     if len(desired_data) > 0:
-        print(desired_data)
         hm_matrix = _build_feature_matrix("HM_FORM", features["HM_FORM"], desired_data)
         data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
-        print(hm_matrix)
-        print(data_quantities)
         # Subtract out the fixed contribution (from CPM_FORM+SM_FORM) from our HM_FORM response vector
         all_samples = _get_samples(desired_data)
         fixed_portion = [feature_transforms["HM_FORM"](i).subs({v.T: temp, 'YS': compf[0],
@@ -294,28 +292,36 @@ def fit_formation_energy(comps, phase_name, configuration,
 
 def _compare_data_to_parameters(desired_data, parameters, x, y, refdata):
     import matplotlib.pyplot as plt
-    # Bounds for the prediction from the fit
-    x_min, x_max = 0, 1
-    for data in desired_data:
-        x_min = min(x_min, np.asarray(data['conditions'][x]).min())
-        x_max = max(x_max, np.asarray(data['conditions'][x]).max())
-    if x == 'T':
-        x_min = max(298.15, x_min)
-        x_max = max(1000, x_max)
-    x_vals = np.linspace(x_min, x_max, 100)
     fit_eq = sympy.Add(*[feature_transforms[y](key)*value for key, value in parameters.items()])
     fit_eq += refdata
-    predicted_quantities = [fit_eq.subs({v.__dict__[x]: x_val}).evalf() for x_val in x_vals]
+    all_samples = np.array(_get_samples(desired_data), dtype=np.object)
+    temperatures = np.array([i[0] for i in all_samples], dtype=np.float)
+    interactions = np.array([i[1][1] for i in all_samples], dtype=np.float)
+    temp_min = temperatures.min()
+    temp_max = temperatures.max()
+    if (temp_min == temp_max) and (x == 'Z'):
+        x_vals = np.linspace(0, 1, 100)
+        # TODO: Not the correct 'YS' value if we have more than one interaction
+        predicted_quantities = [fit_eq.subs({v.T: temp_min, 'YS': x_val * (1 - x_val),
+                                             'Z': x_val - (1 - x_val)}).evalf() for x_val in x_vals]
+    elif x == 'T':
+        x_vals = np.linspace(temp_min, temp_max, 100)
+        predicted_quantities = [fit_eq.subs({v.__dict__[x]: x_val}).evalf() for x_val in x_vals]
+    else:
+        raise ValueError('No support for plotting multiple temperatures on a composition plot yet: {}-{}'.format(x, y))
 
     fig = plt.figure(figsize=(9, 9))
+    fig.gca().plot(x_vals, predicted_quantities, label='This work', color='k')
+    fig.gca().set_xlim((x_vals.min()), (x_vals.max()))
+    fig.gca().set_xlabel(plot_mapping.get(x, x))
+    fig.gca().set_ylabel(plot_mapping.get(y, y))
     for data in desired_data:
-        indep_var_data = np.array(data['conditions'][x], dtype=np.float).flatten()
+        indep_var_data = None
+        if x == 'T' or x == 'P':
+            indep_var_data = np.array(data['conditions'][x], dtype=np.float).flatten()
+        elif x == 'Z':
+            indep_var_data = (interactions+1)/2
         response_data = np.array(data['values'], dtype=np.float).flatten()
-        if x == 'T':
-            # Most reference states will misbehave below 298.15 K
-            keep_filter = indep_var_data >= 298.15
-            indep_var_data = indep_var_data[keep_filter]
-            response_data = response_data[keep_filter]
 
         if (data['output'] == 'HM') or (data['output'] == 'GM'):
             # Shift data by reference state
@@ -328,10 +334,6 @@ def _compare_data_to_parameters(desired_data, parameters, x, y, refdata):
         getattr(fig.gca(), plot_func)(indep_var_data,
                                       response_data,
                                       label=data.get('reference', None))
-    fig.gca().plot(x_vals, predicted_quantities, label='This work', color='k')
-    fig.gca().set_xlabel(plot_mapping.get(x, x))
-    fig.gca().set_xlim(x_min, x_max)
-    fig.gca().set_ylabel(plot_mapping.get(y, y))
     fig.gca().legend(loc='best')
     fig.canvas.draw()
 
@@ -340,10 +342,8 @@ def plot_parameters(comps, phase_name, configuration, subl_ratios,
                     datasets, parameters, plots=None, refstate=SGTE91):
     if plots is None:
         plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
-                 ('T', 'HM'), ('T', 'HM_FORM')]
+                 ('T', 'HM'), ('T', 'HM_FORM'), ('Z', 'HM'), ('Z', 'HM_FORM')]
     comps = sorted(comps)
-    if any([isinstance(config, list) for config in configuration]):
-        raise NotImplementedError('Plotting non-endmembers is not supported yet')
     for x_val, y_val in plots:
         refdata = 0
         if '_FORM' not in y_val:
@@ -355,8 +355,16 @@ def plot_parameters(comps, phase_name, configuration, subl_ratios,
         desired_data = _get_data(comps, phase_name, configuration, datasets, y_val)
         _compare_data_to_parameters(desired_data, parameters, x_val, y_val, refdata)
 
+def _symmetrize(configurations, symmetry):
+    symmetrized = None
+    if symmetry == 'B2':
+        symmetrized = sorted({tuple(sorted(config[0:2])+list(config[2:])) for config in configurations})
+    else:
+        symmetrized = sorted(configurations)
+    return symmetrized
 
-def generate_parameter_file(phase_name, subl_model, datasets):
+
+def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datasets, refstate=SGTE91):
     """
     Generate an initial CALPHAD model for a given phase and
     sublattice model.
@@ -365,13 +373,52 @@ def generate_parameter_file(phase_name, subl_model, datasets):
     ==========
     phase_name : str
         Name of the phase.
+    symmetry : str or None
+        Sublattice model symmetry.
     subl_model : list of tuple
         Sublattice model for the phase of interest.
+    site_ratios : list of float
+        Number of sites in each sublattice, normalized to one atom.
     datasets : tinydb of datasets
         All datasets to consider for the calculation.
     """
+    dbf = Database()
+    dbf.elements = {c.upper() for subl in subl_model for c in subl}
+    dbf.add_phase(phase_name, [], site_ratios)
+    dbf.add_phase_constituents(phase_name, subl_model)
+    # Write reference state to Database
+    comp_refs = {c.upper(): refstate[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
+    comp_refs['VA'] = 0
+    dbf.symbols.update({'GHSER'+c.upper(): data for c, data in comp_refs.items()})
     # First fit endmembers
+    all_em_count = len(list(itertools.product(*subl_model)))
+    endmembers = _symmetrize(itertools.product(*subl_model), symmetry)
+    print('{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
+    for endmember in endmembers:
+        print('ENDMEMBER: '+str(endmember))
+        parameters = fit_formation_energy(sorted(dbf.elements), phase_name, endmember, datasets)
+        refdata = 0
+        for subl, ratio in zip(endmember, site_ratios):
+            if subl == 'VA':
+                continue
+            refdata = refdata + ratio * sympy.Symbol('GHSER'+subl)
+        fit_eq = sympy.Add(*[key*value for key, value in parameters.items()])
+        fit_eq += refdata
+        print(fit_eq)
     # Now fit all binary interactions
+    bin_interactions = list(itertools.combinations(endmembers, 2))
+    transformed_bin_interactions = []
+    for first_endmember, second_endmember in bin_interactions:
+        interaction = []
+        for first_occupant, second_occupant in zip(first_endmember, second_endmember):
+            if first_occupant == second_occupant:
+                interaction.append(first_occupant)
+            else:
+                interaction.append(tuple(sorted([first_occupant, second_occupant])))
+        transformed_bin_interactions.append(interaction)
+    bin_interactions = _symmetrize(transformed_bin_interactions, symmetry)
+    print('{0} distinct binary interactions'.format(len(bin_interactions)))
+    print(bin_interactions)
     # Now fit ternary interactions
     # Generate parameter file
     pass
