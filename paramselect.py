@@ -203,8 +203,18 @@ def _build_feature_matrix(prop, features, desired_data):
     return feature_matrix
 
 
+def _endmembers_from_interaction(configuration):
+    config = []
+    for c in configuration:
+        if isinstance(c, list):
+            config.append(c)
+        else:
+            config.append([c])
+    return list(itertools.product(*[tuple(c) for c in config]))
+
+
 def fit_formation_energy(comps, phase_name, configuration,
-                         datasets, features=None):
+                         datasets, features=None, endmembers=None):
     """
     Find suitable linear model parameters for the given phase.
     We do this by successively fitting heat capacities, entropies and
@@ -228,6 +238,8 @@ def fit_formation_energy(comps, phase_name, configuration,
         Maps "property" to a list of features for the linear model.
         These will be transformed from "GM" coefficients
         e.g., {"CPM_FORM": (v.T*sympy.log(v.T), v.T**2, v.T**-1, v.T**3)}
+    endmembers : dict (optional)
+        Maps endmember tuple to its enthalpy of formation
 
     Returns
     =======
@@ -248,12 +260,15 @@ def fit_formation_energy(comps, phase_name, configuration,
         for feature in features.keys():
             all_features = list(itertools.product(redlich_kister_features, features[feature]))
             features[feature] = [i[0]*i[1] for i in all_features]
+        print('ENDMEMBERS FROM INTERACTION: '+str(_endmembers_from_interaction(configuration)))
+        if endmembers is None:
+            raise ValueError('Endmember dictionary must be specified to compute an interaction parameter')
+
     parameters = {}
     for feature in features.values():
         for coef in feature:
             parameters[coef] = 0
-    # ENDMEMBERS
-    #
+
     # HEAT CAPACITY OF FORMATION
     desired_data = _get_data(comps, phase_name, configuration, datasets, "CPM_FORM")
     if len(desired_data) > 0:
@@ -275,6 +290,11 @@ def fit_formation_energy(comps, phase_name, configuration,
         parameters.update(_fit_parameters(sm_matrix, data_quantities - fixed_portion, features["SM_FORM"]))
     # ENTHALPY OF FORMATION
     desired_data = _get_data(comps, phase_name, configuration, datasets, "HM_FORM")
+    if endmembers is not None:
+        for dataset in desired_data:
+            for occupancy in dataset['solver']['sublattice_occupancies']:
+                multiplier = reduce(operator.mul, _endmembers_from_interaction(occupancy))
+                print('MULTIPLIERS FROM INTERACTION: '+str(multiplier))
     if len(desired_data) > 0:
         hm_matrix = _build_feature_matrix("HM_FORM", features["HM_FORM"], desired_data)
         data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
@@ -364,6 +384,19 @@ def _symmetrize(configurations, symmetry):
     return symmetrized
 
 
+def _generate_symmetric_group(configuration, symmetry):
+    first_configuration = copy.deepcopy(configuration)
+    if symmetry == 'B2':
+        desymmetrized = [first_configuration]
+        new_configuration = tuple(np.roll(configuration[0:2], 1).tolist() + list(configuration[2:]))
+        while new_configuration != first_configuration:
+            desymmetrized.append(new_configuration)
+            new_configuration = tuple(np.roll(new_configuration[0:2], 1).tolist() + list(new_configuration[2:]))
+    else:
+        desymmetrized = [configuration]
+    return desymmetrized
+
+
 def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datasets, refstate=SGTE91):
     """
     Generate an initial CALPHAD model for a given phase and
@@ -393,6 +426,7 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
     # First fit endmembers
     all_em_count = len(list(itertools.product(*subl_model)))
     endmembers = _symmetrize(itertools.product(*subl_model), symmetry)
+    em_dict = {}
     print('{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
     for endmember in endmembers:
         print('ENDMEMBER: '+str(endmember))
@@ -404,8 +438,10 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
             refdata = refdata + ratio * sympy.Symbol('GHSER'+subl)
         fit_eq = sympy.Add(*[key*value for key, value in parameters.items()])
         fit_eq += refdata
-        dbf.add_parameter('G', phase_name, list(endmember), 0, fit_eq)
-        print(fit_eq)
+        symmetric_endmembers = _generate_symmetric_group(endmember, symmetry)
+        for em in symmetric_endmembers:
+            em_dict[em] = fit_eq.subs(dbf.symbols)
+            dbf.add_parameter('G', phase_name, list(em), 0, fit_eq)
     # Now fit all binary interactions
     bin_interactions = list(itertools.combinations(endmembers, 2))
     transformed_bin_interactions = []
@@ -419,7 +455,6 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
         transformed_bin_interactions.append(interaction)
     bin_interactions = _symmetrize(transformed_bin_interactions, symmetry)
     print('{0} distinct binary interactions'.format(len(bin_interactions)))
-    print(bin_interactions)
     for interaction in bin_interactions:
         ixx = []
         for i in interaction:
@@ -428,8 +463,7 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
             else:
                 ixx.append(i)
         print('INTERACTION: '+str(interaction))
-        parameters = fit_formation_energy(sorted(dbf.elements), phase_name, ixx, datasets)
-        print(parameters)
+        parameters = fit_formation_energy(sorted(dbf.elements), phase_name, ixx, datasets, endmembers=em_dict)
         pass
     # Now fit ternary interactions
     # Generate parameter file
