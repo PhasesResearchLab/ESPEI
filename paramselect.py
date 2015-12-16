@@ -399,20 +399,48 @@ def plot_parameters(comps, phase_name, configuration, subl_ratios,
 
 def _symmetrize(configurations, symmetry):
     if symmetry == 'B2':
-        symmetrized = sorted({tuple(sorted(config[0:2])+list(config[2:])) for config in configurations})
+        if len(configurations[0]) == 3:
+            symmetrized = sorted({tuple(sorted(config[0:2])+list(config[2:])) for config in configurations})
+        else:
+            raise ValueError('Symmetry operation unsupported for {} sublattices'.format(len(configurations[0])))
     else:
         symmetrized = sorted(configurations)
     return symmetrized
+
+
+def _list_to_tuple(x):
+    def _tuplify(y):
+        if isinstance(y, list) or isinstance(y, tuple):
+            return tuple(y)
+        else:
+            return y
+    return tuple(map(_tuplify, x))
+
+
+def _tuple_to_list(x):
+    def _listify(y):
+        if isinstance(y, list) or isinstance(y, tuple):
+            return list(y)
+        else:
+            return y
+    return list(map(_listify, x))
 
 
 def _generate_symmetric_group(configuration, symmetry):
     first_configuration = copy.deepcopy(configuration)
     if symmetry == 'B2':
         desymmetrized = [first_configuration]
-        new_configuration = tuple(np.roll(configuration[0:2], 1).tolist() + list(configuration[2:]))
+        new_configuration = tuple(np.roll(np.array(configuration[0:2], dtype=np.object), 1, axis=0).tolist() + list(configuration[2:]))
+        new_configuration = _list_to_tuple(new_configuration)
+        safe_break = 0
         while new_configuration != first_configuration:
             desymmetrized.append(new_configuration)
-            new_configuration = tuple(np.roll(new_configuration[0:2], 1).tolist() + list(new_configuration[2:]))
+            new_configuration = tuple(np.roll(np.array(new_configuration[0:2], dtype=np.object), 1, axis=0).tolist() + list(new_configuration[2:]))
+            new_configuration = _list_to_tuple(new_configuration)
+            safe_break += 1
+            if safe_break > 10:
+                print('SAFE BREAK')
+                raise ValueError
     else:
         desymmetrized = [configuration]
     return desymmetrized
@@ -436,7 +464,6 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
     datasets : tinydb of datasets
         All datasets to consider for the calculation.
     """
-    return_dict = {}
     dbf = Database()
     dbf.elements = {c.upper() for subl in subl_model for c in subl}
     dbf.add_phase(phase_name, [], site_ratios)
@@ -486,8 +513,23 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
                 ixx.append(i)
         print('INTERACTION: '+str(interaction))
         parameters = fit_formation_energy(sorted(dbf.elements), phase_name, ixx, datasets, endmembers=em_dict)
-        return_dict[interaction] = parameters
-        print(parameters)
+        # Organize parameters by polynomial degree
+        degree_polys = np.zeros(10, dtype=np.object)
+        for degree in reversed(range(10)):
+            check_symbol = sympy.Symbol('YS') * sympy.Symbol('Z')**degree
+            keys_to_remove = []
+            for key, value in parameters.items():
+                if key.has(check_symbol):
+                    degree_polys[degree] += parameters[key] * (key / check_symbol)
+                    keys_to_remove.append(key)
+            for key in keys_to_remove:
+                parameters.pop(key)
+        print(degree_polys)
+        # Insert into database
+        symmetric_interactions = _generate_symmetric_group(interaction, symmetry)
+        for degree in np.arange(degree_polys.shape[0]):
+            if degree_polys[degree] != 0:
+                for syminter in symmetric_interactions:
+                    dbf.add_parameter('L', phase_name, list(syminter), degree, degree_polys[degree])
     # Now fit ternary interactions
-    # Generate parameter file
-    return return_dict
+    return dbf
