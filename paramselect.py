@@ -213,6 +213,27 @@ def _endmembers_from_interaction(configuration):
     return list(itertools.product(*[tuple(c) for c in config]))
 
 
+def _format_response_data(desired_data, feature_transform, endmembers):
+    "Remove lattice stability contribution from data which are properties of formation."
+    total_response = []
+    multipliers = [0]
+    for dataset in desired_data:
+        stability = 0
+        if endmembers is not None:
+            for occupancy, config in zip(dataset['solver']['sublattice_occupancies'],
+                                         dataset['solver']['sublattice_configurations']):
+                multipliers = [reduce(operator.mul, em, 1) for em in _endmembers_from_interaction(occupancy)]
+                print('MULTIPLIERS FROM INTERACTION: '+str(multipliers))
+                stabilities = [endmembers[em] for em in _endmembers_from_interaction(config)]
+                stability = sympy.Add(*[feature_transform(a*b) for a, b in zip(multipliers, stabilities)])
+        values = np.asarray(dataset['values'], dtype=np.object)
+        # lattice stability plus ideal mixing
+        # for interaction parameters we're trying to fit excess mixing
+        values[..., :] -= (stability + 8.3145*v.T*(np.sum([np.log(i**i) for i in multipliers])))
+        total_response.append(values.flatten())
+    return total_response
+
+
 def fit_formation_energy(comps, phase_name, configuration,
                          datasets, features=None, endmembers=None):
     """
@@ -290,14 +311,10 @@ def fit_formation_energy(comps, phase_name, configuration,
         parameters.update(_fit_parameters(sm_matrix, data_quantities - fixed_portion, features["SM_FORM"]))
     # ENTHALPY OF FORMATION
     desired_data = _get_data(comps, phase_name, configuration, datasets, "HM_FORM")
-    if endmembers is not None:
-        for dataset in desired_data:
-            for occupancy in dataset['solver']['sublattice_occupancies']:
-                multiplier = reduce(operator.mul, _endmembers_from_interaction(occupancy))
-                print('MULTIPLIERS FROM INTERACTION: '+str(multiplier))
     if len(desired_data) > 0:
         hm_matrix = _build_feature_matrix("HM_FORM", features["HM_FORM"], desired_data)
-        data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
+        data_quantities = np.concatenate(_format_response_data(desired_data,
+                                                               feature_transforms["HM_FORM"], endmembers), axis=-1)
         # Subtract out the fixed contribution (from CPM_FORM+SM_FORM) from our HM_FORM response vector
         all_samples = _get_samples(desired_data)
         fixed_portion = [feature_transforms["HM_FORM"](i).subs({v.T: temp, 'YS': compf[0],
@@ -306,6 +323,10 @@ def fit_formation_energy(comps, phase_name, configuration,
         fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(all_samples),
                                                                         len(features["CPM_FORM"]+features["SM_FORM"]))
         fixed_portion = np.dot(fixed_portion, [parameters[feature] for feature in features["CPM_FORM"]+features["SM_FORM"]])
+        if endmembers is not None:
+            # Evaluate the response minus the lattice stability
+            data_quantities = [i.subs({v.T: ixx[0]}).evalf() for i, ixx in zip(data_quantities, all_samples)]
+        data_quantities = np.asarray(data_quantities, dtype=np.float)
         parameters.update(_fit_parameters(hm_matrix, data_quantities - fixed_portion, features["HM_FORM"]))
     return parameters
 
@@ -415,6 +436,7 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
     datasets : tinydb of datasets
         All datasets to consider for the calculation.
     """
+    return_dict = {}
     dbf = Database()
     dbf.elements = {c.upper() for subl in subl_model for c in subl}
     dbf.add_phase(phase_name, [], site_ratios)
@@ -464,7 +486,8 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
                 ixx.append(i)
         print('INTERACTION: '+str(interaction))
         parameters = fit_formation_energy(sorted(dbf.elements), phase_name, ixx, datasets, endmembers=em_dict)
-        pass
+        return_dict[interaction] = parameters
+        print(parameters)
     # Now fit ternary interactions
     # Generate parameter file
-    pass
+    return return_dict
