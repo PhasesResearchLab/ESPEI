@@ -229,7 +229,8 @@ def _format_response_data(desired_data, feature_transform, endmembers):
         values = np.asarray(dataset['values'], dtype=np.object)
         # lattice stability plus ideal mixing
         # for interaction parameters we're trying to fit excess mixing
-        values[..., :] -= (stability + 8.3145*v.T*(np.sum([np.log(i**i) for i in multipliers])))
+        # TODO: + 8.3145*v.T*(np.sum([np.log(i**i) for i in multipliers]
+        values[..., :] -= stability
         total_response.append(values.flatten())
     return total_response
 
@@ -331,43 +332,61 @@ def fit_formation_energy(comps, phase_name, configuration,
     return parameters
 
 
-def _compare_data_to_parameters(desired_data, parameters, x, y, refdata):
-    import matplotlib.pyplot as plt
-    fit_eq = sympy.Add(*[feature_transforms[y](key)*value for key, value in parameters.items()])
-    fit_eq += refdata
-    all_samples = np.array(_get_samples(desired_data), dtype=np.object)
-    temperatures = np.array([i[0] for i in all_samples], dtype=np.float)
-    interactions = np.array([i[1][1] for i in all_samples], dtype=np.float)
-    temp_min = temperatures.min()
-    temp_max = temperatures.max()
-    if (temp_min == temp_max) and (x == 'Z'):
-        x_vals = np.linspace(0, 1, 100)
-        # TODO: Not the correct 'YS' value if we have more than one interaction
-        predicted_quantities = [fit_eq.subs({v.T: temp_min, 'YS': x_val * (1 - x_val),
-                                             'Z': x_val - (1 - x_val)}).evalf() for x_val in x_vals]
-    elif x == 'T':
-        x_vals = np.linspace(temp_min, temp_max, 100)
-        predicted_quantities = [fit_eq.subs({v.__dict__[x]: x_val}).evalf() for x_val in x_vals]
-    else:
-        raise ValueError('No support for plotting multiple temperatures on a composition plot yet: {}-{}'.format(x, y))
+def _translate_endmember_to_array(endmember, variables):
+    site_fractions = sorted(variables, key=str)
+    frac_array = np.zeros(len(site_fractions))
+    for idx, component in enumerate(endmember):
+        frac_array[site_fractions.index(v.SiteFraction(site_fractions[0].phase_name, idx, component))] = 1
+    return frac_array
 
+
+def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, configuration, x, y):
+    import matplotlib.pyplot as plt
+    all_samples = np.array(_get_samples(desired_data), dtype=np.object)
+    interactions = np.array([i[1][1] for i in all_samples], dtype=np.float)
+    endpoints = _endmembers_from_interaction(configuration)
     fig = plt.figure(figsize=(9, 9))
-    fig.gca().plot(x_vals, predicted_quantities, label='This work', color='k')
-    fig.gca().set_xlim((x_vals.min()), (x_vals.max()))
-    fig.gca().set_xlabel(plot_mapping.get(x, x))
-    fig.gca().set_ylabel(plot_mapping.get(y, y))
+    if '_FORM' in y:
+        # We were passed a Model object with zeroed out reference states
+        yattr = y[:-5]
+    else:
+        yattr = y
+    if len(endpoints) == 1:
+        # This is an endmember so we can just compute T-dependent stuff
+        temperatures = np.array([i[0] for i in all_samples], dtype=np.float)
+        temperatures = np.linspace(temperatures.min(), temperatures.max(), num=100)
+        endmember = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))[None, None]
+        predicted_quantities = calculate(dbf, comps, [phase_name], output=yattr,
+                                         T=temperatures, P=101325, points=endmember, model=mod, mode='numpy')
+        fig.gca().plot(temperatures, predicted_quantities[yattr].values.flatten(),
+                       label='This work', color='k')
+        fig.gca().set_xlabel(plot_mapping.get(x, x))
+        fig.gca().set_ylabel(plot_mapping.get(y, y))
+    elif len(endpoints) == 2:
+        # Binary interaction parameter
+        first_endpoint = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))
+        second_endpoint = _translate_endmember_to_array(endpoints[1], mod.ast.atoms(v.SiteFraction))
+        point_matrix = np.linspace(0, 1, num=100)[None].T * second_endpoint + \
+            (1 - np.linspace(0, 1, num=100))[None].T * first_endpoint
+        # TODO: Real temperature support
+        point_matrix = point_matrix[None, None]
+        predicted_quantities = calculate(dbf, comps, [phase_name], output=yattr,
+                                         T=300, P=101325, points=point_matrix, model=mod, mode='numpy')
+        fig.gca().plot(np.linspace(0, 1, num=100), predicted_quantities[yattr].values.flatten(),
+                       label='This work', color='k')
+        fig.gca().set_xlim((0, 1))
+        fig.gca().set_xlabel(str(':'.join(endpoints[0])) + ' to ' + str(':'.join(endpoints[1])))
+        fig.gca().set_ylabel(plot_mapping.get(y, y))
+    else:
+        raise NotImplementedError('No support for plotting configuration {}', configuration)
+
     for data in desired_data:
         indep_var_data = None
         if x == 'T' or x == 'P':
             indep_var_data = np.array(data['conditions'][x], dtype=np.float).flatten()
         elif x == 'Z':
-            indep_var_data = (interactions+1)/2
+            indep_var_data = 1 - (interactions+1)/2
         response_data = np.array(data['values'], dtype=np.float).flatten()
-
-        if (data['output'] == 'HM') or (data['output'] == 'GM'):
-            # Shift data by reference state
-            # This assumes that HM data has been shifted to zero at 298.15 K
-            response_data += np.array(fit_eq.subs({v.__dict__[x]: 298.15}).evalf(), dtype=np.float)
         if len(response_data) < 10:
             plot_func = 'scatter'
         else:
@@ -379,28 +398,40 @@ def _compare_data_to_parameters(desired_data, parameters, x, y, refdata):
     fig.canvas.draw()
 
 
-def plot_parameters(comps, phase_name, configuration, subl_ratios,
-                    datasets, parameters, plots=None, refstate=SGTE91):
-    if plots is None:
-        plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
-                 ('T', 'HM'), ('T', 'HM_FORM'), ('Z', 'HM'), ('Z', 'HM_FORM')]
+def plot_parameters(dbf, comps, phase_name, configuration, datasets=None):
+    em_plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
+                ('T', 'HM'), ('T', 'HM_FORM')]
+    mix_plots = [('Z', 'HM_FORM')]
     comps = sorted(comps)
+    mod = Model(dbf, comps, phase_name)
+    # This is for computing properties of formation
+    mod_norefstate = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
+    # Is this an interaction parameter or endmember?
+    if any([isinstance(conf, list) or isinstance(conf, tuple) for conf in configuration]):
+        plots = mix_plots
+    else:
+        plots = em_plots
     for x_val, y_val in plots:
-        refdata = 0
-        if '_FORM' not in y_val:
-            # Add reference state contribution to properties not "of formation"
-            comp_refs = {c.upper(): feature_transforms[y_val](refstate[c.upper()]) for c in comps if c.upper() != 'VA'}
-            comp_refs['VA'] = 0
-            for subl, ratio in zip(configuration, subl_ratios):
-                refdata = refdata + ratio * comp_refs[subl]
-        desired_data = _get_data(comps, phase_name, configuration, datasets, y_val)
-        _compare_data_to_parameters(desired_data, parameters, x_val, y_val, refdata)
+        if datasets is not None:
+            desired_data = _get_data(comps, phase_name, configuration, datasets, y_val)
+        else:
+            desired_data = []
+        if '_FORM' in y_val:
+            _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod_norefstate, configuration, x_val, y_val)
+        else:
+            _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, configuration, x_val, y_val)
 
 
 def _symmetrize(configurations, symmetry):
+    configurations = list(configurations)
     if symmetry == 'B2':
         if len(configurations[0]) == 3:
             symmetrized = sorted({tuple(sorted(config[0:2])+list(config[2:])) for config in configurations})
+        else:
+            raise ValueError('Symmetry operation unsupported for {} sublattices'.format(len(configurations[0])))
+    elif symmetry == 'L12':
+        if len(configurations[0]) == 5:
+            symmetrized = sorted({tuple(sorted(config[0:4])+list(config[4:])) for config in configurations})
         else:
             raise ValueError('Symmetry operation unsupported for {} sublattices'.format(len(configurations[0])))
     else:
@@ -441,6 +472,19 @@ def _generate_symmetric_group(configuration, symmetry):
             if safe_break > 10:
                 print('SAFE BREAK')
                 raise ValueError
+    elif symmetry == 'L12':
+        desymmetrized = [first_configuration]
+        new_configuration = tuple(np.roll(np.array(configuration[0:4], dtype=np.object), 1, axis=0).tolist() + list(configuration[4:]))
+        new_configuration = _list_to_tuple(new_configuration)
+        safe_break = 0
+        while new_configuration != first_configuration:
+            desymmetrized.append(new_configuration)
+            new_configuration = tuple(np.roll(np.array(new_configuration[0:4], dtype=np.object), 1, axis=0).tolist() + list(new_configuration[4:]))
+            new_configuration = _list_to_tuple(new_configuration)
+            safe_break += 1
+            if safe_break > 10:
+                print('SAFE BREAK')
+                raise ValueError
     else:
         desymmetrized = [configuration]
     return desymmetrized
@@ -466,7 +510,7 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
     """
     dbf = Database()
     dbf.elements = {c.upper() for subl in subl_model for c in subl}
-    dbf.add_phase(phase_name, [], site_ratios)
+    dbf.add_phase(phase_name, {}, site_ratios)
     dbf.add_phase_constituents(phase_name, subl_model)
     # Write reference state to Database
     comp_refs = {c.upper(): refstate[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
@@ -477,6 +521,13 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
     endmembers = _symmetrize(itertools.product(*subl_model), symmetry)
     em_dict = {}
     print('{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
+
+    def _to_tuple(x):
+        if isinstance(x, list) or isinstance(x, tuple):
+            return tuple(x)
+        else:
+            return tuple([x])
+
     for endmember in endmembers:
         print('ENDMEMBER: '+str(endmember))
         parameters = fit_formation_energy(sorted(dbf.elements), phase_name, endmember, datasets)
@@ -490,7 +541,7 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
         symmetric_endmembers = _generate_symmetric_group(endmember, symmetry)
         for em in symmetric_endmembers:
             em_dict[em] = fit_eq.subs(dbf.symbols)
-            dbf.add_parameter('G', phase_name, list(em), 0, fit_eq)
+            dbf.add_parameter('G', phase_name, tuple(map(_to_tuple, em)), 0, fit_eq)
     # Now fit all binary interactions
     bin_interactions = list(itertools.combinations(endmembers, 2))
     transformed_bin_interactions = []
@@ -530,6 +581,7 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
         for degree in np.arange(degree_polys.shape[0]):
             if degree_polys[degree] != 0:
                 for syminter in symmetric_interactions:
-                    dbf.add_parameter('L', phase_name, list(syminter), degree, degree_polys[degree])
+                    print(_tuple_to_list(syminter))
+                    dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
     # Now fit ternary interactions
     return dbf

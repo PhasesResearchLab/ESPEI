@@ -4,7 +4,7 @@
   "solver": {
 	  "mode": "manual",
 	  "sublattice_site_ratios": [0.25, 0.25, 0.25, 0.25, 1],
-	  "sublattice_configurations": [["NI", "NI", "NI", "AL", "VA"]
+	  "sublattice_configurations": [["AL", "NI", "NI", "NI", "VA"]
 				       ],
 	"comment": "Ni3Al sublattice configuration (4SL)"
   },
