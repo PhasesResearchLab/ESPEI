@@ -49,6 +49,7 @@ with ridge regression is advisible.
 """
 import pycalphad.variables as v
 from pycalphad import calculate, Database, Model
+import pycalphad.refstates
 from pycalphad.refstates import SGTE91
 from sklearn.linear_model import LinearRegression
 import tinydb
@@ -233,6 +234,14 @@ def _format_response_data(desired_data, feature_transform, endmembers):
         values[..., :] -= stability
         total_response.append(values.flatten())
     return total_response
+
+
+def sigfigs(x, n):
+    #if x != 0:
+    #    return np.around(x, -(np.floor(np.log10(np.abs(x)))).astype(np.int) + (n - 1))
+    #else:
+    #    return x
+    return float('%s' % float(('%.'+str(n)+'g') % x))
 
 
 def fit_formation_energy(comps, phase_name, configuration,
@@ -490,7 +499,7 @@ def _generate_symmetric_group(configuration, symmetry):
     return desymmetrized
 
 
-def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datasets, refstate=SGTE91):
+def phase_fit(phase_name, symmetry, subl_model, site_ratios, datasets, refstate=SGTE91):
     """
     Generate an initial CALPHAD model for a given phase and
     sublattice model.
@@ -507,6 +516,8 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
         Number of sites in each sublattice, normalized to one atom.
     datasets : tinydb of datasets
         All datasets to consider for the calculation.
+    refstate : dict, optional (default: SGTE91)
+        Maps pure elements to SymPy object defining energy of standard state.
     """
     dbf = Database()
     dbf.elements = {c.upper() for subl in subl_model for c in subl}
@@ -519,6 +530,8 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
     # First fit endmembers
     all_em_count = len(list(itertools.product(*subl_model)))
     endmembers = _symmetrize(itertools.product(*subl_model), symmetry)
+    # Number of significant figures in parameters
+    numdigits = 6
     em_dict = {}
     print('{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
 
@@ -536,7 +549,7 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
             if subl == 'VA':
                 continue
             refdata = refdata + ratio * sympy.Symbol('GHSER'+subl)
-        fit_eq = sympy.Add(*[key*value for key, value in parameters.items()])
+        fit_eq = sympy.Add(*[sigfigs(value, numdigits) * key for key, value in parameters.items()])
         fit_eq += refdata
         symmetric_endmembers = _generate_symmetric_group(endmember, symmetry)
         for em in symmetric_endmembers:
@@ -571,7 +584,7 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
             keys_to_remove = []
             for key, value in parameters.items():
                 if key.has(check_symbol):
-                    degree_polys[degree] += parameters[key] * (key / check_symbol)
+                    degree_polys[degree] += sigfigs(parameters[key], numdigits) * (key / check_symbol)
                     keys_to_remove.append(key)
             for key in keys_to_remove:
                 parameters.pop(key)
@@ -584,4 +597,31 @@ def generate_parameter_file(phase_name, symmetry, subl_model, site_ratios, datas
                     print(_tuple_to_list(syminter))
                     dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
     # Now fit ternary interactions
+    return dbf
+
+
+def fit(data):
+    # TODO: Validate input JSON
+    dbf = Database()
+    dbf.elements = sorted(data['components'])
+    for phase_name, phase_obj in data['phases'].items():
+        # Perform parameter selection and single-phase fitting based on input
+        # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
+        symmetry = phase_obj.get('equivalent_sublattices', None)
+        # TODO: Temporary until the symmetry code gets rewritten
+        if symmetry == [[0, 1]]:
+            symmetry = "B2"
+        elif symmetry == [[0, 1, 2, 3]]:
+            symmetry = "L12"
+        elif symmetry is None:
+            pass
+        else:
+            raise ValueError('Unsupported symmetry type: \'{}\''.format(symmetry))
+        # TODO: More advanced phase data searching
+        datasets = None
+        phase_fit(phase_name, symmetry, phase_obj['sublattice_model'], phase_obj['sublattice_site_ratios'],
+                  datasets, refstate=getattr(pycalphad.refstates, data['refstate']))
+    # TODO: Fitting with multi-phase data
+    # Do I include experimental data for the first time here, or above in single-phase fit?
+    # Do I only fit new degrees of freedom here, or do I refine the existing ones? If the latter, which ones?
     return dbf
