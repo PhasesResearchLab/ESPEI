@@ -1,0 +1,22 @@
+{
+  "components": ["AL", "NI", "VA"],
+  "refstate": "SGTE91",
+  "phases": {
+	     "BCC_B2": {
+			"known_pointgroup": "none",
+			"known_aliases": ["B2_BCC"],
+			"known_ids": ["0"],
+			"sublattice_model": [["AL", "NI", "VA"], ["AL", "NI", "VA"], ["VA"]],
+			"sublattice_site_ratios": [0.5, 0.5, 1],
+			"equivalent_sublattices": [[0, 1]]
+	     },
+	     "FCC_L12": {
+			"known_pointgroup": "none",
+			"known_aliases": ["L12_FCC"],
+			"known_ids": ["0"],
+			"sublattice_model": [["AL", "NI"], ["AL", "NI"], ["AL", "NI"], ["AL", "NI"], ["VA"]],
+			"sublattice_site_ratios": [0.25, 0.25, 0.25, 0.25, 1],
+			"equivalent_sublattices": [[0, 1, 2, 3]]
+	     }
+    }
+}
