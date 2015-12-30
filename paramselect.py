@@ -92,23 +92,65 @@ def load_datasets(dataset_filenames):
     return ds_database
 
 
-def _symmetry_filter(x, config):
+def canonical_sort_key(x):
+    """
+    Wrap strings in tuples so they'll sort.
+
+    Parameters
+    ==========
+    x : sequence
+    """
+    return [tuple(i) if isinstance(i, (tuple, list)) else (i,) for i in x]
+
+
+def canonicalize(configuration, equivalent_sublattices):
+    """
+    Sort a sequence with symmetry. This routine gives the sequence
+    a deterministic ordering while respecting symmetry.
+
+    Parameters
+    ==========
+    configuration : list
+        Sublattice configuration to sort.
+    equivalent_sublattices : set of set of int
+        Indices of 'configuration' which should be equivalent by symmetry, i.e.,
+        [[0, 4], [1, 2, 3]] means permuting elements 0 and 4, or 1, 2 and 3, respectively,
+        has no effect on the equivalence of the sequence.
+
+    Returns
+    =======
+    canonicalized : list
+    """
+    canonicalized = list(configuration)
+    if equivalent_sublattices is not None:
+        for subl in equivalent_sublattices:
+            subgroup = sorted([configuration[idx] for idx in sorted(subl)], key=canonical_sort_key)
+            for subl_idx, conf_idx in enumerate(sorted(subl)):
+                if isinstance(subgroup[subl_idx], list):
+                    canonicalized[conf_idx] = tuple(subgroup[subl_idx])
+                else:
+                    canonicalized[conf_idx] = subgroup[subl_idx]
+
+    return tuple(canonicalized)
+
+
+def _symmetry_filter(x, config, symmetry):
     if x['mode'] == 'manual':
         if len(config) != len(x['sublattice_configurations'][0]):
             return False
         # If even one matches, it's a match
         # We do more filtering downstream
         for data_config in x['sublattice_configurations']:
-            if config == data_config:
+            if canonicalize(config, symmetry) == canonicalize(data_config, symmetry):
                 return True
     return False
 
 
-def _get_data(comps, phase_name, configuration, datasets, prop):
+def _get_data(comps, phase_name, configuration, symmetry, datasets, prop):
     configuration = list(configuration)
     desired_data = datasets.search((tinydb.where('output') == prop) &
                                    (tinydb.where('components') == comps) &
-                                   (tinydb.where('solver').test(_symmetry_filter, configuration)) &
+                                   (tinydb.where('solver').test(_symmetry_filter, configuration, symmetry)) &
                                    (tinydb.where('phases') == [phase_name]))
     # This seems to be necessary because the 'values' member does not modify 'datasets'
     # But everything else does!
@@ -116,14 +158,21 @@ def _get_data(comps, phase_name, configuration, datasets, prop):
     #if len(desired_data) == 0:
     #    raise ValueError('No datasets for the system of interest containing {} were in \'datasets\''.format(prop))
 
+    def recursive_zip(a, b):
+        if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
+            return list(recursive_zip(x, y) for x, y in zip(a, b))
+        else:
+            return list(zip(a, b))
+
     for idx, data in enumerate(desired_data):
         # Filter output values to only contain data for matching sublattice configurations
-        matching_configs = np.array([(sblconf == configuration) for sblconf in data['solver']['sublattice_configurations']])
+        matching_configs = np.array([(canonicalize(sblconf, symmetry) == canonicalize(configuration, symmetry))
+                                     for sblconf in data['solver']['sublattice_configurations']])
         matching_configs = np.arange(len(data['solver']['sublattice_configurations']))[matching_configs]
         # Rewrite output values with filtered data
         desired_data[idx]['values'] = np.array(data['values'], dtype=np.float)[..., matching_configs]
-        desired_data[idx]['solver']['sublattice_configurations'] = np.array(data['solver']['sublattice_configurations'],
-                                                                            dtype=np.object)[matching_configs].tolist()
+        desired_data[idx]['solver']['sublattice_configurations'] = _list_to_tuple(np.array(data['solver']['sublattice_configurations'],
+                                                                            dtype=np.object)[matching_configs].tolist())
         try:
             desired_data[idx]['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'],
                                                                              dtype=np.object)[matching_configs].tolist()
@@ -206,7 +255,7 @@ def _build_feature_matrix(prop, features, desired_data):
 def _endmembers_from_interaction(configuration):
     config = []
     for c in configuration:
-        if isinstance(c, list):
+        if isinstance(c, (list, tuple)):
             config.append(c)
         else:
             config.append([c])
@@ -243,7 +292,7 @@ def sigfigs(x, n):
     return float('%s' % float(('%.'+str(n)+'g') % x))
 
 
-def fit_formation_energy(comps, phase_name, configuration,
+def fit_formation_energy(comps, phase_name, configuration, symmetry,
                          datasets, features=None, endmembers=None):
     """
     Find suitable linear model parameters for the given phase.
@@ -254,14 +303,14 @@ def fit_formation_energy(comps, phase_name, configuration,
 
     Parameters
     ==========
-    dbf : Database
-        Database containing the relevant phase.
     comps : list of str
         Names of the relevant components.
     phase_name : str
         Name of the desired phase for which the parameters will be found.
     configuration : ndarray
         Configuration of the sublattices for the fitting procedure.
+    symmetry : set of set of int or None
+        Symmetry of the sublattice configuration.
     datasets : tinydb of Dataset
         All the datasets desired to fit to.
     features : dict (optional)
@@ -278,10 +327,10 @@ def fit_formation_energy(comps, phase_name, configuration,
     if features is None:
         features = [("CPM_FORM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3)),
                     ("SM_FORM", (v.T,)),
-                    ("HM_FORM", (1,))
+                    ("HM_FORM", (sympy.S.One,))
                     ]
         features = OrderedDict(features)
-    if any([isinstance(conf, list) for conf in configuration]):
+    if any([isinstance(conf, (list, tuple)) for conf in configuration]):
         # Product of all nonzero site fractions in all sublattices
         YS = sympy.Symbol('YS')
         # Product of all binary interaction terms
@@ -300,13 +349,13 @@ def fit_formation_energy(comps, phase_name, configuration,
             parameters[coef] = 0
 
     # HEAT CAPACITY OF FORMATION
-    desired_data = _get_data(comps, phase_name, configuration, datasets, "CPM_FORM")
+    desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, "CPM_FORM")
     if len(desired_data) > 0:
         cp_matrix = _build_feature_matrix("CPM_FORM", features["CPM_FORM"], desired_data)
         data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
         parameters.update(_fit_parameters(cp_matrix, data_quantities, features["CPM_FORM"]))
     # ENTROPY OF FORMATION
-    desired_data = _get_data(comps, phase_name, configuration, datasets, "SM_FORM")
+    desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, "SM_FORM")
     if len(desired_data) > 0:
         sm_matrix = _build_feature_matrix("SM_FORM", features["SM_FORM"], desired_data)
         data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
@@ -319,7 +368,8 @@ def fit_formation_energy(comps, phase_name, configuration,
         fixed_portion = np.dot(fixed_portion, [parameters[feature] for feature in features["CPM_FORM"]])
         parameters.update(_fit_parameters(sm_matrix, data_quantities - fixed_portion, features["SM_FORM"]))
     # ENTHALPY OF FORMATION
-    desired_data = _get_data(comps, phase_name, configuration, datasets, "HM_FORM")
+    desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, "HM_FORM")
+    print('datasets found: ', len(desired_data))
     if len(desired_data) > 0:
         hm_matrix = _build_feature_matrix("HM_FORM", features["HM_FORM"], desired_data)
         data_quantities = np.concatenate(_format_response_data(desired_data,
@@ -406,7 +456,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
     fig.canvas.draw()
 
 
-def plot_parameters(dbf, comps, phase_name, configuration, datasets=None):
+def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=None):
     em_plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
                 ('T', 'HM'), ('T', 'HM_FORM')]
     mix_plots = [('Z', 'HM_FORM')]
@@ -421,7 +471,7 @@ def plot_parameters(dbf, comps, phase_name, configuration, datasets=None):
         plots = em_plots
     for x_val, y_val in plots:
         if datasets is not None:
-            desired_data = _get_data(comps, phase_name, configuration, datasets, y_val)
+            desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, y_val)
         else:
             desired_data = []
         if '_FORM' in y_val:
@@ -430,33 +480,10 @@ def plot_parameters(dbf, comps, phase_name, configuration, datasets=None):
             _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, configuration, x_val, y_val)
 
 
-def _symmetrize(configurations, symmetry):
-    configurations = list(configurations)
-
-    def nested_key(x):
-        "Wrap strings in tuples so they'll sort."
-        return [i if isinstance(i, tuple) else (i,) for i in x]
-    if symmetry == 'B2':
-        if len(configurations[0]) == 3:
-            symmetrized = sorted({tuple(sorted(config[0:2], key=nested_key)+list(config[2:]))
-                                  for config in configurations}, key=nested_key)
-        else:
-            raise ValueError('Symmetry operation unsupported for {} sublattices'.format(len(configurations[0])))
-    elif symmetry == 'L12':
-        if len(configurations[0]) == 5:
-            symmetrized = sorted({tuple(sorted(config[0:4], key=nested_key)+list(config[4:]))
-                                  for config in configurations}, key=nested_key)
-        else:
-            raise ValueError('Symmetry operation unsupported for {} sublattices'.format(len(configurations[0])))
-    else:
-        symmetrized = sorted(configurations)
-    return symmetrized
-
-
 def _list_to_tuple(x):
     def _tuplify(y):
         if isinstance(y, list) or isinstance(y, tuple):
-            return tuple(y)
+            return tuple(_tuplify(i) if isinstance(i, (list, tuple)) else i for i in y)
         else:
             return y
     return tuple(map(_tuplify, x))
@@ -472,36 +499,31 @@ def _tuple_to_list(x):
 
 
 def _generate_symmetric_group(configuration, symmetry):
-    first_configuration = copy.deepcopy(configuration)
-    if symmetry == 'B2':
-        desymmetrized = [first_configuration]
-        new_configuration = tuple(np.roll(np.array(configuration[0:2], dtype=np.object), 1, axis=0).tolist() + list(configuration[2:]))
-        new_configuration = _list_to_tuple(new_configuration)
-        safe_break = 0
-        while new_configuration != first_configuration:
-            desymmetrized.append(new_configuration)
-            new_configuration = tuple(np.roll(np.array(new_configuration[0:2], dtype=np.object), 1, axis=0).tolist() + list(new_configuration[2:]))
-            new_configuration = _list_to_tuple(new_configuration)
-            safe_break += 1
-            if safe_break > 10:
-                print('SAFE BREAK')
-                raise ValueError
-    elif symmetry == 'L12':
-        desymmetrized = [first_configuration]
-        new_configuration = tuple(np.roll(np.array(configuration[0:4], dtype=np.object), 1, axis=0).tolist() + list(configuration[4:]))
-        new_configuration = _list_to_tuple(new_configuration)
-        safe_break = 0
-        while new_configuration != first_configuration:
-            desymmetrized.append(new_configuration)
-            new_configuration = tuple(np.roll(np.array(new_configuration[0:4], dtype=np.object), 1, axis=0).tolist() + list(new_configuration[4:]))
-            new_configuration = _list_to_tuple(new_configuration)
-            safe_break += 1
-            if safe_break > 10:
-                print('SAFE BREAK')
-                raise ValueError
-    else:
-        desymmetrized = [configuration]
-    return desymmetrized
+    configurations = [_list_to_tuple(configuration)]
+    permutation = np.array(symmetry, dtype=np.object)
+
+    def permute(x):
+        if len(x) == 0:
+            return x
+        x[0] = np.roll(x[0], 1)
+        x[:] = np.roll(x, 1, axis=0)
+        return x
+
+    while np.any(np.array(symmetry, dtype=np.object) != permute(permutation)):
+        new_conf = np.array(configurations[0], dtype=np.object)
+        subgroups = []
+        # There is probably a more efficient way to do this
+        for subl in permutation:
+            subgroups.append([configuration[idx] for idx in subl])
+        # subgroup is ordered according to current permutation
+        # but we'll index it based on the original symmetry
+        # This should permute the configurations
+        for subl, subgroup in zip(symmetry, subgroups):
+            for subl_idx, conf_idx in enumerate(subl):
+                new_conf[conf_idx] = subgroup[subl_idx]
+        configurations.append(tuple(new_conf))
+
+    return sorted(set(configurations), key=canonical_sort_key)
 
 
 def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
@@ -515,7 +537,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
         Database to add parameters to.
     phase_name : str
         Name of the phase.
-    symmetry : str or None
+    symmetry : set of set of int or None
         Sublattice model symmetry.
     subl_model : list of tuple
         Sublattice model for the phase of interest.
@@ -526,7 +548,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
     """
     # First fit endmembers
     all_em_count = len(list(itertools.product(*subl_model)))
-    endmembers = _symmetrize(itertools.product(*subl_model), symmetry)
+    endmembers = sorted(set(canonicalize(i, symmetry) for i in itertools.product(*subl_model)))
     # Number of significant figures in parameters
     numdigits = 6
     em_dict = {}
@@ -540,7 +562,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
 
     for endmember in endmembers:
         print('ENDMEMBER: '+str(endmember))
-        parameters = fit_formation_energy(sorted(dbf.elements), phase_name, endmember, datasets)
+        parameters = fit_formation_energy(sorted(dbf.elements), phase_name, endmember, symmetry, datasets)
         refdata = 0
         for subl, ratio in zip(endmember, site_ratios):
             if subl == 'VA':
@@ -549,6 +571,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
         fit_eq = sympy.Add(*[sigfigs(value, numdigits) * key for key, value in parameters.items()])
         fit_eq += refdata
         symmetric_endmembers = _generate_symmetric_group(endmember, symmetry)
+        print('SYMMETRIC_ENDMEMBERS: ', symmetric_endmembers)
         for em in symmetric_endmembers:
             em_dict[em] = fit_eq.subs(dbf.symbols)
             dbf.add_parameter('G', phase_name, tuple(map(_to_tuple, em)), 0, fit_eq)
@@ -563,17 +586,19 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
             else:
                 interaction.append(tuple(sorted([first_occupant, second_occupant])))
         transformed_bin_interactions.append(interaction)
-    bin_interactions = _symmetrize(transformed_bin_interactions, symmetry)
+    bin_interactions = sorted(set(canonicalize(i, symmetry) for i in transformed_bin_interactions),
+                              key=canonical_sort_key)
     print('{0} distinct binary interactions'.format(len(bin_interactions)))
     for interaction in bin_interactions:
         ixx = []
         for i in interaction:
-            if isinstance(i, tuple):
-                ixx.append(list(i))
+            if isinstance(i, (tuple, list)):
+                ixx.append(tuple(i))
             else:
                 ixx.append(i)
-        print('INTERACTION: '+str(interaction))
-        parameters = fit_formation_energy(sorted(dbf.elements), phase_name, ixx, datasets, endmembers=em_dict)
+        ixx = tuple(ixx)
+        print('INTERACTION: '+str(ixx))
+        parameters = fit_formation_energy(sorted(dbf.elements), phase_name, ixx, symmetry, datasets, endmembers=em_dict)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(10, dtype=np.object)
         for degree in reversed(range(10)):
@@ -591,7 +616,6 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
         for degree in np.arange(degree_polys.shape[0]):
             if degree_polys[degree] != 0:
                 for syminter in symmetric_interactions:
-                    print(_tuple_to_list(syminter))
                     dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
     # Now fit ternary interactions
 
@@ -610,15 +634,6 @@ def fit(input_fname, datasets):
         # Perform parameter selection and single-phase fitting based on input
         # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
         symmetry = phase_obj.get('equivalent_sublattices', None)
-        # TODO: Temporary until the symmetry code gets rewritten
-        if symmetry == [[0, 1]]:
-            symmetry = "B2"
-        elif symmetry == [[0, 1, 2, 3]]:
-            symmetry = "L12"
-        elif symmetry is None:
-            pass
-        else:
-            raise ValueError('Unsupported symmetry type: \'{}\''.format(symmetry))
         # TODO: More advanced phase data searching
         site_ratios = phase_obj['sublattice_site_ratios']
         subl_model = phase_obj['sublattice_model']
