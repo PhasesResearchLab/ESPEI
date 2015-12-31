@@ -265,7 +265,6 @@ def _endmembers_from_interaction(configuration):
 def _format_response_data(desired_data, feature_transform, endmembers):
     "Remove lattice stability contribution from data which are properties of formation."
     total_response = []
-    multipliers = [0]
     for dataset in desired_data:
         stability = 0
         if endmembers is not None:
@@ -274,22 +273,24 @@ def _format_response_data(desired_data, feature_transform, endmembers):
                 multipliers = [reduce(operator.mul, em, 1) for em in _endmembers_from_interaction(occupancy)]
                 print('MULTIPLIERS FROM INTERACTION: '+str(multipliers))
                 stabilities = [endmembers[em] for em in _endmembers_from_interaction(config)]
+
                 stability = sympy.Add(*[feature_transform(a*b) for a, b in zip(multipliers, stabilities)])
+                # Zero out reference state
+                refsymbols = set([x for x in stability.atoms() if str(x).startswith('GHSER')])
+                refsymbols = {x: 0 for x in refsymbols}
+                stability = stability.subs(refsymbols)
         values = np.asarray(dataset['values'], dtype=np.object)
-        # lattice stability plus ideal mixing
         # for interaction parameters we're trying to fit excess mixing
-        # TODO: + 8.3145*v.T*(np.sum([np.log(i**i) for i in multipliers]
         values[..., :] -= stability
         total_response.append(values.flatten())
     return total_response
 
 
 def sigfigs(x, n):
-    #if x != 0:
-    #    return np.around(x, -(np.floor(np.log10(np.abs(x)))).astype(np.int) + (n - 1))
-    #else:
-    #    return x
-    return float('%s' % float(('%.'+str(n)+'g') % x))
+    if x != 0:
+        return np.around(x, -(np.floor(np.log10(np.abs(x)))).astype(np.int) + (n - 1))
+    else:
+        return x
 
 
 def fit_formation_energy(comps, phase_name, configuration, symmetry,
@@ -386,6 +387,7 @@ def fit_formation_energy(comps, phase_name, configuration, symmetry,
             # Evaluate the response minus the lattice stability
             data_quantities = [i.subs({v.T: ixx[0]}).evalf() for i, ixx in zip(data_quantities, all_samples)]
         data_quantities = np.asarray(data_quantities, dtype=np.float)
+        print('DATA QUANTITIES 2', data_quantities)
         parameters.update(_fit_parameters(hm_matrix, data_quantities - fixed_portion, features["HM_FORM"]))
     return parameters
 
@@ -445,13 +447,16 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         elif x == 'Z':
             indep_var_data = 1 - (interactions+1)/2
         response_data = np.array(data['values'], dtype=np.float).flatten()
+        extra_kwargs = {}
         if len(response_data) < 10:
             plot_func = 'scatter'
+            extra_kwargs['s'] = 50
         else:
             plot_func = 'plot'
         getattr(fig.gca(), plot_func)(indep_var_data,
                                       response_data,
-                                      label=data.get('reference', None))
+                                      label=data.get('reference', None),
+                                      **extra_kwargs)
     fig.gca().legend(loc='best')
     fig.canvas.draw()
 
@@ -573,7 +578,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
         symmetric_endmembers = _generate_symmetric_group(endmember, symmetry)
         print('SYMMETRIC_ENDMEMBERS: ', symmetric_endmembers)
         for em in symmetric_endmembers:
-            em_dict[em] = fit_eq.subs(dbf.symbols)
+            em_dict[em] = fit_eq
             dbf.add_parameter('G', phase_name, tuple(map(_to_tuple, em)), 0, fit_eq)
     # Now fit all binary interactions
     bin_interactions = list(itertools.combinations(endmembers, 2))
