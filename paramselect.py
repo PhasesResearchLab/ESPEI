@@ -418,6 +418,9 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         endmember = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))[None, None]
         predicted_quantities = calculate(dbf, comps, [phase_name], output=yattr,
                                          T=temperatures, P=101325, points=endmember, model=mod, mode='numpy')
+        if y == 'HM' and x == 'T':
+            # Shift enthalpy data so that value at minimum T is zero
+            predicted_quantities[yattr] -= predicted_quantities[yattr].sel(T=temperatures[0]).values.flatten()
         fig.gca().plot(temperatures, predicted_quantities[yattr].values.flatten(),
                        label='This work', color='k')
         fig.gca().set_xlabel(plot_mapping.get(x, x))
@@ -611,7 +614,13 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
             keys_to_remove = []
             for key, value in parameters.items():
                 if key.has(check_symbol):
-                    degree_polys[degree] += sigfigs(parameters[key], numdigits) * (key / check_symbol)
+                    coef = sigfigs(parameters[key], numdigits) * (key / check_symbol)
+                    # Try converting to float to work around a print precision problem with sympy
+                    try:
+                        coef = float(coef)
+                    except TypeError:
+                        pass
+                    degree_polys[degree] += coef
                     keys_to_remove.append(key)
             for key in keys_to_remove:
                 parameters.pop(key)

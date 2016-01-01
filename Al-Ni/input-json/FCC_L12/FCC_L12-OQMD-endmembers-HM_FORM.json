@@ -1,0 +1,18 @@
+{
+  "components": ["AL", "NI", "VA"],
+  "phases": ["FCC_L12"],
+  "solver": {
+	  "mode": "manual",
+	  "sublattice_site_ratios": [0.25, 0.25, 0.25, 0.25, 1],
+	  "sublattice_configurations": [["AL", "AL", "NI", "NI", "VA"],
+					["AL", "AL", "AL", "NI", "VA"]
+				       ]
+  },
+  "conditions": {
+	  "P": 101325,
+	  "T": 300
+  },
+  "output": "HM_FORM",
+  "values":   [[[-6657.6, -39656]]],
+  "reference": "DFT (FeNi OQMD)"
+}
