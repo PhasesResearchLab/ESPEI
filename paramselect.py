@@ -214,7 +214,7 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
         clf.fit(current_matrix, data_quantities)
         # This may not exactly be the correct form for the likelihood
         # We're missing the "ridge" contribution here which could become relevant for sparse data
-        rss = np.square(np.dot(current_matrix, clf.coef_) - data_quantities).sum()
+        rss = np.square(np.dot(current_matrix, clf.coef_) - data_quantities.astype(np.float)).sum()
         # Compute Aikaike Information Criterion
         # Form valid under assumption all sample variances are equal and unknown
         score = 2*num_params + current_matrix.shape[-2] * np.log(rss)
@@ -266,8 +266,9 @@ def _format_response_data(desired_data, feature_transform, endmembers):
     "Remove lattice stability contribution from data which are properties of formation."
     total_response = []
     for dataset in desired_data:
-        stability = 0
+        values = np.asarray(dataset['values'], dtype=np.object)
         if endmembers is not None:
+            value_idx = 0
             for occupancy, config in zip(dataset['solver']['sublattice_occupancies'],
                                          dataset['solver']['sublattice_configurations']):
                 multipliers = [reduce(operator.mul, em, 1) for em in _endmembers_from_interaction(occupancy)]
@@ -276,12 +277,12 @@ def _format_response_data(desired_data, feature_transform, endmembers):
 
                 stability = sympy.Add(*[feature_transform(a*b) for a, b in zip(multipliers, stabilities)])
                 # Zero out reference state
-                refsymbols = set([x for x in stability.atoms() if str(x).startswith('GHSER')])
+                refsymbols = set([x for x in stability.free_symbols if x.name.startswith('GHSER')])
                 refsymbols = {x: 0 for x in refsymbols}
                 stability = stability.subs(refsymbols)
-        values = np.asarray(dataset['values'], dtype=np.object)
-        # for interaction parameters we're trying to fit excess mixing
-        values[..., :] -= stability
+                # for interaction parameters we're trying to fit excess mixing
+                values[..., value_idx] -= stability
+                value_idx += 1
         total_response.append(values.flatten())
     return total_response
 
@@ -351,15 +352,18 @@ def fit_formation_energy(comps, phase_name, configuration, symmetry,
 
     # HEAT CAPACITY OF FORMATION
     desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, "CPM_FORM")
+    print('CPM_FORM: datasets found: ', len(desired_data))
     if len(desired_data) > 0:
         cp_matrix = _build_feature_matrix("CPM_FORM", features["CPM_FORM"], desired_data)
         data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
         parameters.update(_fit_parameters(cp_matrix, data_quantities, features["CPM_FORM"]))
     # ENTROPY OF FORMATION
     desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, "SM_FORM")
+    print('SM_FORM: datasets found: ', len(desired_data))
     if len(desired_data) > 0:
         sm_matrix = _build_feature_matrix("SM_FORM", features["SM_FORM"], desired_data)
-        data_quantities = np.concatenate([np.asarray(i['values']).flatten() for i in desired_data], axis=-1)
+        data_quantities = np.concatenate(_format_response_data(desired_data,
+                                                               feature_transforms["SM_FORM"], endmembers), axis=-1)
         # Subtract out the fixed contribution (from CPM_FORM) from our SM_FORM response vector
         all_samples = _get_samples(desired_data)
         fixed_portion = [feature_transforms["SM_FORM"](i).subs({v.T: temp, 'YS': compf[0],
@@ -367,10 +371,14 @@ def fit_formation_energy(comps, phase_name, configuration, symmetry,
                          for temp, compf in all_samples for i in features["CPM_FORM"]]
         fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(all_samples), len(features["CPM_FORM"]))
         fixed_portion = np.dot(fixed_portion, [parameters[feature] for feature in features["CPM_FORM"]])
+        if endmembers is not None:
+            # Evaluate the response minus the lattice stability
+            data_quantities = [i.subs({v.T: ixx[0]}).evalf() for i, ixx in zip(data_quantities, all_samples)]
+        data_quantities = np.asarray(data_quantities, dtype=np.float)
         parameters.update(_fit_parameters(sm_matrix, data_quantities - fixed_portion, features["SM_FORM"]))
     # ENTHALPY OF FORMATION
     desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, "HM_FORM")
-    print('datasets found: ', len(desired_data))
+    print('HM_FORM: datasets found: ', len(desired_data))
     if len(desired_data) > 0:
         hm_matrix = _build_feature_matrix("HM_FORM", features["HM_FORM"], desired_data)
         data_quantities = np.concatenate(_format_response_data(desired_data,
@@ -387,7 +395,6 @@ def fit_formation_energy(comps, phase_name, configuration, symmetry,
             # Evaluate the response minus the lattice stability
             data_quantities = [i.subs({v.T: ixx[0]}).evalf() for i, ixx in zip(data_quantities, all_samples)]
         data_quantities = np.asarray(data_quantities, dtype=np.float)
-        print('DATA QUANTITIES 2', data_quantities)
         parameters.update(_fit_parameters(hm_matrix, data_quantities - fixed_portion, features["HM_FORM"]))
     return parameters
 
@@ -467,11 +474,13 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
 def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=None):
     em_plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
                 ('T', 'HM'), ('T', 'HM_FORM')]
-    mix_plots = [('Z', 'HM_FORM')]
+    mix_plots = [('Z', 'HM_FORM'), ('Z', 'SM_FORM')]
     comps = sorted(comps)
     mod = Model(dbf, comps, phase_name)
     # This is for computing properties of formation
     mod_norefstate = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
+    # Zero out ideal mixing contribution for formation properties
+    mod_norefstate.models['idmix'] = 0
     # Is this an interaction parameter or endmember?
     if any([isinstance(conf, list) or isinstance(conf, tuple) for conf in configuration]):
         plots = mix_plots
