@@ -410,7 +410,6 @@ def _translate_endmember_to_array(endmember, variables):
 def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, configuration, x, y):
     import matplotlib.pyplot as plt
     all_samples = np.array(_get_samples(desired_data), dtype=np.object)
-    interactions = np.array([i[1][1] for i in all_samples], dtype=np.float)
     endpoints = _endmembers_from_interaction(configuration)
     fig = plt.figure(figsize=(9, 9))
     if '_FORM' in y:
@@ -455,18 +454,17 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         if x == 'T' or x == 'P':
             indep_var_data = np.array(data['conditions'][x], dtype=np.float).flatten()
         elif x == 'Z':
+            interactions = np.array([i[1][1] for i in _get_samples([data])], dtype=np.float)
             indep_var_data = 1 - (interactions+1)/2
         response_data = np.array(data['values'], dtype=np.float).flatten()
         extra_kwargs = {}
         if len(response_data) < 10:
-            plot_func = 'scatter'
-            extra_kwargs['s'] = 50
-        else:
-            plot_func = 'plot'
-        getattr(fig.gca(), plot_func)(indep_var_data,
-                                      response_data,
-                                      label=data.get('reference', None),
-                                      **extra_kwargs)
+            extra_kwargs['markersize'] = 20
+            extra_kwargs['marker'] = '.'
+            extra_kwargs['linestyle'] = 'none'
+
+        fig.gca().plot(indep_var_data, response_data, label=data.get('reference', None),
+                       **extra_kwargs)
     fig.gca().legend(loc='best')
     fig.canvas.draw()
 

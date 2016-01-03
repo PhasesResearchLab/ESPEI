@@ -1,0 +1,31 @@
+{
+  "components": ["AL", "NI", "VA"],
+  "phases": ["FCC_L12"],
+  "solver": {
+	  "mode": "manual",
+	  "sublattice_occupancies": [
+				     [[0.25, 0.75], 1, 1, 1, 1],
+				     [[0.5, 0.5], 1, 1, 1, 1],
+				     [[0.75, 0.25], 1, 1, 1, 1],
+				     [1, 1, 1, [0.25, 0.75], 1],
+				     [1, 1, 1, [0.75, 0.25], 1]
+				    ],
+	  "sublattice_site_ratios": [0.25, 0.25, 0.25, 0.25, 1],
+	  "sublattice_configurations": [
+				        [["AL", "NI"], "NI", "NI", "NI", "VA"],
+				        [["AL", "NI"], "NI", "NI", "NI", "VA"],
+				        [["AL", "NI"], "NI", "NI", "NI", "VA"],
+				        ["AL", "AL", "AL", ["AL", "NI"], "VA"],
+				        ["AL", "AL", "AL", ["AL", "NI"], "VA"]
+				       ],
+	  "comment": "L12 (4SL)"
+  },
+  "conditions": {
+	  "P": 101325,
+	  "T": 300
+  },
+  "output": "HM_FORM",
+  "values":   [[[764, 1227, 953,
+		 -282, -274]]],
+  "reference": "T. Wang 2005 (SQS full relax)"
+}
