@@ -24,7 +24,7 @@
 	  "P": 101325,
 	  "T": 300
   },
-  "output": "HM_FORM",
+  "output": "HM_MIX",
   "values":   [[[764, 1227, 953,
 		 -282, -274]]],
   "reference": "T. Wang 2005 (SQS full relax)"

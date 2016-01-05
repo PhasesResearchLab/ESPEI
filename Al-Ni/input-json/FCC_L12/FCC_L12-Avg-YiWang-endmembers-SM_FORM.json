@@ -12,6 +12,7 @@
 	  "P": 101325,
 	  "T": 300
   },
+  "reference_state": "SGTE91",
   "output": "SM_FORM",
   "values":   [[[-1.10633, -0.55316]]],
   "reference": "Y. Wang (estimate)"

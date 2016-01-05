@@ -13,6 +13,7 @@
 	  "P": 101325,
 	  "T": 300
   },
+  "reference_state": "SGTE91",
   "output": "HM_FORM",
   "values":   [[[0, -42170.4]]],
   "reference": "T. Wang 2005"
