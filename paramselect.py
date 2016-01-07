@@ -418,11 +418,46 @@ def _translate_endmember_to_array(endmember, variables):
     return frac_array
 
 
+def _build_sitefractions(phase_name, sublattice_configurations, sublattice_occupancies):
+    """
+    Convert nested lists of sublattice configurations and occupancies to a list of dictionaries.
+    The dictionaries map SiteFraction symbols to occupancy values. Note that zero occupancy
+    site fractions will need to be added separately since the total degrees of freedom aren't
+    known in this function.
+    :param phase_name:
+    :param sublattice_configurations:
+    :param sublattice_occupancies:
+    :return:
+    """
+    result = []
+    for config, occ in zip(sublattice_configurations, sublattice_occupancies):
+        sitefracs = {}
+        if len(config) != len(occ):
+            raise ValueError('Sublattice configuration length differs from occupancies')
+        for sublattice_idx in range(len(config)):
+            if isinstance(config[sublattice_idx], (list, tuple)) != isinstance(occ[sublattice_idx], (list, tuple)):
+                raise ValueError('Sublattice configuration type differs from occupancies')
+            if not isinstance(config[sublattice_idx], (list, tuple)):
+                # This sublattice is fully occupied by one component
+                sitefracs[v.SiteFraction(phase_name, sublattice_idx, config[sublattice_idx])] = occ[sublattice_idx]
+            else:
+                # This sublattice is occupied by multiple elements
+                if len(config[sublattice_idx]) != len(occ[sublattice_idx]):
+                    raise ValueError('Length mismatch in sublattice configuration')
+                for comp, val in zip(config[sublattice_idx], occ[sublattice_idx]):
+                    sitefracs[v.SiteFraction(phase_name, sublattice_idx, comp)] = val
+        result.append(sitefracs)
+    return result
+
+
 def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, configuration, x, y):
     import matplotlib.pyplot as plt
     all_samples = np.array(_get_samples(desired_data), dtype=np.object)
     endpoints = _endmembers_from_interaction(configuration)
     fig = plt.figure(figsize=(9, 9))
+    bar_chart = False
+    bar_labels = []
+    bar_data = []
     if y.endswith('_FORM'):
         # We were passed a Model object with zeroed out reference states
         yattr = y[:-5]
@@ -431,17 +466,33 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
     if len(endpoints) == 1:
         # This is an endmember so we can just compute T-dependent stuff
         temperatures = np.array([i[0] for i in all_samples], dtype=np.float)
-        temperatures = np.linspace(temperatures.min(), temperatures.max(), num=100)
+        if temperatures.min() != temperatures.max():
+            temperatures = np.linspace(temperatures.min(), temperatures.max(), num=100)
+        else:
+            # We only have one temperature: let's do a bar chart instead
+            bar_chart = True
+            temperatures = temperatures.min()
         endmember = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))[None, None]
         predicted_quantities = calculate(dbf, comps, [phase_name], output=yattr,
                                          T=temperatures, P=101325, points=endmember, model=mod, mode='numpy')
         if y == 'HM' and x == 'T':
             # Shift enthalpy data so that value at minimum T is zero
             predicted_quantities[yattr] -= predicted_quantities[yattr].sel(T=temperatures[0]).values.flatten()
-        fig.gca().plot(temperatures, predicted_quantities[yattr].values.flatten(),
-                       label='This work', color='k')
-        fig.gca().set_xlabel(plot_mapping.get(x, x))
-        fig.gca().set_ylabel(plot_mapping.get(y, y))
+        response_data = predicted_quantities[yattr].values.flatten()
+        if not bar_chart:
+            extra_kwargs = {}
+            if len(response_data) < 10:
+                extra_kwargs['markersize'] = 20
+                extra_kwargs['marker'] = '.'
+                extra_kwargs['linestyle'] = 'none'
+                extra_kwargs['clip_on'] = False
+            fig.gca().plot(temperatures, response_data,
+                           label='This work', color='k', **extra_kwargs)
+            fig.gca().set_xlabel(plot_mapping.get(x, x))
+            fig.gca().set_ylabel(plot_mapping.get(y, y))
+        else:
+            bar_labels.append('This work')
+            bar_data.append(response_data[0])
     elif len(endpoints) == 2:
         # Binary interaction parameter
         first_endpoint = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))
@@ -452,44 +503,98 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         point_matrix = point_matrix[None, None]
         predicted_quantities = calculate(dbf, comps, [phase_name], output=yattr,
                                          T=300, P=101325, points=point_matrix, model=mod, mode='numpy')
-        fig.gca().plot(np.linspace(0, 1, num=100), predicted_quantities[yattr].values.flatten(),
-                       label='This work', color='k')
-        fig.gca().set_xlim((0, 1))
-        fig.gca().set_xlabel(str(':'.join(endpoints[0])) + ' to ' + str(':'.join(endpoints[1])))
-        fig.gca().set_ylabel(plot_mapping.get(y, y))
+        response_data = predicted_quantities[yattr].values.flatten()
+        if not bar_chart:
+            extra_kwargs = {}
+            if len(response_data) < 10:
+                extra_kwargs['markersize'] = 20
+                extra_kwargs['marker'] = '.'
+                extra_kwargs['linestyle'] = 'none'
+                extra_kwargs['clip_on'] = False
+            fig.gca().plot(np.linspace(0, 1, num=100), response_data,
+                           label='This work', color='k', **extra_kwargs)
+            fig.gca().set_xlim((0, 1))
+            fig.gca().set_xlabel(str(':'.join(endpoints[0])) + ' to ' + str(':'.join(endpoints[1])))
+            fig.gca().set_ylabel(plot_mapping.get(y, y))
+        else:
+            bar_labels.append('This work')
+            bar_data.append(response_data[0])
     else:
         raise NotImplementedError('No support for plotting configuration {}', configuration)
 
     for data in desired_data:
         indep_var_data = None
+        response_data = np.zeros_like(data['values'], dtype=np.float)
         if x == 'T' or x == 'P':
             indep_var_data = np.array(data['conditions'][x], dtype=np.float).flatten()
         elif x == 'Z':
             interactions = np.array([i[1][1] for i in _get_samples([data])], dtype=np.float)
             indep_var_data = 1 - (interactions+1)/2
-        response_data = np.array(data['values'], dtype=np.float).flatten()
-        extra_kwargs = {}
-        if len(response_data) < 10:
-            extra_kwargs['markersize'] = 20
-            extra_kwargs['marker'] = '.'
-            extra_kwargs['linestyle'] = 'none'
+            if y.endswith('_MIX') and data['output'].endswith('_FORM'):
+                # All the _FORM data we have still has the lattice stability contribution
+                # Need to zero it out to shift formation data to mixing
+                mod_latticeonly = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
+                mod_latticeonly.models = {key: value for key, value in mod_latticeonly.models.items()
+                                          if key == 'ref'}
+                temps = data['conditions'].get('T', 300)
+                pressures = data['conditions'].get('P', 101325)
+                points = _build_sitefractions(phase_name, data['solver']['sublattice_configurations'],
+                                              data['solver']['sublattice_occupancies'])
+                for point_idx in range(len(points)):
+                    missing_variables = mod_latticeonly.ast.atoms(v.SiteFraction) - set(points[point_idx].keys())
+                    # Set unoccupied values to zero
+                    points[point_idx].update({key: 0 for key in missing_variables})
+                    # Change entry to a sorted array of site fractions
+                    points[point_idx] = list(OrderedDict(sorted(points[point_idx].items(), key=str)).values())
+                points = np.array(points, dtype=np.float)
+                # TODO: Real temperature support
+                points = points[None, None]
+                stability = calculate(dbf, comps, [phase_name], output=data['output'][:-5],
+                                      T=temps, P=pressures, points=points,
+                                      model=mod_latticeonly, mode='numpy')
+                response_data -= stability[data['output'][:-5]].values
 
-        fig.gca().plot(indep_var_data, response_data, label=data.get('reference', None),
-                       **extra_kwargs)
-    fig.gca().legend(loc='best')
+        response_data += np.array(data['values'], dtype=np.float)
+        response_data = response_data.flatten()
+        if not bar_chart:
+            extra_kwargs = {}
+            if len(response_data) < 10:
+                extra_kwargs['markersize'] = 20
+                extra_kwargs['marker'] = '.'
+                extra_kwargs['linestyle'] = 'none'
+                extra_kwargs['clip_on'] = False
+
+            fig.gca().plot(indep_var_data, response_data, label=data.get('reference', None),
+                           **extra_kwargs)
+        else:
+            bar_labels.append(data.get('reference', None))
+            bar_data.append(response_data[0])
+    if bar_chart:
+        fig.gca().barh(np.array(range(len(bar_data))) - 0.5, bar_data, color='k')
+        endmember_title = ' to '.join([':'.join(i) for i in endpoints])
+        fig.suptitle('{} (T = {} K)'.format(endmember_title, temperatures), fontsize=20)
+        fig.gca().set_yticks(list(range(len(bar_data))))
+        fig.gca().set_yticklabels(bar_labels, fontsize=20)
+        # This bar chart is rotated 90 degrees, so "y" is now x
+        fig.gca().set_xlabel(plot_mapping.get(y, y))
+    else:
+        fig.gca().set_frame_on(False)
+        fig.gca().legend(loc='best')
     fig.canvas.draw()
 
 
 def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=None):
     em_plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
                 ('T', 'HM'), ('T', 'HM_FORM')]
-    mix_plots = [('Z', 'HM_FORM'), ('Z', 'SM_FORM'), ('Z', 'HM_MIX'), ('Z', 'SM_MIX')]
+    mix_plots = [('Z', 'HM_MIX'), ('Z', 'SM_MIX')]
     comps = sorted(comps)
     mod = Model(dbf, comps, phase_name)
     # This is for computing properties of formation
     mod_norefstate = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
-    # Zero out ideal mixing contribution for formation properties
-    mod_norefstate.models['idmix'] = 0
+    # This is for computing properties of mixing
+    mod_mixonly = Model(dbf, comps, phase_name)
+    # Zero out endmember contribution for mixing properties
+    mod_mixonly.models['ref'] = 0
     # Is this an interaction parameter or endmember?
     if any([isinstance(conf, list) or isinstance(conf, tuple) for conf in configuration]):
         plots = mix_plots
@@ -497,9 +602,15 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
         plots = em_plots
     for x_val, y_val in plots:
         if datasets is not None:
-            desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, [y_val])
+            if y_val.endswith('_MIX'):
+                desired_props = [y_val.split('_')[0]+'_FORM', y_val]
+            else:
+                desired_props = [y_val]
+            desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
         else:
             desired_data = []
+        if len(desired_data) == 0:
+            continue
         if y_val.endswith('_FORM'):
             _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod_norefstate, configuration, x_val, y_val)
         else:
