@@ -265,7 +265,7 @@ def _endmembers_from_interaction(configuration):
     return list(itertools.product(*[tuple(c) for c in config]))
 
 
-def _shift_reference_state(desired_data, feature_transform, endmembers):
+def _shift_reference_state(desired_data, feature_transform, endmembers, eq_subs):
     "Shift data to a new common reference state."
     total_response = []
     for dataset in desired_data:
@@ -276,7 +276,7 @@ def _shift_reference_state(desired_data, feature_transform, endmembers):
                                          dataset['solver']['sublattice_configurations']):
                 multipliers = [reduce(operator.mul, em, 1) for em in _endmembers_from_interaction(occupancy)]
                 print('MULTIPLIERS FROM INTERACTION: '+str(multipliers))
-                stabilities = [endmembers[em] for em in _endmembers_from_interaction(config)]
+                stabilities = [endmembers[canonicalize(em, eq_subs)] for em in _endmembers_from_interaction(config)]
 
                 stability = sympy.Add(*[feature_transform(a*b) for a, b in zip(multipliers, stabilities)])
                 # Zero out reference state
@@ -366,7 +366,8 @@ def fit_formation_energy(comps, phase_name, configuration, symmetry,
     if len(desired_data) > 0:
         cp_matrix = _build_feature_matrix("CPM_FORM", features["CPM_FORM"], desired_data)
         data_quantities = np.concatenate(_shift_reference_state(desired_data,
-                                                                feature_transforms["CPM_FORM"], endmembers), axis=-1)
+                                                                feature_transforms["CPM_FORM"], endmembers, symmetry),
+                                         axis=-1)
         parameters.update(_fit_parameters(cp_matrix, data_quantities, features["CPM_FORM"]))
     # ENTROPY OF FORMATION
     desired_props = ["SM_FORM"] if endmembers is None else ["SM_FORM", "SM_MIX"]
@@ -375,7 +376,8 @@ def fit_formation_energy(comps, phase_name, configuration, symmetry,
     if len(desired_data) > 0:
         sm_matrix = _build_feature_matrix("SM_FORM", features["SM_FORM"], desired_data)
         data_quantities = np.concatenate(_shift_reference_state(desired_data,
-                                                                feature_transforms["SM_FORM"], endmembers), axis=-1)
+                                                                feature_transforms["SM_FORM"], endmembers, symmetry),
+                                         axis=-1)
         # Subtract out the fixed contribution (from CPM_FORM) from our SM_FORM response vector
         all_samples = _get_samples(desired_data)
         fixed_portion = [feature_transforms["SM_FORM"](i).subs({v.T: temp, 'YS': compf[0],
@@ -394,7 +396,8 @@ def fit_formation_energy(comps, phase_name, configuration, symmetry,
     if len(desired_data) > 0:
         hm_matrix = _build_feature_matrix("HM_FORM", features["HM_FORM"], desired_data)
         data_quantities = np.concatenate(_shift_reference_state(desired_data,
-                                                                feature_transforms["HM_FORM"], endmembers), axis=-1)
+                                                                feature_transforms["HM_FORM"], endmembers, symmetry),
+                                         axis=-1)
         # Subtract out the fixed contribution (from CPM_FORM+SM_FORM) from our HM_FORM response vector
         all_samples = _get_samples(desired_data)
         fixed_portion = [feature_transforms["HM_FORM"](i).subs({v.T: temp, 'YS': compf[0],
@@ -570,10 +573,11 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
             bar_labels.append(data.get('reference', None))
             bar_data.append(response_data[0])
     if bar_chart:
-        fig.gca().barh(np.array(range(len(bar_data))) - 0.5, bar_data, color='k')
+        fig.gca().barh(0.1 * (np.array(range(len(bar_data))) - 0.5), bar_data, edgecolor='black',
+                       color='none', height=0.1, hatch='x')
         endmember_title = ' to '.join([':'.join(i) for i in endpoints])
         fig.suptitle('{} (T = {} K)'.format(endmember_title, temperatures), fontsize=20)
-        fig.gca().set_yticks(list(range(len(bar_data))))
+        fig.gca().set_yticks(0.1 * np.array(range(len(bar_data))))
         fig.gca().set_yticklabels(bar_labels, fontsize=20)
         # This bar chart is rotated 90 degrees, so "y" is now x
         fig.gca().set_xlabel(plot_mapping.get(y, y))
