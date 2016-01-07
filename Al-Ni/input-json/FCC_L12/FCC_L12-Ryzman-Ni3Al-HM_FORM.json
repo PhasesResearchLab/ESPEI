@@ -5,7 +5,7 @@
 	  "mode": "manual",
 	  "sublattice_site_ratios": [0.25, 0.25, 0.25, 0.25, 1],
 	  "sublattice_configurations": [
-					["AL", "AL", "AL", "NI", "VA"]
+					["AL", "NI", "NI", "NI", "VA"]
 				       ]
   },
   "conditions": {
@@ -14,6 +14,6 @@
   },
   "reference_state": "SGTE91",
   "output": "HM_FORM",
-  "values":   [[[-39656]]],
-  "reference": "OQMD"
+  "values":   [[[-41300]]],
+  "reference": "Ryzman et al 1996"
 }

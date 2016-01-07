@@ -4,8 +4,9 @@
   "solver": {
 	  "mode": "manual",
 	  "sublattice_site_ratios": [0.25, 0.25, 0.25, 0.25, 1],
-	  "sublattice_configurations": [
-					["AL", "AL", "AL", "NI", "VA"]
+	  "sublattice_configurations": [["AL", "AL", "AL", "NI", "VA"],
+					["AL", "NI", "NI", "NI", "VA"],
+					["AL", "AL", "NI", "NI", "VA"]
 				       ]
   },
   "conditions": {
@@ -14,6 +15,6 @@
   },
   "reference_state": "SGTE91",
   "output": "HM_FORM",
-  "values":   [[[-39656]]],
-  "reference": "OQMD"
+  "values":   [[[-21342, -42209, -64430]]],
+  "reference": "X. Yuan et al. 2012 (DFT)"
 }

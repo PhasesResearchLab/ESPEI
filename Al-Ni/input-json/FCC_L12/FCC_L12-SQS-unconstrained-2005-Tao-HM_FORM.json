@@ -14,9 +14,7 @@
 	  "sublattice_configurations": [
 				        [["AL", "NI"], "NI", "NI", "NI", "VA"],
 				        [["AL", "NI"], "NI", "NI", "NI", "VA"],
-				        [["AL", "NI"], "NI", "NI", "NI", "VA"],
-				        ["AL", "AL", "AL", ["AL", "NI"], "VA"],
-				        ["AL", "AL", "AL", ["AL", "NI"], "VA"]
+				        [["AL", "NI"], "NI", "NI", "NI", "VA"]
 				       ],
 	  "comment": "L12 (4SL)"
   },
@@ -25,7 +23,6 @@
 	  "T": 300
   },
   "output": "HM_MIX",
-  "values":   [[[764, 1227, 953,
-		 -282, -274]]],
+  "values":   [[[764, 1227, 953]]],
   "reference": "T. Wang 2005 (SQS full relax)"
 }
