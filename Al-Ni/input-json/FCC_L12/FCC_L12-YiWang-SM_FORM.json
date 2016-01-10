@@ -21,7 +21,7 @@
 		910, 920, 930]
   },
   "reference_state": "SGTE91",
-  "output": "SM_EX_FORM",
+  "output": "SM_FORM",
   "values":   [[[ 0       ],
 		[-0.0131  ],
 		[-0.028075],
