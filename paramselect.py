@@ -457,6 +457,13 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
     import matplotlib.pyplot as plt
     all_samples = np.array(_get_samples(desired_data), dtype=np.object)
     endpoints = _endmembers_from_interaction(configuration)
+    interacting_subls = [c for c in _list_to_tuple(configuration) if isinstance(c, tuple)]
+    disordered_config = False
+    if (len(set(interacting_subls)) == 1) and (len(interacting_subls[0]) == 2):
+        # This configuration describes all sublattices with the same two elements interacting
+        # In general this is a high-dimensional space; just plot the diagonal to see the disordered mixing
+        endpoints = [endpoints[0], endpoints[-1]]
+        disordered_config = True
     fig = plt.figure(figsize=(9, 9))
     bar_chart = False
     bar_labels = []
@@ -523,7 +530,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
             bar_labels.append('This work')
             bar_data.append(response_data[0])
     else:
-        raise NotImplementedError('No support for plotting configuration {}', configuration)
+        raise NotImplementedError('No support for plotting configuration {}'.format(configuration))
 
     for data in desired_data:
         indep_var_data = None
@@ -531,8 +538,20 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         if x == 'T' or x == 'P':
             indep_var_data = np.array(data['conditions'][x], dtype=np.float).flatten()
         elif x == 'Z':
-            interactions = np.array([i[1][1] for i in _get_samples([data])], dtype=np.float)
-            indep_var_data = 1 - (interactions+1)/2
+            if disordered_config:
+                # Take the second element of the first interacting sublattice as the coordinate
+                # Because it's disordered all sublattices should be equivalent
+                # TODO: Fix this to filter because we need to guarantee the plot points are disordered
+                occ = data['solver']['sublattice_occupancies']
+                subl_idx = np.nonzero([isinstance(c, (list, tuple)) for c in occ[0]])[0]
+                if len(subl_idx) > 1:
+                    subl_idx = int(subl_idx[0])
+                else:
+                    subl_idx = int(subl_idx)
+                indep_var_data = [c[subl_idx][1] for c in occ]
+            else:
+                interactions = np.array([i[1][1] for i in _get_samples([data])], dtype=np.float)
+                indep_var_data = 1 - (interactions+1)/2
             if y.endswith('_MIX') and data['output'].endswith('_FORM'):
                 # All the _FORM data we have still has the lattice stability contribution
                 # Need to zero it out to shift formation data to mixing
