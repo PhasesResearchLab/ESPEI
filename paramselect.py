@@ -265,29 +265,19 @@ def _endmembers_from_interaction(configuration):
     return list(itertools.product(*[tuple(c) for c in config]))
 
 
-def _shift_reference_state(desired_data, feature_transform, endmembers, eq_subs):
+def _shift_reference_state(desired_data, feature_transform, fixed_model):
     "Shift data to a new common reference state."
     total_response = []
     for dataset in desired_data:
         values = np.asarray(dataset['values'], dtype=np.object)
-        if endmembers is not None:
+        if dataset['solver'].get('sublattice_occupancies', None) is not None:
             value_idx = 0
             for occupancy, config in zip(dataset['solver']['sublattice_occupancies'],
                                          dataset['solver']['sublattice_configurations']):
-                multipliers = [reduce(operator.mul, em, 1) for em in _endmembers_from_interaction(occupancy)]
-                print('MULTIPLIERS FROM INTERACTION: '+str(multipliers))
-                stabilities = [endmembers[canonicalize(em, eq_subs)] for em in _endmembers_from_interaction(config)]
-
-                stability = sympy.Add(*[feature_transform(a*b) for a, b in zip(multipliers, stabilities)])
-                # Zero out reference state
-                refsymbols = set([x for x in stability.free_symbols if x.name.startswith('GHSER')])
-                refsymbols = {x: 0 for x in refsymbols}
-                current_stability = stability.subs(refsymbols)
-                # for interaction parameters we're trying to fit excess mixing
                 if dataset['output'].endswith('_FORM'):
-                    values[..., value_idx] -= current_stability
+                    pass
                 elif dataset['output'].endswith('_MIX'):
-                    # Already a mixing property, no shifting necessary
+                    values[..., value_idx] += feature_transform(fixed_model.models['ref'])
                     pass
                 else:
                     raise ValueError('Unknown property to shift: {}'.format(dataset['output']))
@@ -303,8 +293,8 @@ def sigfigs(x, n):
         return x
 
 
-def fit_formation_energy(comps, phase_name, configuration, symmetry,
-                         datasets, features=None, endmembers=None):
+def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry,
+                         datasets, features=None):
     """
     Find suitable linear model parameters for the given phase.
     We do this by successively fitting heat capacities, entropies and
@@ -314,6 +304,8 @@ def fit_formation_energy(comps, phase_name, configuration, symmetry,
 
     Parameters
     ==========
+    dbf : Database
+        Partially complete, so we know what degrees of freedom to fix.
     comps : list of str
         Names of the relevant components.
     phase_name : str
@@ -328,8 +320,6 @@ def fit_formation_energy(comps, phase_name, configuration, symmetry,
         Maps "property" to a list of features for the linear model.
         These will be transformed from "GM" coefficients
         e.g., {"CPM_FORM": (v.T*sympy.log(v.T), v.T**2, v.T**-1, v.T**3)}
-    endmembers : dict (optional)
-        Maps endmember tuple to its enthalpy of formation
 
     Returns
     =======
@@ -342,6 +332,7 @@ def fit_formation_energy(comps, phase_name, configuration, symmetry,
                     ]
         features = OrderedDict(features)
     if any([isinstance(conf, (list, tuple)) for conf in configuration]):
+        fitting_steps = (["CPM_FORM", "CPM_MIX"], ["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
         # Product of all nonzero site fractions in all sublattices
         YS = sympy.Symbol('YS')
         # Product of all binary interaction terms
@@ -351,65 +342,55 @@ def fit_formation_energy(comps, phase_name, configuration, symmetry,
             all_features = list(itertools.product(redlich_kister_features, features[feature]))
             features[feature] = [i[0]*i[1] for i in all_features]
         print('ENDMEMBERS FROM INTERACTION: '+str(_endmembers_from_interaction(configuration)))
-        if endmembers is None:
-            raise ValueError('Endmember dictionary must be specified to compute an interaction parameter')
+    else:
+        # We are only fitting an endmember; no mixing data needed
+        fitting_steps = (["CPM_FORM"], ["SM_FORM"], ["HM_FORM"])
 
     parameters = {}
     for feature in features.values():
         for coef in feature:
             parameters[coef] = 0
 
-    # HEAT CAPACITY OF FORMATION
-    desired_props = ["CPM_FORM"] if endmembers is None else ["CPM_FORM", "CPM_MIX"]
-    desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
-    print('CPM_FORM: datasets found: ', len(desired_data))
-    if len(desired_data) > 0:
-        cp_matrix = _build_feature_matrix("CPM_FORM", features["CPM_FORM"], desired_data)
-        data_quantities = np.concatenate(_shift_reference_state(desired_data,
-                                                                feature_transforms["CPM_FORM"], endmembers, symmetry),
-                                         axis=-1)
-        parameters.update(_fit_parameters(cp_matrix, data_quantities, features["CPM_FORM"]))
-    # ENTROPY OF FORMATION
-    desired_props = ["SM_FORM"] if endmembers is None else ["SM_FORM", "SM_MIX"]
-    desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
-    print('SM_FORM: datasets found: ', len(desired_data))
-    if len(desired_data) > 0:
-        sm_matrix = _build_feature_matrix("SM_FORM", features["SM_FORM"], desired_data)
-        data_quantities = np.concatenate(_shift_reference_state(desired_data,
-                                                                feature_transforms["SM_FORM"], endmembers, symmetry),
-                                         axis=-1)
-        # Subtract out the fixed contribution (from CPM_FORM) from our SM_FORM response vector
-        all_samples = _get_samples(desired_data)
-        fixed_portion = [feature_transforms["SM_FORM"](i).subs({v.T: temp, 'YS': compf[0],
-                                                                'Z': compf[1]}).evalf()
-                         for temp, compf in all_samples for i in features["CPM_FORM"]]
-        fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(all_samples), len(features["CPM_FORM"]))
-        fixed_portion = np.dot(fixed_portion, [parameters[feature] for feature in features["CPM_FORM"]])
-        if endmembers is not None:
-            data_quantities = [sympy.S(i).subs({v.T: ixx[0]}).evalf() for i, ixx in zip(data_quantities, all_samples)]
-        data_quantities = np.asarray(data_quantities, dtype=np.float)
-        parameters.update(_fit_parameters(sm_matrix, data_quantities - fixed_portion, features["SM_FORM"]))
-    # ENTHALPY OF FORMATION
-    desired_props = ["HM_FORM"] if endmembers is None else ["HM_FORM", "HM_MIX"]
-    desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
-    print('HM_FORM: datasets found: ', len(desired_data))
-    if len(desired_data) > 0:
-        hm_matrix = _build_feature_matrix("HM_FORM", features["HM_FORM"], desired_data)
-        data_quantities = np.concatenate(_shift_reference_state(desired_data,
-                                                                feature_transforms["HM_FORM"], endmembers, symmetry),
-                                         axis=-1)
-        # Subtract out the fixed contribution (from CPM_FORM+SM_FORM) from our HM_FORM response vector
-        all_samples = _get_samples(desired_data)
-        fixed_portion = [feature_transforms["HM_FORM"](i).subs({v.T: temp, 'YS': compf[0],
-                                                                'Z': compf[1]}).evalf()
-                         for temp, compf in all_samples for i in features["CPM_FORM"]+features["SM_FORM"]]
-        fixed_portion = np.array(fixed_portion, dtype=np.float).reshape(len(all_samples),
-                                                                        len(features["CPM_FORM"]+features["SM_FORM"]))
-        fixed_portion = np.dot(fixed_portion, [parameters[feature] for feature in features["CPM_FORM"]+features["SM_FORM"]])
-        if endmembers is not None:
-            data_quantities = [sympy.S(i).subs({v.T: ixx[0]}).evalf() for i, ixx in zip(data_quantities, all_samples)]
-        data_quantities = np.asarray(data_quantities, dtype=np.float)
-        parameters.update(_fit_parameters(hm_matrix, data_quantities - fixed_portion, features["HM_FORM"]))
+    # These is our previously fit partial model
+    # Subtract out all of these contributions (zero out reference state because these are formation properties)
+    fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
+    # TODO: What about ideal mixing in SM_FORM?
+    fixed_model.models['idmix'] = 0
+    fixed_portions = [0]
+
+    for desired_props in fitting_steps:
+        desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
+        print('{}: datasets found: {}'.format(desired_props, len(desired_data)))
+        if len(desired_data) > 0:
+            feature_matrix = _build_feature_matrix(desired_props[0], features[desired_props[0]], desired_data)
+            all_samples = _get_samples(desired_data)
+            data_quantities = np.concatenate(_shift_reference_state(desired_data,
+                                                                    feature_transforms[desired_props[0]],
+                                                                    fixed_model),
+                                             axis=-1)
+            site_fractions = [_build_sitefractions(phase_name, ds['solver']['sublattice_configurations'],
+                ds['solver'].get('sublattice_occupancies',
+                                 np.ones((len(ds['solver']['sublattice_configurations']),
+                                          len(ds['solver']['sublattice_configurations'][0])), dtype=np.float)))
+                              for ds in desired_data for _ in ds['conditions']['T']]
+            # Flatten list
+            site_fractions = list(itertools.chain(*site_fractions))
+            # Remove existing partial model contributions from the data
+            data_quantities = data_quantities - feature_transforms[desired_props[0]](fixed_model.ast)
+            # Subtract out high-order (in T) parameters we've already fit
+            data_quantities = data_quantities - feature_transforms[desired_props[0]](sum(fixed_portions))
+            for sf, i in zip(site_fractions, data_quantities):
+                missing_variables = sympy.S(i).atoms(v.SiteFraction) - set(sf.keys())
+                sf.update({x: 0. for x in missing_variables})
+            data_quantities = [sympy.S(i).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
+                               for i, sf, ixx in zip(data_quantities, site_fractions, all_samples)]
+            data_quantities = np.asarray(data_quantities, dtype=np.float)
+            parameters.update(_fit_parameters(feature_matrix, data_quantities, features[desired_props[0]]))
+            # Add these parameters to be fixed for the next fitting step
+            fixed_portion = np.array(features[desired_props[0]], dtype=np.object)
+            fixed_portion = np.dot(fixed_portion, [parameters[feature] for feature in features[desired_props[0]]])
+            fixed_portions.append(fixed_portion)
+
     return parameters
 
 
@@ -435,6 +416,8 @@ def _build_sitefractions(phase_name, sublattice_configurations, sublattice_occup
     result = []
     for config, occ in zip(sublattice_configurations, sublattice_occupancies):
         sitefracs = {}
+        config = [[c] if not isinstance(c, (list, tuple)) else c for c in config]
+        occ = [[o] if not isinstance(o, (list, tuple)) else o for o in occ]
         if len(config) != len(occ):
             raise ValueError('Sublattice configuration length differs from occupancies')
         for sublattice_idx in range(len(config)):
@@ -609,15 +592,11 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
 def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=None):
     em_plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
                 ('T', 'HM'), ('T', 'HM_FORM')]
-    mix_plots = [('Z', 'HM_MIX'), ('Z', 'SM_MIX')]
+    mix_plots = [('Z', 'HM_FORM'), ('Z', 'HM_MIX'), ('Z', 'SM_MIX')]
     comps = sorted(comps)
     mod = Model(dbf, comps, phase_name)
     # This is for computing properties of formation
     mod_norefstate = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
-    # This is for computing properties of mixing
-    mod_mixonly = Model(dbf, comps, phase_name)
-    # Zero out endmember contribution for mixing properties
-    mod_mixonly.models['ref'] = 0
     # Is this an interaction parameter or endmember?
     if any([isinstance(conf, list) or isinstance(conf, tuple) for conf in configuration]):
         plots = mix_plots
@@ -720,9 +699,10 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
         else:
             return tuple([x])
 
+    all_endmembers = []
     for endmember in endmembers:
         print('ENDMEMBER: '+str(endmember))
-        parameters = fit_formation_energy(sorted(dbf.elements), phase_name, endmember, symmetry, datasets)
+        parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets)
         refdata = 0
         for subl, ratio in zip(endmember, site_ratios):
             if subl == 'VA':
@@ -732,11 +712,14 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
         fit_eq += refdata
         symmetric_endmembers = _generate_symmetric_group(endmember, symmetry)
         print('SYMMETRIC_ENDMEMBERS: ', symmetric_endmembers)
+        all_endmembers.extend(symmetric_endmembers)
         for em in symmetric_endmembers:
             em_dict[em] = fit_eq
             dbf.add_parameter('G', phase_name, tuple(map(_to_tuple, em)), 0, fit_eq)
     # Now fit all binary interactions
-    bin_interactions = list(itertools.combinations(endmembers, 2))
+    # Need to use 'all_endmembers' instead of 'endmembers' because you need to generate combinations
+    # of ALL endmembers, not just symmetry equivalent ones
+    bin_interactions = list(itertools.combinations(all_endmembers, 2))
     transformed_bin_interactions = []
     for first_endmember, second_endmember in bin_interactions:
         interaction = []
@@ -746,8 +729,13 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
             else:
                 interaction.append(tuple(sorted([first_occupant, second_occupant])))
         transformed_bin_interactions.append(interaction)
+
+    def bin_int_sort_key(x):
+        interacting_sublattices = sum((isinstance(n, (list, tuple)) and len(n) == 2) for n in x)
+        return canonical_sort_key((interacting_sublattices,) + x)
+
     bin_interactions = sorted(set(canonicalize(i, symmetry) for i in transformed_bin_interactions),
-                              key=canonical_sort_key)
+                              key=bin_int_sort_key)
     print('{0} distinct binary interactions'.format(len(bin_interactions)))
     for interaction in bin_interactions:
         ixx = []
@@ -758,7 +746,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
                 ixx.append(i)
         ixx = tuple(ixx)
         print('INTERACTION: '+str(ixx))
-        parameters = fit_formation_energy(sorted(dbf.elements), phase_name, ixx, symmetry, datasets, endmembers=em_dict)
+        parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(10, dtype=np.object)
         for degree in reversed(range(10)):
