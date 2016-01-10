@@ -585,7 +585,8 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         fig.gca().set_xlabel(plot_mapping.get(y, y))
     else:
         fig.gca().set_frame_on(False)
-        fig.gca().legend(loc='best')
+        leg = fig.gca().legend(loc='best')
+        leg.get_frame().set_edgecolor('black')
     fig.canvas.draw()
 
 
