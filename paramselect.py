@@ -354,9 +354,17 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry,
     # These is our previously fit partial model
     # Subtract out all of these contributions (zero out reference state because these are formation properties)
     fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
-    # TODO: What about ideal mixing in SM_FORM?
     fixed_model.models['idmix'] = 0
     fixed_portions = [0]
+
+    moles_per_formula_unit = sympy.S(0)
+    subl_idx = 0
+    for num_sites, const in zip(dbf.phases[phase_name].sublattices, dbf.phases[phase_name].constituents):
+        if 'VA' in const:
+            moles_per_formula_unit += num_sites * (1 - v.SiteFraction(phase_name, subl_idx, 'VA'))
+        else:
+            moles_per_formula_unit += num_sites
+        subl_idx += 1
 
     for desired_props in fitting_steps:
         desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
@@ -378,11 +386,14 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry,
             # Remove existing partial model contributions from the data
             data_quantities = data_quantities - feature_transforms[desired_props[0]](fixed_model.ast)
             # Subtract out high-order (in T) parameters we've already fit
-            data_quantities = data_quantities - feature_transforms[desired_props[0]](sum(fixed_portions))
+            data_quantities = data_quantities - \
+                feature_transforms[desired_props[0]](sum(fixed_portions)) / moles_per_formula_unit
             for sf, i in zip(site_fractions, data_quantities):
-                missing_variables = sympy.S(i).atoms(v.SiteFraction) - set(sf.keys())
+                missing_variables = sympy.S(i * moles_per_formula_unit).atoms(v.SiteFraction) - set(sf.keys())
                 sf.update({x: 0. for x in missing_variables})
-            data_quantities = [sympy.S(i).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
+            # moles_per_formula_unit factor is here because our data is stored per-atom
+            # but all of our fits are per-formula-unit
+            data_quantities = [sympy.S(i * moles_per_formula_unit).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
                                for i, sf, ixx in zip(data_quantities, site_fractions, all_samples)]
             data_quantities = np.asarray(data_quantities, dtype=np.float)
             parameters.update(_fit_parameters(feature_matrix, data_quantities, features[desired_props[0]]))
