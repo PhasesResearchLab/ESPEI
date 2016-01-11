@@ -586,11 +586,11 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
             bar_labels.append(data.get('reference', None))
             bar_data.append(response_data[0])
     if bar_chart:
-        fig.gca().barh(0.1 * (np.array(range(len(bar_data))) - 0.5), bar_data, edgecolor='black',
-                       color='none', height=0.1, hatch='x')
+        fig.gca().barh(0.02 * np.arange(len(bar_data)), bar_data,
+                       color='k', height=0.01)
         endmember_title = ' to '.join([':'.join(i) for i in endpoints])
         fig.suptitle('{} (T = {} K)'.format(endmember_title, temperatures), fontsize=20)
-        fig.gca().set_yticks(0.1 * np.array(range(len(bar_data))))
+        fig.gca().set_yticks(0.02 * np.arange(len(bar_data)))
         fig.gca().set_yticklabels(bar_labels, fontsize=20)
         # This bar chart is rotated 90 degrees, so "y" is now x
         fig.gca().set_xlabel(plot_mapping.get(y, y))
@@ -660,19 +660,20 @@ def _generate_symmetric_group(configuration, symmetry):
         x[:] = np.roll(x, 1, axis=0)
         return x
 
-    while np.any(np.array(symmetry, dtype=np.object) != permute(permutation)):
-        new_conf = np.array(configurations[0], dtype=np.object)
-        subgroups = []
-        # There is probably a more efficient way to do this
-        for subl in permutation:
-            subgroups.append([configuration[idx] for idx in subl])
-        # subgroup is ordered according to current permutation
-        # but we'll index it based on the original symmetry
-        # This should permute the configurations
-        for subl, subgroup in zip(symmetry, subgroups):
-            for subl_idx, conf_idx in enumerate(subl):
-                new_conf[conf_idx] = subgroup[subl_idx]
-        configurations.append(tuple(new_conf))
+    if symmetry is not None:
+        while np.any(np.array(symmetry, dtype=np.object) != permute(permutation)):
+            new_conf = np.array(configurations[0], dtype=np.object)
+            subgroups = []
+            # There is probably a more efficient way to do this
+            for subl in permutation:
+                subgroups.append([configuration[idx] for idx in subl])
+            # subgroup is ordered according to current permutation
+            # but we'll index it based on the original symmetry
+            # This should permute the configurations
+            for subl, subgroup in zip(symmetry, subgroups):
+                for subl_idx, conf_idx in enumerate(subl):
+                    new_conf[conf_idx] = subgroup[subl_idx]
+            configurations.append(tuple(new_conf))
 
     return sorted(set(configurations), key=canonical_sort_key)
 
@@ -703,6 +704,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
     # Number of significant figures in parameters
     numdigits = 6
     em_dict = {}
+    print('FITTING: ', phase_name)
     print('{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
 
     def _to_tuple(x):

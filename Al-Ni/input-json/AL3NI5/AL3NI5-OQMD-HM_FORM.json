@@ -1,0 +1,17 @@
+{
+  "components": ["AL", "NI", "VA"],
+  "phases": ["AL3NI5"],
+  "solver": {
+	  "mode": "manual",
+	  "sublattice_site_ratios": [0.375, 0.625],
+	  "sublattice_configurations": [["AL", "NI"]
+				       ]
+  },
+  "conditions": {
+	  "P": 101325,
+	  "T": 300
+  },
+  "output": "HM_FORM",
+  "values":   [[[-55383.48]]],
+  "reference": "OQMD"
+}
