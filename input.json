@@ -1,13 +1,19 @@
 {
   "components": ["AL", "NI", "VA"],
-  "refstate": "SGTE91",
+  "refdata": "SGTE91",
   "phases": {
+	     "LIQUID" : {
+			"sublattice_model": [["AL", "NI"]],
+			"sublattice_site_ratios": [1]
+	     },
 	     "BCC_B2": {
+			"aliases": ["BCC_A2"],
 			"sublattice_model": [["AL", "NI", "VA"], ["AL", "NI", "VA"], ["VA"]],
 			"sublattice_site_ratios": [0.5, 0.5, 1],
 			"equivalent_sublattices": [[0, 1]]
 	     },
 	     "FCC_L12": {
+		        "aliases": ["FCC_A1"],
 			"sublattice_model": [["AL", "NI"], ["AL", "NI"], ["AL", "NI"], ["AL", "NI"], ["VA"]],
 			"sublattice_site_ratios": [0.25, 0.25, 0.25, 0.25, 1],
 			"equivalent_sublattices": [[0, 1, 2, 3]]

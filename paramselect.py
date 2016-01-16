@@ -51,6 +51,7 @@ import pycalphad.variables as v
 from pycalphad import calculate, Database, Model
 import pycalphad.refstates
 from sklearn.linear_model import LinearRegression
+from sklearn.covariance import EmpiricalCovariance
 import tinydb
 import sympy
 import numpy as np
@@ -122,7 +123,7 @@ def canonicalize(configuration, equivalent_sublattices):
 
     Returns
     =======
-    canonicalized : list
+    canonicalized : tuple
     """
     canonicalized = list(configuration)
     if equivalent_sublattices is not None:
@@ -134,7 +135,7 @@ def canonicalize(configuration, equivalent_sublattices):
                 else:
                     canonicalized[conf_idx] = subgroup[subl_idx]
 
-    return tuple(canonicalized)
+    return _list_to_tuple(canonicalized)
 
 
 def _symmetry_filter(x, config, symmetry):
@@ -152,7 +153,7 @@ def _symmetry_filter(x, config, symmetry):
 def _get_data(comps, phase_name, configuration, symmetry, datasets, prop):
     configuration = list(configuration)
     desired_data = datasets.search((tinydb.where('output').test(lambda x: x in prop)) &
-                                   (tinydb.where('components') == comps) &
+                                   (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('solver').test(_symmetry_filter, configuration, symmetry)) &
                                    (tinydb.where('phases') == [phase_name]))
     # This seems to be necessary because the 'values' member does not modify 'datasets'
@@ -224,6 +225,9 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
         model_scores.append(score)
         results[num_params - 1, :num_params] = clf.coef_
         print(feature_tuple[:num_params], 'rss:', rss, 'AIC:', score)
+    cov = EmpiricalCovariance(store_precision=False, assume_centered=False)
+    cov.fit(feature_matrix[:, :np.argmin(model_scores)+1], data_quantities)
+    print(cov.covariance_)
     return OrderedDict(zip(feature_tuple, results[np.argmin(model_scores), :]))
 
 
@@ -678,7 +682,7 @@ def _generate_symmetric_group(configuration, symmetry):
     return sorted(set(configurations), key=canonical_sort_key)
 
 
-def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
+def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=None):
     """
     Generate an initial CALPHAD model for a given phase and
     sublattice model.
@@ -697,6 +701,10 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
         Number of sites in each sublattice, normalized to one atom.
     datasets : tinydb of datasets
         All datasets to consider for the calculation.
+    refdata : dict
+        Maps tuple(element, phase_name) -> SymPy object defining energy relative to SER
+    aliases : list or None
+        Alternative phase names. Useful for matching against reference data or other datasets.
     """
     # First fit endmembers
     all_em_count = len(list(itertools.product(*subl_model)))
@@ -704,6 +712,8 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
     # Number of significant figures in parameters
     numdigits = 6
     em_dict = {}
+    aliases = [] if aliases is None else aliases
+    aliases = sorted(set(aliases + [phase_name]))
     print('FITTING: ', phase_name)
     print('{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
 
@@ -716,14 +726,36 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets):
     all_endmembers = []
     for endmember in endmembers:
         print('ENDMEMBER: '+str(endmember))
-        parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets)
-        refdata = 0
-        for subl, ratio in zip(endmember, site_ratios):
-            if subl == 'VA':
-                continue
-            refdata = refdata + ratio * sympy.Symbol('GHSER'+subl)
-        fit_eq = sympy.Add(*[sigfigs(value, numdigits) * key for key, value in parameters.items()])
-        fit_eq += refdata
+        # Some endmembers are fixed by our choice of standard lattice stabilities, e.g., SGTE91
+        # If a (phase, pure component endmember) tuple is fixed, we should use that value instead of fitting
+        endmember_comps = list(set(endmember))
+        fit_eq = None
+        # only one non-VA component, or two components but the other is VA and its only the last sublattice
+        if ((len(endmember_comps) == 1) and (endmember_comps[0] != 'VA')) or\
+                ((len(endmember_comps) == 2) and (endmember[-1] == 'VA') and (len(set(endmember[:-1])) == 1)):
+            # this is a "pure component endmember"
+            # try all phase name aliases until we get run out or get a hit
+            em_comp = list(set(endmember_comps) - {'VA'})[0]
+            sym_name = None
+            for name in aliases:
+                sym_name = 'G'+name[:3].upper()+em_comp.upper()
+                stability = refdata.get((em_comp.upper(), name.upper()), None)
+                if stability is not None:
+                    dbf.symbols[sym_name] = stability
+                    break
+            if dbf.symbols.get(sym_name, None) is not None:
+                num_moles = sum([sites for elem, sites in zip(endmember, site_ratios) if elem != 'VA'])
+                fit_eq = num_moles * sympy.Symbol(sym_name)
+        if fit_eq is None:
+            # No reference lattice stability data -- we have to fit it
+            parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets)
+            fit_eq = sympy.Add(*[sigfigs(value, numdigits) * key for key, value in parameters.items()])
+            ref = 0
+            for subl, ratio in zip(endmember, site_ratios):
+                if subl == 'VA':
+                    continue
+                ref = ref + ratio * sympy.Symbol('GHSER'+subl)
+            fit_eq += ref
         symmetric_endmembers = _generate_symmetric_group(endmember, symmetry)
         print('SYMMETRIC_ENDMEMBERS: ', symmetric_endmembers)
         all_endmembers.extend(symmetric_endmembers)
@@ -794,21 +826,23 @@ def fit(input_fname, datasets):
     dbf = Database()
     dbf.elements = sorted(data['components'])
     # Write reference state to Database
-    refstate = getattr(pycalphad.refstates, data['refstate'])
-    comp_refs = {c.upper(): refstate[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
+    refdata = getattr(pycalphad.refstates, data['refdata'])
+    stabledata = getattr(pycalphad.refstates, data['refdata']+'Stable')
+    comp_refs = {c.upper(): stabledata[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
     comp_refs['VA'] = 0
     dbf.symbols.update({'GHSER'+c.upper(): data for c, data in comp_refs.items()})
     for phase_name, phase_obj in data['phases'].items():
         # Perform parameter selection and single-phase fitting based on input
         # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
         symmetry = phase_obj.get('equivalent_sublattices', None)
+        aliases = phase_obj.get('aliases', None)
         # TODO: More advanced phase data searching
         site_ratios = phase_obj['sublattice_site_ratios']
         subl_model = phase_obj['sublattice_model']
         dbf.add_phase(phase_name, {}, site_ratios)
         dbf.add_phase_constituents(phase_name, subl_model)
         # phase_fit() adds parameters to dbf
-        phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets)
+        phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=aliases)
     # TODO: Fitting with multi-phase data
     # Do I include experimental data for the first time here, or above in single-phase fit?
     # Do I only fit new degrees of freedom here, or do I refine the existing ones? If the latter, which ones?

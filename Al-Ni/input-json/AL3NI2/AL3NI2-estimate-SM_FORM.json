@@ -4,13 +4,15 @@
   "solver": {
 	  "mode": "manual",
 	  "sublattice_site_ratios": [3, 2, 1],
-	  "sublattice_configurations": [["AL", "NI", "VA"]]
+	  "sublattice_configurations": [["AL", "AL", "VA"],
+					["AL", "NI", "NI"],
+					["AL", "AL", "NI"]]
   },
   "conditions": {
 	  "P": 101325,
 	  "T": 300
   },
   "output": "SM_FORM",
-  "values":   [[[-11.104]]],
-  "reference": "OQMD (est.)"
+  "values":   [[[0.5, -10.1115, -0.38787]]],
+  "reference": "Estimate"
 }

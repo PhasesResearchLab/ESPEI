@@ -12,6 +12,6 @@
 	  "T": 300
   },
   "output": "SM_FORM",
-  "values":   [[[5.392]]],
+  "values":   [[[-5.392]]],
   "reference": "OQMD (est.)"
 }
