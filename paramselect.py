@@ -239,9 +239,11 @@ def _get_samples(desired_data):
         site_fraction_product = [reduce(operator.mul, list(itertools.chain(*[np.atleast_1d(f) for f in fracs])), 1)
                                  for fracs in site_fractions]
         # TODO: Subtle sorting bug here, if the interactions aren't already in sorted order...
-        # TODO: This also looks like it won't work if we add more than one interaction here
-        interaction_product = [f[0] - f[1] for fracs in site_fractions for f in fracs
-                               if isinstance(f, list) and len(f) == 2]
+        interaction_product = []
+        for fracs in site_fractions:
+            interaction_product.append(float(reduce(operator.mul,
+                                                    [f[0] - f[1] for f in fracs if isinstance(f, list) and len(f) == 2],
+                                                    1)))
         if len(interaction_product) == 0:
             interaction_product = [0]
         comp_features = zip(site_fraction_product, interaction_product)
