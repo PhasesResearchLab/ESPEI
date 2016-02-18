@@ -49,7 +49,7 @@ with ridge regression is advisible.
 """
 import pycalphad.variables as v
 from pycalphad import calculate, Database, Model
-import pycalphad.refstates
+import pycalphad.refdata
 from sklearn.linear_model import LinearRegression
 from sklearn.covariance import EmpiricalCovariance
 import tinydb
@@ -828,8 +828,8 @@ def fit(input_fname, datasets):
     dbf = Database()
     dbf.elements = sorted(data['components'])
     # Write reference state to Database
-    refdata = getattr(pycalphad.refstates, data['refdata'])
-    stabledata = getattr(pycalphad.refstates, data['refdata']+'Stable')
+    refdata = getattr(pycalphad.refdata, data['refdata'])
+    stabledata = getattr(pycalphad.refdata, data['refdata']+'Stable')
     comp_refs = {c.upper(): stabledata[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
     comp_refs['VA'] = 0
     dbf.symbols.update({'GHSER'+c.upper(): data for c, data in comp_refs.items()})
