@@ -48,7 +48,8 @@ with uninformative priors. With bias of AIC toward complex models, I think doing
 with ridge regression is advisible.
 """
 import pycalphad.variables as v
-from pycalphad import calculate, Database, Model
+from pycalphad import binplot, calculate, equilibrium, Database, Model
+from pycalphad.plot.utils import phase_legend
 import pycalphad.refdata
 from sklearn.linear_model import LinearRegression
 from sklearn.covariance import EmpiricalCovariance
@@ -56,7 +57,7 @@ import tinydb
 import sympy
 import numpy as np
 import json
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import itertools
 import operator
 import copy
@@ -820,6 +821,133 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 for syminter in symmetric_interactions:
                     dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
     # Now fit ternary interactions
+
+
+def multi_plot(dbf, comps, phases, datasets, ax=None):
+    import matplotlib.pyplot as plt
+    plots = [('ZPF', 'T')]
+    real_components = sorted(set(comps) - {'VA'})
+    legend_handles, phase_color_map = phase_legend(phases)
+    for output, indep_var in plots:
+        desired_data = datasets.search((tinydb.where('output') == output) &
+                                       (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
+                                       (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
+        ax = ax if ax is not None else plt.gca()
+        # TODO: There are lot of ways this could break in multi-component situations
+        chosen_comp = real_components[-1]
+        ax.set_xlabel('X({})'.format(chosen_comp))
+        ax.set_ylabel(indep_var)
+        ax.set_xlim((0, 1))
+        symbol_map = {1: "o", 2: "s", 3: "^"}
+        for data in desired_data:
+            payload = data['values']
+            # TODO: Add broadcast_conditions support
+            # Repeat the temperature (or whatever variable) vector to align with the unraveled data
+            temp_repeats = np.zeros(len(np.atleast_1d(data['conditions'][indep_var])), dtype=np.int)
+            for idx, x in enumerate(payload):
+                temp_repeats[idx] = len(x)
+            temps_ravelled = np.repeat(data['conditions'][indep_var], temp_repeats)
+            payload_ravelled = []
+            phases_ravelled = []
+            comps_ravelled = []
+            symbols_ravelled = []
+            # TODO: Fix to only include equilibria listed in 'phases'
+            for p in payload:
+                symbols_ravelled.extend([symbol_map[len(p)]] * len(p))
+                payload_ravelled.extend(p)
+            for rp in payload_ravelled:
+                phases_ravelled.append(rp[0])
+                comp_dict = dict(zip([x.upper() for x in rp[1]], rp[2]))
+                dependent_comp = list(set(real_components) - set(comp_dict.keys()))
+                if len(dependent_comp) > 1:
+                    raise ValueError('Dependent components greater than one')
+                elif len(dependent_comp) == 1:
+                    dependent_comp = dependent_comp[0]
+                    # TODO: Assuming N=1
+                    comp_dict[dependent_comp] = 1 - sum(np.array(list(comp_dict.values()), dtype=np.float))
+                chosen_comp_value = comp_dict[chosen_comp]
+                comps_ravelled.append(chosen_comp_value)
+            symbols_ravelled = np.array(symbols_ravelled)
+            comps_ravelled = np.array(comps_ravelled)
+            temps_ravelled = np.array(temps_ravelled)
+            phases_ravelled = np.array(phases_ravelled)
+            # We can't pass an array of markers to scatter, sadly
+            for sym in symbols_ravelled:
+                selected = symbols_ravelled == sym
+                ax.scatter(comps_ravelled[selected], temps_ravelled[selected], marker=sym, s=100,
+                           c='none', edgecolors=[phase_color_map[x] for x in phases_ravelled[selected]])
+        ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
+
+
+def multi_phase_fit(dbf, comps, phases, datasets):
+    desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
+                                   (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
+                                   (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
+    for data in desired_data:
+        payload = data['values']
+        conditions = data['conditions']
+        broadcast = data.get('broadcast_conditions', False)
+        print(conditions)
+        phase_regions = defaultdict(lambda: defaultdict(lambda: list()))
+        # We send the equilibrium calculation to be performed all at once for each phase tuple
+        # We have to track which calculations need to be compared against each other
+        equilibria_indices = defaultdict(lambda: list())
+        phase_region_indices = defaultdict(lambda: list())
+        # TODO: Fix to only include equilibria listed in 'phases'
+        for idx, p in enumerate(payload):
+            phase_key = tuple(sorted(rp[0] for rp in p))
+            if len(phase_key) < 2:
+                # Skip single-phase regions for fitting purposes
+                continue
+            comp_dicts = [dict(zip([x.upper() for x in rp[1]], rp[2])) for rp in p]
+            for cd_idx, cd in enumerate(comp_dicts):
+                for dcomp, compval in cd.items():
+                    compval = compval if compval is not None else np.nan
+                    phase_regions[phase_key][v.X(dcomp.upper())].append(compval)
+            # Need to not just check the chemical potential difference
+            # Need to also verify that they are still zero phase-fraction lines
+            equilibria_indices[phase_key].append(list(range(len(phase_key))))
+            phase_region_indices[phase_key].append(idx)
+        for region, comp_dict in phase_regions.items():
+            print(region)
+            print(phase_region_indices[region])
+            region_conds = OrderedDict()
+            for key, value in conditions.items():
+                value = np.atleast_1d(np.asarray(value))
+                if len(value) == 1:
+                    region_conds[getattr(v, key)] = np.atleast_1d(np.asarray(value))
+                else:
+                    value = np.repeat(value[phase_region_indices[region]], [len(x) for x in equilibria_indices[region]])
+                    region_conds[getattr(v, key)] = value
+            region_conds.update(comp_dict)
+            print(region_conds)
+            region_keys = list(region_conds.keys())
+            cond_size = max(len(x) for x in region_conds.values())
+            region_cond_vals = []
+            for val in region_conds.values():
+                if len(val) > 1:
+                    region_cond_vals.append(val)
+                else:
+                    region_cond_vals.append(np.repeat(val, cond_size))
+            region_eq = np.array(region_cond_vals, dtype=np.float).T
+            for req in region_eq:
+                current_conds = dict(zip(region_keys, req))
+                print(current_conds)
+                if np.any(np.isnan(list(current_conds.values()))):
+                    pass
+                else:
+                    # Extract chemical potential hyperplane from multi-phase calculation
+                    multi_eqdata = equilibrium(dbf, comps, list(region), current_conds, pbar=False, verbose=True)
+                    print(multi_eqdata.MU)
+            for req, current_phase in zip(region_eq, region):
+                current_conds = dict(zip(region_keys, req))
+                print(current_conds)
+                if np.any(np.isnan(list(current_conds.values()))):
+                    pass
+                else:
+                    # Extract energies from single-phase calculations
+                    single_eqdata = equilibrium(dbf, comps, current_phase, current_conds, pbar=False, verbose=True)
+                    print(single_eqdata.GM)
 
 
 def fit(input_fname, datasets):
