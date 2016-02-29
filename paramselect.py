@@ -880,6 +880,79 @@ def multi_plot(dbf, comps, phases, datasets, ax=None):
         ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
 
 
+def _sublattice_model_to_variables(phase_name, subl_model):
+    """
+    Convert a sublattice model to a list of variables.
+    """
+    result = []
+    for idx, subl in enumerate(subl_model):
+        result.extend([v.SiteFraction(phase_name, idx, s) for s in subl])
+    return result
+
+
+def choose_interaction(phase_name, subl_model, site_fractions):
+    """
+    Get the interaction or end-member with the largest contribution to the given site fractions.
+    """
+    print('SUBL_MODEL', subl_model)
+    print('SITE_FRACTIONS', site_fractions)
+    sitefrac_dict = dict(zip(_sublattice_model_to_variables(phase_name, subl_model), site_fractions))
+    print('SITEFRAC_DICT', sitefrac_dict)
+    all_endmembers = sorted(set(i for i in itertools.product(*subl_model)))
+    bin_interactions = list(itertools.combinations(all_endmembers, 2))
+    transformed_bin_interactions = []
+    for first_endmember, second_endmember in bin_interactions:
+        interaction = []
+        for first_occupant, second_occupant in zip(first_endmember, second_endmember):
+            if first_occupant == second_occupant:
+                interaction.append(first_occupant)
+            else:
+                interaction.append(tuple(sorted([first_occupant, second_occupant])))
+        transformed_bin_interactions.append(interaction)
+
+    def bin_int_sort_key(x):
+        interacting_sublattices = sum((isinstance(n, (list, tuple)) and len(n) == 2) for n in x)
+        return canonical_sort_key((interacting_sublattices,) + x)
+
+    bin_interactions = sorted(set(tuple(i) for i in transformed_bin_interactions),
+                              key=bin_int_sort_key)
+    # Return interaction with largest numerical value for the given site fractions
+    important_interaction = None
+    important_k = 0
+    interaction_score = 0
+    for endmember in all_endmembers:
+        em_prod = sympy.Mul(*[v.SiteFraction(phase_name, idx, s) for idx, s in enumerate(endmember)])
+        em_prod = em_prod.subs(sitefrac_dict).evalf()
+        print('ENDMEMBER', endmember, '- SCORE', em_prod)
+        if em_prod > interaction_score:
+            interaction_score = em_prod
+            important_interaction = endmember
+            important_k = 0
+    max_value = {0: 0.5, 1: 1./6*(3**0.5), 2: 1./16, 3: 0.0464758}
+    for interaction in bin_interactions:
+        interacting_subls = sum([isinstance(subl, (list, tuple, set)) for subl in interaction])
+        for k in range(4):
+            in_prod = sympy.S.One
+            for idx, subl in enumerate(interaction):
+                if isinstance(subl, (list, tuple)):
+                    in_prod *= sympy.Mul(*[v.SiteFraction(phase_name, idx, s) for s in subl])
+                    # Only works for binary interactions
+                    in_prod *= (v.SiteFraction(phase_name, idx, subl[0]) - v.SiteFraction(phase_name, idx, subl[1])) ** k
+                else:
+                    in_prod *= v.SiteFraction(phase_name, idx, subl)
+            in_prod = np.abs(in_prod.subs(sitefrac_dict).evalf())
+            # Rescale to be percent of maximum value
+            # TODO: Not sure if this scaling is correct for reciprocal interactions
+            in_prod /= (max_value[k] ** interacting_subls)
+            print('INTERACTION', interaction, ' (k={})'.format(k), '- SCORE', in_prod)
+            print('INTERACTING SUBLS: ', interacting_subls)
+            if in_prod > interaction_score:
+                interaction_score = in_prod
+                important_interaction = interaction
+                important_k = k
+    return important_interaction, important_k
+
+
 def multi_phase_fit(dbf, comps, phases, datasets):
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
@@ -980,9 +1053,13 @@ def multi_phase_fit(dbf, comps, phases, datasets):
                     error /= 8.3145 * current_conds[v.T]
                     print(error)
                     phase_errors[current_phase].append(float(error))
-                    # Determine closest end-member and closest binary interaction
-                    # Are we within x distance of an end-member? Choose to modify it
-                    # Otherwise find the nearest binary interaction, or the disordered interaction
+                    # Determine the most sensitive interaction under the current conditions (if error > 1e-4)
+                    if error > 1e-4:
+                        best_interaction = choose_interaction(current_phase, phase_models[current_phase].constituents,
+                                                              np.squeeze(single_eqdata.Y.sel(vertex=0).values).tolist())
+                    else:
+                        best_interaction = None
+                    print('INTERACTION TO MODIFY', (current_phase, best_interaction))
     print(phase_errors)
 
 
