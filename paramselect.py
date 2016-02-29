@@ -50,6 +50,7 @@ with ridge regression is advisible.
 import pycalphad.variables as v
 from pycalphad import binplot, calculate, equilibrium, Database, Model
 from pycalphad.plot.utils import phase_legend
+from pycalphad.core.autograd_utils import build_functions
 import pycalphad.refdata
 from sklearn.linear_model import LinearRegression
 from sklearn.covariance import EmpiricalCovariance
@@ -883,6 +884,14 @@ def multi_phase_fit(dbf, comps, phases, datasets):
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
+    phase_errors = defaultdict(lambda: list())
+    phase_models = {phase: Model(dbf, comps, phase) for phase in phases}
+    phase_obj_callables = {}
+    phase_grad_callables = {}
+    phase_hess_callables = {}
+    for phase, phase_mod in phase_models.items():
+        phase_obj_callables[phase], phase_grad_callables[phase], phase_hess_callables[phase] = \
+            build_functions(phase_mod.GM, [v.P, v.T] + phase_mod.site_fractions)
     for data in desired_data:
         payload = data['values']
         conditions = data['conditions']
@@ -899,7 +908,8 @@ def multi_phase_fit(dbf, comps, phases, datasets):
             if len(phase_key) < 2:
                 # Skip single-phase regions for fitting purposes
                 continue
-            comp_dicts = [dict(zip([x.upper() for x in rp[1]], rp[2])) for rp in p]
+            # Need to sort 'p' here so we have the sorted ordering used in 'phase_key'
+            comp_dicts = [dict(zip([x.upper() for x in rp[1]], rp[2])) for rp in sorted(p, key=operator.itemgetter(0))]
             for cd_idx, cd in enumerate(comp_dicts):
                 for dcomp, compval in cd.items():
                     compval = compval if compval is not None else np.nan
@@ -930,6 +940,7 @@ def multi_phase_fit(dbf, comps, phases, datasets):
                 else:
                     region_cond_vals.append(np.repeat(val, cond_size))
             region_eq = np.array(region_cond_vals, dtype=np.float).T
+            region_chemical_potentials = []
             for req in region_eq:
                 current_conds = dict(zip(region_keys, req))
                 print(current_conds)
@@ -937,17 +948,43 @@ def multi_phase_fit(dbf, comps, phases, datasets):
                     pass
                 else:
                     # Extract chemical potential hyperplane from multi-phase calculation
-                    multi_eqdata = equilibrium(dbf, comps, list(region), current_conds, pbar=False, verbose=True)
-                    print(multi_eqdata.MU)
-            for req, current_phase in zip(region_eq, region):
+                    multi_eqdata = equilibrium(dbf, comps, list(region), current_conds, pbar=False, verbose=True,
+                                               callables=phase_obj_callables, grad_callables=phase_grad_callables,
+                                               hess_callables=phase_hess_callables)
+                    # Does there exist only a single phase in the result with zero internal degrees of freedom?
+                    # We should exclude those chemical potentials from the average because they are meaningless.
+                    num_phases = len(np.squeeze(multi_eqdata['Phase'].values != ''))
+                    zero_dof = np.all((multi_eqdata['Y'].values == 1.) | np.isnan(multi_eqdata['Y'].values))
+                    if (num_phases == 1) and zero_dof:
+                        region_chemical_potentials.append(np.full_like(np.squeeze(multi_eqdata['MU'].values), np.nan))
+                    else:
+                        region_chemical_potentials.append(np.squeeze(multi_eqdata['MU'].values))
+            region_chemical_potentials = np.nanmean(region_chemical_potentials, axis=0, dtype=np.float)
+            #print('REGION_EQ, REGION', region_eq, region)
+            for req, current_phase in zip(region_eq, np.tile(region, len(region_eq)/len(region))):
                 current_conds = dict(zip(region_keys, req))
-                print(current_conds)
+                print('CURRENT PHASE', current_phase)
+                print('CURRENT CONDS', current_conds)
                 if np.any(np.isnan(list(current_conds.values()))):
                     pass
                 else:
                     # Extract energies from single-phase calculations
-                    single_eqdata = equilibrium(dbf, comps, current_phase, current_conds, pbar=False, verbose=True)
-                    print(single_eqdata.GM)
+                    single_eqdata = equilibrium(dbf, comps, [current_phase], current_conds, pbar=False, verbose=True,
+                                                callables=phase_obj_callables, grad_callables=phase_grad_callables,
+                                                hess_callables=phase_hess_callables)
+                    error = np.abs(single_eqdata.GM.values -
+                                   np.multiply(region_chemical_potentials,
+                                               np.squeeze(single_eqdata['X'].sel(vertex=0).values)).sum())
+                    # Normalize residual driving force by a factor of RT
+                    # This will make it easier to sum errors at different temperatures
+                    error /= 8.3145 * current_conds[v.T]
+                    print(error)
+                    phase_errors[current_phase].append(float(error))
+                    # Determine closest end-member and closest binary interaction
+                    # Are we within x distance of an end-member? Choose to modify it
+                    # Otherwise find the nearest binary interaction, or the disordered interaction
+    print(phase_errors)
+
 
 
 def fit(input_fname, datasets):
