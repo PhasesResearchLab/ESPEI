@@ -56,6 +56,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.covariance import EmpiricalCovariance
 import tinydb
 import sympy
+from scipy.optimize import fmin_powell
 import numpy as np
 import json
 from collections import OrderedDict, defaultdict
@@ -894,10 +895,10 @@ def choose_interaction(phase_name, subl_model, site_fractions):
     """
     Get the interaction or end-member with the largest contribution to the given site fractions.
     """
-    print('SUBL_MODEL', subl_model)
-    print('SITE_FRACTIONS', site_fractions)
+    #print('SUBL_MODEL', subl_model)
+    #print('SITE_FRACTIONS', site_fractions)
     sitefrac_dict = dict(zip(_sublattice_model_to_variables(phase_name, subl_model), site_fractions))
-    print('SITEFRAC_DICT', sitefrac_dict)
+    #print('SITEFRAC_DICT', sitefrac_dict)
     all_endmembers = sorted(set(i for i in itertools.product(*subl_model)))
     bin_interactions = list(itertools.combinations(all_endmembers, 2))
     transformed_bin_interactions = []
@@ -923,7 +924,7 @@ def choose_interaction(phase_name, subl_model, site_fractions):
     for endmember in all_endmembers:
         em_prod = sympy.Mul(*[v.SiteFraction(phase_name, idx, s) for idx, s in enumerate(endmember)])
         em_prod = em_prod.subs(sitefrac_dict).evalf()
-        print('ENDMEMBER', endmember, '- SCORE', em_prod)
+        #print('ENDMEMBER', endmember, '- SCORE', em_prod)
         if em_prod > interaction_score:
             interaction_score = em_prod
             important_interaction = endmember
@@ -944,7 +945,7 @@ def choose_interaction(phase_name, subl_model, site_fractions):
             # Rescale to be percent of maximum value
             # TODO: Not sure if this scaling is correct for reciprocal interactions
             in_prod /= (max_value[k] ** interacting_subls)
-            print('INTERACTION', interaction, ' (k={})'.format(k), '- SCORE', in_prod)
+            #print('INTERACTION', interaction, ' (k={})'.format(k), '- SCORE', in_prod)
             if in_prod > interaction_score:
                 interaction_score = in_prod
                 important_interaction = interaction
@@ -952,12 +953,17 @@ def choose_interaction(phase_name, subl_model, site_fractions):
     return important_interaction, important_k
 
 
-def multi_phase_fit(dbf, comps, phases, inpd, datasets):
+def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
     phase_errors = defaultdict(lambda: list())
-    phase_models = {phase: Model(dbf, comps, phase) for phase in phases}
+    if param_symbols is not None:
+        param_dict = dict(zip(param_symbols, x))
+        print('PARAM DICT', param_dict)
+    else:
+        param_dict = None
+    phase_models = {phase: Model(dbf, comps, phase, parameters=param_dict) for phase in phases}
     phase_obj_callables = {}
     phase_grad_callables = {}
     phase_hess_callables = {}
@@ -968,7 +974,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets):
         payload = data['values']
         conditions = data['conditions']
         broadcast = data.get('broadcast_conditions', False)
-        print(conditions)
+        #print(conditions)
         phase_regions = defaultdict(lambda: defaultdict(lambda: list()))
         # We send the equilibrium calculation to be performed all at once for each phase tuple
         # We have to track which calculations need to be compared against each other
@@ -991,8 +997,8 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets):
             equilibria_indices[phase_key].append(list(range(len(phase_key))))
             phase_region_indices[phase_key].append(idx)
         for region, comp_dict in phase_regions.items():
-            print(region)
-            print(phase_region_indices[region])
+            #print(region)
+            #print(phase_region_indices[region])
             region_conds = OrderedDict()
             for key, value in conditions.items():
                 value = np.atleast_1d(np.asarray(value))
@@ -1002,7 +1008,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets):
                     value = np.repeat(value[phase_region_indices[region]], [len(x) for x in equilibria_indices[region]])
                     region_conds[getattr(v, key)] = value
             region_conds.update(comp_dict)
-            print(region_conds)
+            #print(region_conds)
             region_keys = list(region_conds.keys())
             cond_size = max(len(x) for x in region_conds.values())
             region_cond_vals = []
@@ -1015,12 +1021,12 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets):
             region_chemical_potentials = []
             for req in region_eq:
                 current_conds = dict(zip(region_keys, req))
-                print(current_conds)
+                #print(current_conds)
                 if np.any(np.isnan(list(current_conds.values()))):
                     pass
                 else:
                     # Extract chemical potential hyperplane from multi-phase calculation
-                    multi_eqdata = equilibrium(dbf, comps, list(region), current_conds, pbar=False, verbose=True,
+                    multi_eqdata = equilibrium(dbf, comps, list(region), current_conds, pbar=False, verbose=False,
                                                callables=phase_obj_callables, grad_callables=phase_grad_callables,
                                                hess_callables=phase_hess_callables)
                     # Does there exist only a single phase in the result with zero internal degrees of freedom?
@@ -1041,7 +1047,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets):
                     pass
                 else:
                     # Extract energies from single-phase calculations
-                    single_eqdata = equilibrium(dbf, comps, [current_phase], current_conds, pbar=False, verbose=True,
+                    single_eqdata = equilibrium(dbf, comps, [current_phase], current_conds, pbar=False, verbose=False,
                                                 callables=phase_obj_callables, grad_callables=phase_grad_callables,
                                                 hess_callables=phase_hess_callables)
                     error = np.abs(single_eqdata.GM.values -
@@ -1057,14 +1063,10 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets):
                         # best_interaction returns a tuple of interaction, interaction_k
                         inter_key = (current_phase,
                                      canonicalize(best_interaction[0],
-                                                  inpd['phases'].get('equivalent_sublattices', None)),
+                                                  inpd['phases'][current_phase].get('equivalent_sublattices', None)),
                                      best_interaction[1])
                         phase_errors[inter_key].append(float(error))
-    # To decide the degrees of freedom for each interaction:
-    # If we have multiple data points for it, use A+BT
-    # If only one temperature data point, use just A (const.)
-    print('PHASE ERRORS', phase_errors)
-
+    return phase_errors
 
 
 def fit(input_fname, datasets):
@@ -1090,7 +1092,70 @@ def fit(input_fname, datasets):
         dbf.add_phase_constituents(phase_name, subl_model)
         # phase_fit() adds parameters to dbf
         phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=aliases)
-    # TODO: Fitting with multi-phase data
-    # Do I include experimental data for the first time here, or above in single-phase fit?
-    # Do I only fit new degrees of freedom here, or do I refine the existing ones? If the latter, which ones?
+    max_iterations = 20
+    max_refine_iterations = 20
+    old_params = None
+    old_direc = None
+    for iteration in range(max_iterations):
+        print('MAIN ITERATION ', iteration+1, flush=True)
+        errors = multi_phase_fit(dbf, dbf.elements, sorted(data['phases'].keys()), data, datasets, None)
+        total_error = np.mean([np.mean(err) for err in errors.values()])
+        print('TOTAL MEAN ERROR ({}/{})'.format(iteration+1, max_iterations), total_error, flush=True)
+        if total_error < 1e-3:
+            print('CONVERGED')
+            break
+        # Have we converged? Check the error
+        params = sorted(set(errors.keys()), key=str)
+        print('PARAMS', params)
+        param_variables = []
+        pcount = 0
+
+        def update_param(element):
+            element['parameter'] += 1000 * sympy.Symbol('P00{}A'.format(pcount)) + \
+                                    10 * v.T * sympy.Symbol('P00{}B'.format(pcount))
+            param_variables.extend([sympy.Symbol('P00{}A'.format(pcount)), sympy.Symbol('P00{}B'.format(pcount))])
+            return element
+
+        for param in params:
+            # single components in sublattices need to be wrapped in a tuple so they'll match in the database
+            const_array = []
+            for subl in param[1]:
+                if isinstance(subl, (tuple, list, set)):
+                    const_array.append(subl)
+                else:
+                    const_array.append((subl,))
+            const_array = tuple(const_array)
+            param_query = ((tinydb.where('phase_name') == param[0]) &
+                           (tinydb.where('parameter_order') == param[2]) &
+                           ((tinydb.where('parameter_type') == 'G') |
+                            (tinydb.where('parameter_type') == 'L')) &
+                           (tinydb.where('constituent_array') == const_array)
+                           )
+            result = dbf.search(param_query)
+            if len(result) == 0:
+                dbf.add_parameter('G', param[0], const_array, param[2], sympy.S.Zero)
+            dbf._parameters.update(update_param, param_query)
+            pcount += 1
+
+        def error_func(x):
+            errors = multi_phase_fit(dbf, dbf.elements, sorted(data['phases'].keys()), data, datasets,
+                                     x, param_symbols=[str(s) for s in param_variables])
+            return sum([sum(err) for err in errors.values()])
+
+        def itercb(xk):
+            print('CURRENT GUESS', dict(zip(param_variables, xk)), flush=True)
+        # If we haven't changed parameters to update since the last iteration, use the old direction set
+        if old_params == params:
+            direc = old_direc
+        else:
+            old_params = params
+            direc = None
+        solution = fmin_powell(error_func, np.zeros_like(param_variables, dtype=np.float),
+                               maxiter=max_refine_iterations, retall=True, direc=direc, callback=itercb)
+        print('SOLUTION', solution, flush=True)
+
+        def sub_values(element):
+            element['parameter'] = element['parameter'].xreplace(dict(zip(param_variables, solution.x)))
+            return element
+        dbf._parameters.update(sub_values)
     return dbf
