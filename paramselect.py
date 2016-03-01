@@ -945,7 +945,6 @@ def choose_interaction(phase_name, subl_model, site_fractions):
             # TODO: Not sure if this scaling is correct for reciprocal interactions
             in_prod /= (max_value[k] ** interacting_subls)
             print('INTERACTION', interaction, ' (k={})'.format(k), '- SCORE', in_prod)
-            print('INTERACTING SUBLS: ', interacting_subls)
             if in_prod > interaction_score:
                 interaction_score = in_prod
                 important_interaction = interaction
@@ -953,7 +952,7 @@ def choose_interaction(phase_name, subl_model, site_fractions):
     return important_interaction, important_k
 
 
-def multi_phase_fit(dbf, comps, phases, datasets):
+def multi_phase_fit(dbf, comps, phases, inpd, datasets):
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
@@ -1051,16 +1050,20 @@ def multi_phase_fit(dbf, comps, phases, datasets):
                     # Normalize residual driving force by a factor of RT
                     # This will make it easier to sum errors at different temperatures
                     error /= 8.3145 * current_conds[v.T]
-                    print(error)
-                    phase_errors[current_phase].append(float(error))
                     # Determine the most sensitive interaction under the current conditions (if error > 1e-4)
                     if error > 1e-4:
                         best_interaction = choose_interaction(current_phase, phase_models[current_phase].constituents,
                                                               np.squeeze(single_eqdata.Y.sel(vertex=0).values).tolist())
-                    else:
-                        best_interaction = None
-                    print('INTERACTION TO MODIFY', (current_phase, best_interaction))
-    print(phase_errors)
+                        # best_interaction returns a tuple of interaction, interaction_k
+                        inter_key = (current_phase,
+                                     canonicalize(best_interaction[0],
+                                                  inpd['phases'].get('equivalent_sublattices', None)),
+                                     best_interaction[1])
+                        phase_errors[inter_key].append(float(error))
+    # To decide the degrees of freedom for each interaction:
+    # If we have multiple data points for it, use A+BT
+    # If only one temperature data point, use just A (const.)
+    print('PHASE ERRORS', phase_errors)
 
 
 
