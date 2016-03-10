@@ -59,7 +59,7 @@ import sympy
 from scipy.optimize import fmin_powell
 import numpy as np
 import json
-from collections import OrderedDict, defaultdict
+from collections import Counter, OrderedDict, defaultdict
 import itertools
 import operator
 import copy
@@ -887,7 +887,7 @@ def _sublattice_model_to_variables(phase_name, subl_model):
     """
     result = []
     for idx, subl in enumerate(subl_model):
-        result.extend([v.SiteFraction(phase_name, idx, s) for s in subl])
+        result.extend([v.SiteFraction(phase_name, idx, s) for s in sorted(subl, key=str)])
     return result
 
 
@@ -923,6 +923,7 @@ def choose_interaction(phase_name, subl_model, site_fractions):
     interaction_score = 0
     for endmember in all_endmembers:
         em_prod = sympy.Mul(*[v.SiteFraction(phase_name, idx, s) for idx, s in enumerate(endmember)])
+        #print('EM_PROD', em_prod)
         em_prod = em_prod.subs(sitefrac_dict).evalf()
         #print('ENDMEMBER', endmember, '- SCORE', em_prod)
         if em_prod > interaction_score:
@@ -957,7 +958,8 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
-    phase_errors = defaultdict(lambda: list())
+    phase_errors = tinydb.TinyDB(storage=tinydb.storages.MemoryStorage)
+    phase_interactions = Counter()
     if param_symbols is not None:
         param_dict = dict(zip(param_symbols, x))
         print('PARAM DICT', param_dict)
@@ -1026,9 +1028,11 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                     pass
                 else:
                     # Extract chemical potential hyperplane from multi-phase calculation
-                    multi_eqdata = equilibrium(dbf, comps, list(region), current_conds, pbar=False, verbose=False,
+                    # Include all phases instead of just list(region)
+                    multi_eqdata = equilibrium(dbf, comps, phases, current_conds, pbar=False, verbose=False,
                                                callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                               hess_callables=phase_hess_callables)
+                                               hess_callables=phase_hess_callables, calc_opts={'pdens': 1000})
+                    print('MULTI_EQDATA', multi_eqdata)
                     # Does there exist only a single phase in the result with zero internal degrees of freedom?
                     # We should exclude those chemical potentials from the average because they are meaningless.
                     num_phases = len(np.squeeze(multi_eqdata['Phase'].values != ''))
@@ -1038,6 +1042,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                     else:
                         region_chemical_potentials.append(np.squeeze(multi_eqdata['MU'].values))
             region_chemical_potentials = np.nanmean(region_chemical_potentials, axis=0, dtype=np.float)
+            print('REGION_CHEMICAL_POTENTIALS', region_chemical_potentials)
             #print('REGION_EQ, REGION', region_eq, region)
             for req, current_phase in zip(region_eq, np.tile(region, len(region_eq)/len(region))):
                 current_conds = dict(zip(region_keys, req))
@@ -1049,24 +1054,70 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                     # Extract energies from single-phase calculations
                     single_eqdata = equilibrium(dbf, comps, [current_phase], current_conds, pbar=False, verbose=False,
                                                 callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                                hess_callables=phase_hess_callables)
-                    error = np.abs(single_eqdata.GM.values -
-                                   np.multiply(region_chemical_potentials,
-                                               np.squeeze(single_eqdata['X'].sel(vertex=0).values)).sum())
-                    # Normalize residual driving force by a factor of RT
-                    # This will make it easier to sum errors at different temperatures
-                    error /= 8.3145 * current_conds[v.T]
-                    # Determine the most sensitive interaction under the current conditions (if error > 1e-4)
-                    if error > 1e-4:
-                        best_interaction = choose_interaction(current_phase, phase_models[current_phase].constituents,
-                                                              np.squeeze(single_eqdata.Y.sel(vertex=0).values).tolist())
-                        # best_interaction returns a tuple of interaction, interaction_k
-                        inter_key = (current_phase,
-                                     canonicalize(best_interaction[0],
-                                                  inpd['phases'][current_phase].get('equivalent_sublattices', None)),
-                                     best_interaction[1])
-                        phase_errors[inter_key].append(float(error))
-    return phase_errors
+                                                hess_callables=phase_hess_callables, calc_opts={'pdens': 1000})
+                    print('SINGLE_EQDATA', single_eqdata)
+                    # Sometimes we can get a miscibility gap in our "single-phase" calculation
+                    # Choose the weighted mixture of site fractions
+                    print('Y FRACTIONS', single_eqdata['Y'].values)
+                    phases_idx = np.nonzero(~np.isnan(np.squeeze(single_eqdata['NP'].values)))
+                    desired_sitefracs = np.multiply(single_eqdata['NP'].values[..., phases_idx, np.newaxis],
+                                                    single_eqdata['Y'].values[..., phases_idx, :]).sum(axis=-2)
+                    print('DESIRED_SITEFRACS', desired_sitefracs)
+                    select_energy = float(single_eqdata['GM'].values)
+                    region_comps = []
+                    for comp in [c for c in sorted(comps) if c != 'VA']:
+                        region_comps.append(current_conds.get(v.X(comp), np.nan))
+                    region_comps[region_comps.index(np.nan)] = 1 - np.nansum(region_comps)
+                    error = np.multiply(region_chemical_potentials, region_comps).sum() - select_energy
+                    error = float(error)
+                    best_interaction = choose_interaction(current_phase, phase_models[current_phase].constituents,
+                                                          np.squeeze(desired_sitefracs))
+                    # best_interaction returns a tuple of interaction, interaction_k
+                    sitefrac_dict = dict(zip(_sublattice_model_to_variables(current_phase,
+                                                                            phase_models[current_phase].constituents),
+                                             np.squeeze(desired_sitefracs)))
+                    interarray = sympy.S.One
+                    for idx, subl in enumerate(best_interaction[0]):
+                        if isinstance(subl, (list, tuple)):
+                            interarray *= sympy.Mul(*[v.SiteFraction(current_phase, idx, s) for s in subl])
+                            # Only works for binary interactions and assumes canonicalized
+                            # If not we could end up with sign errors in binary parameters
+                            interarray *= (v.SiteFraction(current_phase, idx, subl[0]) -
+                                           v.SiteFraction(current_phase, idx, subl[1])) ** best_interaction[1]
+                        else:
+                            interarray *= v.SiteFraction(current_phase, idx, subl)
+                    intercoef = float(interarray.xreplace(sitefrac_dict))
+                    num_sites = _site_ratio_normalization(dbf.phases[current_phase]).xreplace(sitefrac_dict)
+                    constituent_array = canonicalize(best_interaction[0],
+                                                     inpd['phases'][current_phase].get('equivalent_sublattices', None))
+                    error_record = {'phase_name': current_phase, 'parameter_order': best_interaction[1],
+                                    'constituent_array': constituent_array, 'components': tuple(comps),
+                                    'error': error, 'num_sites': num_sites,
+                                    'intercoef': intercoef}
+                    error_record.update(current_conds)
+                    phase_errors.insert(error_record)
+                    phase_interactions[(current_phase, constituent_array, best_interaction[1])] += 1
+    return phase_errors, phase_interactions
+
+
+def _site_ratio_normalization(phase):
+    """
+    Calculates the normalization factor based on the number of sites
+    in each sublattice.
+    """
+    site_ratio_normalization = sympy.S.Zero
+    # Normalize by the sum of site ratios times a factor
+    # related to the site fraction of vacancies
+    comps = set()
+    for consts in phase.constituents:
+        comps |= consts
+    for idx, sublattice in enumerate(phase.constituents):
+        if ('VA' in set(sublattice)) and ('VA' in comps):
+            site_ratio_normalization += phase.sublattices[idx] * \
+                (1 - v.SiteFraction(phase.name, idx, 'VA'))
+        else:
+            site_ratio_normalization += phase.sublattices[idx]
+    return site_ratio_normalization
 
 
 def fit(input_fname, datasets):
@@ -1092,70 +1143,112 @@ def fit(input_fname, datasets):
         dbf.add_phase_constituents(phase_name, subl_model)
         # phase_fit() adds parameters to dbf
         phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=aliases)
+
     max_iterations = 20
-    max_refine_iterations = 20
-    old_params = None
-    old_direc = None
+
+    def abstol(x, tol):
+        return np.abs(x) > tol
+
+    def update_param(coef, pnum, value, database):
+        print('UPDATE_PARAM', (coef, pnum, value))
+        def transform(element):
+            #symname = 'P' + str(pnum).zfill(4)
+            element['parameter'] += coef * value #sympy.Symbol(symname)
+            #database.symbols[symname] = value
+            return element
+        return transform
+
+    min_error = 1e-3
+    dof_to_add = [sympy.S.One, v.T]
+    pcount = 0
+    stepsize = 1
+
     for iteration in range(max_iterations):
         print('MAIN ITERATION ', iteration+1, flush=True)
-        errors = multi_phase_fit(dbf, dbf.elements, sorted(data['phases'].keys()), data, datasets, None)
-        total_error = np.mean([np.mean(err) for err in errors.values()])
-        print('TOTAL MEAN ERROR ({}/{})'.format(iteration+1, max_iterations), total_error, flush=True)
-        if total_error < 1e-3:
+        errors, interactions = multi_phase_fit(dbf, dbf.elements, sorted(data['phases'].keys()), data, datasets, None)
+        print(errors.all())
+        print(interactions)
+        new_params = []
+        data_rows = 0
+        dof_columns = 0
+        for interaction in interactions.keys():
+            phase_name, constituent_array, parameter_order = interaction
+            interrecs = errors.search((tinydb.where('constituent_array') == constituent_array) &
+                                      (tinydb.where('parameter_order') == parameter_order) &
+                                      (tinydb.where('phase_name') == phase_name) &
+                                      (tinydb.where('error').test(abstol, min_error)))
+            intercount = len(interrecs)
+            data_rows += intercount
+            if intercount == 1:
+                dof_columns += 1
+                new_params.append((phase_name, constituent_array, parameter_order, dof_to_add[0]))
+            elif intercount > 1:
+                dof_columns += 2
+                new_params.append((phase_name, constituent_array, parameter_order, dof_to_add[0]))
+                if np.var([i[v.T] for i in interrecs]) > 0:
+                    new_params.append((phase_name, constituent_array, parameter_order, dof_to_add[1]))
+            print('INTERACTION', interaction)
+            print('INTERCOUNT', intercount)
+        if (data_rows == 0) or (dof_columns == 0):
             print('CONVERGED')
             break
-        # Have we converged? Check the error
-        params = sorted(set(errors.keys()), key=str)
-        print('PARAMS', params)
-        param_variables = []
-        pcount = 0
-
-        def update_param(element):
-            element['parameter'] += 1000 * sympy.Symbol('P00{}A'.format(pcount)) + \
-                                    10 * v.T * sympy.Symbol('P00{}B'.format(pcount))
-            param_variables.extend([sympy.Symbol('P00{}A'.format(pcount)), sympy.Symbol('P00{}B'.format(pcount))])
-            return element
-
-        for param in params:
-            # single components in sublattices need to be wrapped in a tuple so they'll match in the database
-            const_array = []
-            for subl in param[1]:
-                if isinstance(subl, (tuple, list, set)):
-                    const_array.append(subl)
+        solution_matrix = np.zeros((data_rows, dof_columns), dtype=np.float)
+        error_vector = np.zeros((data_rows,), dtype=np.float)
+        # As we iterate, track which column we are currently considering
+        # By construction all rows with the same dof columns are grouped
+        dof_idx = 0
+        data_idx = 0
+        for interaction in interactions.keys():
+            phase_name, constituent_array, parameter_order = interaction
+            records = errors.search((tinydb.where('constituent_array') == constituent_array) &
+                                    (tinydb.where('parameter_order') == parameter_order) &
+                                    (tinydb.where('phase_name') == phase_name) &
+                                    (tinydb.where('error').test(abstol, min_error)))
+            intercount = len(records)
+            if intercount == 1:
+                new_dof = [dof_to_add[0]]
+            elif intercount > 1:
+                if np.var([i[v.T] for i in records]) > 0:
+                    new_dof = [dof_to_add[0], dof_to_add[1]]
                 else:
-                    const_array.append((subl,))
-            const_array = tuple(const_array)
-            param_query = ((tinydb.where('phase_name') == param[0]) &
-                           (tinydb.where('parameter_order') == param[2]) &
-                           ((tinydb.where('parameter_type') == 'G') |
-                            (tinydb.where('parameter_type') == 'L')) &
-                           (tinydb.where('constituent_array') == const_array)
-                           )
-            result = dbf.search(param_query)
-            if len(result) == 0:
-                dbf.add_parameter('G', param[0], const_array, param[2], sympy.S.Zero)
-            dbf._parameters.update(update_param, param_query)
+                    new_dof = [dof_to_add[0]]
+            else:
+                new_dof = []
+            for record in records:
+                num_sites = record['num_sites']
+                intercoef = record['intercoef']
+                error_vector[data_idx] = stepsize * record['error']
+                solution_matrix[data_idx, dof_idx:dof_idx+len(new_dof)] = \
+                    np.array([(intercoef / num_sites) * i.subs(record) for i in new_dof], dtype=np.float)
+                data_idx += 1
+            dof_idx += len(new_dof)
+        print('SOLUTION MATRIX', solution_matrix)
+        new_param_values = np.linalg.lstsq(solution_matrix, error_vector)[0]
+        print('NEW_PARAM_VALUES', new_param_values)
+        # Commit new parameter values to the database
+        for param, val in zip(new_params, new_param_values):
+            current_phase = param[0]
+            parameter_order = param[2]
+            # single components in sublattices need to be wrapped in a tuple so they'll match in the database
+            symmetry = data['phases'][current_phase].get('equivalent_sublattices', None)
+            symmetric_interactions = _generate_symmetric_group(param[1], symmetry)
+            for syminter in symmetric_interactions:
+                const_array = []
+                for subl in syminter:
+                    if isinstance(subl, (tuple, list, set)):
+                        const_array.append(subl)
+                    else:
+                        const_array.append((subl,))
+                const_array = tuple(const_array)
+                param_query = ((tinydb.where('phase_name') == current_phase) &
+                               (tinydb.where('parameter_order') == parameter_order) &
+                               ((tinydb.where('parameter_type') == 'G') |
+                                (tinydb.where('parameter_type') == 'L')) &
+                               (tinydb.where('constituent_array') == const_array)
+                               )
+                result = dbf.search(param_query)
+                if len(result) == 0:
+                    dbf.add_parameter('G', current_phase, const_array, parameter_order, sympy.S.Zero)
+                dbf._parameters.update(update_param(param[3], pcount, val, dbf), param_query)
             pcount += 1
-
-        def error_func(x):
-            errors = multi_phase_fit(dbf, dbf.elements, sorted(data['phases'].keys()), data, datasets,
-                                     x, param_symbols=[str(s) for s in param_variables])
-            return sum([sum(err) for err in errors.values()])
-
-        def itercb(xk):
-            print('CURRENT GUESS', dict(zip(param_variables, xk)), flush=True)
-        # If we haven't changed parameters to update since the last iteration, use the old direction set
-        if old_params == params:
-            direc = old_direc
-        else:
-            old_params = params
-            direc = None
-        solution = fmin_powell(error_func, np.zeros_like(param_variables, dtype=np.float),
-                               maxiter=max_refine_iterations, retall=True, direc=direc, callback=itercb)
-        print('SOLUTION', solution, flush=True)
-
-        def sub_values(element):
-            element['parameter'] = element['parameter'].xreplace(dict(zip(param_variables, solution.x)))
-            return element
-        dbf._parameters.update(sub_values)
     return dbf
