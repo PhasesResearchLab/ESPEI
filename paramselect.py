@@ -895,6 +895,10 @@ def choose_interaction(phase_name, subl_model, site_fractions):
     """
     Get the interaction or end-member with the largest contribution to the given site fractions.
     """
+    subl_model = copy.deepcopy(subl_model)
+    for idx in range(len(subl_model)):
+        if isinstance(subl_model[idx], set):
+            subl_model[idx] = sorted(subl_model[idx])
     #print('SUBL_MODEL', subl_model)
     #print('SITE_FRACTIONS', site_fractions)
     sitefrac_dict = dict(zip(_sublattice_model_to_variables(phase_name, subl_model), site_fractions))
@@ -1060,8 +1064,10 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                     # Choose the weighted mixture of site fractions
                     print('Y FRACTIONS', single_eqdata['Y'].values)
                     phases_idx = np.nonzero(~np.isnan(np.squeeze(single_eqdata['NP'].values)))
-                    desired_sitefracs = np.multiply(single_eqdata['NP'].values[..., phases_idx, np.newaxis],
-                                                    single_eqdata['Y'].values[..., phases_idx, :]).sum(axis=-2)
+                    cur_vertex = np.nanargmax(np.squeeze(single_eqdata['NP'].values))
+                    #desired_sitefracs = np.multiply(single_eqdata['NP'].values[..., phases_idx, np.newaxis],
+                    #                                single_eqdata['Y'].values[..., phases_idx, :]).sum(axis=-2)
+                    desired_sitefracs = single_eqdata['Y'].values[..., cur_vertex, :]
                     print('DESIRED_SITEFRACS', desired_sitefracs)
                     select_energy = float(single_eqdata['GM'].values)
                     region_comps = []
@@ -1073,11 +1079,32 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                     best_interaction = choose_interaction(current_phase, phase_models[current_phase].constituents,
                                                           np.squeeze(desired_sitefracs))
                     # best_interaction returns a tuple of interaction, interaction_k
-                    sitefrac_dict = dict(zip(_sublattice_model_to_variables(current_phase,
-                                                                            phase_models[current_phase].constituents),
-                                             np.squeeze(desired_sitefracs)))
+                    num_sites = _site_ratio_normalization(dbf.phases[current_phase])
+                    symmetry = inpd['phases'][current_phase].get('equivalent_sublattices', None)
+                    constituent_array = canonicalize(best_interaction[0], symmetry)
+                    # Need to get indices of swapped sublattices, then swap them around in the sitefrac array
+                    desired_sitefracs = np.squeeze(desired_sitefracs)
+                    if symmetry is not None:
+                        sidx = 0
+                        symslices = []
+                        for subl in phase_models[current_phase].constituents:
+                            symslices.append(slice(sidx, sidx+len(subl)))
+                            sidx += len(subl)
+                        print('OLD_SITEFRACS', desired_sitefracs)
+                        for subls in symmetry:
+                            print('SUBLS', subls)
+                            items = [best_interaction[0][i] for i in subls]
+                            print('ITEMS', items)
+                            sorted_subls = sorted(subls, key=lambda x: canonical_sort_key(items[x]))
+                            print('SORTED SUBLS', sorted_subls)
+                            old_sitefracs = [copy.deepcopy(desired_sitefracs[sl])
+                                             for sl in [symslices[i] for i in subls]]
+                            print('OLD_SF', old_sitefracs)
+                            for old_sf, new_subl in zip(old_sitefracs, sorted_subls):
+                                desired_sitefracs[symslices[new_subl]] = old_sf
+                            print('NEW_SITEFRACS', desired_sitefracs)
                     interarray = sympy.S.One
-                    for idx, subl in enumerate(best_interaction[0]):
+                    for idx, subl in enumerate(constituent_array):
                         if isinstance(subl, (list, tuple)):
                             interarray *= sympy.Mul(*[v.SiteFraction(current_phase, idx, s) for s in subl])
                             # Only works for binary interactions and assumes canonicalized
@@ -1086,14 +1113,17 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                                            v.SiteFraction(current_phase, idx, subl[1])) ** best_interaction[1]
                         else:
                             interarray *= v.SiteFraction(current_phase, idx, subl)
-                    intercoef = float(interarray.xreplace(sitefrac_dict))
-                    num_sites = _site_ratio_normalization(dbf.phases[current_phase]).xreplace(sitefrac_dict)
-                    constituent_array = canonicalize(best_interaction[0],
-                                                     inpd['phases'][current_phase].get('equivalent_sublattices', None))
+                    sorted_constituents = phase_models[current_phase].constituents
+                    for idx in range(len(sorted_constituents)):
+                        if isinstance(sorted_constituents[idx], set):
+                            sorted_constituents[idx] = sorted(sorted_constituents[idx])
+                    sitefrac_dict = dict(zip(_sublattice_model_to_variables(current_phase,
+                                                                            sorted_constituents),
+                                             desired_sitefracs))
                     error_record = {'phase_name': current_phase, 'parameter_order': best_interaction[1],
                                     'constituent_array': constituent_array, 'components': tuple(comps),
                                     'error': error, 'num_sites': num_sites,
-                                    'intercoef': intercoef}
+                                    'intercoef': interarray, 'site_fractions': sitefrac_dict}
                     error_record.update(current_conds)
                     phase_errors.insert(error_record)
                     phase_interactions[(current_phase, constituent_array, best_interaction[1])] += 1
@@ -1192,18 +1222,20 @@ def fit(input_fname, datasets):
         if (data_rows == 0) or (dof_columns == 0):
             print('CONVERGED')
             break
-        solution_matrix = np.zeros((data_rows, dof_columns), dtype=np.float)
+        solution_matrix = np.zeros((data_rows, dof_columns), dtype=np.object)
         error_vector = np.zeros((data_rows,), dtype=np.float)
         # As we iterate, track which column we are currently considering
         # By construction all rows with the same dof columns are grouped
         dof_idx = 0
         data_idx = 0
+        all_records = []
         for interaction in interactions.keys():
             phase_name, constituent_array, parameter_order = interaction
             records = errors.search((tinydb.where('constituent_array') == constituent_array) &
                                     (tinydb.where('parameter_order') == parameter_order) &
                                     (tinydb.where('phase_name') == phase_name) &
                                     (tinydb.where('error').test(abstol, min_error)))
+            all_records.extend(records)
             intercount = len(records)
             if intercount == 1:
                 new_dof = [dof_to_add[0]]
@@ -1218,10 +1250,17 @@ def fit(input_fname, datasets):
                 num_sites = record['num_sites']
                 intercoef = record['intercoef']
                 error_vector[data_idx] = stepsize * record['error']
-                solution_matrix[data_idx, dof_idx:dof_idx+len(new_dof)] = \
-                    np.array([(intercoef / num_sites) * i.subs(record) for i in new_dof], dtype=np.float)
+                solution_matrix[:, dof_idx:dof_idx+len(new_dof)] = \
+                    np.array([(intercoef / num_sites) * i for i in new_dof], dtype=np.object)
                 data_idx += 1
             dof_idx += len(new_dof)
+        for rec_idx, record in enumerate(all_records):
+            subbed_row = [sympy.S(x).xreplace(record).xreplace(record['site_fractions'])
+                          for x in solution_matrix[rec_idx, :]]
+            sr_undefs = {key: 0 for key in sympy.Add(*subbed_row).atoms(sympy.Symbol)}
+            subbed_row = [x.xreplace(sr_undefs) for x in subbed_row]
+            solution_matrix[rec_idx, :] = subbed_row
+        solution_matrix = solution_matrix.astype(np.float)
         print('SOLUTION MATRIX', solution_matrix)
         new_param_values = np.linalg.lstsq(solution_matrix, error_vector)[0]
         print('NEW_PARAM_VALUES', new_param_values)
