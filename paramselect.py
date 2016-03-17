@@ -56,7 +56,6 @@ from sklearn.linear_model import LinearRegression
 from sklearn.covariance import EmpiricalCovariance
 import tinydb
 import sympy
-from scipy.optimize import fmin_powell
 import numpy as np
 import json
 from collections import Counter, OrderedDict, defaultdict
@@ -64,14 +63,18 @@ import itertools
 import operator
 import copy
 from functools import reduce
+from datetime import datetime
 
 
 # Mapping of energy polynomial coefficients to corresponding property coefficients
 feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
+                      "CPM_MIX": lambda x: -v.T*sympy.diff(x, v.T, 2),
                       "CPM": lambda x: -v.T*sympy.diff(x, v.T, 2),
                       "SM_FORM": lambda x: -sympy.diff(x, v.T),
+                      "SM_MIX": lambda x: -sympy.diff(x, v.T),
                       "SM": lambda x: -sympy.diff(x, v.T),
                       "HM_FORM": lambda x: x - v.T*sympy.diff(x, v.T),
+                      "HM_MIX": lambda x: x - v.T*sympy.diff(x, v.T),
                       "HM": lambda x: x - v.T*sympy.diff(x, v.T)}
 
 plot_mapping = {
@@ -379,6 +382,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry,
         desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
         print('{}: datasets found: {}'.format(desired_props, len(desired_data)))
         if len(desired_data) > 0:
+            # We assume all properties in the same fitting step have the same features (but different ref states)
             feature_matrix = _build_feature_matrix(desired_props[0], features[desired_props[0]], desired_data)
             all_samples = _get_samples(desired_data)
             data_quantities = np.concatenate(_shift_reference_state(desired_data,
@@ -937,7 +941,7 @@ def choose_interaction(phase_name, subl_model, site_fractions):
     max_value = {0: 0.5, 1: 1./6*(3**0.5), 2: 1./16, 3: 0.0464758}
     for interaction in bin_interactions:
         interacting_subls = sum([isinstance(subl, (list, tuple, set)) for subl in interaction])
-        for k in range(4):
+        for k in range(2):
             in_prod = sympy.S.One
             for idx, subl in enumerate(interaction):
                 if isinstance(subl, (list, tuple)):
@@ -949,7 +953,7 @@ def choose_interaction(phase_name, subl_model, site_fractions):
             in_prod = np.abs(in_prod.subs(sitefrac_dict).evalf())
             # Rescale to be percent of maximum value
             # TODO: Not sure if this scaling is correct for reciprocal interactions
-            in_prod /= (max_value[k] ** interacting_subls)
+            in_prod /= (interacting_subls * (max_value[k] ** interacting_subls))
             #print('INTERACTION', interaction, ' (k={})'.format(k), '- SCORE', in_prod)
             if in_prod > interaction_score:
                 interaction_score = in_prod
@@ -1032,10 +1036,9 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                     pass
                 else:
                     # Extract chemical potential hyperplane from multi-phase calculation
-                    # Include all phases instead of just list(region)
                     multi_eqdata = equilibrium(dbf, comps, phases, current_conds, pbar=False, verbose=False,
                                                callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                               hess_callables=phase_hess_callables, calc_opts={'pdens': 1000})
+                                               hess_callables=phase_hess_callables)
                     print('MULTI_EQDATA', multi_eqdata)
                     # Does there exist only a single phase in the result with zero internal degrees of freedom?
                     # We should exclude those chemical potentials from the average because they are meaningless.
@@ -1058,22 +1061,23 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                     # Extract energies from single-phase calculations
                     single_eqdata = equilibrium(dbf, comps, [current_phase], current_conds, pbar=False, verbose=False,
                                                 callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                                hess_callables=phase_hess_callables, calc_opts={'pdens': 1000})
+                                                hess_callables=phase_hess_callables)
                     print('SINGLE_EQDATA', single_eqdata)
                     # Sometimes we can get a miscibility gap in our "single-phase" calculation
                     # Choose the weighted mixture of site fractions
                     print('Y FRACTIONS', single_eqdata['Y'].values)
                     phases_idx = np.nonzero(~np.isnan(np.squeeze(single_eqdata['NP'].values)))
                     cur_vertex = np.nanargmax(np.squeeze(single_eqdata['NP'].values))
-                    #desired_sitefracs = np.multiply(single_eqdata['NP'].values[..., phases_idx, np.newaxis],
-                    #                                single_eqdata['Y'].values[..., phases_idx, :]).sum(axis=-2)
-                    desired_sitefracs = single_eqdata['Y'].values[..., cur_vertex, :]
+                    desired_sitefracs = np.multiply(single_eqdata['NP'].values[..., phases_idx, np.newaxis],
+                                                    single_eqdata['Y'].values[..., phases_idx, :]).sum(axis=-2)
+                    #desired_sitefracs = single_eqdata['Y'].values[..., cur_vertex, :]
                     print('DESIRED_SITEFRACS', desired_sitefracs)
                     select_energy = float(single_eqdata['GM'].values)
                     region_comps = []
                     for comp in [c for c in sorted(comps) if c != 'VA']:
                         region_comps.append(current_conds.get(v.X(comp), np.nan))
                     region_comps[region_comps.index(np.nan)] = 1 - np.nansum(region_comps)
+                    print('REGION_COMPS', region_comps)
                     error = np.multiply(region_chemical_potentials, region_comps).sum() - select_energy
                     error = float(error)
                     best_interaction = choose_interaction(current_phase, phase_models[current_phase].constituents,
@@ -1092,6 +1096,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                             sidx += len(subl)
                         print('OLD_SITEFRACS', desired_sitefracs)
                         for subls in symmetry:
+                            subls = sorted(subls)
                             print('SUBLS', subls)
                             items = [best_interaction[0][i] for i in subls]
                             print('ITEMS', items)
@@ -1099,8 +1104,10 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                             print('SORTED SUBLS', sorted_subls)
                             old_sitefracs = [copy.deepcopy(desired_sitefracs[sl])
                                              for sl in [symslices[i] for i in subls]]
+                            old_sitefracs = [old_sitefracs[i] for i in sorted_subls]
                             print('OLD_SF', old_sitefracs)
-                            for old_sf, new_subl in zip(old_sitefracs, sorted_subls):
+                            for old_sf, new_subl in zip(old_sitefracs, subls):
+                                print('desired_sitefracs[{}] = {}'.format(str(symslices[new_subl]), old_sf))
                                 desired_sitefracs[symslices[new_subl]] = old_sf
                             print('NEW_SITEFRACS', desired_sitefracs)
                     interarray = sympy.S.One
@@ -1150,7 +1157,8 @@ def _site_ratio_normalization(phase):
     return site_ratio_normalization
 
 
-def fit(input_fname, datasets):
+def fit(input_fname, datasets, saveall=True):
+    start_time = datetime.utcnow()
     # TODO: Validate input JSON
     data = json.load(open(input_fname))
     dbf = Database()
@@ -1174,7 +1182,7 @@ def fit(input_fname, datasets):
         # phase_fit() adds parameters to dbf
         phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=aliases)
 
-    max_iterations = 20
+    max_iterations = 10
 
     def abstol(x, tol):
         return np.abs(x) > tol
@@ -1213,17 +1221,76 @@ def fit(input_fname, datasets):
                 dof_columns += 1
                 new_params.append((phase_name, constituent_array, parameter_order, dof_to_add[0]))
             elif intercount > 1:
-                dof_columns += 2
+                dof_columns += 1
                 new_params.append((phase_name, constituent_array, parameter_order, dof_to_add[0]))
                 if np.var([i[v.T] for i in interrecs]) > 0:
+                    dof_columns += 1
                     new_params.append((phase_name, constituent_array, parameter_order, dof_to_add[1]))
             print('INTERACTION', interaction)
             print('INTERCOUNT', intercount)
         if (data_rows == 0) or (dof_columns == 0):
             print('CONVERGED')
             break
-        solution_matrix = np.zeros((data_rows, dof_columns), dtype=np.object)
-        error_vector = np.zeros((data_rows,), dtype=np.float)
+        # Now add all the single-phase data points
+        # We add these to help the optimizer stay in a reasonable range of solutions
+        # Remember to apply the feature transforms for the relevant thermodynamic property
+        comps = sorted(dbf.elements)
+        phases = sorted(dbf.phases.keys())
+        dq = OrderedDict()
+        for phase_name in phases:
+            desired_props = ["CPM_FORM", "CPM_MIX", "SM_FORM", "SM_MIX", "HM_FORM", "HM_MIX"]
+            # Subtract out all of these contributions (zero out reference state because these are formation properties)
+            fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
+            fixed_model.models['idmix'] = 0
+            # TODO: What about phase name aliases?
+            desired_data = datasets.search((tinydb.where('output').test(lambda k: k in desired_props)) &
+                                           (tinydb.where('components').test(lambda k: set(k).issubset(comps))) &
+                                           (tinydb.where('solver').test(lambda k: k.get('mode', None) == 'manual')) &
+                                           (tinydb.where('phases') == [phase_name]))
+            print('DESIRED_DATA', desired_data)
+            if len(desired_data) == 0:
+                continue
+            for idx, dd in enumerate(desired_data):
+                temp_filter = np.nonzero(np.atleast_1d(dd['conditions']['T']) >= 298.15)
+                desired_data[idx]['conditions']['T'] = np.atleast_1d(dd['conditions']['T'])[temp_filter]
+                # Don't use data['values'] because we rewrote it above; not sure what 'data' references now
+                desired_data[idx]['values'] = np.asarray(desired_data[idx]['values'])[..., temp_filter, :]
+            all_samples = _get_samples(desired_data)
+            data_quantities = [np.concatenate(_shift_reference_state([ds],
+                                                                     feature_transforms[ds['output']],
+                                                                     fixed_model), axis=-1)[0]
+                               for ds in desired_data for _ in np.atleast_1d(ds['conditions']['T'])]
+            data_quantities = np.asarray(data_quantities, dtype=np.object)
+            site_fractions = [_build_sitefractions(phase_name, ds['solver']['sublattice_configurations'],
+                ds['solver'].get('sublattice_occupancies',
+                                 np.ones((len(ds['solver']['sublattice_configurations']),
+                                          len(ds['solver']['sublattice_configurations'][0])), dtype=np.float)))
+                              for ds in desired_data for _ in np.atleast_1d(ds['conditions']['T'])]
+            # Flatten list
+            site_fractions = list(itertools.chain(*site_fractions))
+            # Add dependent site fractions to dictionary
+            for idx in range(len(site_fractions)):
+                sf = site_fractions[idx]
+                for subl_idx, subl_species in enumerate(dbf.phases[phase_name].constituents):
+                    for spec in subl_species:
+                        if v.SiteFraction(phase_name, subl_idx, spec) not in sf.keys():
+                            sfsum = sum([val for key, val in sf.items() if key.sublattice_index == subl_idx])
+                            sfsum = max(sfsum, 1e-16)
+                            site_fractions[idx][v.Y(phase_name, subl_idx, spec)] = 1 - sfsum
+            # Remove existing partial model contributions from the data
+            data_quantities = data_quantities - [feature_transforms[ds['output']](fixed_model.GM)
+                                                 for ds in desired_data for _ in np.atleast_1d(ds['conditions']['T'])]
+            data_quantities = [sympy.S(i).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
+                               for i, sf, ixx in zip(data_quantities, site_fractions, all_samples)]
+            data_quantities = np.asarray(data_quantities, dtype=np.float)
+            dq[phase_name] = (data_quantities, site_fractions, all_samples)
+        total_singlephase_dq = sum([len(x[0]) for x in dq.values()])
+        solution_matrix = np.zeros((data_rows + total_singlephase_dq, dof_columns), dtype=np.object)
+        error_vector = np.zeros((data_rows + total_singlephase_dq,), dtype=np.float)
+        iter_idx = 0
+        for x in dq.values():
+            error_vector[data_rows+iter_idx:data_rows+iter_idx+len(x[0])] = x[0]
+            iter_idx += len(x[0])
         # As we iterate, track which column we are currently considering
         # By construction all rows with the same dof columns are grouped
         dof_idx = 0
@@ -1258,10 +1325,21 @@ def fit(input_fname, datasets):
             subbed_row = [sympy.S(x).xreplace(record).xreplace(record['site_fractions'])
                           for x in solution_matrix[rec_idx, :]]
             sr_undefs = {key: 0 for key in sympy.Add(*subbed_row).atoms(sympy.Symbol)}
-            subbed_row = [x.xreplace(sr_undefs) for x in subbed_row]
+            subbed_row = [sympy.S(x).xreplace(sr_undefs) for x in subbed_row]
             solution_matrix[rec_idx, :] = subbed_row
+        rec_idx = len(all_records)
+        for x in dq.values():
+            data_quantities, site_fractions, all_samples = x
+            for i, sf, ixx in zip(data_quantities, site_fractions, all_samples):
+                subbed_row = [sympy.S(z).xreplace(sf).xreplace({v.T: ixx[0]})
+                              for z in solution_matrix[rec_idx, :]]
+                sr_undefs = {key: 0 for key in sympy.Add(*subbed_row).atoms(sympy.Symbol)}
+                subbed_row = [sympy.S(z).xreplace(sr_undefs) for z in subbed_row]
+                solution_matrix[rec_idx, :] = subbed_row
+                rec_idx += 1
         solution_matrix = solution_matrix.astype(np.float)
         print('SOLUTION MATRIX', solution_matrix)
+        print('ERROR VECTOR', error_vector)
         new_param_values = np.linalg.lstsq(solution_matrix, error_vector)[0]
         print('NEW_PARAM_VALUES', new_param_values)
         # Commit new parameter values to the database
@@ -1290,4 +1368,8 @@ def fit(input_fname, datasets):
                     dbf.add_parameter('G', current_phase, const_array, parameter_order, sympy.S.Zero)
                 dbf._parameters.update(update_param(param[3], pcount, val, dbf), param_query)
             pcount += 1
+        if saveall:
+            dbf.to_file('{}-{}-iter{}.tdb'.format(start_time,
+                                                  ''.join([c for c in sorted(comps) if c != 'VA']), iteration),
+                        fmt='tdb')
     return dbf
