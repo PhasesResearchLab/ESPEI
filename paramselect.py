@@ -985,11 +985,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
         conditions = data['conditions']
         broadcast = data.get('broadcast_conditions', False)
         #print(conditions)
-        phase_regions = defaultdict(lambda: defaultdict(lambda: list()))
-        # We send the equilibrium calculation to be performed all at once for each phase tuple
-        # We have to track which calculations need to be compared against each other
-        equilibria_indices = defaultdict(lambda: list())
-        phase_region_indices = defaultdict(lambda: list())
+        phase_regions = defaultdict(lambda: list())
         # TODO: Fix to only include equilibria listed in 'phases'
         for idx, p in enumerate(payload):
             phase_key = tuple(sorted(rp[0] for rp in p))
@@ -997,89 +993,92 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                 # Skip single-phase regions for fitting purposes
                 continue
             # Need to sort 'p' here so we have the sorted ordering used in 'phase_key'
-            comp_dicts = [dict(zip([x.upper() for x in rp[1]], rp[2])) for rp in sorted(p, key=operator.itemgetter(0))]
-            for cd_idx, cd in enumerate(comp_dicts):
-                for dcomp, compval in cd.items():
-                    compval = compval if compval is not None else np.nan
-                    phase_regions[phase_key][v.X(dcomp.upper())].append(compval)
-            # Need to not just check the chemical potential difference
-            # Need to also verify that they are still zero phase-fraction lines
-            equilibria_indices[phase_key].append(list(range(len(phase_key))))
-            phase_region_indices[phase_key].append(idx)
-        for region, comp_dict in phase_regions.items():
-            #print(region)
-            #print(phase_region_indices[region])
-            region_conds = OrderedDict()
+            #print('SORTED P', sorted(p, key=operator.itemgetter(0)))
+            comp_dicts = [dict(zip([v.X(x.upper()) for x in rp[1]], rp[2]))
+                          for rp in sorted(p, key=operator.itemgetter(0))]
+            cur_conds = {}
             for key, value in conditions.items():
                 value = np.atleast_1d(np.asarray(value))
-                if len(value) == 1:
-                    region_conds[getattr(v, key)] = np.atleast_1d(np.asarray(value))
-                else:
-                    value = np.repeat(value[phase_region_indices[region]], [len(x) for x in equilibria_indices[region]])
-                    region_conds[getattr(v, key)] = value
-            region_conds.update(comp_dict)
-            #print(region_conds)
-            region_keys = list(region_conds.keys())
-            cond_size = max(len(x) for x in region_conds.values())
-            region_cond_vals = []
-            for val in region_conds.values():
-                if len(val) > 1:
-                    region_cond_vals.append(val)
-                else:
-                    region_cond_vals.append(np.repeat(val, cond_size))
-            region_eq = np.array(region_cond_vals, dtype=np.float).T
-            region_chemical_potentials = []
+                if len(value) > 1:
+                    value = value[idx]
+                cur_conds[getattr(v, key)] = float(value)
+            phase_regions[phase_key].append((cur_conds, comp_dicts))
+        print('PHASE_REGIONS', phase_regions)
+        for region, region_eq in phase_regions.items():
+            print('REGION', region)
             for req in region_eq:
-                current_conds = dict(zip(region_keys, req))
-                #print(current_conds)
-                if np.any(np.isnan(list(current_conds.values()))):
-                    pass
-                else:
-                    # Extract chemical potential hyperplane from multi-phase calculation
-                    multi_eqdata = equilibrium(dbf, comps, phases, current_conds, pbar=False, verbose=False,
-                                               callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                               hess_callables=phase_hess_callables)
-                    print('MULTI_EQDATA', multi_eqdata)
-                    # Does there exist only a single phase in the result with zero internal degrees of freedom?
-                    # We should exclude those chemical potentials from the average because they are meaningless.
-                    num_phases = len(np.squeeze(multi_eqdata['Phase'].values != ''))
-                    zero_dof = np.all((multi_eqdata['Y'].values == 1.) | np.isnan(multi_eqdata['Y'].values))
-                    if (num_phases == 1) and zero_dof:
-                        region_chemical_potentials.append(np.full_like(np.squeeze(multi_eqdata['MU'].values), np.nan))
+                # We are now considering a particular tie region
+                current_statevars, comp_dicts = req
+                region_chemical_potentials = []
+                for cond_dict in comp_dicts:
+                    # We are now considering a particular tie vertex
+                    for key, val in cond_dict.items():
+                        if val is None:
+                            cond_dict[key] = np.nan
+                    cond_dict.update(current_statevars)
+                    print('COND_DICT (MULTI)', cond_dict)
+                    if np.any(np.isnan(list(cond_dict.values()))):
+                        # This composition is unknown -- it doesn't contribute to hyperplane estimation
+                        pass
                     else:
-                        region_chemical_potentials.append(np.squeeze(multi_eqdata['MU'].values))
-            region_chemical_potentials = np.nanmean(region_chemical_potentials, axis=0, dtype=np.float)
-            print('REGION_CHEMICAL_POTENTIALS', region_chemical_potentials)
-            #print('REGION_EQ, REGION', region_eq, region)
-            for req, current_phase in zip(region_eq, np.tile(region, len(region_eq)/len(region))):
-                current_conds = dict(zip(region_keys, req))
-                print('CURRENT PHASE', current_phase)
-                print('CURRENT CONDS', current_conds)
-                if np.any(np.isnan(list(current_conds.values()))):
-                    pass
-                else:
-                    # Extract energies from single-phase calculations
-                    single_eqdata = equilibrium(dbf, comps, [current_phase], current_conds, pbar=False, verbose=False,
-                                                callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                                hess_callables=phase_hess_callables)
-                    print('SINGLE_EQDATA', single_eqdata)
-                    # Sometimes we can get a miscibility gap in our "single-phase" calculation
-                    # Choose the weighted mixture of site fractions
-                    print('Y FRACTIONS', single_eqdata['Y'].values)
-                    phases_idx = np.nonzero(~np.isnan(np.squeeze(single_eqdata['NP'].values)))
-                    cur_vertex = np.nanargmax(np.squeeze(single_eqdata['NP'].values))
-                    desired_sitefracs = np.multiply(single_eqdata['NP'].values[..., phases_idx, np.newaxis],
-                                                    single_eqdata['Y'].values[..., phases_idx, :]).sum(axis=-2)
-                    #desired_sitefracs = single_eqdata['Y'].values[..., cur_vertex, :]
+                        # Extract chemical potential hyperplane from multi-phase calculation
+                        # Note that we consider all phases in the system, not just ones in this tie region
+                        multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, pbar=False, verbose=False,
+                                                   callables=phase_obj_callables, grad_callables=phase_grad_callables,
+                                                   hess_callables=phase_hess_callables)
+                        print('MULTI_EQDATA', multi_eqdata)
+                        # Does there exist only a single phase in the result with zero internal degrees of freedom?
+                        # We should exclude those chemical potentials from the average because they are meaningless.
+                        num_phases = len(np.squeeze(multi_eqdata['Phase'].values != ''))
+                        zero_dof = np.all((multi_eqdata['Y'].values == 1.) | np.isnan(multi_eqdata['Y'].values))
+                        if (num_phases == 1) and zero_dof:
+                            region_chemical_potentials.append(np.full_like(np.squeeze(multi_eqdata['MU'].values), np.nan))
+                        else:
+                            region_chemical_potentials.append(np.squeeze(multi_eqdata['MU'].values))
+                print('REGION_CHEMICAL_POTENTIALS', region_chemical_potentials)
+                region_chemical_potentials = np.nanmean(region_chemical_potentials, axis=0, dtype=np.float)
+                print('REGION_CHEMICAL_POTENTIALS', region_chemical_potentials)
+                # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
+                for current_phase, cond_dict in zip(region, comp_dicts):
+                    # We are now considering a particular tie vertex
+                    for key, val in cond_dict.items():
+                        if val is None:
+                            cond_dict[key] = np.nan
+                    cond_dict.update(current_statevars)
+                    print('COND_DICT ({})'.format(current_phase), cond_dict)
+                    if np.any(np.isnan(list(cond_dict.values()))):
+                        # We don't actually know the phase composition here, so we estimate it
+                        single_eqdata = calculate(dbf, comps, [current_phase], mode='numpy', output='GM', pdens=1000,
+                                                  T=cond_dict[v.T], P=cond_dict[v.P])
+                        print('SINGLE_EQDATA (UNKNOWN COMP)', single_eqdata)
+                        driving_force = np.multiply(region_chemical_potentials,
+                                                    single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
+                        desired_sitefracs = single_eqdata['Y'].values[..., np.argmax(driving_force), :]
+                        error = float(driving_force.max())
+                    else:
+                        # Extract energies from single-phase calculations
+                        single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, pbar=False, verbose=False,
+                                                    callables=phase_obj_callables, grad_callables=phase_grad_callables,
+                                                    hess_callables=phase_hess_callables)
+                        print('SINGLE_EQDATA', single_eqdata)
+                        # Sometimes we can get a miscibility gap in our "single-phase" calculation
+                        # Choose the weighted mixture of site fractions
+                        print('Y FRACTIONS', single_eqdata['Y'].values)
+                        phases_idx = np.nonzero(~np.isnan(np.squeeze(single_eqdata['NP'].values)))
+                        cur_vertex = np.nanargmax(np.squeeze(single_eqdata['NP'].values))
+                        desired_sitefracs = np.multiply(single_eqdata['NP'].values[..., phases_idx, np.newaxis],
+                                                        single_eqdata['Y'].values[..., phases_idx, :]).sum(axis=-2)
+                        #desired_sitefracs = single_eqdata['Y'].values[..., cur_vertex, :]
+                        select_energy = float(single_eqdata['GM'].values)
+                        region_comps = []
+                        for comp in [c for c in sorted(comps) if c != 'VA']:
+                            region_comps.append(cond_dict.get(v.X(comp), np.nan))
+                        region_comps[region_comps.index(np.nan)] = 1 - np.nansum(region_comps)
+                        print('REGION_COMPS', region_comps)
+                        error = np.multiply(region_chemical_potentials, region_comps).sum() - select_energy
+                        error = float(error)
                     print('DESIRED_SITEFRACS', desired_sitefracs)
-                    select_energy = float(single_eqdata['GM'].values)
-                    region_comps = []
-                    for comp in [c for c in sorted(comps) if c != 'VA']:
-                        region_comps.append(current_conds.get(v.X(comp), np.nan))
-                    region_comps[region_comps.index(np.nan)] = 1 - np.nansum(region_comps)
-                    print('REGION_COMPS', region_comps)
-                    error = np.multiply(region_chemical_potentials, region_comps).sum() - select_energy
-                    error = float(error)
+
                     best_interaction = choose_interaction(current_phase, phase_models[current_phase].constituents,
                                                           np.squeeze(desired_sitefracs))
                     # best_interaction returns a tuple of interaction, interaction_k
@@ -1120,6 +1119,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                                            v.SiteFraction(current_phase, idx, subl[1])) ** best_interaction[1]
                         else:
                             interarray *= v.SiteFraction(current_phase, idx, subl)
+                    # TODO: Add all symmetry-equivalent site fraction coefs to interarray
                     sorted_constituents = phase_models[current_phase].constituents
                     for idx in range(len(sorted_constituents)):
                         if isinstance(sorted_constituents[idx], set):
@@ -1131,7 +1131,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                                     'constituent_array': constituent_array, 'components': tuple(comps),
                                     'error': error, 'num_sites': num_sites,
                                     'intercoef': interarray, 'site_fractions': sitefrac_dict}
-                    error_record.update(current_conds)
+                    error_record.update(current_statevars)
                     phase_errors.insert(error_record)
                     phase_interactions[(current_phase, constituent_array, best_interaction[1])] += 1
     return phase_errors, phase_interactions
@@ -1157,32 +1157,59 @@ def _site_ratio_normalization(phase):
     return site_ratio_normalization
 
 
-def fit(input_fname, datasets, saveall=True):
+def fit(input_fname, datasets, saveall=True, resume=None):
+    """
+    Fit thermodynamic and phase equilibria data to a model.
+
+    Parameters
+    ==========
+    input_fname : str
+        Filename for input JSON configuration file.
+    datasets : tinydb
+    saveall : bool, optional
+        If True, write TDB out at each iteration.
+    resume : Database, optional
+        If specified, start multi-phase fitting using this Database.
+        Useful for resuming calculations from Databases generated by 'saveall'.
+
+    Returns
+    =======
+    dbf : Database
+    """
     start_time = datetime.utcnow()
     # TODO: Validate input JSON
     data = json.load(open(input_fname))
-    dbf = Database()
-    dbf.elements = sorted(data['components'])
-    # Write reference state to Database
-    refdata = getattr(pycalphad.refdata, data['refdata'])
-    stabledata = getattr(pycalphad.refdata, data['refdata']+'Stable')
-    comp_refs = {c.upper(): stabledata[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
-    comp_refs['VA'] = 0
-    dbf.symbols.update({'GHSER'+c.upper(): data for c, data in comp_refs.items()})
-    for phase_name, phase_obj in data['phases'].items():
-        # Perform parameter selection and single-phase fitting based on input
-        # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
-        symmetry = phase_obj.get('equivalent_sublattices', None)
-        aliases = phase_obj.get('aliases', None)
-        # TODO: More advanced phase data searching
-        site_ratios = phase_obj['sublattice_site_ratios']
-        subl_model = phase_obj['sublattice_model']
-        dbf.add_phase(phase_name, {}, site_ratios)
-        dbf.add_phase_constituents(phase_name, subl_model)
-        # phase_fit() adds parameters to dbf
-        phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=aliases)
+    if resume is None:
+        dbf = Database()
+        dbf.elements = sorted(data['components'])
+        # Write reference state to Database
+        refdata = getattr(pycalphad.refdata, data['refdata'])
+        stabledata = getattr(pycalphad.refdata, data['refdata']+'Stable')
+        comp_refs = {c.upper(): stabledata[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
+        comp_refs['VA'] = 0
+        dbf.symbols.update({'GHSER'+c.upper(): data for c, data in comp_refs.items()})
+        for phase_name, phase_obj in data['phases'].items():
+            # Perform parameter selection and single-phase fitting based on input
+            # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
+            symmetry = phase_obj.get('equivalent_sublattices', None)
+            aliases = phase_obj.get('aliases', None)
+            # TODO: More advanced phase data searching
+            site_ratios = phase_obj['sublattice_site_ratios']
+            subl_model = phase_obj['sublattice_model']
+            dbf.add_phase(phase_name, {}, site_ratios)
+            dbf.add_phase_constituents(phase_name, subl_model)
+            # phase_fit() adds parameters to dbf
+            phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=aliases)
+    else:
+        print('STARTING FROM USER-SPECIFIED DATABASE')
+        dbf = resume
 
-    max_iterations = 10
+    if saveall:
+        dbf.to_file('{}-{}-iter{}.tdb'.format(start_time,
+                                              ''.join([c for c in sorted(data['components']) if c != 'VA']), 0),
+                    fmt='tdb')
+
+    max_iterations = 3
 
     def abstol(x, tol):
         return np.abs(x) > tol
@@ -1190,9 +1217,12 @@ def fit(input_fname, datasets, saveall=True):
     def update_param(coef, pnum, value, database):
         print('UPDATE_PARAM', (coef, pnum, value))
         def transform(element):
-            #symname = 'P' + str(pnum).zfill(4)
-            element['parameter'] += coef * value #sympy.Symbol(symname)
-            #database.symbols[symname] = value
+            if isinstance(element['parameter'], sympy.Piecewise):
+                newvals = [(arg.expr + coef * value, arg.cond) for arg in element['parameter'].args]
+                newval = sympy.Piecewise(*newvals)
+            else:
+                newval = element['parameter'] + coef * value
+            element['parameter'] = newval
             return element
         return transform
 
@@ -1322,7 +1352,7 @@ def fit(input_fname, datasets, saveall=True):
                 data_idx += 1
             dof_idx += len(new_dof)
         for rec_idx, record in enumerate(all_records):
-            subbed_row = [sympy.S(x).xreplace(record).xreplace(record['site_fractions'])
+            subbed_row = [sympy.S(sympy.S(x).xreplace(record)).xreplace(record['site_fractions'])
                           for x in solution_matrix[rec_idx, :]]
             sr_undefs = {key: 0 for key in sympy.Add(*subbed_row).atoms(sympy.Symbol)}
             subbed_row = [sympy.S(x).xreplace(sr_undefs) for x in subbed_row]
@@ -1331,7 +1361,7 @@ def fit(input_fname, datasets, saveall=True):
         for x in dq.values():
             data_quantities, site_fractions, all_samples = x
             for i, sf, ixx in zip(data_quantities, site_fractions, all_samples):
-                subbed_row = [sympy.S(z).xreplace(sf).xreplace({v.T: ixx[0]})
+                subbed_row = [sympy.S(sympy.S(z).xreplace(sf)).xreplace({v.T: ixx[0]})
                               for z in solution_matrix[rec_idx, :]]
                 sr_undefs = {key: 0 for key in sympy.Add(*subbed_row).atoms(sympy.Symbol)}
                 subbed_row = [sympy.S(z).xreplace(sr_undefs) for z in subbed_row]
@@ -1370,6 +1400,6 @@ def fit(input_fname, datasets, saveall=True):
             pcount += 1
         if saveall:
             dbf.to_file('{}-{}-iter{}.tdb'.format(start_time,
-                                                  ''.join([c for c in sorted(comps) if c != 'VA']), iteration),
+                                                  ''.join([c for c in sorted(comps) if c != 'VA']), iteration+1),
                         fmt='tdb')
     return dbf
