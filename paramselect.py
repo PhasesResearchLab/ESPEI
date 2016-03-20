@@ -1109,17 +1109,21 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                                 print('desired_sitefracs[{}] = {}'.format(str(symslices[new_subl]), old_sf))
                                 desired_sitefracs[symslices[new_subl]] = old_sf
                             print('NEW_SITEFRACS', desired_sitefracs)
-                    interarray = sympy.S.One
-                    for idx, subl in enumerate(constituent_array):
-                        if isinstance(subl, (list, tuple)):
-                            interarray *= sympy.Mul(*[v.SiteFraction(current_phase, idx, s) for s in subl])
-                            # Only works for binary interactions and assumes canonicalized
-                            # If not we could end up with sign errors in binary parameters
-                            interarray *= (v.SiteFraction(current_phase, idx, subl[0]) -
-                                           v.SiteFraction(current_phase, idx, subl[1])) ** best_interaction[1]
-                        else:
-                            interarray *= v.SiteFraction(current_phase, idx, subl)
-                    # TODO: Add all symmetry-equivalent site fraction coefs to interarray
+                    symmetric_interactions = _generate_symmetric_group(constituent_array, symmetry)
+                    interarray = sympy.S.Zero
+                    for syminter in symmetric_interactions:
+                        print('SYMINTER', syminter)
+                        symarray = sympy.S.One
+                        for idx, subl in enumerate(syminter):
+                            if isinstance(subl, (list, tuple)):
+                                symarray *= sympy.Mul(*[v.SiteFraction(current_phase, idx, s) for s in subl])
+                                # Only works for binary interactions and assumes canonicalized
+                                # If not we could end up with sign errors in binary parameters
+                                symarray *= (v.SiteFraction(current_phase, idx, subl[0]) -
+                                             v.SiteFraction(current_phase, idx, subl[1])) ** best_interaction[1]
+                            else:
+                                symarray *= v.SiteFraction(current_phase, idx, subl)
+                        interarray += symarray
                     sorted_constituents = phase_models[current_phase].constituents
                     for idx in range(len(sorted_constituents)):
                         if isinstance(sorted_constituents[idx], set):
