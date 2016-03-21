@@ -52,9 +52,11 @@ from pycalphad import binplot, calculate, equilibrium, Database, Model
 from pycalphad.plot.utils import phase_legend
 from pycalphad.core.autograd_utils import build_functions
 import pycalphad.refdata
-from sklearn.linear_model import LinearRegression, Lasso
+from sklearn.linear_model import LinearRegression, Lasso, LassoCV
 from sklearn.covariance import EmpiricalCovariance
+from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import VarianceThreshold
+from sklearn.feature_selection import SelectKBest, f_regression
 from sklearn.pipeline import Pipeline
 import tinydb
 import sympy
@@ -233,9 +235,9 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
         model_scores.append(score)
         results[num_params - 1, :num_params] = clf.coef_
         print(feature_tuple[:num_params], 'rss:', rss, 'AIC:', score)
-    cov = EmpiricalCovariance(store_precision=False, assume_centered=False)
-    cov.fit(feature_matrix[:, :np.argmin(model_scores)+1], data_quantities)
-    print(cov.covariance_)
+    #cov = EmpiricalCovariance(store_precision=False, assume_centered=False)
+    #cov.fit(feature_matrix[:, :np.argmin(model_scores)+1], data_quantities)
+    #print(cov.covariance_)
     return OrderedDict(zip(feature_tuple, results[np.argmin(model_scores), :]))
 
 
@@ -1150,7 +1152,8 @@ def _generate_phase_features(phase_name, symmetry, subl_model, num_sites):
     max_parameter_order = 3
     endmembers = sorted(set(canonicalize(i, symmetry) for i in itertools.product(*subl_model)))
     all_endmembers = []
-    all_desired_coefficients = [v.T**n for n in range(-1, 3)] + [v.T*sympy.log(v.T)]
+    #all_desired_coefficients = [v.T**n for n in range(-1, 3)] + [v.T*sympy.log(v.T)]
+    all_desired_coefficients = [v.T**n for n in range(0, 2)]
     # Key is tuple of form (phase_name, interaction, parameter_order, coefficient)
     interaction_to_sympy_object = OrderedDict()
     for endmember in endmembers:
@@ -1279,7 +1282,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
                                               ''.join([c for c in sorted(data['components']) if c != 'VA']), 0),
                     fmt='tdb')
 
-    max_iterations = 3
+    max_iterations = 10
 
     def abstol(x, tol):
         return np.abs(x) > tol
@@ -1297,7 +1300,6 @@ def fit(input_fname, datasets, saveall=True, resume=None):
         return transform
 
     min_error = 1e-3
-    dof_to_add = [sympy.S.One, v.T]
     pcount = 0
     stepsize = 1
 
@@ -1331,7 +1333,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
         phases = sorted(dbf.phases.keys())
         dq = OrderedDict()
         # Use weights to get residuals to the same order of magnitude
-        data_multipliers = {'CPM': 100, 'SM': 100, 'HM': 1}
+        data_multipliers = {'CPM': 1, 'SM': 1, 'HM': 1}
         for phase_name in phases:
             desired_props = ["CPM_FORM", "CPM_MIX", "SM_FORM", "SM_MIX", "HM_FORM", "HM_MIX"]
             # Subtract out all of these contributions (zero out reference state because these are formation properties)
@@ -1431,20 +1433,31 @@ def fit(input_fname, datasets, saveall=True, resume=None):
                         sympy.S(feature_transforms[output_type](sympy.S(solution_matrix[rec_idx, col_idx]).xreplace(sf))).xreplace({v.T: ixx[0]})
                 rec_idx += 1
         solution_matrix = solution_matrix.astype(np.float)
-        print('SOLUTION MATRIX', solution_matrix, flush=True)
+        #print('SOLUTION MATRIX', solution_matrix, flush=True)
         print('ERROR VECTOR', error_vector, flush=True)
-        varfilter = VarianceThreshold(1000)
-        varfilter.fit(solution_matrix, error_vector)
-        print('VARFILTER', varfilter, flush=True)
-        multi_solver = Pipeline([('varfilter', VarianceThreshold(1000)),
-                                 ('lasso', Lasso(fit_intercept=False, normalize=False))
+
+        varfilter = VarianceThreshold(0)
+        downselect = SelectKBest(score_func=f_regression, k=10)
+        #downselect.fit(solution_matrix, error_vector)
+        #print('SELECTED FEATURES:', operator.itemgetter(*downselect.get_support(indices=True))(list(features.keys())),
+        #      flush=True)
+        #print('MIN SOLUTION MATRIX', solution_matrix[:, downselect.get_support(indices=True)])
+        ##
+        multi_solver = Pipeline([#('varfilter', varfilter),
+                                 ('scaler', StandardScaler()),
+                                 ('downselect', downselect),
+                                 ('lasso', Lasso(alpha=0.1, fit_intercept=False, normalize=False, max_iter=5000))
                                  ])
-        iter_solution = multi_solver.fit(solution_matrix, error_vector)
-        print('ITER SOLUTION', iter_solution)
-        raise ValueError('lol')
+        multi_solver.fit(solution_matrix, error_vector)
+        selected_feature_indices = multi_solver.steps[-2][1].get_support(indices=True)
+        new_features = operator.itemgetter(*selected_feature_indices)(list(features.keys()))
+        if len(selected_feature_indices) == 1:
+            new_features = [new_features]
+        new_params = list(zip(new_features, np.atleast_1d(multi_solver.steps[-1][1].coef_)))
+        print('NEW_PARAMS', new_params)
 
         # Commit new parameter values to the database
-        for param, val in zip(new_params, new_param_values):
+        for param, val in new_params:
             current_phase = param[0]
             parameter_order = param[2]
             # single components in sublattices need to be wrapped in a tuple so they'll match in the database
