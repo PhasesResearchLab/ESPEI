@@ -1406,26 +1406,29 @@ def fit(input_fname, datasets, saveall=True, resume=None):
                 error_vector[data_idx] = stepsize * record['error']
                 data_idx += 1
         for rec_idx, record in enumerate(all_records):
-            for col_idx in range(solution_matrix.shape[1]):
+            # XXX: Assumes all features are only single-phase
+            phase_name = record['phase_name']
+            same_phase = np.array([x[0] == phase_name for x in features.keys()])
+            nonzero_features = np.nonzero(same_phase)[0]
+            zero_features = np.nonzero(~same_phase)[0]
+            solution_matrix[rec_idx, zero_features] = 0
+            for col_idx in nonzero_features:
                 solution_matrix[rec_idx, col_idx] = \
                     sympy.S(sympy.S(solution_matrix[rec_idx, col_idx]).xreplace(record)).xreplace(record['site_fractions'])
-                try:
-                    solution_matrix[rec_idx, col_idx] = float(solution_matrix[rec_idx, col_idx])
-                except TypeError:
-                    solution_matrix[rec_idx, col_idx] = 0
         rec_idx = len(all_records)
-        print('Subbing a bunch of columns', flush=True)
         for x in dq.values():
             data_quantities, site_fractions, all_samples, output_types = x
-            print('New DQ', flush=True)
             for i, sf, ixx, output_type in zip(data_quantities, site_fractions, all_samples, output_types):
-                for col_idx in range(solution_matrix.shape[1]):
+                # XXX: Assumes all features are only single-phase
+                phase_name = list(sf)[0].phase_name
+                same_phase = np.array([x[0] == phase_name for x in features.keys()])
+                nonzero_features = np.nonzero(same_phase)[0]
+                zero_features = np.nonzero(~same_phase)[0]
+                solution_matrix[rec_idx, zero_features] = 0
+                for col_idx in nonzero_features:
+                    # TODO: This will break if feature_transforms modifies site fraction dof!
                     solution_matrix[rec_idx, col_idx] = \
-                        sympy.S(feature_transforms[output_type](sympy.S(solution_matrix[rec_idx, col_idx])).xreplace(sf)).xreplace({v.T: ixx[0]})
-                    try:
-                        solution_matrix[rec_idx, col_idx] = float(solution_matrix[rec_idx, col_idx])
-                    except TypeError:
-                        solution_matrix[rec_idx, col_idx] = 0
+                        sympy.S(feature_transforms[output_type](sympy.S(solution_matrix[rec_idx, col_idx]).xreplace(sf))).xreplace({v.T: ixx[0]})
                 rec_idx += 1
         solution_matrix = solution_matrix.astype(np.float)
         print('SOLUTION MATRIX', solution_matrix, flush=True)
