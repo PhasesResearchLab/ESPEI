@@ -54,7 +54,7 @@ from pycalphad.core.autograd_utils import build_functions
 import pycalphad.refdata
 from sklearn.linear_model import LinearRegression, Lasso, LassoCV
 from sklearn.covariance import EmpiricalCovariance
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import Normalizer, MaxAbsScaler, StandardScaler
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.feature_selection import SelectKBest, f_regression
 from sklearn.pipeline import Pipeline
@@ -245,7 +245,8 @@ def _get_samples(desired_data):
     all_samples = []
     for data in desired_data:
         temperatures = np.atleast_1d(data['conditions']['T'])
-        site_fractions = data['solver'].get('sublattice_occupancies', [[1]])
+        num_configs = np.array(data['solver'].get('sublattice_configurations'), dtype=np.object).shape[0]
+        site_fractions = data['solver'].get('sublattice_occupancies', [[1]] * num_configs)
         site_fraction_product = [reduce(operator.mul, list(itertools.chain(*[np.atleast_1d(f) for f in fracs])), 1)
                                  for fracs in site_fractions]
         # TODO: Subtle sorting bug here, if the interactions aren't already in sorted order...
@@ -1302,6 +1303,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
     min_error = 1e-3
     pcount = 0
     stepsize = 1
+    converged = False
 
     for iteration in range(max_iterations):
         print('MAIN ITERATION ', iteration+1, flush=True)
@@ -1333,7 +1335,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
         phases = sorted(dbf.phases.keys())
         dq = OrderedDict()
         # Use weights to get residuals to the same order of magnitude
-        data_multipliers = {'CPM': 1, 'SM': 1, 'HM': 1}
+        data_multipliers = {'CPM': 100, 'SM': 100, 'HM': 1}
         for phase_name in phases:
             desired_props = ["CPM_FORM", "CPM_MIX", "SM_FORM", "SM_MIX", "HM_FORM", "HM_MIX"]
             # Subtract out all of these contributions (zero out reference state because these are formation properties)
@@ -1347,17 +1349,24 @@ def fit(input_fname, datasets, saveall=True, resume=None):
             #print('DESIRED_DATA', desired_data)
             if len(desired_data) == 0:
                 continue
+            total_data = 0
             for idx, dd in enumerate(desired_data):
                 temp_filter = np.nonzero(np.atleast_1d(dd['conditions']['T']) >= 298.15)
                 desired_data[idx]['conditions']['T'] = np.atleast_1d(dd['conditions']['T'])[temp_filter]
                 # Don't use data['values'] because we rewrote it above; not sure what 'data' references now
                 desired_data[idx]['values'] = np.asarray(desired_data[idx]['values'])[..., temp_filter, :]
+                total_data += len(desired_data[idx]['values'].flat)
+            #print('TOTAL DATA', total_data)
             all_samples = _get_samples(desired_data)
+            #print('LEN ALL SAMPLES', len(all_samples))
+            #print('ALL SAMPLES', all_samples)
+            assert len(all_samples) == total_data
             data_quantities = [np.concatenate(_shift_reference_state([ds],
                                                                      feature_transforms[ds['output']],
-                                                                     fixed_model), axis=-1)[0]
-                               for ds in desired_data for _ in np.atleast_1d(ds['conditions']['T'])]
-            data_quantities = np.asarray(data_quantities, dtype=np.object)
+                                                                     fixed_model), axis=-1)
+                               for ds in desired_data]
+            # Flatten list
+            data_quantities = np.asarray(list(itertools.chain(*data_quantities)), dtype=np.object)
             site_fractions = [_build_sitefractions(phase_name, ds['solver']['sublattice_configurations'],
                 ds['solver'].get('sublattice_occupancies',
                                  np.ones((len(ds['solver']['sublattice_configurations']),
@@ -1365,6 +1374,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
                               for ds in desired_data for _ in np.atleast_1d(ds['conditions']['T'])]
             # Flatten list
             site_fractions = list(itertools.chain(*site_fractions))
+            #print('SITE_FRACTIONS', site_fractions)
             # Add dependent site fractions to dictionary
             for idx in range(len(site_fractions)):
                 sf = site_fractions[idx]
@@ -1375,17 +1385,28 @@ def fit(input_fname, datasets, saveall=True, resume=None):
                             sfsum = max(sfsum, 1e-16)
                             site_fractions[idx][v.Y(phase_name, subl_idx, spec)] = 1 - sfsum
             # Remove existing partial model contributions from the data
-            data_quantities = data_quantities - [feature_transforms[ds['output']](fixed_model.GM)
-                                                 for ds in desired_data for _ in np.atleast_1d(ds['conditions']['T'])]
+            #print('DATA_QUANTITIES 1', data_quantities)
+            data_quantities = data_quantities - np.repeat([feature_transforms[ds['output']](fixed_model.GM)
+                                                           for ds in desired_data],
+                                                          [len(ds['values'].flat) for ds in desired_data])
+            print('LEN DATA_QUANTITIES', len(data_quantities))
+            #print('DATA_QUANTITIES 2', data_quantities)
+            assert len(data_quantities) == total_data
             data_quantities = [sympy.S(i).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
                                for i, sf, ixx in zip(data_quantities, site_fractions, all_samples)]
-            data_quantities = np.asarray(data_quantities, dtype=np.float)
+            #print('LEN DATA_QUANTITIES', len(data_quantities))
+            #print('DATA_QUANTITIES 3', data_quantities)
+            data_quantities = np.array(data_quantities, dtype=np.float)
             # Reweight data based on the output type
-            data_quantities *= np.asarray([data_multipliers[ds['output'].split('_')[0]]
-                                           for ds in desired_data for _ in np.atleast_1d(ds['conditions']['T'])],
-                                          dtype=np.float)
-            dq[phase_name] = (data_quantities, site_fractions, all_samples,
-                              [ds['output'] for ds in desired_data for _ in np.atleast_1d(ds['conditions']['T'])])
+            multiply_array = [np.repeat(data_multipliers[ds['output'].split('_')[0]], len(ds['values'].flat))
+                              for ds in desired_data]
+            multiply_array = list(itertools.chain(*multiply_array))
+            #print('LEN MULTIPLY_ARRAY', len(multiply_array))
+            #print('LEN DATA_QUANTITIES', len(data_quantities))
+            #data_quantities *= np.asarray(multiply_array, dtype=np.float)
+            output_types = [np.repeat(ds['output'], len(ds['values'].flat)) for ds in desired_data]
+            output_types = list(itertools.chain(*output_types))
+            dq[phase_name] = (data_quantities, site_fractions, all_samples, output_types)
         total_singlephase_dq = sum([len(x[0]) for x in dq.values()])
         solution_matrix = np.zeros((data_rows + total_singlephase_dq, dof_columns), dtype=np.object)
         error_vector = np.zeros((data_rows + total_singlephase_dq,), dtype=np.float)
@@ -1420,6 +1441,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
         rec_idx = len(all_records)
         for x in dq.values():
             data_quantities, site_fractions, all_samples, output_types = x
+            #print('DQ, SF, AS, OUT', x)
             for i, sf, ixx, output_type in zip(data_quantities, site_fractions, all_samples, output_types):
                 # XXX: Assumes all features are only single-phase
                 phase_name = list(sf)[0].phase_name
@@ -1432,29 +1454,54 @@ def fit(input_fname, datasets, saveall=True, resume=None):
                     solution_matrix[rec_idx, col_idx] = \
                         sympy.S(feature_transforms[output_type](sympy.S(solution_matrix[rec_idx, col_idx]).xreplace(sf))).xreplace({v.T: ixx[0]})
                 rec_idx += 1
+        #print('SOLUTION MATRIX (SYMBOLIC)', solution_matrix, flush=True)
         solution_matrix = solution_matrix.astype(np.float)
+        #print('FEATURES', list(features.keys()))
         #print('SOLUTION MATRIX', solution_matrix, flush=True)
-        print('ERROR VECTOR', error_vector, flush=True)
-
-        varfilter = VarianceThreshold(0)
-        downselect = SelectKBest(score_func=f_regression, k=10)
-        #downselect.fit(solution_matrix, error_vector)
-        #print('SELECTED FEATURES:', operator.itemgetter(*downselect.get_support(indices=True))(list(features.keys())),
-        #      flush=True)
-        #print('MIN SOLUTION MATRIX', solution_matrix[:, downselect.get_support(indices=True)])
-        ##
-        multi_solver = Pipeline([#('varfilter', varfilter),
-                                 ('scaler', StandardScaler()),
-                                 ('downselect', downselect),
-                                 ('lasso', Lasso(alpha=0.1, fit_intercept=False, normalize=False, max_iter=5000))
+        #print('ERROR VECTOR', error_vector, flush=True)
+        import functools
+        if solution_matrix.shape[0] <= 2:
+            reg = Lasso(fit_intercept=False, normalize=False, max_iter=1000)
+        else:
+            reg = LassoCV(n_alphas=100, fit_intercept=False, normalize=False, max_iter=1000)
+        multi_solver = Pipeline([('scaler', StandardScaler(with_mean=False, with_std=True)),
+                                 ('downselect', SelectKBest(score_func=functools.partial(f_regression,
+                                                                                         center=False),
+                                                            k='all')),
+                                 ('lasso', reg)
                                  ])
+        multi_solver.fit(solution_matrix[data_rows:, :], error_vector[data_rows:])
+        if isinstance(reg, LassoCV):
+            print('CHOSEN ALPHA', multi_solver.named_steps['lasso'].alpha_)
+
         multi_solver.fit(solution_matrix, error_vector)
-        selected_feature_indices = multi_solver.steps[-2][1].get_support(indices=True)
-        new_features = operator.itemgetter(*selected_feature_indices)(list(features.keys()))
-        if len(selected_feature_indices) == 1:
-            new_features = [new_features]
-        new_params = list(zip(new_features, np.atleast_1d(multi_solver.steps[-1][1].coef_)))
+        selected_feature_indices = np.nonzero(np.atleast_1d(multi_solver.steps[-1][1].coef_))[0]
+        if len(selected_feature_indices) > 0:
+            print('SELECTED FEATURE INDICES', selected_feature_indices)
+            #print('SOLUTION MATRIX (SCALED)',
+            #      multi_solver.named_steps['scaler'].transform(solution_matrix)[:, selected_feature_indices], flush=True)
+            #print('SOLUTION MATRIX', solution_matrix, flush=True)
+            #print('SOLUTION MATRIX', solution_matrix[:, selected_feature_indices], flush=True)
+            new_features = operator.itemgetter(*selected_feature_indices)(list(features.keys()))
+            if len(selected_feature_indices) == 1:
+                new_features = [new_features]
+            # Because we rescaled our features, we need to descale the result
+            selected_param_values = np.atleast_1d(multi_solver.steps[-1][1].coef_)[selected_feature_indices]
+            scales = multi_solver.named_steps['scaler'].scale_[selected_feature_indices]
+            print('SCALER', scales)
+            new_params = list(zip(new_features, selected_param_values / scales))
+            #print('DIFF', solution_matrix[:, selected_feature_indices].dot(np.atleast_1d(multi_solver.steps[-1][1].coef_)) - error_vector)
+        else:
+            new_params = []
+            converged = True
+
         print('NEW_PARAMS', new_params)
+        score = multi_solver.score(solution_matrix, error_vector)
+        if score < 0.1:
+            # Not making good progress
+            new_params = []
+            converged = True
+        print('SCORE', multi_solver.score(solution_matrix, error_vector))
 
         # Commit new parameter values to the database
         for param, val in new_params:
@@ -1486,4 +1533,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
             dbf.to_file('{}-{}-iter{}.tdb'.format(start_time,
                                                   ''.join([c for c in sorted(comps) if c != 'VA']), iteration+1),
                         fmt='tdb')
+        if converged:
+            print('CONVERGED')
+            break
     return dbf
