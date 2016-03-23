@@ -1155,7 +1155,8 @@ def _generate_phase_features(phase_name, symmetry, subl_model, num_sites):
     all_endmembers = []
     #all_desired_coefficients = [v.T**n for n in range(-1, 3)] + [v.T*sympy.log(v.T)]
     all_desired_coefficients = [v.T**n for n in range(0, 2)]
-    # Key is tuple of form (phase_name, interaction, parameter_order, coefficient)
+    temp_coef_scale = [pow(0.001, n) for n in range(0, 2)]
+    # Key is tuple of form (phase_name, interaction, parameter_order, coefficient, scale)
     interaction_to_sympy_object = OrderedDict()
     for endmember in endmembers:
         symmetric_endmembers = _generate_symmetric_group(endmember, symmetry)
@@ -1166,8 +1167,8 @@ def _generate_phase_features(phase_name, symmetry, subl_model, num_sites):
             for idx, subl in enumerate(em):
                     symarray *= v.SiteFraction(phase_name, idx, subl)
             interarray += symarray
-        for coef in all_desired_coefficients:
-            interaction_to_sympy_object[(phase_name, endmember, 0, coef)] = coef*interarray/num_sites
+        for temp_scale, coef in zip(temp_coef_scale, all_desired_coefficients):
+            interaction_to_sympy_object[(phase_name, endmember, 0, coef, temp_scale)] = coef*interarray/num_sites
 
     bin_interactions = list(itertools.combinations(all_endmembers, 2))
     transformed_bin_interactions = []
@@ -1185,15 +1186,17 @@ def _generate_phase_features(phase_name, symmetry, subl_model, num_sites):
         interacting_sublattices = sum((isinstance(n, (list, tuple)) and len(n) == 2) for n in x)
         return canonical_sort_key((interacting_sublattices,) + x)
 
-    bin_interactions = sorted(set(tuple(i) for i in transformed_bin_interactions),
+    bin_interactions = sorted(set(canonicalize(tuple(i), symmetry) for i in transformed_bin_interactions),
                               key=bin_int_sort_key)
     # placeholder for parameter order
     k = sympy.Symbol('k')
+    scale = sympy.S.One
     for constituent_array in bin_interactions:
         symmetric_interactions = _generate_symmetric_group(constituent_array, symmetry)
         interarray = sympy.S.Zero
         for syminter in symmetric_interactions:
             symarray = sympy.S.One
+            scale = sympy.S.One
             for idx, subl in enumerate(syminter):
                 if isinstance(subl, (list, tuple)):
                     symarray *= sympy.Mul(*[v.SiteFraction(phase_name, idx, s) for s in subl])
@@ -1201,12 +1204,14 @@ def _generate_phase_features(phase_name, symmetry, subl_model, num_sites):
                     # If not we could end up with sign errors in binary parameters
                     symarray *= (v.SiteFraction(phase_name, idx, subl[0]) -
                                  v.SiteFraction(phase_name, idx, subl[1])) ** k
+                    #scale *= 10 ** k
                 else:
                     symarray *= v.SiteFraction(phase_name, idx, subl)
             interarray += symarray
         for parameter_order in range(max_parameter_order+1):
-            for coef in all_desired_coefficients:
-                interaction_to_sympy_object[(phase_name, constituent_array, parameter_order, coef)] = \
+            for temp_scale, coef in zip(temp_coef_scale, all_desired_coefficients):
+                interaction_to_sympy_object[(phase_name, constituent_array, parameter_order, coef,
+                                             temp_scale)] =\
                     coef * interarray.xreplace({k: parameter_order}) / num_sites
     return interaction_to_sympy_object
 
@@ -1224,8 +1229,9 @@ def _site_ratio_normalization(phase):
         comps |= consts
     for idx, sublattice in enumerate(phase.constituents):
         if ('VA' in set(sublattice)) and ('VA' in comps):
-            site_ratio_normalization += phase.sublattices[idx] * \
-                (1 - v.SiteFraction(phase.name, idx, 'VA'))
+            if len(sublattice) > 1:
+                site_ratio_normalization += phase.sublattices[idx] * \
+                    (1 - v.SiteFraction(phase.name, idx, 'VA'))
         else:
             site_ratio_normalization += phase.sublattices[idx]
     return site_ratio_normalization
@@ -1300,7 +1306,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
             return element
         return transform
 
-    min_error = 1e-3
+    min_error = 0
     pcount = 0
     stepsize = 1
     converged = False
@@ -1437,7 +1443,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
             solution_matrix[rec_idx, zero_features] = 0
             for col_idx in nonzero_features:
                 solution_matrix[rec_idx, col_idx] = \
-                    sympy.S(sympy.S(solution_matrix[rec_idx, col_idx]).xreplace(record)).xreplace(record['site_fractions'])
+                    sympy.S(sympy.S(solution_matrix[rec_idx, col_idx]).xreplace(record)).xreplace(record['site_fractions']).evalf()
         rec_idx = len(all_records)
         for x in dq.values():
             data_quantities, site_fractions, all_samples, output_types = x
@@ -1455,53 +1461,60 @@ def fit(input_fname, datasets, saveall=True, resume=None):
                         sympy.S(feature_transforms[output_type](sympy.S(solution_matrix[rec_idx, col_idx]).xreplace(sf))).xreplace({v.T: ixx[0]})
                 rec_idx += 1
         #print('SOLUTION MATRIX (SYMBOLIC)', solution_matrix, flush=True)
-        solution_matrix = solution_matrix.astype(np.float)
+        solution_matrix = np.array(solution_matrix, dtype=np.float)
         #print('FEATURES', list(features.keys()))
         #print('SOLUTION MATRIX', solution_matrix, flush=True)
-        #print('ERROR VECTOR', error_vector, flush=True)
-        import functools
+        print('ERROR VECTOR', error_vector[:data_rows], flush=True)
         if solution_matrix.shape[0] <= 2:
             reg = Lasso(fit_intercept=False, normalize=False, max_iter=1000)
         else:
             reg = LassoCV(n_alphas=100, fit_intercept=False, normalize=False, max_iter=1000)
-        multi_solver = Pipeline([('scaler', StandardScaler(with_mean=False, with_std=True)),
-                                 ('downselect', SelectKBest(score_func=functools.partial(f_regression,
-                                                                                         center=False),
-                                                            k='all')),
-                                 ('lasso', reg)
-                                 ])
-        multi_solver.fit(solution_matrix[data_rows:, :], error_vector[data_rows:])
-        if isinstance(reg, LassoCV):
-            print('CHOSEN ALPHA', multi_solver.named_steps['lasso'].alpha_)
+        #reg = LinearRegression()
+        scales = np.array([key[4] for key in list(features.keys())], dtype=np.float)
+        # Rescale features based on all data
+        scaled_solution_matrix = np.multiply(solution_matrix, scales)
+        #print('MAT DIFF', np.nonzero(solution_matrix != scaled_solution_matrix))
+        #if np.all(solution_matrix != scaled_solution_matrix):
+        #    raise ValueError('how')
+        # Select features based on the multi-phase data (scaled)
+        print('DATA ROWS', data_rows)
+        selected_feature_indices = np.argpartition(np.abs(scaled_solution_matrix[:data_rows, :]).sum(axis=0), -10)[-10:]
+        print('SELECTED FEATURE INDICES (ISOLATED)', selected_feature_indices)
+        print('FEATURE SCORES', np.abs(scaled_solution_matrix[:data_rows, selected_feature_indices].sum(axis=0)))
+        print('SELECTED SCALES', scales[selected_feature_indices])
+        print('SMALL SOLUTION MATRIX', scaled_solution_matrix[:data_rows, selected_feature_indices])
+        print('SMALL SOLUTION MATRIX (UNSCALED)', solution_matrix[:data_rows, selected_feature_indices])
 
-        multi_solver.fit(solution_matrix, error_vector)
-        selected_feature_indices = np.nonzero(np.atleast_1d(multi_solver.steps[-1][1].coef_))[0]
+        # Scale the features the opposite way to get the parameter values on the same scale
+        reg.fit(np.divide(solution_matrix[:, selected_feature_indices], scales[selected_feature_indices]), error_vector)
+        #selected_feature_indices = np.nonzero(np.atleast_1d(multi_solver.steps[-1][1].coef_))[0]
         if len(selected_feature_indices) > 0:
             print('SELECTED FEATURE INDICES', selected_feature_indices)
             #print('SOLUTION MATRIX (SCALED)',
             #      multi_solver.named_steps['scaler'].transform(solution_matrix)[:, selected_feature_indices], flush=True)
             #print('SOLUTION MATRIX', solution_matrix, flush=True)
-            #print('SOLUTION MATRIX', solution_matrix[:, selected_feature_indices], flush=True)
+            #print('SOLUTION MATRIX', solution_matrix[:data_rows], flush=True)
             new_features = operator.itemgetter(*selected_feature_indices)(list(features.keys()))
             if len(selected_feature_indices) == 1:
                 new_features = [new_features]
+            #print('NEW FEATURES', new_features)
             # Because we rescaled our features, we need to descale the result
-            selected_param_values = np.atleast_1d(multi_solver.steps[-1][1].coef_)[selected_feature_indices]
-            scales = multi_solver.named_steps['scaler'].scale_[selected_feature_indices]
-            print('SCALER', scales)
-            new_params = list(zip(new_features, selected_param_values / scales))
+            selected_param_values = np.array([sigfigs(x, 6) for x in np.atleast_1d(reg.coef_)])#[selected_feature_indices]
+            #scales = 1#scaler.scale_[selected_feature_indices]
+            #print('SCALER', scales)
+            new_params = list(zip(new_features, selected_param_values / scales[selected_feature_indices]))
             #print('DIFF', solution_matrix[:, selected_feature_indices].dot(np.atleast_1d(multi_solver.steps[-1][1].coef_)) - error_vector)
         else:
             new_params = []
             converged = True
 
         print('NEW_PARAMS', new_params)
-        score = multi_solver.score(solution_matrix, error_vector)
-        if score < 0.1:
+        score = reg.score(np.divide(solution_matrix[:, selected_feature_indices], scales[selected_feature_indices]), error_vector)
+        if score < 1e-6:
             # Not making good progress
             new_params = []
             converged = True
-        print('SCORE', multi_solver.score(solution_matrix, error_vector))
+        print('SCORE', score)
 
         # Commit new parameter values to the database
         for param, val in new_params:
