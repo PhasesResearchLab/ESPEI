@@ -1184,6 +1184,16 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
     return phase_errors, phase_interactions
 
 
+def _scale_factor(temperature_order, parameter_order, interacting_subls):
+    """
+    Compute parameter rescaling factor.
+    """
+    temp_scale = {n: pow(0.001, n) for n in range(0, 2)}
+    max_value = {0: 0.5, 1: 1. / 6 * (3 ** 0.5), 2: 1. / 16, 3: 0.0464758}
+    param_rescale = temp_scale[temperature_order] / (max_value[parameter_order] * (0.1 ** interacting_subls))
+    return param_rescale
+
+
 def _generate_phase_features(phase_name, symmetry, subl_model, num_sites):
     """
     Generate a list of all possible features for a phase in our solution matrix.
@@ -1246,16 +1256,17 @@ def _generate_phase_features(phase_name, symmetry, subl_model, num_sites):
                     symarray *= v.SiteFraction(phase_name, idx, subl)
             interarray += symarray
         for parameter_order in range(max_parameter_order+1):
-            #if (interacting_subls > 0) and (parameter_order > 0):
-            #    # Don't add high-order mixing parameters
-            #    continue
+            if (interacting_subls > 1) and (parameter_order > 0):
+                # Don't add high-order mixing parameters
+                # Thermo-Calc des not allow them
+                continue
             #if interacting_subls < (len(constituent_array) - 1):
             #    # Only allow "fully disordered" mixing parameter
             #    continue
             for temp_scale, coef in zip(temp_coef_scale, all_desired_coefficients):
-                if (interacting_subls > 0) and (sympy.S(coef) != sympy.S.One):
-                    # Don't add high-order temperature-dependent mixing parameters
-                    continue
+                #if (interacting_subls > 0) and (sympy.S(coef) != sympy.S.One):
+                #    # Don't add high-order temperature-dependent mixing parameters
+                #    continue
                 # Scale factor to attempt to get all parameters to same rough order of magnitude
                 param_rescale = temp_scale / (max_value[parameter_order] * (0.1 ** interacting_subls))
                 interaction_to_sympy_object[(phase_name, constituent_array, parameter_order, coef,
@@ -1430,7 +1441,7 @@ def _multiphase_fitting_system(dbf, data, datasets, features):
             rec_idx += 1
     # print('SOLUTION MATRIX (SYMBOLIC)', solution_matrix, flush=True)
     solution_matrix = np.array(solution_matrix, dtype=np.float)
-    return solution_matrix, error_vector
+    return solution_matrix, error_vector, data_rows
 
 
 def _multiphase_error(dbf, data, datasets):
@@ -1652,30 +1663,45 @@ def fit(input_fname, datasets, saveall=True, resume=None):
 
     for iteration in range(max_iterations):
         print('MAIN ITERATION ', iteration+1, flush=True)
-        solution_matrix, error_vector = _multiphase_fitting_system(dbf, data, datasets, features)
-        zpf_rows = datasets.count()
-        error_scale = np.sum(error_vector ** 2)
+        solution_matrix, error_vector, data_rows = _multiphase_fitting_system(dbf, data, datasets, features)
+        error_scale = np.mean(error_vector ** 2)
+        error_without_zpf = np.sum(error_vector[data_rows:] ** 2) / len(error_vector)
         print('ERROR SCALE', error_scale)
+        print('ERROR SCALE', error_without_zpf, '(NO ZPF)')
         scales = np.array([key[4] for key in list(features.keys())], dtype=np.float)
         # Rescale features based on all data
-        scaled_solution_matrix = np.multiply(solution_matrix, scales)
-        # TODO: Change scoring to only consider the multi-phase rows
+        # Consider just the ZPF data for scoring purposes (though we fit to all data)
+        scaled_solution_matrix = np.multiply(solution_matrix[:data_rows, :], scales)
         feature_scores = np.abs(scaled_solution_matrix).sum(axis=0)
-        max_num_features = 1
-        selected_feature_indices = np.argpartition(feature_scores, -max_num_features)[-max_num_features:]
-        selected_scales = scales[selected_feature_indices]
+        max_num_features = 10
+        selected_feature_indices = []
         selected_features = OrderedDict()
-        for idx in selected_feature_indices:
+        desired_coefs = [1, v.T]
+        # For all selected features, add the A, B, etc., variants, like A+B*T
+        for idx in np.argpartition(feature_scores, -max_num_features)[-max_num_features:]:
             idx_feature = list(features.keys())[idx]
-            selected_features[idx_feature] = features[idx_feature]
+            features_to_select = []
+            for temp_order, coef in enumerate(desired_coefs):
+                feature = list(idx_feature)
+                interacting_subls = sum([isinstance(subl, (list, tuple, set)) for subl in feature[1]])
+                feature[3] = coef
+                feature[4] = _scale_factor(temp_order, feature[2], interacting_subls)
+                features_to_select.append(tuple(feature))
+                sel_feat_idx = list(features.keys()).index(tuple(feature))
+                selected_feature_indices.append(sel_feat_idx)
+            for sel_feat in features_to_select:
+                selected_features[sel_feat] = features[sel_feat]
+        selected_feature_indices = np.array(selected_feature_indices)
+        selected_scales = scales[selected_feature_indices]
         print('FEATURES', list(selected_features.keys()))
+        print('FEATURE SCORES', feature_scores[selected_feature_indices])
 
         def sumsqerr(x):
             frozen_dbf = Database.from_string(dbf.to_string(fmt='tdb'), fmt='tdb')
             candidate_params = zip(selected_features.keys(), x*selected_scales)
             _update_database(frozen_dbf, data, candidate_params)
             iter_error = _multiphase_error(frozen_dbf, data, datasets)
-            print('SSE', np.sum(iter_error**2))
+            print('MSE', np.mean(iter_error**2) / error_scale)
             return np.sum(iter_error**2) / error_scale
         res_output = fmin_powell(sumsqerr, np.full_like(selected_feature_indices, 0.1, dtype=np.float),
                                  maxfun=10, full_output=True)
