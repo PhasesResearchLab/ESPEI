@@ -1190,7 +1190,7 @@ def _scale_factor(temperature_order, parameter_order, interacting_subls):
     """
     temp_scale = {n: pow(0.001, n) for n in range(0, 2)}
     max_value = {0: 0.5, 1: 1. / 6 * (3 ** 0.5), 2: 1. / 16, 3: 0.0464758}
-    param_rescale = temp_scale[temperature_order] / (max_value[parameter_order] * (0.1 ** interacting_subls))
+    param_rescale = temp_scale[temperature_order] / ((max_value[parameter_order] * 0.1) ** interacting_subls)
     return param_rescale
 
 
@@ -1198,7 +1198,7 @@ def _generate_phase_features(phase_name, symmetry, subl_model, num_sites):
     """
     Generate a list of all possible features for a phase in our solution matrix.
     """
-    max_parameter_order = 3
+    max_parameter_order = 2
     endmembers = sorted(set(canonicalize(i, symmetry) for i in itertools.product(*subl_model)))
     all_endmembers = []
     #all_desired_coefficients = [v.T**n for n in range(-1, 3)] + [v.T*sympy.log(v.T)]
@@ -1318,7 +1318,7 @@ def _multiphase_fitting_system(dbf, data, datasets, features):
     # Use weights to get residuals to the same order of magnitude
     data_multipliers = {'CPM': 100, 'SM': 100, 'HM': 1}
     for phase_name in phases:
-        desired_props = ["CPM_FORM", "CPM_MIX", "SM_FORM", "SM_MIX", "HM_FORM", "HM_MIX"]
+        desired_props = ["SM_FORM", "SM_MIX", "HM_FORM", "HM_MIX"]
         # Subtract out all of these contributions (zero out reference state because these are formation properties)
         fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER' + c.upper(): 0 for c in comps})
         fixed_model.models['idmix'] = 0
@@ -1333,6 +1333,8 @@ def _multiphase_fitting_system(dbf, data, datasets, features):
         total_data = 0
         for idx, dd in enumerate(desired_data):
             temp_filter = np.nonzero(np.atleast_1d(dd['conditions']['T']) >= 298.15)
+            # Necessary copy because mutation is weird
+            desired_data[idx]['conditions'] = desired_data[idx]['conditions'].copy()
             desired_data[idx]['conditions']['T'] = np.atleast_1d(dd['conditions']['T'])[temp_filter]
             # Don't use data['values'] because we rewrote it above; not sure what 'data' references now
             desired_data[idx]['values'] = np.asarray(desired_data[idx]['values'])[..., temp_filter, :]
@@ -1465,7 +1467,7 @@ def _multiphase_error(dbf, data, datasets):
     # Use weights to get residuals to the same order of magnitude
     data_multipliers = {'CPM': 100, 'SM': 100, 'HM': 1}
     for phase_name in phases:
-        desired_props = ["CPM_FORM", "CPM_MIX", "SM_FORM", "SM_MIX", "HM_FORM", "HM_MIX"]
+        desired_props = ["SM_FORM", "SM_MIX", "HM_FORM", "HM_MIX"]
         # Subtract out all of these contributions (zero out reference state because these are formation properties)
         fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER' + c.upper(): 0 for c in comps})
         fixed_model.models['idmix'] = 0
@@ -1480,6 +1482,8 @@ def _multiphase_error(dbf, data, datasets):
         total_data = 0
         for idx, dd in enumerate(desired_data):
             temp_filter = np.nonzero(np.atleast_1d(dd['conditions']['T']) >= 298.15)
+            # Necessary copy because mutation is weird
+            desired_data[idx]['conditions'] = desired_data[idx]['conditions'].copy()
             desired_data[idx]['conditions']['T'] = np.atleast_1d(dd['conditions']['T'])[temp_filter]
             # Don't use data['values'] because we rewrote it above; not sure what 'data' references now
             desired_data[idx]['values'] = np.asarray(desired_data[idx]['values'])[..., temp_filter, :]
@@ -1620,7 +1624,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
     data = json.load(open(input_fname))
     if resume is None:
         dbf = Database()
-        dbf.elements = sorted(data['components'])
+        dbf.elements = set(data['components'])
         # Write reference state to Database
         refdata = getattr(pycalphad.refdata, data['refdata'])
         stabledata = getattr(pycalphad.refdata, data['refdata']+'Stable')
@@ -1637,6 +1641,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
             subl_model = phase_obj['sublattice_model']
             dbf.add_phase(phase_name, {}, site_ratios)
             dbf.add_phase_constituents(phase_name, subl_model)
+            dbf.add_structure_entry(phase_name, phase_name)
             # phase_fit() adds parameters to dbf
             phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=aliases)
     else:
@@ -1672,8 +1677,8 @@ def fit(input_fname, datasets, saveall=True, resume=None):
         # Rescale features based on all data
         # Consider just the ZPF data for scoring purposes (though we fit to all data)
         scaled_solution_matrix = np.multiply(solution_matrix[:data_rows, :], scales)
-        feature_scores = np.abs(scaled_solution_matrix).sum(axis=0)
-        max_num_features = 10
+        feature_scores = np.var(scaled_solution_matrix, axis=0)
+        max_num_features = 2
         selected_feature_indices = []
         selected_features = OrderedDict()
         desired_coefs = [1, v.T]
@@ -1701,22 +1706,24 @@ def fit(input_fname, datasets, saveall=True, resume=None):
             candidate_params = zip(selected_features.keys(), x*selected_scales)
             _update_database(frozen_dbf, data, candidate_params)
             iter_error = _multiphase_error(frozen_dbf, data, datasets)
-            print('MSE', np.mean(iter_error**2) / error_scale)
-            return np.sum(iter_error**2) / error_scale
-        res_output = fmin_powell(sumsqerr, np.full_like(selected_feature_indices, 0.1, dtype=np.float),
-                                 maxfun=10, full_output=True)
-        print('RES OUTPUT', res_output)
-        coefs = res_output[0]
-        if len(selected_feature_indices) > 0:
+            print('MSE', np.nanmean(iter_error**2) / error_scale, '({})'.format(x))
+            return np.nanmean(iter_error**2) / error_scale
+
+        if (len(selected_feature_indices) > 0) and np.any(feature_scores[selected_feature_indices] > 1e-6):
+            res_output = fmin_powell(sumsqerr, np.full_like(selected_feature_indices, 0, dtype=np.float),
+                                     full_output=True)
+            print('RES OUTPUT', res_output)
+            coefs = res_output[0]
             # Because we rescaled our features, we need to descale the result
             selected_param_values = np.array([sigfigs(x*y, 6) for x, y in zip(np.atleast_1d(coefs), selected_scales)])
             new_params = list(zip(selected_features.keys(), selected_param_values))
+            if res_output[1] <= 0.999:
+                print('NEW_PARAMS', new_params)
+                _update_database(dbf, data, new_params)
+            else:
+                print('Failed to make significant progress -- discarding parameters')
         else:
-            new_params = []
             converged = True
-
-        print('NEW_PARAMS', new_params)
-        _update_database(dbf, data, new_params)
 
         # Don't attempt to again fit features already considered this iteration
         for feat in selected_features.keys():
