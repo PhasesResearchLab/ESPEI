@@ -1268,7 +1268,7 @@ def _generate_phase_features(phase_name, symmetry, subl_model, num_sites):
                 #    # Don't add high-order temperature-dependent mixing parameters
                 #    continue
                 # Scale factor to attempt to get all parameters to same rough order of magnitude
-                param_rescale = temp_scale / (max_value[parameter_order] * (0.1 ** interacting_subls))
+                param_rescale = temp_scale / ((max_value[parameter_order] * 0.1) ** interacting_subls)
                 interaction_to_sympy_object[(phase_name, constituent_array, parameter_order, coef,
                                              param_rescale)] =\
                     coef * interarray.xreplace({k: parameter_order}) / num_sites
