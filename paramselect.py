@@ -51,6 +51,8 @@ import pycalphad.variables as v
 from pycalphad import binplot, calculate, equilibrium, Database, Model
 from pycalphad.plot.utils import phase_legend
 from pycalphad.core.autograd_utils import build_functions
+from pycalphad.core.sympydiff_utils import make_gradient_from_graph
+from pycalphad.core.utils import make_callable
 import pycalphad.refdata
 from sklearn.linear_model import LinearRegression, Lasso, LassoCV, RandomizedLasso
 from sklearn.covariance import EmpiricalCovariance
@@ -968,7 +970,11 @@ def choose_interaction(phase_name, subl_model, site_fractions):
     return important_interaction, important_k
 
 
-def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
+def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None,
+                    obj_callables=None, grad_callables=None, hess_callables=None):
+    obj_callables = obj_callables if obj_callables is not None else defaultdict(lambda: None)
+    grad_callables = grad_callables if grad_callables is not None else defaultdict(lambda: None)
+    hess_callables = hess_callables if hess_callables is not None else defaultdict(lambda: None)
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
@@ -990,8 +996,15 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
     phase_grad_callables = {}
     phase_hess_callables = {}
     for phase, phase_mod in phase_models.items():
-        phase_obj_callables[phase], phase_grad_callables[phase], phase_hess_callables[phase] = \
-            build_functions(phase_mod.GM, [v.P, v.T] + phase_mod.site_fractions)
+        if (obj_callables[phase] is None) or (grad_callables[phase] is None) or (hess_callables[phase] is None):
+            phase_obj_callables[phase], phase_grad_callables[phase], phase_hess_callables[phase] = \
+                build_functions(phase_mod.GM, [v.P, v.T] + phase_mod.site_fractions)
+        if obj_callables[phase] is not None:
+            phase_obj_callables[phase] = obj_callables[phase]
+        if grad_callables[phase] is not None:
+            phase_grad_callables[phase] = grad_callables[phase]
+        if hess_callables[phase] is not None:
+            phase_hess_callables[phase] = hess_callables[phase]
     for data in desired_data:
         payload = data['values']
         conditions = data['conditions']
@@ -1039,7 +1052,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                         # Note that we consider all phases in the system, not just ones in this tie region
                         multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, pbar=False, verbose=False,
                                                    callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                                   hess_callables=phase_hess_callables, _approx=True)
+                                                   hess_callables=phase_hess_callables)
                         #print('MULTI_EQDATA', multi_eqdata)
                         # Does there exist only a single phase in the result with zero internal degrees of freedom?
                         # We should exclude those chemical potentials from the average because they are meaningless.
@@ -1102,7 +1115,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None):
                         # Extract energies from single-phase calculations
                         single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, pbar=False, verbose=False,
                                                     callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                                    hess_callables=phase_hess_callables, _approx=True)
+                                                    hess_callables=phase_hess_callables)
                         #print('SINGLE_EQDATA', single_eqdata)
                         # Sometimes we can get a miscibility gap in our "single-phase" calculation
                         # Choose the weighted mixture of site fractions
@@ -1296,10 +1309,10 @@ def _site_ratio_normalization(phase):
     return site_ratio_normalization
 
 
-def _multiphase_fitting_system(dbf, data, datasets, features):
+def _multiphase_fitting_system(dbf, data, datasets, features, **kwargs):
     comps = sorted(data['components'])
     phases = sorted(data['phases'].keys())
-    errors, interactions = multi_phase_fit(dbf, comps, phases, data, datasets, None)
+    errors, interactions = multi_phase_fit(dbf, comps, phases, data, datasets, None, **kwargs)
     #print(errors.all())
     #print(interactions)
     data_rows = 0
@@ -1446,10 +1459,10 @@ def _multiphase_fitting_system(dbf, data, datasets, features):
     return solution_matrix, error_vector, data_rows
 
 
-def _multiphase_error(dbf, data, datasets):
+def _multiphase_error(dbf, data, datasets, **kwargs):
     comps = sorted(data['components'])
     phases = sorted(data['phases'].keys())
-    errors, interactions = multi_phase_fit(dbf, comps, phases, data, datasets, None)
+    errors, interactions = multi_phase_fit(dbf, comps, phases, data, datasets, None, **kwargs)
     #print(errors.all())
     #print(interactions)
     data_rows = 0
@@ -1600,6 +1613,36 @@ def _update_database(dbf, data, new_params):
             dbf._parameters.update(update_param(param[3], val), param_query)
 
 
+def _modify_callables(dbf, comps, data, new_params, obj_funcs, grad_funcs, hess_funcs):
+    for new_param, param_value in new_params:
+        param_phase = new_param[0]
+        constituent_array = new_param[1]
+        symmetry = data['phases'][param_phase].get('equivalent_sublattices', None)
+        symmetric_interactions = _generate_symmetric_group(constituent_array, symmetry)
+        interarray = sympy.S.Zero
+        for syminter in symmetric_interactions:
+            symarray = sympy.S.One
+            for idx, subl in enumerate(syminter):
+                if isinstance(subl, (list, tuple)):
+                    symarray *= sympy.Mul(*[v.SiteFraction(param_phase, idx, s) for s in subl])
+                    # Only works for binary interactions and assumes canonicalized
+                    # If not we could end up with sign errors in binary parameters
+                    symarray *= (v.SiteFraction(param_phase, idx, subl[0]) -
+                                 v.SiteFraction(param_phase, idx, subl[1])) ** new_param[2]
+                else:
+                    symarray *= v.SiteFraction(param_phase, idx, subl)
+            interarray += symarray
+        interarray *= interarray * new_param[3] * param_value
+        # XXX: This could be factored out if we stored the site fractions somewhere
+        # But Model construction is usually pretty cheap
+        new_mod = Model(dbf, comps, param_phase)
+        new_obj = make_callable(interarray, [v.P, v.T] + new_mod.site_fractions)
+        new_grad, new_hess = make_gradient_from_graph(interarray, [v.P, v.T] + new_mod.site_fractions)
+        obj_funcs[param_phase].append(new_obj)
+        grad_funcs[param_phase].append(new_grad)
+        hess_funcs[param_phase].append(new_hess)
+
+
 def fit(input_fname, datasets, saveall=True, resume=None):
     """
     Fit thermodynamic and phase equilibria data to a model.
@@ -1666,9 +1709,42 @@ def fit(input_fname, datasets, saveall=True, resume=None):
         print(phase_name, len(new_features), 'features')
         features.update(new_features)
 
+    # Generate obj, grad and hess for each phase
+    # We keep a list of functions: The first element is the starting model, and all others are corrections
+    # The idea is to avoid costly recompilation of the gradient and Hessian at every iteration
+    obj_funcs = defaultdict(lambda: list())
+    grad_funcs = defaultdict(lambda: list())
+    hess_funcs = defaultdict(lambda: list())
+
+    print('Compiling phase models', flush=True)
+    for phase_name in sorted(data['phases'].keys()):
+        mod = Model(dbf, comps, phase_name)
+        obj = make_callable(mod.GM, [v.P, v.T] + mod.site_fractions)
+        grad, hess = make_gradient_from_graph(mod.GM, [v.P, v.T] + mod.site_fractions)
+        obj_funcs[phase_name].append(obj)
+        grad_funcs[phase_name].append(grad)
+        hess_funcs[phase_name].append(hess)
+    print('Starting fit', flush=True)
+
+    # There are subtle things happening with these lambda definitions
+    # Note the "pn=phase_name" to bind the phase_name at _definition time_ in the loop
+    # If you don't do this, it won't look up phase_name until _call time_, which is not desirable
+    # On the other hand, we let obj_funcs, grad_funcs, and hess_funcs be looked up at _call time_, since
+    # we will be modifying those objects between function calls
+    system_obj = {phase_name: lambda *args, pn=phase_name: np.sum([o(*args) for o in obj_funcs[pn]], axis=0)
+                  for phase_name in sorted(data['phases'].keys())}
+    system_grad = {phase_name: lambda *args, pn=phase_name: np.sum([g(*args) for g in grad_funcs[pn]], axis=0)
+                   for phase_name in sorted(data['phases'].keys())}
+    system_hess = {phase_name: lambda *args, pn=phase_name: np.sum([h(*args) for h in hess_funcs[pn]], axis=0)
+                   for phase_name in sorted(data['phases'].keys())}
+    #system_obj = system_grad = system_hess = None
+
     for iteration in range(max_iterations):
         print('MAIN ITERATION ', iteration+1, flush=True)
-        solution_matrix, error_vector, data_rows = _multiphase_fitting_system(dbf, data, datasets, features)
+        solution_matrix, error_vector, data_rows = _multiphase_fitting_system(dbf, data, datasets, features,
+                                                                              obj_callables=system_obj,
+                                                                              grad_callables=system_grad,
+                                                                              hess_callables=system_hess)
         error_scale = np.mean(error_vector ** 2)
         error_without_zpf = np.sum(error_vector[data_rows:] ** 2) / len(error_vector)
         print('ERROR SCALE', error_scale)
@@ -1696,22 +1772,47 @@ def fit(input_fname, datasets, saveall=True, resume=None):
                 selected_feature_indices.append(sel_feat_idx)
             for sel_feat in features_to_select:
                 selected_features[sel_feat] = features[sel_feat]
-        selected_feature_indices = np.array(selected_feature_indices)
+        selected_feature_indices = np.unique(np.array(selected_feature_indices))
         selected_scales = scales[selected_feature_indices]
         print('FEATURES', list(selected_features.keys()))
         print('FEATURE SCORES', feature_scores[selected_feature_indices])
 
         def sumsqerr(x):
             frozen_dbf = Database.from_string(dbf.to_string(fmt='tdb'), fmt='tdb')
-            candidate_params = zip(selected_features.keys(), x*selected_scales)
+            candidate_params = list(zip(selected_features.keys(), x*selected_scales))
             _update_database(frozen_dbf, data, candidate_params)
-            iter_error = _multiphase_error(frozen_dbf, data, datasets)
+            temp_obj_funcs = defaultdict(lambda: list())
+            temp_grad_funcs = defaultdict(lambda: list())
+            temp_hess_funcs = defaultdict(lambda: list())
+            _modify_callables(frozen_dbf, comps, data, candidate_params,
+                              temp_obj_funcs, temp_grad_funcs, temp_hess_funcs)
+            temp_obj = {phase_name: lambda *args, pn=phase_name: np.sum([o(*args)
+                                                                         for o in itertools.chain(obj_funcs[pn],
+                                                                                                  temp_obj_funcs[pn])],
+                                                                        axis=0)
+                        for phase_name in sorted(data['phases'].keys())}
+
+            temp_grad = {phase_name: lambda *args, pn=phase_name: np.sum([g(*args)
+                                                                          for g in itertools.chain(grad_funcs[pn],
+                                                                                                   temp_grad_funcs[pn])],
+                                                                         axis=0)
+                         for phase_name in sorted(data['phases'].keys())}
+            temp_hess = {phase_name: lambda *args, pn=phase_name: np.sum([h(*args)
+                                                                          for h in itertools.chain(hess_funcs[pn],
+                                                                                                   temp_hess_funcs[pn])],
+                                                                         axis=0)
+                         for phase_name in sorted(data['phases'].keys())}
+
+            iter_error = _multiphase_error(frozen_dbf, data, datasets,
+                                           obj_callables=temp_obj,
+                                           grad_callables=temp_grad,
+                                           hess_callables=temp_hess)
             print('MSE', np.nanmean(iter_error**2) / error_scale, '({})'.format(x))
             return np.nanmean(iter_error**2) / error_scale
 
         if (len(selected_feature_indices) > 0) and np.any(feature_scores[selected_feature_indices] > 1e-6):
             res_output = fmin_powell(sumsqerr, np.full_like(selected_feature_indices, 0, dtype=np.float),
-                                     full_output=True)
+                                     full_output=True, ftol=1e-3, xtol=0.1)
             print('RES OUTPUT', res_output)
             coefs = res_output[0]
             # Because we rescaled our features, we need to descale the result
@@ -1720,6 +1821,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
             if res_output[1] <= 0.999:
                 print('NEW_PARAMS', new_params)
                 _update_database(dbf, data, new_params)
+                _modify_callables(dbf, comps, data, new_params, obj_funcs, grad_funcs, hess_funcs)
             else:
                 print('Failed to make significant progress -- discarding parameters')
         else:
