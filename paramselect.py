@@ -1643,6 +1643,23 @@ def _modify_callables(dbf, comps, data, new_params, obj_funcs, grad_funcs, hess_
         hess_funcs[param_phase].append(new_hess)
 
 
+def tuplify(x):
+    res = []
+    for subl in x:
+        if isinstance(subl, (list, set, tuple)):
+            res.append(tuple(subl))
+        else:
+            res.append((subl,))
+    return tuple(res)
+
+
+def reorder_ordereddict(od, new_key_order):
+    "http://codereview.stackexchange.com/questions/86294/reordering-ordereddict"
+    new_od = OrderedDict([(k, None) for k in new_key_order if k in od])
+    new_od.update(od)
+    return new_od
+
+
 def fit(input_fname, datasets, saveall=True, resume=None):
     """
     Fit thermodynamic and phase equilibria data to a model.
@@ -1706,8 +1723,18 @@ def fit(input_fname, datasets, saveall=True, resume=None):
         subl_model = data['phases'][phase_name]['sublattice_model']
         num_sites = _site_ratio_normalization(dbf.phases[phase_name])
         new_features = _generate_phase_features(phase_name, symmetry, subl_model, num_sites)
-        print(phase_name, len(new_features), 'features')
-        features.update(new_features)
+        # XXX: This is such an inefficient way of doing this...
+        # Filter features to only be ones we already fit
+        param_query = ((tinydb.where('phase_name') == phase_name) &
+                       ((tinydb.where('parameter_type') == 'G') |
+                        (tinydb.where('parameter_type') == 'L'))
+                       )
+        result = dbf.search(param_query)
+        result = set((phase_name, canonicalize(tuplify(i['constituent_array']), symmetry), i['parameter_order'])
+                     for i in result)
+        features.update([(key, value) for key, value in new_features.items()
+                         if (key[0], canonicalize(tuplify(key[1]), symmetry), key[2]) in result])
+    print('Total number of features:', len(features))
 
     # Generate obj, grad and hess for each phase
     # We keep a list of functions: The first element is the starting model, and all others are corrections
@@ -1754,12 +1781,17 @@ def fit(input_fname, datasets, saveall=True, resume=None):
         # Consider just the ZPF data for scoring purposes (though we fit to all data)
         scaled_solution_matrix = np.multiply(solution_matrix[:data_rows, :], scales)
         feature_scores = np.var(scaled_solution_matrix, axis=0)
+        # Reorder features by score (highest first)
+        features = reorder_ordereddict(features,
+                                       operator.itemgetter(*np.argsort(feature_scores)[::-1].tolist())(list(features.keys())))
+        scales = scales[np.argsort(feature_scores)[::-1]]
+        feature_scores = np.sort(feature_scores)[::-1]
         max_num_features = 2
         selected_feature_indices = []
         selected_features = OrderedDict()
         desired_coefs = [1, v.T]
         # For all selected features, add the A, B, etc., variants, like A+B*T
-        for idx in np.argpartition(feature_scores, -max_num_features)[-max_num_features:]:
+        for idx in range(max_num_features):
             idx_feature = list(features.keys())[idx]
             features_to_select = []
             for temp_order, coef in enumerate(desired_coefs):
