@@ -1784,7 +1784,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
 
         def sorting_func(x):
             "sorting: parameter order, number of interacting sublattices, phase name, sublattice config"
-            return str((x[1][2], sum([isinstance(subl, (list, tuple, set)) for subl in x[1][2]]), x[1][0], x[1][1]))
+            return str((x[1][2], sum([isinstance(subl, (list, tuple, set)) for subl in x[1][1]]), x[1][0], x[1][1]))
         feature_scores = [x[0] for x in sorted(enumerate(list(features.keys())),
                                                key=sorting_func)]
         feature_scores = np.array(feature_scores)
