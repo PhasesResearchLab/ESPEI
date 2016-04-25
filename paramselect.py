@@ -1780,19 +1780,29 @@ def fit(input_fname, datasets, saveall=True, resume=None):
         # Rescale features based on all data
         # Consider just the ZPF data for scoring purposes (though we fit to all data)
         scaled_solution_matrix = np.multiply(solution_matrix[:data_rows, :], scales)
-        feature_scores = np.var(scaled_solution_matrix, axis=0)
-        # Reorder features by score (highest first)
+        feature_variance = np.var(scaled_solution_matrix, axis=0)
+
+        def sorting_func(x):
+            "sorting: parameter order, number of interacting sublattices, phase name, sublattice config"
+            return str((x[1][2], sum([isinstance(subl, (list, tuple, set)) for subl in x[1][2]]), x[1][0], x[1][1]))
+        feature_scores = [x[0] for x in sorted(enumerate(list(features.keys())),
+                                               key=sorting_func)]
+        feature_scores = np.array(feature_scores)
+        # Reorder features by score (zero variance gets moved to back)
         features = reorder_ordereddict(features,
-                                       operator.itemgetter(*np.argsort(feature_scores)[::-1].tolist())(list(features.keys())))
-        scales = scales[np.argsort(feature_scores)[::-1]]
-        feature_scores = np.sort(feature_scores)[::-1]
-        max_num_features = 2
+                                       operator.itemgetter(*feature_scores)(list(features.keys())))
+        scales = np.array([key[4] for key in list(features.keys())], dtype=np.float)
+        #feature_scores = np.sort(feature_scores)
+        max_num_features = 6
         selected_feature_indices = []
         selected_features = OrderedDict()
         desired_coefs = [1, v.T]
         # For all selected features, add the A, B, etc., variants, like A+B*T
-        for idx in range(max_num_features):
+        added_features = 0
+        for old_idx, idx in zip(feature_scores, range(len(features))):
             idx_feature = list(features.keys())[idx]
+            if feature_variance[old_idx] < 1e-16:
+                continue
             features_to_select = []
             for temp_order, coef in enumerate(desired_coefs):
                 feature = list(idx_feature)
@@ -1802,12 +1812,15 @@ def fit(input_fname, datasets, saveall=True, resume=None):
                 features_to_select.append(tuple(feature))
                 sel_feat_idx = list(features.keys()).index(tuple(feature))
                 selected_feature_indices.append(sel_feat_idx)
+                added_features += 1
             for sel_feat in features_to_select:
                 selected_features[sel_feat] = features[sel_feat]
+            if added_features >= max_num_features:
+                break
         selected_feature_indices = np.unique(np.array(selected_feature_indices))
         selected_scales = scales[selected_feature_indices]
         print('FEATURES', list(selected_features.keys()))
-        print('FEATURE SCORES', feature_scores[selected_feature_indices])
+        #print('FEATURE SCORES', feature_scores[selected_feature_indices])
 
         def sumsqerr(x):
             frozen_dbf = Database.from_string(dbf.to_string(fmt='tdb'), fmt='tdb')
