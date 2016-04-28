@@ -1052,7 +1052,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None,
                         # Note that we consider all phases in the system, not just ones in this tie region
                         multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, pbar=False, verbose=False,
                                                    callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                                   hess_callables=phase_hess_callables)
+                                                   hess_callables=phase_hess_callables, model=phase_models)
                         #print('MULTI_EQDATA', multi_eqdata)
                         # Does there exist only a single phase in the result with zero internal degrees of freedom?
                         # We should exclude those chemical potentials from the average because they are meaningless.
@@ -1079,7 +1079,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None,
                     if np.any(np.isnan(list(cond_dict.values()))):
                         # We don't actually know the phase composition here, so we estimate it
                         single_eqdata = calculate(dbf, comps, [current_phase], mode='numpy', output='GM',
-                                                  T=cond_dict[v.T], P=cond_dict[v.P])
+                                                  T=cond_dict[v.T], P=cond_dict[v.P], model=phase_models)
                         #print('SINGLE_EQDATA (UNKNOWN COMP)', single_eqdata)
                         driving_force = np.multiply(region_chemical_potentials,
                                                     single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
@@ -1107,7 +1107,8 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None,
                             dof_idx += len(dof)
                         #print('DISORDERED SITEFRACS', desired_sitefracs)
                         single_eqdata = calculate(dbf, comps, [current_phase], mode='numpy', output='GM',
-                                                  T=cond_dict[v.T], P=cond_dict[v.P], points=desired_sitefracs)
+                                                  T=cond_dict[v.T], P=cond_dict[v.P], points=desired_sitefracs,
+                                                  model=phase_models)
                         driving_force = np.multiply(region_chemical_potentials,
                                                     single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
                         error = float(np.squeeze(driving_force))
@@ -1115,7 +1116,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None,
                         # Extract energies from single-phase calculations
                         single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, pbar=False, verbose=False,
                                                     callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                                    hess_callables=phase_hess_callables)
+                                                    hess_callables=phase_hess_callables, model=phase_models)
                         #print('SINGLE_EQDATA', single_eqdata)
                         # Sometimes we can get a miscibility gap in our "single-phase" calculation
                         # Choose the weighted mixture of site fractions
