@@ -50,9 +50,7 @@ with ridge regression is advisible.
 import pycalphad.variables as v
 from pycalphad import binplot, calculate, equilibrium, Database, Model
 from pycalphad.plot.utils import phase_legend
-from pycalphad.core.autograd_utils import build_functions
-from pycalphad.core.sympydiff_utils import make_gradient_from_graph
-from pycalphad.core.utils import make_callable
+from pycalphad.core.sympydiff_utils import build_functions as compiled_build_functions
 import pycalphad.refdata
 from sklearn.linear_model import LinearRegression, Lasso, LassoCV, RandomizedLasso
 from sklearn.covariance import EmpiricalCovariance
@@ -758,6 +756,11 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 sym_name = 'G'+name[:3].upper()+em_comp.upper()
                 stability = refdata.get((em_comp.upper(), name.upper()), None)
                 if stability is not None:
+                    if isinstance(stability, sympy.Piecewise):
+                        # Default zero required for the compiled backend
+                        if (0, True) not in stability.args:
+                            new_args = stability.args + ((0, True),)
+                            stability = sympy.Piecewise(*new_args)
                     dbf.symbols[sym_name] = stability
                     break
             if dbf.symbols.get(sym_name, None) is not None:
@@ -979,7 +982,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None,
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
     phase_errors = tinydb.TinyDB(storage=tinydb.storages.MemoryStorage)
-    phase_interactions = Counter()
+    error_id = 0
     if param_symbols is not None:
         param_dict = dict(zip(param_symbols, x))
         #print('PARAM DICT', param_dict)
@@ -998,7 +1001,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None,
     for phase, phase_mod in phase_models.items():
         if (obj_callables[phase] is None) or (grad_callables[phase] is None) or (hess_callables[phase] is None):
             phase_obj_callables[phase], phase_grad_callables[phase], phase_hess_callables[phase] = \
-                build_functions(phase_mod.GM, [v.P, v.T] + phase_mod.site_fractions)
+                compiled_build_functions(phase_mod.GM, [v.P, v.T] + phase_mod.site_fractions)
         if obj_callables[phase] is not None:
             phase_obj_callables[phase] = obj_callables[phase]
         if grad_callables[phase] is not None:
@@ -1079,7 +1082,8 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None,
                     if np.any(np.isnan(list(cond_dict.values()))):
                         # We don't actually know the phase composition here, so we estimate it
                         single_eqdata = calculate(dbf, comps, [current_phase], mode='numpy', output='GM',
-                                                  T=cond_dict[v.T], P=cond_dict[v.P], model=phase_models)
+                                                  T=cond_dict[v.T], P=cond_dict[v.P],
+                                                  model=phase_models, callables=phase_obj_callables)
                         #print('SINGLE_EQDATA (UNKNOWN COMP)', single_eqdata)
                         driving_force = np.multiply(region_chemical_potentials,
                                                     single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
@@ -1134,53 +1138,9 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None,
                         #print('REGION_COMPS', region_comps)
                         error = np.multiply(region_chemical_potentials, region_comps).sum() - select_energy
                         error = float(error)
-                    #print('DESIRED_SITEFRACS', desired_sitefracs)
-
-                    best_interaction = choose_interaction(current_phase, phase_models[current_phase].constituents,
-                                                          np.squeeze(desired_sitefracs))
-                    # best_interaction returns a tuple of interaction, interaction_k
                     num_sites = _site_ratio_normalization(dbf.phases[current_phase])
-                    symmetry = inpd['phases'][current_phase].get('equivalent_sublattices', None)
-                    constituent_array = canonicalize(best_interaction[0], symmetry)
                     # Need to get indices of swapped sublattices, then swap them around in the sitefrac array
                     desired_sitefracs = np.squeeze(desired_sitefracs)
-                    if symmetry is not None:
-                        sidx = 0
-                        symslices = []
-                        for subl in phase_models[current_phase].constituents:
-                            symslices.append(slice(sidx, sidx+len(subl)))
-                            sidx += len(subl)
-                        #print('OLD_SITEFRACS', desired_sitefracs)
-                        for subls in symmetry:
-                            subls = sorted(subls)
-                            #print('SUBLS', subls)
-                            items = [best_interaction[0][i] for i in subls]
-                            #print('ITEMS', items)
-                            sorted_subls = sorted(subls, key=lambda x: canonical_sort_key(items[x]))
-                            #print('SORTED SUBLS', sorted_subls)
-                            old_sitefracs = [copy.deepcopy(desired_sitefracs[sl])
-                                             for sl in [symslices[i] for i in subls]]
-                            old_sitefracs = [old_sitefracs[i] for i in sorted_subls]
-                            #print('OLD_SF', old_sitefracs)
-                            for old_sf, new_subl in zip(old_sitefracs, subls):
-                                #print('desired_sitefracs[{}] = {}'.format(str(symslices[new_subl]), old_sf))
-                                desired_sitefracs[symslices[new_subl]] = old_sf
-                            #print('NEW_SITEFRACS', desired_sitefracs)
-                    symmetric_interactions = _generate_symmetric_group(constituent_array, symmetry)
-                    interarray = sympy.S.Zero
-                    for syminter in symmetric_interactions:
-                        #print('SYMINTER', syminter)
-                        symarray = sympy.S.One
-                        for idx, subl in enumerate(syminter):
-                            if isinstance(subl, (list, tuple)):
-                                symarray *= sympy.Mul(*[v.SiteFraction(current_phase, idx, s) for s in subl])
-                                # Only works for binary interactions and assumes canonicalized
-                                # If not we could end up with sign errors in binary parameters
-                                symarray *= (v.SiteFraction(current_phase, idx, subl[0]) -
-                                             v.SiteFraction(current_phase, idx, subl[1])) ** best_interaction[1]
-                            else:
-                                symarray *= v.SiteFraction(current_phase, idx, subl)
-                        interarray += symarray
                     sorted_constituents = phase_models[current_phase].constituents
                     for idx in range(len(sorted_constituents)):
                         if isinstance(sorted_constituents[idx], set):
@@ -1188,14 +1148,13 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None,
                     sitefrac_dict = dict(zip(_sublattice_model_to_variables(current_phase,
                                                                             sorted_constituents),
                                              desired_sitefracs))
-                    error_record = {'phase_name': current_phase, 'parameter_order': best_interaction[1],
-                                    'constituent_array': constituent_array, 'components': tuple(comps),
-                                    'error': error, 'num_sites': num_sites,
-                                    'intercoef': interarray, 'site_fractions': sitefrac_dict}
+                    error_record = {'id': error_id, 'phase_name': current_phase,
+                                    'components': tuple(comps), 'error': error,
+                                    'site_fractions': sitefrac_dict, 'num_sites': num_sites}
                     error_record.update(current_statevars)
                     phase_errors.insert(error_record)
-                    phase_interactions[(current_phase, constituent_array, best_interaction[1])] += 1
-    return phase_errors, phase_interactions
+                    error_id += 1
+    return phase_errors
 
 
 def _scale_factor(temperature_order, parameter_order, interacting_subls):
@@ -1313,18 +1272,11 @@ def _site_ratio_normalization(phase):
 def _multiphase_fitting_system(dbf, data, datasets, features, **kwargs):
     comps = sorted(data['components'])
     phases = sorted(data['phases'].keys())
-    errors, interactions = multi_phase_fit(dbf, comps, phases, data, datasets, None, **kwargs)
-    #print(errors.all())
-    #print(interactions)
-    data_rows = 0
+    errors = multi_phase_fit(dbf, comps, phases, data, datasets, None, **kwargs)
+    data_rows = len(errors.all())
 
     dof_columns = len(features)
-    for interaction in interactions.keys():
-        phase_name, constituent_array, parameter_order = interaction
-        intercount = errors.count((tinydb.where('constituent_array') == constituent_array) &
-                                  (tinydb.where('parameter_order') == parameter_order) &
-                                  (tinydb.where('phase_name') == phase_name))
-        data_rows += intercount
+
     # Now add all the single-phase data points
     # We add these to help the optimizer stay in a reasonable range of solutions
     # Remember to apply the feature transforms for the relevant thermodynamic property
@@ -1415,16 +1367,10 @@ def _multiphase_fitting_system(dbf, data, datasets, features, **kwargs):
         error_vector[data_rows + iter_idx:data_rows + iter_idx + len(x[0])] = x[0]
         iter_idx += len(x[0])
     data_idx = 0
-    all_records = []
-    for interaction in interactions.keys():
-        phase_name, constituent_array, parameter_order = interaction
-        records = errors.search((tinydb.where('constituent_array') == constituent_array) &
-                                (tinydb.where('parameter_order') == parameter_order) &
-                                (tinydb.where('phase_name') == phase_name))
-        all_records.extend(records)
-        for record in records:
-            error_vector[data_idx] = record['error']
-            data_idx += 1
+    all_records = sorted(errors.all(), key=lambda k: (k['phase_name'], k['id']))
+    for record in all_records:
+        error_vector[data_idx] = record['error']
+        data_idx += 1
     for rec_idx, record in enumerate(all_records):
         # XXX: Assumes all features are only single-phase
         phase_name = record['phase_name']
@@ -1463,17 +1409,9 @@ def _multiphase_fitting_system(dbf, data, datasets, features, **kwargs):
 def _multiphase_error(dbf, data, datasets, **kwargs):
     comps = sorted(data['components'])
     phases = sorted(data['phases'].keys())
-    errors, interactions = multi_phase_fit(dbf, comps, phases, data, datasets, None, **kwargs)
-    #print(errors.all())
-    #print(interactions)
-    data_rows = 0
+    errors = multi_phase_fit(dbf, comps, phases, data, datasets, None, **kwargs)
+    data_rows = len(errors.all())
 
-    for interaction in interactions.keys():
-        phase_name, constituent_array, parameter_order = interaction
-        intercount = errors.count((tinydb.where('constituent_array') == constituent_array) &
-                                  (tinydb.where('parameter_order') == parameter_order) &
-                                  (tinydb.where('phase_name') == phase_name))
-        data_rows += intercount
     # Now add all the single-phase data points
     # We add these to help the optimizer stay in a reasonable range of solutions
     # Remember to apply the feature transforms for the relevant thermodynamic property
@@ -1562,16 +1500,10 @@ def _multiphase_error(dbf, data, datasets, **kwargs):
         error_vector[data_rows + iter_idx:data_rows + iter_idx + len(x[0])] = x[0]
         iter_idx += len(x[0])
     data_idx = 0
-    all_records = []
-    for interaction in interactions.keys():
-        phase_name, constituent_array, parameter_order = interaction
-        records = errors.search((tinydb.where('constituent_array') == constituent_array) &
-                                (tinydb.where('parameter_order') == parameter_order) &
-                                (tinydb.where('phase_name') == phase_name))
-        all_records.extend(records)
-        for record in records:
-            error_vector[data_idx] = record['error']
-            data_idx += 1
+    all_records = sorted(errors.all(), key=lambda k: (k['phase_name'], k['id']))
+    for record in all_records:
+        error_vector[data_idx] = record['error']
+        data_idx += 1
 
     return error_vector
 
@@ -1637,8 +1569,7 @@ def _modify_callables(dbf, comps, data, new_params, obj_funcs, grad_funcs, hess_
         # XXX: This could be factored out if we stored the site fractions somewhere
         # But Model construction is usually pretty cheap
         new_mod = Model(dbf, comps, param_phase)
-        new_obj = make_callable(interarray, [v.P, v.T] + new_mod.site_fractions)
-        new_grad, new_hess = make_gradient_from_graph(interarray, [v.P, v.T] + new_mod.site_fractions)
+        new_obj, new_grad, new_hess = compiled_build_functions(interarray, [v.P, v.T] + new_mod.site_fractions)
         obj_funcs[param_phase].append(new_obj)
         grad_funcs[param_phase].append(new_grad)
         hess_funcs[param_phase].append(new_hess)
@@ -1689,6 +1620,14 @@ def fit(input_fname, datasets, saveall=True, resume=None):
         # Write reference state to Database
         refdata = getattr(pycalphad.refdata, data['refdata'])
         stabledata = getattr(pycalphad.refdata, data['refdata']+'Stable')
+        for key, element in refdata.items():
+            if isinstance(element, sympy.Piecewise):
+                newargs = element.args + ((0, True),)
+                refdata[key] = sympy.Piecewise(*newargs)
+        for key, element in stabledata.items():
+            if isinstance(element, sympy.Piecewise):
+                newargs = element.args + ((0, True),)
+                stabledata[key] = sympy.Piecewise(*newargs)
         comp_refs = {c.upper(): stabledata[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
         comp_refs['VA'] = 0
         dbf.symbols.update({'GHSER'+c.upper(): data for c, data in comp_refs.items()})
@@ -1747,8 +1686,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
     print('Compiling phase models', flush=True)
     for phase_name in sorted(data['phases'].keys()):
         mod = Model(dbf, comps, phase_name)
-        obj = make_callable(mod.GM, [v.P, v.T] + mod.site_fractions)
-        grad, hess = make_gradient_from_graph(mod.GM, [v.P, v.T] + mod.site_fractions)
+        obj, grad, hess = compiled_build_functions(mod.GM, [v.P, v.T] + mod.site_fractions)
         obj_funcs[phase_name].append(obj)
         grad_funcs[phase_name].append(grad)
         hess_funcs[phase_name].append(hess)
