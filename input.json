@@ -23,8 +23,8 @@
 			"sublattice_model": [["AL"], ["NI"]]
 	     },
 	     "AL3NI2": {
-			"sublattice_site_ratios": [3, 2, 1],
-			"sublattice_model": [["AL"], ["AL", "NI"], ["NI", "VA"]]
+			"sublattice_site_ratios": [2, 1, 2],
+			"sublattice_model": [["AL", "NI"], ["AL", "NI"], ["NI"]]
 	     },
 	     "AL3NI5": {
 			"sublattice_site_ratios": [0.375, 0.625],

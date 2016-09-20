@@ -51,6 +51,7 @@ import pycalphad.variables as v
 from pycalphad import binplot, calculate, equilibrium, Database, Model
 from pycalphad.plot.utils import phase_legend
 from pycalphad.core.sympydiff_utils import build_functions as compiled_build_functions
+from pycalphad.core.tempfilemanager import TempfileManager
 import pycalphad.refdata
 from sklearn.linear_model import LinearRegression, Lasso, LassoCV, RandomizedLasso
 from sklearn.covariance import EmpiricalCovariance
@@ -63,6 +64,7 @@ import tinydb
 import sympy
 import numpy as np
 import json
+import os
 from collections import Counter, OrderedDict, defaultdict
 import itertools
 import operator
@@ -982,6 +984,7 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None,
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
     phase_errors = tinydb.TinyDB(storage=tinydb.storages.MemoryStorage)
+    tmpman = TempfileManager(os.getcwd())
     error_id = 0
     if param_symbols is not None:
         param_dict = dict(zip(param_symbols, x))
@@ -1055,7 +1058,8 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None,
                         # Note that we consider all phases in the system, not just ones in this tie region
                         multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, pbar=False, verbose=False,
                                                    callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                                   hess_callables=phase_hess_callables, model=phase_models)
+                                                   hess_callables=phase_hess_callables, model=phase_models,
+                                                   tmpman=tmpman)
                         #print('MULTI_EQDATA', multi_eqdata)
                         # Does there exist only a single phase in the result with zero internal degrees of freedom?
                         # We should exclude those chemical potentials from the average because they are meaningless.
@@ -1120,11 +1124,15 @@ def multi_phase_fit(dbf, comps, phases, inpd, datasets, x, param_symbols=None,
                         # Extract energies from single-phase calculations
                         single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, pbar=False, verbose=False,
                                                     callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                                    hess_callables=phase_hess_callables, model=phase_models)
+                                                    hess_callables=phase_hess_callables, model=phase_models,
+                                                    tmpman=tmpman)
                         #print('SINGLE_EQDATA', single_eqdata)
                         # Sometimes we can get a miscibility gap in our "single-phase" calculation
                         # Choose the weighted mixture of site fractions
                         #print('Y FRACTIONS', single_eqdata['Y'].values)
+                        if np.all(np.isnan(single_eqdata['NP'].values)):
+                            print('Dropping condition due to calculation failure: ', cond_dict)
+                            continue
                         phases_idx = np.nonzero(~np.isnan(np.squeeze(single_eqdata['NP'].values)))
                         cur_vertex = np.nanargmax(np.squeeze(single_eqdata['NP'].values))
                         #desired_sitefracs = np.multiply(single_eqdata['NP'].values[..., phases_idx, np.newaxis],
