@@ -723,6 +723,8 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
     aliases : list or None
         Alternative phase names. Useful for matching against reference data or other datasets.
     """
+    if not hasattr(dbf, 'varcounter'):
+        dbf.varcounter = 0
     # First fit endmembers
     all_em_count = len(list(itertools.product(*subl_model)))
     endmembers = sorted(set(canonicalize(i, symmetry) for i in itertools.product(*subl_model)))
@@ -771,7 +773,16 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         if fit_eq is None:
             # No reference lattice stability data -- we have to fit it
             parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets)
-            fit_eq = sympy.Add(*[sigfigs(value, numdigits) * key for key, value in parameters.items()])
+            for key, value in sorted(parameters.items(), key=str):
+                if value == 0:
+                    continue
+                symbol_name = 'VV'+str(dbf.varcounter).zfill(4)
+                while dbf.symbols.get(symbol_name, None) is not None:
+                    dbf.varcounter += 1
+                    symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+                dbf.symbols[symbol_name] = sigfigs(value, numdigits)
+                parameters[key] = sympy.Symbol(symbol_name)
+            fit_eq = sympy.Add(*[value * key for key, value in parameters.items()])
             ref = 0
             for subl, ratio in zip(endmember, site_ratios):
                 if subl == 'VA':
@@ -820,10 +831,16 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         for degree in reversed(range(10)):
             check_symbol = sympy.Symbol('YS') * sympy.Symbol('Z')**degree
             keys_to_remove = []
-            for key, value in parameters.items():
+            for key, value in sorted(parameters.items(), key=str):
                 if key.has(check_symbol):
-                    coef = sigfigs(parameters[key], numdigits) * (key / check_symbol)
-                    # Try converting to float to work around a print precision problem with sympy
+                    if value != 0:
+                        symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+                        while dbf.symbols.get(symbol_name, None) is not None:
+                            dbf.varcounter += 1
+                            symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+                        dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
+                        parameters[key] = sympy.Symbol(symbol_name)
+                    coef = parameters[key] * (key / check_symbol)
                     try:
                         coef = float(coef)
                     except TypeError:
@@ -840,6 +857,9 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 for syminter in symmetric_interactions:
                     dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
     # Now fit ternary interactions
+
+    if hasattr(dbf, 'varcounter'):
+        del dbf.varcounter
 
 
 def multi_plot(dbf, comps, phases, datasets, ax=None):
@@ -1660,6 +1680,7 @@ def fit(input_fname, datasets, saveall=True, resume=None):
         dbf.to_file('{}-{}-iter{}.tdb'.format(start_time,
                                               ''.join([c for c in sorted(data['components']) if c != 'VA']), 0),
                     fmt='tdb')
+    return dbf
 
     comps = sorted(data['components'])
     max_iterations = 10
