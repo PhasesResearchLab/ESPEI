@@ -51,7 +51,6 @@ import pycalphad.variables as v
 from pycalphad import binplot, calculate, equilibrium, Database, Model
 from pycalphad.plot.utils import phase_legend
 from pycalphad.core.sympydiff_utils import build_functions as compiled_build_functions
-from pycalphad.core.tempfilemanager import TempfileManager
 import pycalphad.refdata
 from sklearn.linear_model import LinearRegression, Lasso, LassoCV, RandomizedLasso
 from sklearn.covariance import EmpiricalCovariance
@@ -1005,7 +1004,6 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
     phase_errors = tinydb.TinyDB(storage=tinydb.storages.MemoryStorage)
-    tmpman = TempfileManager(os.getcwd())
     error_id = 0
 
     def safe_get(itms, idxx):
@@ -1075,7 +1073,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                         multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, pbar=False, verbose=False,
                                                    callables=phase_obj_callables, grad_callables=phase_grad_callables,
                                                    hess_callables=phase_hess_callables, model=phase_models,
-                                                   tmpman=tmpman, scheduler=scheduler)
+                                                   scheduler=scheduler)
                         #print('MULTI_EQDATA', multi_eqdata)
                         # Does there exist only a single phase in the result with zero internal degrees of freedom?
                         # We should exclude those chemical potentials from the average because they are meaningless.
@@ -1142,7 +1140,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                         single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, pbar=False, verbose=False,
                                                     callables=phase_obj_callables, grad_callables=phase_grad_callables,
                                                     hess_callables=phase_hess_callables, model=phase_models,
-                                                    tmpman=tmpman, scheduler=scheduler)
+                                                    scheduler=scheduler)
                         #print('SINGLE_EQDATA', single_eqdata)
                         # Sometimes we can get a miscibility gap in our "single-phase" calculation
                         # Choose the weighted mixture of site fractions
