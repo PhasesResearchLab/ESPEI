@@ -1681,7 +1681,7 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
 
     comps = sorted(data['components'])
     pattern = re.compile("^V[V]?([0-9]+)$")
-    symbols_to_fit = sorted([x for x in dbf.symbols.keys() if pattern.match(x)])
+    symbols_to_fit = sorted([x for x in sorted(dbf.symbols.keys()) if pattern.match(x)])
 
     import pymc
     model_dof = [pymc.Uniform(x, float(dbf.symbols[x]) - 0.5*abs(float(dbf.symbols[x])),
