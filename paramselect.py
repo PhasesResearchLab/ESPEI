@@ -1713,7 +1713,7 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
         parameter_dof = [value for key, value in sorted(locals().items(), key=str)]
         #print(parameter_dof)
         import time
-        print(time.time(), 'enter')
+        enter_time = time.time()
         filled_obj_funcs = dict((key, partial(func, *parameter_dof)) for key, func in obj_funcs.items())
         filled_grad_funcs = dict((key, partial(func, *parameter_dof)) for key, func in grad_funcs.items())
         filled_hess_funcs = dict((key, partial(func, *parameter_dof)) for key, func in hess_funcs.items())
@@ -1726,9 +1726,11 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
                                      grad_callables=filled_grad_funcs,
                                      hess_callables=filled_hess_funcs, scheduler=scheduler)
         iter_error = [ite['error']**2 for ite in iter_error.all()]
-        iter_error = -np.nansum(iter_error)
-        #print('error', iter_error)
-        print(time.time(), 'exit', iter_error)
+        iter_error = [np.inf if np.isnan(x) else x for x in iter_error]
+        iter_error = -np.sum(iter_error)
+        print(time.time()-enter_time, 'exit', iter_error, flush=True)
+        if (last_iter == -1) or (np.abs(iter_error-last_iter)/np.abs(iter_error) > 0.1):
+            globals()['last_iter'] = iter_error
         return iter_error
     """
     import textwrap
