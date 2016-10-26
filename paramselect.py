@@ -65,11 +65,12 @@ import numpy as np
 import json
 import os
 import re
+import dask
 from collections import Counter, OrderedDict, defaultdict
 import itertools
 import operator
 import copy
-from functools import reduce
+from functools import reduce, partial
 from datetime import datetime
 
 
@@ -995,8 +996,113 @@ def choose_interaction(phase_name, subl_model, site_fractions):
     return important_interaction, important_k
 
 
+def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_obj_callables,
+                        phase_grad_callables, phase_hess_callables, phase_models):
+    region_chemical_potentials = []
+    for cond_dict, phase_flag in comp_dicts:
+        # We are now considering a particular tie vertex
+        for key, val in cond_dict.items():
+            if val is None:
+                cond_dict[key] = np.nan
+        cond_dict.update(current_statevars)
+        # print('COND_DICT (MULTI)', cond_dict)
+        # print('PHASE FLAG', phase_flag)
+        if np.any(np.isnan(list(cond_dict.values()))):
+            # This composition is unknown -- it doesn't contribute to hyperplane estimation
+            pass
+        else:
+            # Extract chemical potential hyperplane from multi-phase calculation
+            # Note that we consider all phases in the system, not just ones in this tie region
+            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, pbar=False, verbose=False,
+                                       callables=phase_obj_callables, grad_callables=phase_grad_callables,
+                                       hess_callables=phase_hess_callables, model=phase_models,
+                                       scheduler=dask.async.get_sync)
+            # print('MULTI_EQDATA', multi_eqdata)
+            # Does there exist only a single phase in the result with zero internal degrees of freedom?
+            # We should exclude those chemical potentials from the average because they are meaningless.
+            num_phases = len(np.squeeze(multi_eqdata['Phase'].values != ''))
+            zero_dof = np.all((multi_eqdata['Y'].values == 1.) | np.isnan(multi_eqdata['Y'].values))
+            if (num_phases == 1) and zero_dof:
+                region_chemical_potentials.append(np.full_like(np.squeeze(multi_eqdata['MU'].values), np.nan))
+            else:
+                region_chemical_potentials.append(np.squeeze(multi_eqdata['MU'].values))
+    # print('REGION_CHEMICAL_POTENTIALS', region_chemical_potentials)
+    region_chemical_potentials = np.nanmean(region_chemical_potentials, axis=0, dtype=np.float)
+    return region_chemical_potentials
+
+
+def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
+                  phase_models, phase_obj_callables, phase_grad_callables, phase_hess_callables):
+    # print('COND_DICT ({})'.format(current_phase), cond_dict)
+    # print('PHASE FLAG', phase_flag)
+    if np.any(np.isnan(list(cond_dict.values()))):
+        # We don't actually know the phase composition here, so we estimate it
+        single_eqdata = calculate(dbf, comps, [current_phase],
+                                  T=cond_dict[v.T], P=cond_dict[v.P],
+                                  model=phase_models, callables=phase_obj_callables)
+        # print('SINGLE_EQDATA (UNKNOWN COMP)', single_eqdata)
+        driving_force = np.multiply(region_chemical_potentials,
+                                    single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
+        desired_sitefracs = single_eqdata['Y'].values[..., np.argmax(driving_force), :]
+        error = float(driving_force.max())
+    elif phase_flag == 'disordered':
+        # Construct disordered sublattice configuration from composition dict
+        # Compute energy
+        # Compute residual driving force
+        # TODO: Check that it actually makes sense to declare this phase 'disordered'
+        num_dof = sum([len(set(c).intersection(comps)) for c in dbf.phases[current_phase].constituents])
+        desired_sitefracs = np.ones(num_dof, dtype=np.float)
+        dof_idx = 0
+        for c in dbf.phases[current_phase].constituents:
+            dof = sorted(set(c).intersection(comps))
+            # print('DOF', dof)
+            if (len(dof) == 1) and (dof[0] == 'VA'):
+                return 0
+            # If it's disordered config of BCC_B2 with VA, disordered config is tiny vacancy count
+            sitefracs_to_add = np.array([cond_dict.get(v.X(d)) for d in dof],
+                                        dtype=np.float)
+            # Fix composition of dependent component
+            sitefracs_to_add[np.isnan(sitefracs_to_add)] = 1 - np.nansum(sitefracs_to_add)
+            desired_sitefracs[dof_idx:dof_idx + len(dof)] = sitefracs_to_add
+            dof_idx += len(dof)
+        # print('DISORDERED SITEFRACS', desired_sitefracs)
+        single_eqdata = calculate(dbf, comps, [current_phase],
+                                  T=cond_dict[v.T], P=cond_dict[v.P], points=desired_sitefracs,
+                                  model=phase_models, callables=phase_obj_callables)
+        driving_force = np.multiply(region_chemical_potentials,
+                                    single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
+        error = float(np.squeeze(driving_force))
+    else:
+        # Extract energies from single-phase calculations
+        single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, pbar=False, verbose=False,
+                                    callables=phase_obj_callables, grad_callables=phase_grad_callables,
+                                    hess_callables=phase_hess_callables, model=phase_models,
+                                    scheduler=dask.async.get_sync)
+        # print('SINGLE_EQDATA', single_eqdata)
+        # Sometimes we can get a miscibility gap in our "single-phase" calculation
+        # Choose the weighted mixture of site fractions
+        # print('Y FRACTIONS', single_eqdata['Y'].values)
+        if np.all(np.isnan(single_eqdata['NP'].values)):
+            print('Dropping condition due to calculation failure: ', cond_dict)
+            return 0
+        phases_idx = np.nonzero(~np.isnan(np.squeeze(single_eqdata['NP'].values)))
+        cur_vertex = np.nanargmax(np.squeeze(single_eqdata['NP'].values))
+        # desired_sitefracs = np.multiply(single_eqdata['NP'].values[..., phases_idx, np.newaxis],
+        #                                single_eqdata['Y'].values[..., phases_idx, :]).sum(axis=-2)
+        desired_sitefracs = single_eqdata['Y'].values[..., cur_vertex, :]
+        select_energy = float(single_eqdata['GM'].values)
+        region_comps = []
+        for comp in [c for c in sorted(comps) if c != 'VA']:
+            region_comps.append(cond_dict.get(v.X(comp), np.nan))
+        region_comps[region_comps.index(np.nan)] = 1 - np.nansum(region_comps)
+        # print('REGION_COMPS', region_comps)
+        error = np.multiply(region_chemical_potentials, region_comps).sum() - select_energy
+        error = float(error)
+    return error
+
+
 def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
-                    obj_callables=None, grad_callables=None, hess_callables=None, scheduler=None):
+                    obj_callables=None, grad_callables=None, hess_callables=None, parameter_dof=None, scheduler=None):
     obj_callables = obj_callables if obj_callables is not None else defaultdict(lambda: None)
     grad_callables = grad_callables if grad_callables is not None else defaultdict(lambda: None)
     hess_callables = hess_callables if hess_callables is not None else defaultdict(lambda: None)
@@ -1011,19 +1117,29 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
             return itms[idxx]
         except IndexError:
             return None
-    phase_obj_callables = {}
-    phase_grad_callables = {}
-    phase_hess_callables = {}
-    for phase, phase_mod in phase_models.items():
-        if (obj_callables[phase] is None) or (grad_callables[phase] is None) or (hess_callables[phase] is None):
-            phase_obj_callables[phase], phase_grad_callables[phase], phase_hess_callables[phase] = \
-                compiled_build_functions(phase_mod.GM, [v.P, v.T] + phase_mod.site_fractions)
-        if obj_callables[phase] is not None:
-            phase_obj_callables[phase] = obj_callables[phase]
-        if grad_callables[phase] is not None:
-            phase_grad_callables[phase] = grad_callables[phase]
-        if hess_callables[phase] is not None:
-            phase_hess_callables[phase] = hess_callables[phase]
+
+    def fill_callables(obj_funcs, grad_funcs, hess_funcs, parameter_dof):
+        filled_obj_funcs = dict((key, partial(func, *parameter_dof)) for key, func in obj_funcs.items())
+        filled_grad_funcs = dict((key, partial(func, *parameter_dof)) for key, func in grad_funcs.items())
+        filled_hess_funcs = dict((key, partial(func, *parameter_dof)) for key, func in hess_funcs.items())
+        return filled_obj_funcs, filled_grad_funcs, filled_hess_funcs
+
+    filled_callables = \
+        dask.delayed(fill_callables, pure=True)(obj_callables, grad_callables, hess_callables, parameter_dof)
+    phase_obj_callables = filled_callables[0]
+    phase_grad_callables = filled_callables[1]
+    phase_hess_callables = filled_callables[2]
+    #for phase, phase_mod in phase_models.items():
+    #    if (obj_callables[phase] is None) or (grad_callables[phase] is None) or (hess_callables[phase] is None):
+    #        phase_obj_callables[phase], phase_grad_callables[phase], phase_hess_callables[phase] = \
+    #            compiled_build_functions(phase_mod.GM, [v.P, v.T] + phase_mod.site_fractions)
+    #    if obj_callables[phase] is not None:
+    #        phase_obj_callables[phase] = obj_callables[phase]
+    #    if grad_callables[phase] is not None:
+    #        phase_grad_callables[phase] = grad_callables[phase]
+    #    if hess_callables[phase] is not None:
+    #        phase_hess_callables[phase] = hess_callables[phase]
+    fit_jobs = []
     for data in desired_data:
         payload = data['values']
         conditions = data['conditions']
@@ -1054,38 +1170,10 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
             for req in region_eq:
                 # We are now considering a particular tie region
                 current_statevars, comp_dicts = req
-                region_chemical_potentials = []
-                for cond_dict, phase_flag in comp_dicts:
-                    # We are now considering a particular tie vertex
-                    for key, val in cond_dict.items():
-                        if val is None:
-                            cond_dict[key] = np.nan
-                    cond_dict.update(current_statevars)
-                    #print('COND_DICT (MULTI)', cond_dict)
-                    #print('PHASE FLAG', phase_flag)
-                    if np.any(np.isnan(list(cond_dict.values()))):
-                        # This composition is unknown -- it doesn't contribute to hyperplane estimation
-                        pass
-                    else:
-                        # Extract chemical potential hyperplane from multi-phase calculation
-                        # Note that we consider all phases in the system, not just ones in this tie region
-                        import dask
-                        multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, pbar=False, verbose=False,
-                                                   callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                                   hess_callables=phase_hess_callables, model=phase_models,
-                                                   scheduler=scheduler)
-                        #print('MULTI_EQDATA', multi_eqdata)
-                        # Does there exist only a single phase in the result with zero internal degrees of freedom?
-                        # We should exclude those chemical potentials from the average because they are meaningless.
-                        num_phases = len(np.squeeze(multi_eqdata['Phase'].values != ''))
-                        zero_dof = np.all((multi_eqdata['Y'].values == 1.) | np.isnan(multi_eqdata['Y'].values))
-                        if (num_phases == 1) and zero_dof:
-                            region_chemical_potentials.append(np.full_like(np.squeeze(multi_eqdata['MU'].values), np.nan))
-                        else:
-                            region_chemical_potentials.append(np.squeeze(multi_eqdata['MU'].values))
-                #print('REGION_CHEMICAL_POTENTIALS', region_chemical_potentials)
-                region_chemical_potentials = np.nanmean(region_chemical_potentials, axis=0, dtype=np.float)
-                #print('REGION_CHEMICAL_POTENTIALS', region_chemical_potentials)
+                region_chemical_potentials = \
+                    dask.delayed(estimate_hyperplane)(dbf, comps, phases, current_statevars, comp_dicts, phase_obj_callables,
+                                                      phase_grad_callables, phase_hess_callables,
+                                                      phase_models)
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
                 for current_phase, cond_dict in zip(region, comp_dicts):
                     # XXX: Messy unpacking
@@ -1095,89 +1183,12 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                         if val is None:
                             cond_dict[key] = np.nan
                     cond_dict.update(current_statevars)
-                    #print('COND_DICT ({})'.format(current_phase), cond_dict)
-                    #print('PHASE FLAG', phase_flag)
-                    if np.any(np.isnan(list(cond_dict.values()))):
-                        # We don't actually know the phase composition here, so we estimate it
-                        single_eqdata = calculate(dbf, comps, [current_phase],
-                                                  T=cond_dict[v.T], P=cond_dict[v.P],
-                                                  model=phase_models, callables=phase_obj_callables)
-                        #print('SINGLE_EQDATA (UNKNOWN COMP)', single_eqdata)
-                        driving_force = np.multiply(region_chemical_potentials,
-                                                    single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
-                        desired_sitefracs = single_eqdata['Y'].values[..., np.argmax(driving_force), :]
-                        error = float(driving_force.max())
-                    elif phase_flag == 'disordered':
-                        # Construct disordered sublattice configuration from composition dict
-                        # Compute energy
-                        # Compute residual driving force
-                        # TODO: Check that it actually makes sense to declare this phase 'disordered'
-                        num_dof = sum([len(set(c).intersection(comps)) for c in dbf.phases[current_phase].constituents])
-                        desired_sitefracs = np.ones(num_dof, dtype=np.float)
-                        dof_idx = 0
-                        for c in dbf.phases[current_phase].constituents:
-                            dof = sorted(set(c).intersection(comps))
-                            #print('DOF', dof)
-                            if (len(dof) == 1) and (dof[0] == 'VA'):
-                                continue
-                            # If it's disordered config of BCC_B2 with VA, disordered config is tiny vacancy count
-                            sitefracs_to_add = np.array([cond_dict.get(v.X(d)) for d in dof],
-                                                        dtype=np.float)
-                            # Fix composition of dependent component
-                            sitefracs_to_add[np.isnan(sitefracs_to_add)] = 1 - np.nansum(sitefracs_to_add)
-                            desired_sitefracs[dof_idx:dof_idx+len(dof)] = sitefracs_to_add
-                            dof_idx += len(dof)
-                        #print('DISORDERED SITEFRACS', desired_sitefracs)
-                        single_eqdata = calculate(dbf, comps, [current_phase],
-                                                  T=cond_dict[v.T], P=cond_dict[v.P], points=desired_sitefracs,
-                                                  model=phase_models, callables=phase_obj_callables)
-                        driving_force = np.multiply(region_chemical_potentials,
-                                                    single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
-                        error = float(np.squeeze(driving_force))
-                    else:
-                        # Extract energies from single-phase calculations
-                        import dask
-                        single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, pbar=False, verbose=False,
-                                                    callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                                    hess_callables=phase_hess_callables, model=phase_models,
-                                                    scheduler=scheduler)
-                        #print('SINGLE_EQDATA', single_eqdata)
-                        # Sometimes we can get a miscibility gap in our "single-phase" calculation
-                        # Choose the weighted mixture of site fractions
-                        #print('Y FRACTIONS', single_eqdata['Y'].values)
-                        if np.all(np.isnan(single_eqdata['NP'].values)):
-                            print('Dropping condition due to calculation failure: ', cond_dict)
-                            continue
-                        phases_idx = np.nonzero(~np.isnan(np.squeeze(single_eqdata['NP'].values)))
-                        cur_vertex = np.nanargmax(np.squeeze(single_eqdata['NP'].values))
-                        #desired_sitefracs = np.multiply(single_eqdata['NP'].values[..., phases_idx, np.newaxis],
-                        #                                single_eqdata['Y'].values[..., phases_idx, :]).sum(axis=-2)
-                        desired_sitefracs = single_eqdata['Y'].values[..., cur_vertex, :]
-                        select_energy = float(single_eqdata['GM'].values)
-                        region_comps = []
-                        for comp in [c for c in sorted(comps) if c != 'VA']:
-                            region_comps.append(cond_dict.get(v.X(comp), np.nan))
-                        region_comps[region_comps.index(np.nan)] = 1 - np.nansum(region_comps)
-                        #print('REGION_COMPS', region_comps)
-                        error = np.multiply(region_chemical_potentials, region_comps).sum() - select_energy
-                        error = float(error)
-                    num_sites = _site_ratio_normalization(dbf.phases[current_phase])
-                    # Need to get indices of swapped sublattices, then swap them around in the sitefrac array
-                    desired_sitefracs = np.squeeze(desired_sitefracs)
-                    sorted_constituents = phase_models[current_phase].constituents
-                    for idx in range(len(sorted_constituents)):
-                        if isinstance(sorted_constituents[idx], set):
-                            sorted_constituents[idx] = sorted(sorted_constituents[idx])
-                    sitefrac_dict = dict(zip(_sublattice_model_to_variables(current_phase,
-                                                                            sorted_constituents),
-                                             desired_sitefracs))
-                    error_record = {'id': error_id, 'phase_name': current_phase,
-                                    'components': tuple(comps), 'error': error,
-                                    'site_fractions': sitefrac_dict, 'num_sites': num_sites}
-                    error_record.update(current_statevars)
-                    phase_errors.insert(error_record)
-                    error_id += 1
-    return phase_errors
+                    error = dask.delayed(tieline_error)(dbf, comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
+                                                        phase_models, phase_obj_callables,
+                                                        phase_grad_callables, phase_hess_callables)
+                    fit_jobs.append(error)
+    errors = dask.compute(*fit_jobs, get=scheduler.get)
+    return errors
 
 
 def _scale_factor(temperature_order, parameter_order, interacting_subls):
@@ -1706,6 +1717,10 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
         grad_funcs[phase_name] = grad
         hess_funcs[phase_name] = hess
     print('Building finished', flush=True)
+    obj_funcs = dask.delayed(obj_funcs, pure=True)
+    grad_funcs = dask.delayed(grad_funcs, pure=True)
+    hess_funcs = dask.delayed(hess_funcs, pure=True)
+    obj_funcs, grad_funcs, hess_funcs = scheduler.persist([obj_funcs, grad_funcs, hess_funcs], broadcast=True)
 
     error_args = ",".join(['{}=model_dof[{}]'.format(x, idx) for idx, x in enumerate(symbols_to_fit)])
     error_code = """
@@ -1714,19 +1729,15 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
         #print(parameter_dof)
         import time
         enter_time = time.time()
-        filled_obj_funcs = dict((key, partial(func, *parameter_dof)) for key, func in obj_funcs.items())
-        filled_grad_funcs = dict((key, partial(func, *parameter_dof)) for key, func in grad_funcs.items())
-        filled_hess_funcs = dict((key, partial(func, *parameter_dof)) for key, func in hess_funcs.items())
         #iter_error = _multiphase_error(dbf, data, datasets,
         #                               obj_callables=filled_obj_funcs,
         #                               grad_callables=filled_grad_funcs,
         #                               hess_callables=filled_hess_funcs)
         iter_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models,
-                                     obj_callables=filled_obj_funcs,
-                                     grad_callables=filled_grad_funcs,
-                                     hess_callables=filled_hess_funcs, scheduler=scheduler)
-        iter_error = [ite['error']**2 for ite in iter_error.all()]
-        iter_error = [np.inf if np.isnan(x) else x for x in iter_error]
+                                     obj_callables=obj_funcs,
+                                     grad_callables=grad_funcs,
+                                     hess_callables=hess_funcs, parameter_dof=parameter_dof, scheduler=scheduler)
+        iter_error = [np.inf if np.isnan(x) else x**2 for x in iter_error]
         iter_error = -np.sum(iter_error)
         print(time.time()-enter_time, 'exit', iter_error, flush=True)
         if (last_iter == -1) or (np.abs(iter_error-last_iter)/np.abs(iter_error) > 0.1):
@@ -1735,24 +1746,28 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
     """
     import textwrap
     import functools
+    from pycalphad.core.cache import cacheit
     error_code = textwrap.dedent(error_code).format(error_args)
     result_obj = {'model_dof': model_dof}
     error_context = {'data': data, 'comps': comps, 'dbf': dbf, 'phases': sorted(data['phases'].keys()),
-                     'partial': functools.partial,
                      'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
                      'obj_funcs': obj_funcs, 'grad_funcs': grad_funcs, 'hess_funcs': hess_funcs,
-                     'phase_models': phase_models, 'scheduler': scheduler}
+                     'phase_models': phase_models, 'scheduler': scheduler, 'last_iter': 1e30}
     error_context.update(globals())
     exec(error_code, error_context, result_obj)
     error = result_obj['error']
     error = pymc.potential(error)
     model_dof.append(error)
-    #print(error(*[0 for x in range(len(model_dof))]))
     pymod = pymc.Model(model_dof)
-    #pymc.MAP(pymod).fit()
     mdl = pymc.MCMC(pymod)
     try:
-        mdl.sample(iter=200, burn=0, burn_till_tuned=False, thin=2, progress_bar=True)
+        pymc.MAP(pymod).fit()
+        #mdl.sample(iter=100, burn=0, burn_till_tuned=False, thin=2, progress_bar=True)
     finally:
         model_dof = result_obj['model_dof']
+        for key, variable in zip(symbols_to_fit, model_dof):
+            dbf.symbols[key] = variable.value
+        dbf.to_file('{}-{}.tdb'.format(start_time,
+                                       ''.join([c for c in sorted(data['components']) if c != 'VA'])),
+                    fmt='tdb')
     return dbf, mdl, model_dof
