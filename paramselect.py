@@ -1717,10 +1717,13 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
         grad_funcs[phase_name] = grad
         hess_funcs[phase_name] = hess
     print('Building finished', flush=True)
+    dbf = dask.delayed(dbf, pure=True)
     obj_funcs = dask.delayed(obj_funcs, pure=True)
     grad_funcs = dask.delayed(grad_funcs, pure=True)
     hess_funcs = dask.delayed(hess_funcs, pure=True)
-    obj_funcs, grad_funcs, hess_funcs = scheduler.persist([obj_funcs, grad_funcs, hess_funcs], broadcast=True)
+    phase_models = dask.delayed(phase_models, pure=True)
+    dbf, obj_funcs, grad_funcs, hess_funcs, phase_models = \
+        scheduler.persist([dbf, obj_funcs, grad_funcs, hess_funcs, phase_models], broadcast=True)
 
     error_args = ",".join(['{}=model_dof[{}]'.format(x, idx) for idx, x in enumerate(symbols_to_fit)])
     error_code = """
@@ -1745,8 +1748,6 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
         return iter_error
     """
     import textwrap
-    import functools
-    from pycalphad.core.cache import cacheit
     error_code = textwrap.dedent(error_code).format(error_args)
     result_obj = {'model_dof': model_dof}
     error_context = {'data': data, 'comps': comps, 'dbf': dbf, 'phases': sorted(data['phases'].keys()),
