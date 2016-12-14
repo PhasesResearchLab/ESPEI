@@ -923,8 +923,9 @@ def _sublattice_model_to_variables(phase_name, subl_model):
 
 
 def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_obj_callables,
-                        phase_grad_callables, phase_hess_callables, phase_models):
+                        phase_grad_callables, phase_hess_callables, phase_models, parameters):
     region_chemical_potentials = []
+    parameters = OrderedDict(sorted(parameters.items(), key=str))
     for cond_dict, phase_flag in comp_dicts:
         # We are now considering a particular tie vertex
         for key, val in cond_dict.items():
@@ -942,7 +943,7 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
             multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, pbar=False, verbose=False,
                                        callables=phase_obj_callables, grad_callables=phase_grad_callables,
                                        hess_callables=phase_hess_callables, model=phase_models,
-                                       scheduler=dask.async.get_sync)
+                                       scheduler=dask.async.get_sync, parameters=parameters)
             # print('MULTI_EQDATA', multi_eqdata)
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
@@ -958,14 +959,14 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
 
 
 def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
-                  phase_models, phase_obj_callables, phase_grad_callables, phase_hess_callables):
+                  phase_models, phase_obj_callables, phase_grad_callables, phase_hess_callables, parameters):
     # print('COND_DICT ({})'.format(current_phase), cond_dict)
     # print('PHASE FLAG', phase_flag)
     if np.any(np.isnan(list(cond_dict.values()))):
         # We don't actually know the phase composition here, so we estimate it
         single_eqdata = calculate(dbf, comps, [current_phase],
                                   T=cond_dict[v.T], P=cond_dict[v.P],
-                                  model=phase_models, callables=phase_obj_callables)
+                                  model=phase_models, callables=phase_obj_callables, parameters=parameters)
         # print('SINGLE_EQDATA (UNKNOWN COMP)', single_eqdata)
         driving_force = np.multiply(region_chemical_potentials,
                                     single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
@@ -994,7 +995,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
         # print('DISORDERED SITEFRACS', desired_sitefracs)
         single_eqdata = calculate(dbf, comps, [current_phase],
                                   T=cond_dict[v.T], P=cond_dict[v.P], points=desired_sitefracs,
-                                  model=phase_models, callables=phase_obj_callables)
+                                  model=phase_models, callables=phase_obj_callables, parameters=parameters)
         driving_force = np.multiply(region_chemical_potentials,
                                     single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
         error = float(np.squeeze(driving_force))
@@ -1003,7 +1004,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
         single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, pbar=False, verbose=False,
                                     callables=phase_obj_callables, grad_callables=phase_grad_callables,
                                     hess_callables=phase_hess_callables, model=phase_models,
-                                    scheduler=dask.async.get_sync)
+                                    scheduler=dask.async.get_sync, parameters=parameters)
         # print('SINGLE_EQDATA', single_eqdata)
         # Sometimes we can get a miscibility gap in our "single-phase" calculation
         # Choose the weighted mixture of site fractions
@@ -1028,7 +1029,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
 
 
 def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
-                    obj_callables=None, grad_callables=None, hess_callables=None, parameter_dof=None, scheduler=None):
+                    obj_callables=None, grad_callables=None, hess_callables=None, parameters=None, scheduler=None):
     obj_callables = obj_callables if obj_callables is not None else defaultdict(lambda: None)
     grad_callables = grad_callables if grad_callables is not None else defaultdict(lambda: None)
     hess_callables = hess_callables if hess_callables is not None else defaultdict(lambda: None)
@@ -1044,27 +1045,6 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
         except IndexError:
             return None
 
-    def fill_callables(obj_funcs, grad_funcs, hess_funcs, parameter_dof):
-        filled_obj_funcs = dict((key, partial(func, *parameter_dof)) for key, func in obj_funcs.items())
-        filled_grad_funcs = dict((key, partial(func, *parameter_dof)) for key, func in grad_funcs.items())
-        filled_hess_funcs = dict((key, partial(func, *parameter_dof)) for key, func in hess_funcs.items())
-        return filled_obj_funcs, filled_grad_funcs, filled_hess_funcs
-
-    filled_callables = \
-        dask.delayed(fill_callables, pure=True)(obj_callables, grad_callables, hess_callables, parameter_dof)
-    phase_obj_callables = filled_callables[0]
-    phase_grad_callables = filled_callables[1]
-    phase_hess_callables = filled_callables[2]
-    #for phase, phase_mod in phase_models.items():
-    #    if (obj_callables[phase] is None) or (grad_callables[phase] is None) or (hess_callables[phase] is None):
-    #        phase_obj_callables[phase], phase_grad_callables[phase], phase_hess_callables[phase] = \
-    #            compiled_build_functions(phase_mod.GM, [v.P, v.T] + phase_mod.site_fractions)
-    #    if obj_callables[phase] is not None:
-    #        phase_obj_callables[phase] = obj_callables[phase]
-    #    if grad_callables[phase] is not None:
-    #        phase_grad_callables[phase] = grad_callables[phase]
-    #    if hess_callables[phase] is not None:
-    #        phase_hess_callables[phase] = hess_callables[phase]
     fit_jobs = []
     for data in desired_data:
         payload = data['values']
@@ -1097,9 +1077,9 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                 # We are now considering a particular tie region
                 current_statevars, comp_dicts = req
                 region_chemical_potentials = \
-                    dask.delayed(estimate_hyperplane)(dbf, comps, phases, current_statevars, comp_dicts, phase_obj_callables,
-                                                      phase_grad_callables, phase_hess_callables,
-                                                      phase_models)
+                    dask.delayed(estimate_hyperplane)(dbf, comps, phases, current_statevars, comp_dicts, obj_callables,
+                                                      grad_callables, hess_callables,
+                                                      phase_models, parameters)
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
                 for current_phase, cond_dict in zip(region, comp_dicts):
                     # XXX: Messy unpacking
@@ -1110,8 +1090,8 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                             cond_dict[key] = np.nan
                     cond_dict.update(current_statevars)
                     error = dask.delayed(tieline_error)(dbf, comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
-                                                        phase_models, phase_obj_callables,
-                                                        phase_grad_callables, phase_hess_callables)
+                                                        phase_models, obj_callables,
+                                                        grad_callables, hess_callables, parameters)
                     fit_jobs.append(error)
     errors = dask.compute(*fit_jobs, get=scheduler.get)
     return errors
@@ -1313,9 +1293,9 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
     for phase_name in sorted(data['phases'].keys()):
         mod = Model(dbf, comps, phase_name)
         phase_models[phase_name] = mod
-        obj, grad, hess = compiled_build_functions(mod.GM, [sympy.Symbol(s) for s in symbols_to_fit] + [v.P, v.T] + mod.site_fractions,
+        obj, grad, hess = compiled_build_functions(mod.GM, [v.P, v.T] + mod.site_fractions,
                                                    wrt=[v.P, v.T] + mod.site_fractions,
-                                                   excluded=len(model_dof))
+                                                   parameters=[sympy.Symbol(s) for s in symbols_to_fit])
         obj_funcs[phase_name] = obj
         grad_funcs[phase_name] = grad
         hess_funcs[phase_name] = hess
@@ -1331,22 +1311,28 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
     error_args = ",".join(['{}=model_dof[{}]'.format(x, idx) for idx, x in enumerate(symbols_to_fit)])
     error_code = """
     def error({0}):
-        parameter_dof = [value for key, value in sorted(locals().items(), key=str)]
-        #print(parameter_dof)
+        parameters = OrderedDict(sorted(locals().items(), key=str))
         import time
         enter_time = time.time()
-        #iter_error = _multiphase_error(dbf, data, datasets,
-        #                               obj_callables=filled_obj_funcs,
-        #                               grad_callables=filled_grad_funcs,
-        #                               hess_callables=filled_hess_funcs)
-        iter_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models,
-                                     obj_callables=obj_funcs,
-                                     grad_callables=grad_funcs,
-                                     hess_callables=hess_funcs, parameter_dof=parameter_dof, scheduler=scheduler)
+        try:
+            iter_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models,
+                                         obj_callables=obj_funcs,
+                                         grad_callables=grad_funcs,
+                                         hess_callables=hess_funcs, parameters=parameters, scheduler=scheduler)
+        except ValueError as e:
+            print(e)
+            iter_error = [np.inf]
         iter_error = [np.inf if np.isnan(x) else x**2 for x in iter_error]
         iter_error = -np.sum(iter_error)
         print(time.time()-enter_time, 'exit', iter_error, flush=True)
         if (last_iter == -1) or (np.abs(iter_error-last_iter)/np.abs(iter_error) > 0.1):
+            print('Dumping parameters')
+            rdbf = dbf.compute()
+            parameter_dof = [value for key, value in sorted(locals().items(), key=str)]
+            for key, variable in zip(symbols_to_fit, parameter_dof):
+                print(key, variable)
+                rdbf.symbols[key] = float(variable)
+            rdbf.to_file('dumped.tdb', fmt='tdb', if_exists='overwrite')
             globals()['last_iter'] = iter_error
         return iter_error
     """
