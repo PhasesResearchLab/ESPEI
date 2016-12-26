@@ -1277,6 +1277,9 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
     pattern = re.compile("^V[V]?([0-9]+)$")
     symbols_to_fit = sorted([x for x in sorted(dbf.symbols.keys()) if pattern.match(x)])
 
+    if len(symbols_to_fit) == 0:
+        raise ValueError('No degrees of freedom. Database must contain symbols starting with \'V\' or \'VV\', followed by a number.')
+
     import pymc
     model_dof = [pymc.Uniform(x, float(dbf.symbols[x]) - 0.5*abs(float(dbf.symbols[x])),
                               float(dbf.symbols[x]) + 0.5*abs(float(dbf.symbols[x])), value=float(dbf.symbols[x]))
