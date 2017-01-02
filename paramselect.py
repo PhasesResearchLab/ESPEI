@@ -1280,6 +1280,11 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
     if len(symbols_to_fit) == 0:
         raise ValueError('No degrees of freedom. Database must contain symbols starting with \'V\' or \'VV\', followed by a number.')
 
+    for x in symbols_to_fit:
+        if isinstance(dbf.symbols[x], sympy.Piecewise):
+            if len(dbf.symbols[x].args) == 1:
+                dbf.symbols[x] = dbf.symbols[x].args[0].expr
+
     import pymc
     model_dof = [pymc.Uniform(x, float(dbf.symbols[x]) - 0.5*abs(float(dbf.symbols[x])),
                               float(dbf.symbols[x]) + 0.5*abs(float(dbf.symbols[x])), value=float(dbf.symbols[x]))
