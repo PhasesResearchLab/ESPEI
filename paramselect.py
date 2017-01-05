@@ -1333,6 +1333,7 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
         iter_error = [np.inf if np.isnan(x) else x**2 for x in iter_error]
         iter_error = -np.sum(iter_error)
         print(time.time()-enter_time, 'exit', iter_error, flush=True)
+        recfile.write(','.join([str(-iter_error)] + [str(x) for x in parameters.values()]) + '\\n')
         if (last_iter == -1) or (np.abs(iter_error-last_iter)/np.abs(iter_error) > 0.1):
             print('Dumping parameters')
             rdbf = dbf.compute()
@@ -1346,11 +1347,14 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
     """
     import textwrap
     error_code = textwrap.dedent(error_code).format(error_args)
+    recfile = open('recfile-{}.csv'.format(''.join([c for c in sorted(data['components']) if c != 'VA'])), 'a')
+    recfile.write(','.join(['error'] + [str(x) for x in symbols_to_fit]) + '\n')
+
     result_obj = {'model_dof': model_dof}
     error_context = {'data': data, 'comps': comps, 'dbf': dbf, 'phases': sorted(data['phases'].keys()),
                      'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
                      'obj_funcs': obj_funcs, 'grad_funcs': grad_funcs, 'hess_funcs': hess_funcs,
-                     'phase_models': phase_models, 'scheduler': scheduler, 'last_iter': 1e30}
+                     'phase_models': phase_models, 'scheduler': scheduler, 'last_iter': 1e30, 'recfile': recfile}
     error_context.update(globals())
     exec(error_code, error_context, result_obj)
     error = result_obj['error']
@@ -1362,6 +1366,7 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
         pymc.MAP(pymod).fit()
         #mdl.sample(iter=100, burn=0, burn_till_tuned=False, thin=2, progress_bar=True)
     finally:
+        recfile.close()
         model_dof = result_obj['model_dof']
         for key, variable in zip(symbols_to_fit, model_dof):
             dbf.symbols[key] = variable.value
