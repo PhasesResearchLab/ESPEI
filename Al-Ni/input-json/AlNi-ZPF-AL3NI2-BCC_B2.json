@@ -1,0 +1,16 @@
+{
+  "components": ["AL", "NI"],
+  "phases": ["AL3NI2", "BCC_B2"],
+  "conditions": {
+	  "P": 101325,
+	  "T": [1348, 1176, 977]
+  },
+  "broadcast_conditions": false,
+  "output": "ZPF",
+  "values":   [
+               [["AL3NI2", ["NI"], [0.4083]], ["BCC_B2", ["NI"], [0.4340]]],
+	       [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4456]]],
+	       [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4532]]]
+              ],
+  "reference": "37ALE"
+}

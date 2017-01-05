@@ -1,0 +1,23 @@
+{
+  "components": ["AL", "NI", "VA"],
+  "phases": ["LIQUID", "FCC_L12"],
+  "conditions": {
+	  "P": 101325,
+	  "T": [1718, 1708, 1695.7, 1687.9, 1684.7, 1673.9, 1669.1, 1659.9, 1727.1, 1723.6]
+  },
+  "broadcast_conditions": false,
+  "output": "ZPF",
+  "values":   [
+               [["LIQUID", ["NI"], [null]], ["FCC_L12", ["NI"], [0.9091]]],
+	       [["LIQUID", ["NI"], [null]], ["FCC_L12", ["NI"], [0.8786]]],
+	       [["LIQUID", ["NI"], [null]], ["FCC_L12", ["NI"], [0.8487]]],
+               [["LIQUID", ["NI"], [null]], ["FCC_L12", ["NI"], [0.8387]]],
+               [["LIQUID", ["NI"], [null]], ["FCC_L12", ["NI"], [0.8293]]],
+	       [["LIQUID", ["NI"], [null]], ["FCC_L12", ["NI"], [0.8192]]],
+	       [["LIQUID", ["NI"], [null]], ["FCC_L12", ["NI"], [0.8092]]],
+               [["LIQUID", ["NI"], [null]], ["FCC_L12", ["NI"], [0.7992]]],
+	       [["LIQUID", ["NI"], [null]], ["FCC_L12", ["NI"], [0.9588]]],
+               [["LIQUID", ["NI"], [null]], ["FCC_L12", ["NI"], [0.9384]]]
+              ],
+  "reference": "87HIL"
+}

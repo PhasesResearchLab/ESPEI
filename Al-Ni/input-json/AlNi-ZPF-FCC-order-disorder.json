@@ -1,0 +1,20 @@
+{
+  "components": ["AL", "NI"],
+  "phases": ["FCC_L12"],
+  "conditions": {
+	  "P": 101325,
+	  "T": [1573, 1468, 1373, 1273, 1173, 1073, 973]
+  },
+  "broadcast_conditions": false,
+  "output": "ZPF",
+  "values":   [
+               [["FCC_L12", ["NI"], [0.764]], ["FCC_L12", ["NI"],  [0.793], "disordered"]],
+               [["FCC_L12", ["NI"], [0.767]], ["FCC_L12", ["NI"],  [0.812], "disordered"]],
+               [["FCC_L12", ["NI"], [0.770]], ["FCC_L12", ["NI"],  [0.832], "disordered"]],
+               [["FCC_L12", ["NI"], [0.773]], ["FCC_L12", ["NI"],  [0.845], "disordered"]],
+               [["FCC_L12", ["NI"], [0.768]], ["FCC_L12", ["NI"],  [0.858], "disordered"]],
+               [["FCC_L12", ["NI"], [0.761]], ["FCC_L12", ["NI"],  [0.861], "disordered"]],
+               [["FCC_L12", ["NI"], [0.755]], ["FCC_L12", ["NI"],  [0.874], "disordered"]]
+              ],
+  "reference": "90JIA"
+}
