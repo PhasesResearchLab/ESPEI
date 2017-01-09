@@ -45,7 +45,7 @@ def recursive_glob(start, pattern):
     for root, dirnames, filenames in os.walk(start):
         for filename in fnmatch.filter(filenames, pattern):
             matches.append(os.path.join(root, filename))
-    return matches
+    return sorted(matches)
 
 if __name__ == '__main__':
     args = parser.parse_args(sys.argv[1:])
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     finally:
         if recfile:
             recfile.close()
-        dbf.to_file(args.output_tdb, if_exists='overwrite')
+    dbf.to_file(args.output_tdb, if_exists='overwrite')
 
 
 
