@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: daskd-scheduler
+  name: alni-fit
   labels:
-    app: daskd
-    role: scheduler
+    app: espei
+    role: fit
 spec:
   ports:
   - port: 8786
@@ -17,7 +17,7 @@ spec:
     targetPort: 9786
     name: http
   selector:
-    app: daskd
+    app: espei
     role: scheduler
   type: LoadBalancer
 ---
@@ -30,7 +30,7 @@ spec:
   template:
     metadata:
       labels:
-        app: daskd
+        app: espei
         role: scheduler
     spec:
       containers:
@@ -45,30 +45,39 @@ spec:
         ports:
         - containerPort: 8786
 ---
-apiVersion: extensions/v1beta1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: taskrunner
 spec:
-  replicas: 1
   template:
     metadata:
       labels:
-        app: daskd
+        app: espei
         role: runner
     spec:
       containers:
       - name: runner
         image: gcr.io/espei-alni/pycalphad-fitting
+        volumeMounts:
+          - name: output-volume
+            mountPath: /out
         imagePullPolicy: Always
         command: ["/bin/bash",
                   "-cx",
-                  "env && python fit.py --dask-scheduler $DASKD_SCHEDULER_SERVICE_HOST:$DASKD_SCHEDULER_SERVICE_PORT_SCHEDULER"
+                  "env && python fit.py --dask-scheduler $ALNI_FIT_SERVICE_HOST:$ALNI_FIT_SERVICE_PORT_SCHEDULER --iter-record /out/alni.csv --output-tdb /out/alni.tdb"
                   ]
         resources:
           requests:
             cpu: 1
             memory: 1000Mi
+      restartPolicy: Never
+      volumes:
+        - name: output-volume
+          gcePersistentDisk:
+            # This disk must already exist.
+            pdName: output-data
+            fsType: ext4
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -79,7 +88,7 @@ spec:
   template:
     metadata:
       labels:
-        app: daskd
+        app: espei
         role: worker
     spec:
       containers:
@@ -89,5 +98,46 @@ spec:
         command: [
           "/bin/bash",
           "-cx",
-          "env && PYTHONPATH=/work:$PYTHONPATH dask-worker $DASKD_SCHEDULER_SERVICE_HOST:$DASKD_SCHEDULER_SERVICE_PORT_SCHEDULER --nthreads 1",
+          "env && PYTHONPATH=/work:$PYTHONPATH dask-worker $ALNI_FIT_SERVICE_HOST:$ALNI_FIT_SERVICE_PORT_SCHEDULER --nthreads 1",
         ]
+---
+apiVersion: batch/v2alpha1
+kind: CronJob
+metadata:
+  name: backup
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: hello
+            image: busybox
+            args:
+            - /bin/sh
+            - -c
+            - date; echo Hello from the Kubernetes cluster
+          restartPolicy: OnFailure
+spec:
+  template:
+    metadata:
+      labels:
+        app: espei
+        role: backup
+    spec:
+      containers:
+      - name: backup
+        image: google/cloud-sdk
+        volumeMounts:
+          - name: output-volume
+            mountPath: /out
+        imagePullPolicy: Always
+        command: ["gcloud info"]
+      restartPolicy: Never
+      volumes:
+        - name: output-volume
+          gcePersistentDisk:
+            # This disk must already exist.
+            pdName: output-data
+            fsType: ext4
