@@ -1049,7 +1049,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
     for data in desired_data:
         payload = data['values']
         conditions = data['conditions']
-        data_comps = data['components']
+        data_comps = list(set(data['components']).union({'VA'}))
         broadcast = data.get('broadcast_conditions', False)
         #print(conditions)
         phase_regions = defaultdict(lambda: list())
@@ -1353,7 +1353,8 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None):
         pymc.MAP(pymod).fit()
         #mdl.sample(iter=100, burn=0, burn_till_tuned=False, thin=2, progress_bar=True)
     finally:
-        recfile.close()
+        if recfile:
+            recfile.close()
     model_dof = result_obj['model_dof']
     dbf = dbf.compute()
     for key, variable in zip(symbols_to_fit, model_dof):
