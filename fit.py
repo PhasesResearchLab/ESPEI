@@ -17,12 +17,35 @@ parser.add_argument(
     metavar="HOST:PORT",
     help="Host and port of dask distributed scheduler")
 
+parser.add_argument(
+    "--iter-record",
+    metavar="FILE",
+    help="Output file for recording iterations (CSV)")
+
+parser.add_argument(
+    "--fit-settings",
+    metavar="FILE",
+    default="input.json",
+    help="Input JSON file with settings for fit")
+
+parser.add_argument(
+    "--input-tdb",
+    metavar="FILE",
+    default=None,
+    help="Input TDB file, with desired degrees of freedom to fit specified as FUNCTIONs starting with 'VV'")
+
+parser.add_argument(
+    "--output-tdb",
+    metavar="FILE",
+    default="out.tdb",
+    help="Output TDB file")
+
 def recursive_glob(start, pattern):
     matches = []
     for root, dirnames, filenames in os.walk(start):
         for filename in fnmatch.filter(filenames, pattern):
             matches.append(os.path.join(root, filename))
-    return matches
+    return sorted(matches)
 
 if __name__ == '__main__':
     args = parser.parse_args(sys.argv[1:])
@@ -34,4 +57,13 @@ if __name__ == '__main__':
             args.dask_scheduler,
             sum(client.ncores().values())))
     datasets = load_datasets(sorted(recursive_glob('Al-Ni', '*.json')))
-    dbf, mdl, model_dof = fit('input.json', datasets, saveall=True, scheduler=client)
+    recfile = open(args.iter_record, 'a') if args.iter_record else None
+    try:
+        dbf, mdl, model_dof = fit(args.fit_settings, datasets, scheduler=client, recfile=recfile)
+    finally:
+        if recfile:
+            recfile.close()
+    dbf.to_file(args.output_tdb, if_exists='overwrite')
+
+
+
