@@ -65,7 +65,8 @@ import operator
 import copy
 from functools import reduce, partial
 from datetime import datetime
-
+import time
+import textwrap
 
 # Mapping of energy polynomial coefficients to corresponding property coefficients
 feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
@@ -944,6 +945,26 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
                                        callables=phase_obj_callables, grad_callables=phase_grad_callables,
                                        hess_callables=phase_hess_callables, model=phase_models,
                                        scheduler=dask.async.get_sync, parameters=parameters)
+            if np.all(np.isnan(multi_eqdata.NP.values)):
+                error_time = time.time()
+                template_error = """
+                from pycalphad import Database, equilibrium
+                from pycalphad.variables import T, P, X
+                import dask
+                dbf_string = \"\"\"
+                {0}
+                \"\"\"
+                dbf = Database(dbf_string)
+                comps = {1}
+                phases = {2}
+                cond_dict = {3}
+                parameters = {4}
+                equilibrium(dbf, comps, phases, cond_dict, scheduler=dask.async.get_sync, parameters=parameters)
+                """
+                template_error = textwrap.dedent(template_error)
+                print('Dumping', 'error-'+str(error_time)+'.py')
+                with open('error-'+str(error_time)+'.py', 'w') as f:
+                    f.write(template_error.format(dbf.to_string(fmt='tdb'), comps, phases, cond_dict, {key: float(x) for key, x in parameters.items()}))
             # print('MULTI_EQDATA', multi_eqdata)
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
@@ -1005,6 +1026,26 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
                                     callables=phase_obj_callables, grad_callables=phase_grad_callables,
                                     hess_callables=phase_hess_callables, model=phase_models,
                                     scheduler=dask.async.get_sync, parameters=parameters)
+        if np.all(np.isnan(single_eqdata['NP'].values)):
+            error_time = time.time()
+            template_error = """
+            from pycalphad import Database, equilibrium
+            from pycalphad.variables import T, P, X
+            import dask
+            dbf_string = \"\"\"
+            {0}
+            \"\"\"
+            dbf = Database(dbf_string)
+            comps = {1}
+            phases = {2}
+            cond_dict = {3}
+            parameters = {4}
+            equilibrium(dbf, comps, phases, cond_dict, scheduler=dask.async.get_sync, parameters=parameters)
+            """
+            template_error = textwrap.dedent(template_error)
+            print('Dumping', 'error-'+str(error_time)+'.py')
+            with open('error-'+str(error_time)+'.py', 'w') as f:
+                f.write(template_error.format(dbf.to_string(fmt='tdb'), comps, [current_phase], cond_dict, {key: float(x) for key, x in parameters.items()}))
         # print('SINGLE_EQDATA', single_eqdata)
         # Sometimes we can get a miscibility gap in our "single-phase" calculation
         # Choose the weighted mixture of site fractions
