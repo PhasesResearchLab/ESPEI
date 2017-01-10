@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: alni-fit
+  labels:
+    app: espei
+    role: fit
+spec:
+  ports:
+  - port: 8786
+    targetPort: 8786
+    name: scheduler
+  - port: 8787
+    targetPort: 8787
+    name: bokeh
+  - port: 9786
+    targetPort: 9786
+    name: http
+  selector:
+    app: espei
+    role: scheduler
+  type: LoadBalancer
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: taskrunner
+spec:
+  template:
+    metadata:
+      labels:
+        app: espei
+        role: runner
+    spec:
+      containers:
+      - name: runner
+        image: gcr.io/espei-alni/pycalphad-fitting
+        volumeMounts:
+          - name: output-volume
+            mountPath: /out
+        imagePullPolicy: Always
+        command: ["/bin/bash",
+                  "-cx",
+                  "env && python fit.py --iter-record /out/alni-`date +%s`.csv --output-tdb /out/alni.tdb"
+                  ]
+      restartPolicy: Never
+      volumes:
+        - name: output-volume
+          gcePersistentDisk:
+            # This disk must already exist.
+            pdName: output-data
+            fsType: ext4
