@@ -1049,6 +1049,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
     for data in desired_data:
         payload = data['values']
         conditions = data['conditions']
+        data_comps = data['components']
         broadcast = data.get('broadcast_conditions', False)
         #print(conditions)
         phase_regions = defaultdict(lambda: list())
@@ -1077,7 +1078,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                 # We are now considering a particular tie region
                 current_statevars, comp_dicts = req
                 region_chemical_potentials = \
-                    dask.delayed(estimate_hyperplane)(dbf, comps, phases, current_statevars, comp_dicts, obj_callables,
+                    dask.delayed(estimate_hyperplane)(dbf, data_comps, phases, current_statevars, comp_dicts, obj_callables,
                                                       grad_callables, hess_callables,
                                                       phase_models, parameters)
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
@@ -1089,7 +1090,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                         if val is None:
                             cond_dict[key] = np.nan
                     cond_dict.update(current_statevars)
-                    error = dask.delayed(tieline_error)(dbf, comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
+                    error = dask.delayed(tieline_error)(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
                                                         phase_models, obj_callables,
                                                         grad_callables, hess_callables, parameters)
                     fit_jobs.append(error)
@@ -1282,8 +1283,8 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
 
     for x in symbols_to_fit:
         if isinstance(dbf.symbols[x], sympy.Piecewise):
-            if len(dbf.symbols[x].args) == 1:
-                dbf.symbols[x] = dbf.symbols[x].args[0].expr
+            print('Replacing', x)
+            dbf.symbols[x] = dbf.symbols[x].args[0].expr
 
     import pymc
     model_dof = [pymc.Uniform(x, float(dbf.symbols[x]) - 0.5*abs(float(dbf.symbols[x])),
@@ -1367,6 +1368,7 @@ def fit(input_fname, datasets, saveall=True, resume=None, scheduler=None):
         #mdl.sample(iter=100, burn=0, burn_till_tuned=False, thin=2, progress_bar=True)
     finally:
         recfile.close()
+        dbf = dbf.compute()
         model_dof = result_obj['model_dof']
         for key, variable in zip(symbols_to_fit, model_dof):
             dbf.symbols[key] = variable.value
