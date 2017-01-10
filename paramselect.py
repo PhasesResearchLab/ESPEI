@@ -1249,7 +1249,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None):
         comp_refs = {c.upper(): stabledata[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
         comp_refs['VA'] = 0
         dbf.symbols.update({'GHSER'+c.upper(): data for c, data in comp_refs.items()})
-        for phase_name, phase_obj in data['phases'].items():
+        for phase_name, phase_obj in sorted(data['phases'].items(), key=operator.itemgetter(0)):
             # Perform parameter selection and single-phase fitting based on input
             # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
             symmetry = phase_obj.get('equivalent_sublattices', None)

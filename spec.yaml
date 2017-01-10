@@ -38,10 +38,6 @@ spec:
         image: gcr.io/espei-alni/pycalphad-fitting
         imagePullPolicy: Always
         command: ["dask-scheduler"]
-        resources:
-          requests:
-            cpu: 1
-            memory: 1000Mi
         ports:
         - containerPort: 8786
 ---
@@ -65,12 +61,8 @@ spec:
         imagePullPolicy: Always
         command: ["/bin/bash",
                   "-cx",
-                  "env && python fit.py --dask-scheduler $ALNI_FIT_SERVICE_HOST:$ALNI_FIT_SERVICE_PORT_SCHEDULER --iter-record /out/alni.csv --output-tdb /out/alni.tdb"
+                  "env && python fit.py --dask-scheduler $ALNI_FIT_SERVICE_HOST:$ALNI_FIT_SERVICE_PORT_SCHEDULER --iter-record /out/alni-`date +%s`.csv --output-tdb /out/alni.tdb"
                   ]
-        resources:
-          requests:
-            cpu: 1
-            memory: 1000Mi
       restartPolicy: Never
       volumes:
         - name: output-volume
@@ -84,7 +76,7 @@ kind: Deployment
 metadata:
   name: daskd-worker
 spec:
-  replicas: 4
+  replicas: 8
   template:
     metadata:
       labels:
@@ -100,44 +92,3 @@ spec:
           "-cx",
           "env && PYTHONPATH=/work:$PYTHONPATH dask-worker $ALNI_FIT_SERVICE_HOST:$ALNI_FIT_SERVICE_PORT_SCHEDULER --nthreads 1",
         ]
----
-apiVersion: batch/v2alpha1
-kind: CronJob
-metadata:
-  name: backup
-spec:
-  schedule: "*/1 * * * *"
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          containers:
-          - name: hello
-            image: busybox
-            args:
-            - /bin/sh
-            - -c
-            - date; echo Hello from the Kubernetes cluster
-          restartPolicy: OnFailure
-spec:
-  template:
-    metadata:
-      labels:
-        app: espei
-        role: backup
-    spec:
-      containers:
-      - name: backup
-        image: google/cloud-sdk
-        volumeMounts:
-          - name: output-volume
-            mountPath: /out
-        imagePullPolicy: Always
-        command: ["gcloud info"]
-      restartPolicy: Never
-      volumes:
-        - name: output-volume
-          gcePersistentDisk:
-            # This disk must already exist.
-            pdName: output-data
-            fsType: ext4
