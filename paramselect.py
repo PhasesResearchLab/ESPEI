@@ -48,7 +48,7 @@ with uninformative priors. With bias of AIC toward complex models, I think doing
 with ridge regression is advisible.
 """
 import pycalphad.variables as v
-from pycalphad import binplot, calculate, equilibrium, Database, Model
+from pycalphad import binplot, calculate, equilibrium, Database, Model, CompiledModel
 from pycalphad.plot.utils import phase_legend
 from pycalphad.core.sympydiff_utils import build_functions as compiled_build_functions
 import pycalphad.refdata
@@ -923,8 +923,7 @@ def _sublattice_model_to_variables(phase_name, subl_model):
     return result
 
 
-def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_obj_callables,
-                        phase_grad_callables, phase_hess_callables, phase_models, parameters):
+def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters):
     region_chemical_potentials = []
     parameters = OrderedDict(sorted(parameters.items(), key=str))
     for cond_dict, phase_flag in comp_dicts:
@@ -942,9 +941,7 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
             multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, pbar=False, verbose=False,
-                                       callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                       hess_callables=phase_hess_callables, model=phase_models,
-                                       scheduler=dask.async.get_sync, parameters=parameters)
+                                       model=phase_models, scheduler=dask.async.get_sync, parameters=parameters)
             if np.all(np.isnan(multi_eqdata.NP.values)):
                 error_time = time.time()
                 template_error = """
@@ -962,9 +959,9 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
                 equilibrium(dbf, comps, phases, cond_dict, scheduler=dask.async.get_sync, parameters=parameters)
                 """
                 template_error = textwrap.dedent(template_error)
-                print('Dumping', 'error-'+str(error_time)+'.py')
-                with open('error-'+str(error_time)+'.py', 'w') as f:
-                    f.write(template_error.format(dbf.to_string(fmt='tdb'), comps, phases, cond_dict, {key: float(x) for key, x in parameters.items()}))
+                #print('Dumping', 'error-'+str(error_time)+'.py')
+                #with open('error-'+str(error_time)+'.py', 'w') as f:
+                #    f.write(template_error.format(dbf.to_string(fmt='tdb'), comps, phases, cond_dict, {key: float(x) for key, x in parameters.items()}))
             # print('MULTI_EQDATA', multi_eqdata)
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
@@ -980,14 +977,14 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
 
 
 def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
-                  phase_models, phase_obj_callables, phase_grad_callables, phase_hess_callables, parameters):
+                  phase_models, parameters):
     # print('COND_DICT ({})'.format(current_phase), cond_dict)
     # print('PHASE FLAG', phase_flag)
     if np.any(np.isnan(list(cond_dict.values()))):
         # We don't actually know the phase composition here, so we estimate it
         single_eqdata = calculate(dbf, comps, [current_phase],
                                   T=cond_dict[v.T], P=cond_dict[v.P],
-                                  model=phase_models, callables=phase_obj_callables, parameters=parameters)
+                                  model=phase_models, parameters=parameters)
         # print('SINGLE_EQDATA (UNKNOWN COMP)', single_eqdata)
         driving_force = np.multiply(region_chemical_potentials,
                                     single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
@@ -1016,15 +1013,14 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
         # print('DISORDERED SITEFRACS', desired_sitefracs)
         single_eqdata = calculate(dbf, comps, [current_phase],
                                   T=cond_dict[v.T], P=cond_dict[v.P], points=desired_sitefracs,
-                                  model=phase_models, callables=phase_obj_callables, parameters=parameters)
+                                  model=phase_models, parameters=parameters)
         driving_force = np.multiply(region_chemical_potentials,
                                     single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
         error = float(np.squeeze(driving_force))
     else:
         # Extract energies from single-phase calculations
         single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, pbar=False, verbose=False,
-                                    callables=phase_obj_callables, grad_callables=phase_grad_callables,
-                                    hess_callables=phase_hess_callables, model=phase_models,
+                                    model=phase_models,
                                     scheduler=dask.async.get_sync, parameters=parameters)
         if np.all(np.isnan(single_eqdata['NP'].values)):
             error_time = time.time()
@@ -1070,10 +1066,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
 
 
 def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
-                    obj_callables=None, grad_callables=None, hess_callables=None, parameters=None, scheduler=None):
-    obj_callables = obj_callables if obj_callables is not None else defaultdict(lambda: None)
-    grad_callables = grad_callables if grad_callables is not None else defaultdict(lambda: None)
-    hess_callables = hess_callables if hess_callables is not None else defaultdict(lambda: None)
+                    parameters=None, scheduler=None):
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
@@ -1119,8 +1112,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                 # We are now considering a particular tie region
                 current_statevars, comp_dicts = req
                 region_chemical_potentials = \
-                    dask.delayed(estimate_hyperplane)(dbf, data_comps, phases, current_statevars, comp_dicts, obj_callables,
-                                                      grad_callables, hess_callables,
+                    dask.delayed(estimate_hyperplane)(dbf, data_comps, phases, current_statevars, comp_dicts,
                                                       phase_models, parameters)
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
                 for current_phase, cond_dict in zip(region, comp_dicts):
@@ -1132,8 +1124,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                             cond_dict[key] = np.nan
                     cond_dict.update(current_statevars)
                     error = dask.delayed(tieline_error)(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
-                                                        phase_models, obj_callables,
-                                                        grad_callables, hess_callables, parameters)
+                                                        phase_models, parameters)
                     fit_jobs.append(error)
     errors = dask.compute(*fit_jobs, get=scheduler.get)
     return errors
@@ -1329,28 +1320,17 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None):
     for x in symbols_to_fit:
         del dbf.symbols[x]
 
-    obj_funcs = dict()
-    grad_funcs = dict()
-    hess_funcs = dict()
     phase_models = dict()
     print('Building functions', flush=True)
+    # 0 is placeholder value
     for phase_name in sorted(data['phases'].keys()):
-        mod = Model(dbf, comps, phase_name)
+        mod = CompiledModel(dbf, comps, phase_name, parameters=OrderedDict([(sympy.Symbol(s), 0) for s in symbols_to_fit]))
         phase_models[phase_name] = mod
-        obj, grad, hess = compiled_build_functions(mod.GM, [v.P, v.T] + mod.site_fractions,
-                                                   wrt=[v.P, v.T] + mod.site_fractions,
-                                                   parameters=[sympy.Symbol(s) for s in symbols_to_fit])
-        obj_funcs[phase_name] = obj
-        grad_funcs[phase_name] = grad
-        hess_funcs[phase_name] = hess
     print('Building finished', flush=True)
     dbf = dask.delayed(dbf, pure=True)
-    obj_funcs = dask.delayed(obj_funcs, pure=True)
-    grad_funcs = dask.delayed(grad_funcs, pure=True)
-    hess_funcs = dask.delayed(hess_funcs, pure=True)
     phase_models = dask.delayed(phase_models, pure=True)
-    dbf, obj_funcs, grad_funcs, hess_funcs, phase_models = \
-        scheduler.persist([dbf, obj_funcs, grad_funcs, hess_funcs, phase_models], broadcast=True)
+    dbf, phase_models = \
+        scheduler.persist([dbf, phase_models], broadcast=True)
 
     error_args = ",".join(['{}=model_dof[{}]'.format(x, idx) for idx, x in enumerate(symbols_to_fit)])
     error_code = """
@@ -1360,9 +1340,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None):
         enter_time = time.time()
         try:
             iter_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models,
-                                         obj_callables=obj_funcs,
-                                         grad_callables=grad_funcs,
-                                         hess_callables=hess_funcs, parameters=parameters, scheduler=scheduler)
+                                         parameters=parameters, scheduler=scheduler)
         except ValueError as e:
             print(e)
             iter_error = [np.inf]
@@ -1381,7 +1359,6 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None):
     result_obj = {'model_dof': model_dof}
     error_context = {'data': data, 'comps': comps, 'dbf': dbf, 'phases': sorted(data['phases'].keys()),
                      'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
-                     'obj_funcs': obj_funcs, 'grad_funcs': grad_funcs, 'hess_funcs': hess_funcs,
                      'phase_models': phase_models, 'scheduler': scheduler, 'recfile': recfile}
     error_context.update(globals())
     exec(error_code, error_context, result_obj)
