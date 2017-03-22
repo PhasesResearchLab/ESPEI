@@ -23,6 +23,11 @@ parser.add_argument(
     help="Output file for recording iterations (CSV)")
 
 parser.add_argument(
+    "--tracefile",
+    metavar="FILE",
+    help="Output file for recording MCMC trace (HDF5)")
+
+parser.add_argument(
     "--fit-settings",
     metavar="FILE",
     default="input.json",
@@ -58,8 +63,9 @@ if __name__ == '__main__':
             sum(client.ncores().values())))
     datasets = load_datasets(sorted(recursive_glob('Al-Ni', '*.json')))
     recfile = open(args.iter_record, 'a') if args.iter_record else None
+    tracefile = args.tracefile if args.tracefile else None
     try:
-        dbf, mdl, model_dof = fit(args.fit_settings, datasets, scheduler=client, recfile=recfile)
+        dbf, mdl, model_dof = fit(args.fit_settings, datasets, scheduler=client, recfile=recfile, tracefile=tracefile)
     finally:
         if recfile:
             recfile.close()

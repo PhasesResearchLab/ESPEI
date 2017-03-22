@@ -1245,7 +1245,7 @@ def tuplify(x):
     return tuple(res)
 
 
-def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None):
+def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracefile=None):
     """
     Fit thermodynamic and phase equilibria data to a model.
 
@@ -1342,12 +1342,12 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None):
             iter_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                                          parameters=parameters, scheduler=scheduler)
         except ValueError as e:
-            print(e)
+            #print(e)
             iter_error = [np.inf]
         iter_error = [np.inf if np.isnan(x) else x**2 for x in iter_error]
         iter_error = -np.sum(iter_error)
-        print(time.time()-enter_time, 'exit', iter_error, flush=True)
         if recfile:
+            print(time.time()-enter_time, 'exit', iter_error, flush=True)
             recfile.write(','.join([str(-iter_error), str(time.time()-enter_time)] + [str(x) for x in parameters.values()]) + '\\n')
         return iter_error
     """
@@ -1366,11 +1366,15 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None):
     error = pymc.potential(error)
     model_dof.append(error)
     pymod = pymc.Model(model_dof)
-    mdl = pymc.MCMC(pymod)
+    if tracefile is not None:
+        mdl = pymc.MCMC(pymod, db='txt', dbname=tracefile)
+    else:
+        mdl = pymc.MCMC(pymod)
     try:
-        pymc.MAP(pymod).fit()
-        #mdl.sample(iter=100, burn=0, burn_till_tuned=False, thin=2, progress_bar=True)
+        #pymc.MAP(pymod).fit()
+        mdl.sample(iter=100, burn=0, burn_till_tuned=False, thin=1, progress_bar=True, save_interval=1)
     finally:
+        mdl.db.close()
         if recfile:
             recfile.close()
     model_dof = result_obj['model_dof']
