@@ -940,7 +940,7 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
         else:
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
-            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, pbar=False, verbose=False,
+            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, verbose=False,
                                        model=phase_models, scheduler=dask.async.get_sync, parameters=parameters)
             if np.all(np.isnan(multi_eqdata.NP.values)):
                 error_time = time.time()
@@ -1019,7 +1019,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
         error = float(np.squeeze(driving_force))
     else:
         # Extract energies from single-phase calculations
-        single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, pbar=False, verbose=False,
+        single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, verbose=False,
                                     model=phase_models,
                                     scheduler=dask.async.get_sync, parameters=parameters)
         if np.all(np.isnan(single_eqdata['NP'].values)):
