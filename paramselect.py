@@ -984,7 +984,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
         # We don't actually know the phase composition here, so we estimate it
         single_eqdata = calculate(dbf, comps, [current_phase],
                                   T=cond_dict[v.T], P=cond_dict[v.P],
-                                  model=phase_models, parameters=parameters)
+                                  model=phase_models, parameters=parameters, pdens=10)
         # print('SINGLE_EQDATA (UNKNOWN COMP)', single_eqdata)
         driving_force = np.multiply(region_chemical_potentials,
                                     single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
@@ -1313,8 +1313,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
             dbf.symbols[x] = dbf.symbols[x].args[0].expr
 
     import pymc
-    model_dof = [pymc.Uniform(x, float(dbf.symbols[x]) - 0.5*abs(float(dbf.symbols[x])),
-                              float(dbf.symbols[x]) + 0.5*abs(float(dbf.symbols[x])), value=float(dbf.symbols[x]))
+    model_dof = [pymc.Normal(x, float(dbf.symbols[x]), 1./(0.7407 * float(dbf.symbols[x]))**2, value=float(dbf.symbols[x]))
                  for x in symbols_to_fit]
     print([y.value for y in model_dof])
     for x in symbols_to_fit:
