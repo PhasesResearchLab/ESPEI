@@ -65,7 +65,7 @@ def recursive_glob(start, pattern):
 if __name__ == '__main__':
     args = parser.parse_args(sys.argv[1:])
     if not args.dask_scheduler:
-        args.dask_scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, nanny=True)
+        args.dask_scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, processes=True)
     client = Client(args.dask_scheduler)
     logging.info(
         "Running with dask scheduler: %s [%s cores]" % (
