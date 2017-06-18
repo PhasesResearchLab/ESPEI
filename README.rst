@@ -18,6 +18,30 @@ The name and idea of ESPEI are originally based off of Shang, Wang, and Liu, ESP
 .. _Richard Otis's thesis: https://etda.libraries.psu.edu/catalog/s1784k73d
 .. _Jom 69, (2017): http://dx.doi.org/10.1007/s11837-017-2318-6
 
+Usage
+=====
+
+ESPEI has two different fitting modes: single-phase and multi-phase fitting. Currently which of them is performed depends on the input data (more control coming soon).
+
+A better format for storing thermodynamic data is under development, but there are examples of the `current datasets format`_
+
+To define the sublattice models you must create a JSON file as well. Again, this is under development, but here is a working example of `sublattice fit settings`_.
+
+If you have ESPEI installed you can run it by running the command
+
+.. code-block:: bash
+
+    espei --datasets=my-dataset-folder --fit-settings=my-input.json
+
+If you have a database already and just want to do a multi-phase fitting, you can specify a starting TDB file with
+
+.. code-block:: bash
+
+    espei --datasets=my-dataset-folder --fit-settings=my-input.json --input-tdb=my-starting-database.tdb
+
+.. _current datasets format: https://github.com/PhasesResearchLab/ESPEI/tree/7a9f681757b5773e7394f72836357e4cbc4e54cc/Al-Ni/input-json
+.. _sublattice fit settings: https://github.com/PhasesResearchLab/ESPEI/blob/7a9f681757b5773e7394f72836357e4cbc4e54cc/input.json
+
 License
 =======
 
