@@ -10,7 +10,7 @@ import fnmatch
 import argparse
 import logging
 import multiprocessing
-from paramselect import fit, load_datasets
+from espei.paramselect import fit, load_datasets
 from distributed import Client, LocalCluster
 from pycalphad import Database
 
@@ -62,7 +62,7 @@ def recursive_glob(start, pattern):
             matches.append(os.path.join(root, filename))
     return sorted(matches)
 
-if __name__ == '__main__':
+def main():
     args = parser.parse_args(sys.argv[1:])
     if not args.dask_scheduler:
         args.dask_scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, processes=True)
@@ -84,6 +84,9 @@ if __name__ == '__main__':
         if recfile:
             recfile.close()
     dbf.to_file(args.output_tdb, if_exists='overwrite')
+
+if __name__ == '__main__':
+    main()
 
 
 
