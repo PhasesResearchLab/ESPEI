@@ -1365,17 +1365,21 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
     error = pymc.potential(error)
     model_dof.append(error)
     pymod = pymc.Model(model_dof)
+    def close_mdl():
+        mdl.db.close()
+        if recfile:
+            recfile.close()
     if tracefile is not None:
         mdl = pymc.MCMC(pymod, db='txt', dbname=tracefile)
     else:
         mdl = pymc.MCMC(pymod)
     try:
         #pymc.MAP(pymod).fit()
-        mdl.sample(iter=100, burn=0, burn_till_tuned=False, thin=1, progress_bar=True, save_interval=1)
+        mdl.sample(iter=50000, burn=0, burn_till_tuned=False, thin=1, progress_bar=True, save_interval=1)
+    except:
+        close_mdl()
     finally:
-        mdl.db.close()
-        if recfile:
-            recfile.close()
+        close_mdl()
     model_dof = result_obj['model_dof']
     dbf = dbf.compute()
     for key, variable in zip(symbols_to_fit, model_dof):
