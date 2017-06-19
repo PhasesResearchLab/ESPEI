@@ -42,6 +42,16 @@ If you have a database already and just want to do a multi-phase fitting, you ca
 .. _current datasets format: https://github.com/PhasesResearchLab/ESPEI/tree/7a9f681757b5773e7394f72836357e4cbc4e54cc/Al-Ni/input-json
 .. _sublattice fit settings: https://github.com/PhasesResearchLab/ESPEI/blob/7a9f681757b5773e7394f72836357e4cbc4e54cc/input.json
 
+
+Module Hierarchy
+================
+
+* ``fit.py`` is the main entry point
+* ``paramselect.py`` is where all of the fitting happens. This is the core.
+* ``core_utils.py`` contains specialized utilities for ESPEI.
+* ``utils.py`` are utilities with reuse potential outside of ESPEI.
+* ``plot.py`` holds plotting functions
+
 License
 =======
 

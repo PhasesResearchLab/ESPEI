@@ -47,28 +47,28 @@ If we do pinv method like ZKL suggested, it's like doing Bayesian regression
 with uninformative priors. With bias of AIC toward complex models, I think doing regularization
 with ridge regression is advisible.
 """
-import pycalphad.variables as v
-from pycalphad import calculate, equilibrium, Database, Model, CompiledModel
-from pycalphad.plot.utils import phase_legend
-import pycalphad.refdata
-from sklearn.linear_model import LinearRegression
-import tinydb
-import sympy
-import numpy as np
-import json
-import re
-import dask
-import distributed
-from collections import OrderedDict, defaultdict
 import itertools
-import operator
-import copy
-from functools import reduce
-from datetime import datetime
-import time
+import json
 import textwrap
+import time
+from datetime import datetime
 
-# Mapping of energy polynomial coefficients to corresponding property coefficients
+import dask
+import numpy as np
+import operator
+import pycalphad.refdata
+import re
+import sympy
+import tinydb
+from collections import OrderedDict, defaultdict
+from pycalphad import calculate, equilibrium, Database, Model, CompiledModel, \
+    variables as v
+from sklearn.linear_model import LinearRegression
+
+from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort_key, \
+    list_to_tuple, endmembers_from_interaction, build_sitefractions
+from espei.utils import PickleableTinyDB, sigfigs
+
 feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
                       "CPM_MIX": lambda x: -v.T*sympy.diff(x, v.T, 2),
                       "CPM": lambda x: -v.T*sympy.diff(x, v.T, 2),
@@ -78,144 +78,6 @@ feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
                       "HM_FORM": lambda x: x - v.T*sympy.diff(x, v.T),
                       "HM_MIX": lambda x: x - v.T*sympy.diff(x, v.T),
                       "HM": lambda x: x - v.T*sympy.diff(x, v.T)}
-
-plot_mapping = {
-    'T': 'Temperature (K)',
-    'CPM': 'Heat Capacity (J/K-mol-atom)',
-    'HM': 'Enthalpy (J/mol-atom)',
-    'SM': 'Entropy (J/K-mol-atom)',
-    'CPM_FORM': 'Heat Capacity of Formation (J/K-mol-atom)',
-    'HM_FORM': 'Enthalpy of Formation (J/mol-atom)',
-    'SM_FORM': 'Entropy of Formation (J/K-mol-atom)',
-    'CPM_MIX': 'Heat Capacity of Mixing (J/K-mol-atom)',
-    'HM_MIX': 'Enthalpy of Mixing (J/mol-atom)',
-    'SM_MIX': 'Entropy of Mixing (J/K-mol-atom)'
-}
-
-class PickleableTinyDB(tinydb.TinyDB):
-    def __getstate__(self):
-        pickle_dict = {}
-        for key, value in self.__dict__.items():
-            if key == '_table':
-                pickle_dict[key] = value.all()
-            else:
-                pickle_dict[key] = value
-        return pickle_dict
-
-    def __setstate__(self, state):
-        self.__init__(storage=tinydb.storages.MemoryStorage)
-        self.insert_multiple(state['_table'])
-
-class ImmediateClient(distributed.Client):
-    def map (self, *args, **kwargs):
-        result = super(ImmediateClient, self).map(*args, **kwargs)
-        result = [x.result() for x in result]
-        return result
-
-
-def load_datasets(dataset_filenames):
-    ds_database = PickleableTinyDB(storage=tinydb.storages.MemoryStorage)
-    for fname in dataset_filenames:
-        with open(fname) as file_:
-            try:
-                ds_database.insert(json.load(file_))
-            except ValueError as e:
-                print('JSON Error in {}: {}'.format(fname, e))
-    return ds_database
-
-
-def canonical_sort_key(x):
-    """
-    Wrap strings in tuples so they'll sort.
-
-    Parameters
-    ==========
-    x : sequence
-    """
-    return [tuple(i) if isinstance(i, (tuple, list)) else (i,) for i in x]
-
-
-def canonicalize(configuration, equivalent_sublattices):
-    """
-    Sort a sequence with symmetry. This routine gives the sequence
-    a deterministic ordering while respecting symmetry.
-
-    Parameters
-    ==========
-    configuration : list
-        Sublattice configuration to sort.
-    equivalent_sublattices : set of set of int
-        Indices of 'configuration' which should be equivalent by symmetry, i.e.,
-        [[0, 4], [1, 2, 3]] means permuting elements 0 and 4, or 1, 2 and 3, respectively,
-        has no effect on the equivalence of the sequence.
-
-    Returns
-    =======
-    canonicalized : tuple
-    """
-    canonicalized = list(configuration)
-    if equivalent_sublattices is not None:
-        for subl in equivalent_sublattices:
-            subgroup = sorted([configuration[idx] for idx in sorted(subl)], key=canonical_sort_key)
-            for subl_idx, conf_idx in enumerate(sorted(subl)):
-                if isinstance(subgroup[subl_idx], list):
-                    canonicalized[conf_idx] = tuple(subgroup[subl_idx])
-                else:
-                    canonicalized[conf_idx] = subgroup[subl_idx]
-
-    return _list_to_tuple(canonicalized)
-
-
-def _symmetry_filter(x, config, symmetry):
-    if x['mode'] == 'manual':
-        if len(config) != len(x['sublattice_configurations'][0]):
-            return False
-        # If even one matches, it's a match
-        # We do more filtering downstream
-        for data_config in x['sublattice_configurations']:
-            if canonicalize(config, symmetry) == canonicalize(data_config, symmetry):
-                return True
-    return False
-
-
-def _get_data(comps, phase_name, configuration, symmetry, datasets, prop):
-    configuration = list(configuration)
-    desired_data = datasets.search((tinydb.where('output').test(lambda x: x in prop)) &
-                                   (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
-                                   (tinydb.where('solver').test(_symmetry_filter, configuration, symmetry)) &
-                                   (tinydb.where('phases') == [phase_name]))
-    # This seems to be necessary because the 'values' member does not modify 'datasets'
-    # But everything else does!
-    desired_data = copy.deepcopy(desired_data)
-    #if len(desired_data) == 0:
-    #    raise ValueError('No datasets for the system of interest containing {} were in \'datasets\''.format(prop))
-
-    def recursive_zip(a, b):
-        if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
-            return list(recursive_zip(x, y) for x, y in zip(a, b))
-        else:
-            return list(zip(a, b))
-
-    for idx, data in enumerate(desired_data):
-        # Filter output values to only contain data for matching sublattice configurations
-        matching_configs = np.array([(canonicalize(sblconf, symmetry) == canonicalize(configuration, symmetry))
-                                     for sblconf in data['solver']['sublattice_configurations']])
-        matching_configs = np.arange(len(data['solver']['sublattice_configurations']))[matching_configs]
-        # Rewrite output values with filtered data
-        desired_data[idx]['values'] = np.array(data['values'], dtype=np.float)[..., matching_configs]
-        desired_data[idx]['solver']['sublattice_configurations'] = _list_to_tuple(np.array(data['solver']['sublattice_configurations'],
-                                                                            dtype=np.object)[matching_configs].tolist())
-        try:
-            desired_data[idx]['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'],
-                                                                             dtype=np.object)[matching_configs].tolist()
-        except KeyError:
-            pass
-        # Filter out temperatures below 298.15 K (for now, until better refstates exist)
-        temp_filter = np.atleast_1d(data['conditions']['T']) >= 298.15
-        desired_data[idx]['conditions']['T'] = np.atleast_1d(data['conditions']['T'])[temp_filter]
-        # Don't use data['values'] because we rewrote it above; not sure what 'data' references now
-        desired_data[idx]['values'] = desired_data[idx]['values'][..., temp_filter, :]
-    return desired_data
 
 
 def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
@@ -259,45 +121,14 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
     return OrderedDict(zip(feature_tuple, results[np.argmin(model_scores), :]))
 
 
-def _get_samples(desired_data):
-    all_samples = []
-    for data in desired_data:
-        temperatures = np.atleast_1d(data['conditions']['T'])
-        num_configs = np.array(data['solver'].get('sublattice_configurations'), dtype=np.object).shape[0]
-        site_fractions = data['solver'].get('sublattice_occupancies', [[1]] * num_configs)
-        site_fraction_product = [reduce(operator.mul, list(itertools.chain(*[np.atleast_1d(f) for f in fracs])), 1)
-                                 for fracs in site_fractions]
-        # TODO: Subtle sorting bug here, if the interactions aren't already in sorted order...
-        interaction_product = []
-        for fracs in site_fractions:
-            interaction_product.append(float(reduce(operator.mul,
-                                                    [f[0] - f[1] for f in fracs if isinstance(f, list) and len(f) == 2],
-                                                    1)))
-        if len(interaction_product) == 0:
-            interaction_product = [0]
-        comp_features = zip(site_fraction_product, interaction_product)
-        all_samples.extend(list(itertools.product(temperatures, comp_features)))
-    return all_samples
-
-
 def _build_feature_matrix(prop, features, desired_data):
     transformed_features = sympy.Matrix([feature_transforms[prop](i) for i in features])
-    all_samples = _get_samples(desired_data)
+    all_samples = get_samples(desired_data)
     feature_matrix = np.empty((len(all_samples), len(transformed_features)), dtype=np.float)
     feature_matrix[:, :] = [transformed_features.subs({v.T: temp, 'YS': compf[0],
                                                        'Z': compf[1]}).evalf()
                             for temp, compf in all_samples]
     return feature_matrix
-
-
-def _endmembers_from_interaction(configuration):
-    config = []
-    for c in configuration:
-        if isinstance(c, (list, tuple)):
-            config.append(c)
-        else:
-            config.append([c])
-    return list(itertools.product(*[tuple(c) for c in config]))
 
 
 def _shift_reference_state(desired_data, feature_transform, fixed_model):
@@ -321,15 +152,7 @@ def _shift_reference_state(desired_data, feature_transform, fixed_model):
     return total_response
 
 
-def sigfigs(x, n):
-    if x != 0:
-        return np.around(x, -(np.floor(np.log10(np.abs(x)))).astype(np.int) + (n - 1))
-    else:
-        return x
-
-
-def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry,
-                         datasets, features=None):
+def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, features=None):
     """
     Find suitable linear model parameters for the given phase.
     We do this by successively fitting heat capacities, entropies and
@@ -376,7 +199,8 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry,
         for feature in features.keys():
             all_features = list(itertools.product(redlich_kister_features, features[feature]))
             features[feature] = [i[0]*i[1] for i in all_features]
-        print('ENDMEMBERS FROM INTERACTION: '+str(_endmembers_from_interaction(configuration)))
+        print('ENDMEMBERS FROM INTERACTION: ' + str(
+            endmembers_from_interaction(configuration)))
     else:
         # We are only fitting an endmember; no mixing data needed
         fitting_steps = (["CPM_FORM"], ["SM_FORM"], ["HM_FORM"])
@@ -402,18 +226,18 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry,
         subl_idx += 1
 
     for desired_props in fitting_steps:
-        desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
+        desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
         print('{}: datasets found: {}'.format(desired_props, len(desired_data)))
         if len(desired_data) > 0:
             # We assume all properties in the same fitting step have the same features (but different ref states)
             feature_matrix = _build_feature_matrix(desired_props[0], features[desired_props[0]], desired_data)
-            all_samples = _get_samples(desired_data)
+            all_samples = get_samples(desired_data)
             data_quantities = np.concatenate(_shift_reference_state(desired_data,
                                                                     feature_transforms[desired_props[0]],
                                                                     fixed_model),
                                              axis=-1)
-            site_fractions = [_build_sitefractions(phase_name, ds['solver']['sublattice_configurations'],
-                ds['solver'].get('sublattice_occupancies',
+            site_fractions = [build_sitefractions(phase_name, ds['solver']['sublattice_configurations'],
+                                                  ds['solver'].get('sublattice_occupancies',
                                  np.ones((len(ds['solver']['sublattice_configurations']),
                                           len(ds['solver']['sublattice_configurations'][0])), dtype=np.float)))
                               for ds in desired_data for _ in ds['conditions']['T']]
@@ -441,252 +265,8 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry,
     return parameters
 
 
-def _translate_endmember_to_array(endmember, variables):
-    site_fractions = sorted(variables, key=str)
-    frac_array = np.zeros(len(site_fractions))
-    for idx, component in enumerate(endmember):
-        frac_array[site_fractions.index(v.SiteFraction(site_fractions[0].phase_name, idx, component))] = 1
-    return frac_array
-
-
-def _build_sitefractions(phase_name, sublattice_configurations, sublattice_occupancies):
-    """
-    Convert nested lists of sublattice configurations and occupancies to a list of dictionaries.
-    The dictionaries map SiteFraction symbols to occupancy values. Note that zero occupancy
-    site fractions will need to be added separately since the total degrees of freedom aren't
-    known in this function.
-    :param phase_name:
-    :param sublattice_configurations:
-    :param sublattice_occupancies:
-    :return:
-    """
-    result = []
-    for config, occ in zip(sublattice_configurations, sublattice_occupancies):
-        sitefracs = {}
-        config = [[c] if not isinstance(c, (list, tuple)) else c for c in config]
-        occ = [[o] if not isinstance(o, (list, tuple)) else o for o in occ]
-        if len(config) != len(occ):
-            raise ValueError('Sublattice configuration length differs from occupancies')
-        for sublattice_idx in range(len(config)):
-            if isinstance(config[sublattice_idx], (list, tuple)) != isinstance(occ[sublattice_idx], (list, tuple)):
-                raise ValueError('Sublattice configuration type differs from occupancies')
-            if not isinstance(config[sublattice_idx], (list, tuple)):
-                # This sublattice is fully occupied by one component
-                sitefracs[v.SiteFraction(phase_name, sublattice_idx, config[sublattice_idx])] = occ[sublattice_idx]
-            else:
-                # This sublattice is occupied by multiple elements
-                if len(config[sublattice_idx]) != len(occ[sublattice_idx]):
-                    raise ValueError('Length mismatch in sublattice configuration')
-                for comp, val in zip(config[sublattice_idx], occ[sublattice_idx]):
-                    sitefracs[v.SiteFraction(phase_name, sublattice_idx, comp)] = val
-        result.append(sitefracs)
-    return result
-
-
-def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, configuration, x, y):
-    import matplotlib.pyplot as plt
-    all_samples = np.array(_get_samples(desired_data), dtype=np.object)
-    endpoints = _endmembers_from_interaction(configuration)
-    interacting_subls = [c for c in _list_to_tuple(configuration) if isinstance(c, tuple)]
-    disordered_config = False
-    if (len(set(interacting_subls)) == 1) and (len(interacting_subls[0]) == 2):
-        # This configuration describes all sublattices with the same two elements interacting
-        # In general this is a high-dimensional space; just plot the diagonal to see the disordered mixing
-        endpoints = [endpoints[0], endpoints[-1]]
-        disordered_config = True
-    fig = plt.figure(figsize=(9, 9))
-    bar_chart = False
-    bar_labels = []
-    bar_data = []
-    if y.endswith('_FORM'):
-        # We were passed a Model object with zeroed out reference states
-        yattr = y[:-5]
-    else:
-        yattr = y
-    if len(endpoints) == 1:
-        # This is an endmember so we can just compute T-dependent stuff
-        temperatures = np.array([i[0] for i in all_samples], dtype=np.float)
-        if temperatures.min() != temperatures.max():
-            temperatures = np.linspace(temperatures.min(), temperatures.max(), num=100)
-        else:
-            # We only have one temperature: let's do a bar chart instead
-            bar_chart = True
-            temperatures = temperatures.min()
-        endmember = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))[None, None]
-        predicted_quantities = calculate(dbf, comps, [phase_name], output=yattr,
-                                         T=temperatures, P=101325, points=endmember, model=mod, mode='numpy')
-        if y == 'HM' and x == 'T':
-            # Shift enthalpy data so that value at minimum T is zero
-            predicted_quantities[yattr] -= predicted_quantities[yattr].sel(T=temperatures[0]).values.flatten()
-        response_data = predicted_quantities[yattr].values.flatten()
-        if not bar_chart:
-            extra_kwargs = {}
-            if len(response_data) < 10:
-                extra_kwargs['markersize'] = 20
-                extra_kwargs['marker'] = '.'
-                extra_kwargs['linestyle'] = 'none'
-                extra_kwargs['clip_on'] = False
-            fig.gca().plot(temperatures, response_data,
-                           label='This work', color='k', **extra_kwargs)
-            fig.gca().set_xlabel(plot_mapping.get(x, x))
-            fig.gca().set_ylabel(plot_mapping.get(y, y))
-        else:
-            bar_labels.append('This work')
-            bar_data.append(response_data[0])
-    elif len(endpoints) == 2:
-        # Binary interaction parameter
-        first_endpoint = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))
-        second_endpoint = _translate_endmember_to_array(endpoints[1], mod.ast.atoms(v.SiteFraction))
-        point_matrix = np.linspace(0, 1, num=100)[None].T * second_endpoint + \
-            (1 - np.linspace(0, 1, num=100))[None].T * first_endpoint
-        # TODO: Real temperature support
-        point_matrix = point_matrix[None, None]
-        predicted_quantities = calculate(dbf, comps, [phase_name], output=yattr,
-                                         T=300, P=101325, points=point_matrix, model=mod, mode='numpy')
-        response_data = predicted_quantities[yattr].values.flatten()
-        if not bar_chart:
-            extra_kwargs = {}
-            if len(response_data) < 10:
-                extra_kwargs['markersize'] = 20
-                extra_kwargs['marker'] = '.'
-                extra_kwargs['linestyle'] = 'none'
-                extra_kwargs['clip_on'] = False
-            fig.gca().plot(np.linspace(0, 1, num=100), response_data,
-                           label='This work', color='k', **extra_kwargs)
-            fig.gca().set_xlim((0, 1))
-            fig.gca().set_xlabel(str(':'.join(endpoints[0])) + ' to ' + str(':'.join(endpoints[1])))
-            fig.gca().set_ylabel(plot_mapping.get(y, y))
-        else:
-            bar_labels.append('This work')
-            bar_data.append(response_data[0])
-    else:
-        raise NotImplementedError('No support for plotting configuration {}'.format(configuration))
-
-    for data in desired_data:
-        indep_var_data = None
-        response_data = np.zeros_like(data['values'], dtype=np.float)
-        if x == 'T' or x == 'P':
-            indep_var_data = np.array(data['conditions'][x], dtype=np.float).flatten()
-        elif x == 'Z':
-            if disordered_config:
-                # Take the second element of the first interacting sublattice as the coordinate
-                # Because it's disordered all sublattices should be equivalent
-                # TODO: Fix this to filter because we need to guarantee the plot points are disordered
-                occ = data['solver']['sublattice_occupancies']
-                subl_idx = np.nonzero([isinstance(c, (list, tuple)) for c in occ[0]])[0]
-                if len(subl_idx) > 1:
-                    subl_idx = int(subl_idx[0])
-                else:
-                    subl_idx = int(subl_idx)
-                indep_var_data = [c[subl_idx][1] for c in occ]
-            else:
-                interactions = np.array([i[1][1] for i in _get_samples([data])], dtype=np.float)
-                indep_var_data = 1 - (interactions+1)/2
-            if y.endswith('_MIX') and data['output'].endswith('_FORM'):
-                # All the _FORM data we have still has the lattice stability contribution
-                # Need to zero it out to shift formation data to mixing
-                mod_latticeonly = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
-                mod_latticeonly.models = {key: value for key, value in mod_latticeonly.models.items()
-                                          if key == 'ref'}
-                temps = data['conditions'].get('T', 300)
-                pressures = data['conditions'].get('P', 101325)
-                points = _build_sitefractions(phase_name, data['solver']['sublattice_configurations'],
-                                              data['solver']['sublattice_occupancies'])
-                for point_idx in range(len(points)):
-                    missing_variables = mod_latticeonly.ast.atoms(v.SiteFraction) - set(points[point_idx].keys())
-                    # Set unoccupied values to zero
-                    points[point_idx].update({key: 0 for key in missing_variables})
-                    # Change entry to a sorted array of site fractions
-                    points[point_idx] = list(OrderedDict(sorted(points[point_idx].items(), key=str)).values())
-                points = np.array(points, dtype=np.float)
-                # TODO: Real temperature support
-                points = points[None, None]
-                stability = calculate(dbf, comps, [phase_name], output=data['output'][:-5],
-                                      T=temps, P=pressures, points=points,
-                                      model=mod_latticeonly, mode='numpy')
-                response_data -= stability[data['output'][:-5]].values
-
-        response_data += np.array(data['values'], dtype=np.float)
-        response_data = response_data.flatten()
-        if not bar_chart:
-            extra_kwargs = {}
-            if len(response_data) < 10:
-                extra_kwargs['markersize'] = 20
-                extra_kwargs['marker'] = '.'
-                extra_kwargs['linestyle'] = 'none'
-                extra_kwargs['clip_on'] = False
-
-            fig.gca().plot(indep_var_data, response_data, label=data.get('reference', None),
-                           **extra_kwargs)
-        else:
-            bar_labels.append(data.get('reference', None))
-            bar_data.append(response_data[0])
-    if bar_chart:
-        fig.gca().barh(0.02 * np.arange(len(bar_data)), bar_data,
-                       color='k', height=0.01)
-        endmember_title = ' to '.join([':'.join(i) for i in endpoints])
-        fig.suptitle('{} (T = {} K)'.format(endmember_title, temperatures), fontsize=20)
-        fig.gca().set_yticks(0.02 * np.arange(len(bar_data)))
-        fig.gca().set_yticklabels(bar_labels, fontsize=20)
-        # This bar chart is rotated 90 degrees, so "y" is now x
-        fig.gca().set_xlabel(plot_mapping.get(y, y))
-    else:
-        fig.gca().set_frame_on(False)
-        leg = fig.gca().legend(loc='best')
-        leg.get_frame().set_edgecolor('black')
-    fig.canvas.draw()
-
-
-def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=None):
-    em_plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
-                ('T', 'HM'), ('T', 'HM_FORM')]
-    mix_plots = [('Z', 'HM_FORM'), ('Z', 'HM_MIX'), ('Z', 'SM_MIX')]
-    comps = sorted(comps)
-    mod = Model(dbf, comps, phase_name)
-    # This is for computing properties of formation
-    mod_norefstate = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
-    # Is this an interaction parameter or endmember?
-    if any([isinstance(conf, list) or isinstance(conf, tuple) for conf in configuration]):
-        plots = mix_plots
-    else:
-        plots = em_plots
-    for x_val, y_val in plots:
-        if datasets is not None:
-            if y_val.endswith('_MIX'):
-                desired_props = [y_val.split('_')[0]+'_FORM', y_val]
-            else:
-                desired_props = [y_val]
-            desired_data = _get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
-        else:
-            desired_data = []
-        if len(desired_data) == 0:
-            continue
-        if y_val.endswith('_FORM'):
-            _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod_norefstate, configuration, x_val, y_val)
-        else:
-            _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, configuration, x_val, y_val)
-
-
-def _list_to_tuple(x):
-    def _tuplify(y):
-        if isinstance(y, list) or isinstance(y, tuple):
-            return tuple(_tuplify(i) if isinstance(i, (list, tuple)) else i for i in y)
-        else:
-            return y
-    return tuple(map(_tuplify, x))
-
-
-def _tuple_to_list(x):
-    def _listify(y):
-        if isinstance(y, list) or isinstance(y, tuple):
-            return list(y)
-        else:
-            return y
-    return list(map(_listify, x))
-
-
 def _generate_symmetric_group(configuration, symmetry):
-    configurations = [_list_to_tuple(configuration)]
+    configurations = [list_to_tuple(configuration)]
     permutation = np.array(symmetry, dtype=np.object)
 
     def permute(x):
@@ -742,7 +322,8 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         dbf.varcounter = 0
     # First fit endmembers
     all_em_count = len(list(itertools.product(*subl_model)))
-    endmembers = sorted(set(canonicalize(i, symmetry) for i in itertools.product(*subl_model)))
+    endmembers = sorted(set(
+        canonicalize(i, symmetry) for i in itertools.product(*subl_model)))
     # Number of significant figures in parameters
     numdigits = 6
     em_dict = {}
@@ -828,7 +409,8 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         interacting_sublattices = sum((isinstance(n, (list, tuple)) and len(n) == 2) for n in x)
         return canonical_sort_key((interacting_sublattices,) + x)
 
-    bin_interactions = sorted(set(canonicalize(i, symmetry) for i in transformed_bin_interactions),
+    bin_interactions = sorted(set(
+        canonicalize(i, symmetry) for i in transformed_bin_interactions),
                               key=bin_int_sort_key)
     print('{0} distinct binary interactions'.format(len(bin_interactions)))
     for interaction in bin_interactions:
@@ -875,72 +457,6 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
 
     if hasattr(dbf, 'varcounter'):
         del dbf.varcounter
-
-
-def multi_plot(dbf, comps, phases, datasets, ax=None):
-    import matplotlib.pyplot as plt
-    plots = [('ZPF', 'T')]
-    real_components = sorted(set(comps) - {'VA'})
-    legend_handles, phase_color_map = phase_legend(phases)
-    for output, indep_var in plots:
-        desired_data = datasets.search((tinydb.where('output') == output) &
-                                       (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
-                                       (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
-        ax = ax if ax is not None else plt.gca()
-        # TODO: There are lot of ways this could break in multi-component situations
-        chosen_comp = real_components[-1]
-        ax.set_xlabel('X({})'.format(chosen_comp))
-        ax.set_ylabel(indep_var)
-        ax.set_xlim((0, 1))
-        symbol_map = {1: "o", 2: "s", 3: "^"}
-        for data in desired_data:
-            payload = data['values']
-            # TODO: Add broadcast_conditions support
-            # Repeat the temperature (or whatever variable) vector to align with the unraveled data
-            temp_repeats = np.zeros(len(np.atleast_1d(data['conditions'][indep_var])), dtype=np.int)
-            for idx, x in enumerate(payload):
-                temp_repeats[idx] = len(x)
-            temps_ravelled = np.repeat(data['conditions'][indep_var], temp_repeats)
-            payload_ravelled = []
-            phases_ravelled = []
-            comps_ravelled = []
-            symbols_ravelled = []
-            # TODO: Fix to only include equilibria listed in 'phases'
-            for p in payload:
-                symbols_ravelled.extend([symbol_map[len(p)]] * len(p))
-                payload_ravelled.extend(p)
-            for rp in payload_ravelled:
-                phases_ravelled.append(rp[0])
-                comp_dict = dict(zip([x.upper() for x in rp[1]], rp[2]))
-                dependent_comp = list(set(real_components) - set(comp_dict.keys()))
-                if len(dependent_comp) > 1:
-                    raise ValueError('Dependent components greater than one')
-                elif len(dependent_comp) == 1:
-                    dependent_comp = dependent_comp[0]
-                    # TODO: Assuming N=1
-                    comp_dict[dependent_comp] = 1 - sum(np.array(list(comp_dict.values()), dtype=np.float))
-                chosen_comp_value = comp_dict[chosen_comp]
-                comps_ravelled.append(chosen_comp_value)
-            symbols_ravelled = np.array(symbols_ravelled)
-            comps_ravelled = np.array(comps_ravelled)
-            temps_ravelled = np.array(temps_ravelled)
-            phases_ravelled = np.array(phases_ravelled)
-            # We can't pass an array of markers to scatter, sadly
-            for sym in symbols_ravelled:
-                selected = symbols_ravelled == sym
-                ax.scatter(comps_ravelled[selected], temps_ravelled[selected], marker=sym, s=100,
-                           c='none', edgecolors=[phase_color_map[x] for x in phases_ravelled[selected]])
-        ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
-
-
-def _sublattice_model_to_variables(phase_name, subl_model):
-    """
-    Convert a sublattice model to a list of variables.
-    """
-    result = []
-    for idx, subl in enumerate(subl_model):
-        result.extend([v.SiteFraction(phase_name, idx, s) for s in sorted(subl, key=str)])
-    return result
 
 
 def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters):
@@ -1085,8 +601,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
     return error
 
 
-def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
-                    parameters=None, scheduler=None):
+def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None, scheduler=None):
     scheduler = scheduler or dask.local
     # TODO: support distributed schedulers for mutli_phase_fit.
     # support mostly has to do with being able to either
@@ -1157,121 +672,6 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models,
     return errors
 
 
-def _multiphase_error(dbf, data, datasets, **kwargs):
-    comps = sorted(data['components'])
-    phases = sorted(data['phases'].keys())
-    errors = multi_phase_fit(dbf, comps, phases, data, datasets, None, **kwargs)
-    errors = []
-    #data_rows = len(errors.all())
-    data_rows = 0
-
-    # Now add all the single-phase data points
-    # We add these to help the optimizer stay in a reasonable range of solutions
-    # Remember to apply the feature transforms for the relevant thermodynamic property
-    dq = OrderedDict()
-    # Use weights to get residuals to the same order of magnitude
-    data_multipliers = {'CPM': 100, 'SM': 100, 'HM': 1}
-    for phase_name in phases:
-        desired_props = ["SM_FORM", "SM_MIX", "HM_FORM", "HM_MIX"]
-        # Subtract out all of these contributions (zero out reference state because these are formation properties)
-        fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER' + c.upper(): 0 for c in comps})
-        fixed_model.models['idmix'] = 0
-        # TODO: What about phase name aliases?
-        desired_data = datasets.search((tinydb.where('output').test(lambda k: k in desired_props)) &
-                                       (tinydb.where('components').test(lambda k: set(k).issubset(comps))) &
-                                       (tinydb.where('solver').test(lambda k: k.get('mode', None) == 'manual')) &
-                                       (tinydb.where('phases') == [phase_name]))
-        # print('DESIRED_DATA', desired_data)
-        if len(desired_data) == 0:
-            continue
-        total_data = 0
-        for idx, dd in enumerate(desired_data):
-            temp_filter = np.nonzero(np.atleast_1d(dd['conditions']['T']) >= 298.15)
-            # Necessary copy because mutation is weird
-            desired_data[idx]['conditions'] = desired_data[idx]['conditions'].copy()
-            desired_data[idx]['conditions']['T'] = np.atleast_1d(dd['conditions']['T'])[temp_filter]
-            # Don't use data['values'] because we rewrote it above; not sure what 'data' references now
-            desired_data[idx]['values'] = np.asarray(desired_data[idx]['values'])[..., temp_filter, :]
-            total_data += len(desired_data[idx]['values'].flat)
-        # print('TOTAL DATA', total_data)
-        all_samples = _get_samples(desired_data)
-        # print('LEN ALL SAMPLES', len(all_samples))
-        # print('ALL SAMPLES', all_samples)
-        assert len(all_samples) == total_data
-        data_quantities = [np.concatenate(_shift_reference_state([ds],
-                                                                 feature_transforms[ds['output']],
-                                                                 fixed_model), axis=-1)
-                           for ds in desired_data]
-        # Flatten list
-        data_quantities = np.asarray(list(itertools.chain(*data_quantities)), dtype=np.object)
-        site_fractions = [_build_sitefractions(phase_name, ds['solver']['sublattice_configurations'],
-                                               ds['solver'].get('sublattice_occupancies',
-                                                                np.ones((len(ds['solver']['sublattice_configurations']),
-                                                                         len(ds['solver']['sublattice_configurations'][
-                                                                                 0])), dtype=np.float)))
-                          for ds in desired_data for _ in np.atleast_1d(ds['conditions']['T'])]
-        # Flatten list
-        site_fractions = list(itertools.chain(*site_fractions))
-        # print('SITE_FRACTIONS', site_fractions)
-        # Add dependent site fractions to dictionary
-        for idx in range(len(site_fractions)):
-            sf = site_fractions[idx]
-            for subl_idx, subl_species in enumerate(dbf.phases[phase_name].constituents):
-                for spec in subl_species:
-                    if v.SiteFraction(phase_name, subl_idx, spec) not in sf.keys():
-                        sfsum = sum([val for key, val in sf.items() if key.sublattice_index == subl_idx])
-                        sfsum = max(sfsum, 1e-16)
-                        site_fractions[idx][v.Y(phase_name, subl_idx, spec)] = 1 - sfsum
-        # Remove existing partial model contributions from the data
-        # print('DATA_QUANTITIES 1', data_quantities)
-        data_quantities = data_quantities - np.repeat([feature_transforms[ds['output']](fixed_model.GM)
-                                                       for ds in desired_data],
-                                                      [len(ds['values'].flat) for ds in desired_data])
-        # print('LEN DATA_QUANTITIES', len(data_quantities))
-        # print('DATA_QUANTITIES 2', data_quantities)
-        assert len(data_quantities) == total_data
-        data_quantities = [sympy.S(i).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
-                           for i, sf, ixx in zip(data_quantities, site_fractions, all_samples)]
-        # print('LEN DATA_QUANTITIES', len(data_quantities))
-        # print('DATA_QUANTITIES 3', data_quantities)
-        data_quantities = np.array(data_quantities, dtype=np.float)
-        # Reweight data based on the output type
-        multiply_array = [np.repeat(data_multipliers[ds['output'].split('_')[0]], len(ds['values'].flat))
-                          for ds in desired_data]
-        multiply_array = list(itertools.chain(*multiply_array))
-        # print('LEN MULTIPLY_ARRAY', len(multiply_array))
-        # print('LEN DATA_QUANTITIES', len(data_quantities))
-        data_quantities *= np.asarray(multiply_array, dtype=np.float)
-        output_types = [np.repeat(ds['output'], len(ds['values'].flat)) for ds in desired_data]
-        output_types = list(itertools.chain(*output_types))
-        dq[phase_name] = (data_quantities, site_fractions, all_samples, output_types)
-    total_singlephase_dq = sum([len(x[0]) for x in dq.values()])
-
-    error_vector = np.zeros((data_rows + total_singlephase_dq,), dtype=np.float)
-    iter_idx = 0
-    for x in dq.values():
-        error_vector[data_rows + iter_idx:data_rows + iter_idx + len(x[0])] = x[0]
-        iter_idx += len(x[0])
-    data_idx = 0
-    #all_records = sorted(errors.all(), key=lambda k: (k['phase_name'], k['id']))
-    all_records = []
-    for record in all_records:
-        error_vector[data_idx] = record['error']
-        data_idx += 1
-
-    return error_vector
-
-
-def tuplify(x):
-    res = []
-    for subl in x:
-        if isinstance(subl, (list, set, tuple)):
-            res.append(tuple(subl))
-        else:
-            res.append((subl,))
-    return tuple(res)
-
-
 def error(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
              symbols_to_fit=None, phase_models=None, scheduler=None, recfile=None):
     """
@@ -1296,6 +696,7 @@ def error(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
     #         [str(-iter_error), str(time.time() - enter_time)] + [str(x) for x in
     #                                                              parameters.values()]) + '\n')
     return np.array(iter_error, dtype=np.float64)
+
 
 def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracefile=None):
     """
@@ -1322,7 +723,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
         dbf.elements = set(data['components'])
         # Write reference state to Database
         refdata = getattr(pycalphad.refdata, data['refdata'])
-        stabledata = getattr(pycalphad.refdata, data['refdata']+'Stable')
+        stabledata = getattr(refdata, data['refdata']+'Stable')
         for key, element in refdata.items():
             if isinstance(element, sympy.Piecewise):
                 newargs = element.args + ((0, True),)
@@ -1414,7 +815,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
     import sys
     # the pool must implement a map function
     sampler = emcee.EnsembleSampler(nwalkers, ndim, error, kwargs=error_context, pool=scheduler)
-    nsteps = 100
+    nsteps = 1000
     progbar_width = 30
     # TODO: add incremental saving of the chain
     for i, result in enumerate(sampler.sample(initial_walker_parameters, iterations=nsteps)):
