@@ -8,10 +8,11 @@ import os
 import sys
 import fnmatch
 import argparse
+import dask
 import logging
 import multiprocessing
-from espei.paramselect import fit, load_datasets
-from distributed import Client, LocalCluster
+from espei.paramselect import fit, load_datasets, ImmediateClient
+from distributed import LocalCluster
 from pycalphad import Database
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -65,8 +66,9 @@ def recursive_glob(start, pattern):
 def main():
     args = parser.parse_args(sys.argv[1:])
     if not args.dask_scheduler:
+        pass
         args.dask_scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, processes=True)
-    client = Client(args.dask_scheduler)
+    client = ImmediateClient(args.dask_scheduler)
     logging.info(
         "Running with dask scheduler: %s [%s cores]" % (
             args.dask_scheduler,
@@ -78,11 +80,9 @@ def main():
         resume = Database(args.input_tdb)
     else:
         resume = None
-    try:
-        dbf, mdl, model_dof = fit(args.fit_settings, datasets, scheduler=client, recfile=recfile, tracefile=tracefile, resume=resume)
-    finally:
-        if recfile:
-            recfile.close()
+    
+    dbf, sampler, parameters = fit(args.fit_settings, datasets, scheduler=client, recfile=recfile, tracefile=tracefile, resume=resume)
+
     dbf.to_file(args.output_tdb, if_exists='overwrite')
 
 if __name__ == '__main__':
