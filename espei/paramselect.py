@@ -1,18 +1,16 @@
 """
 The paramselect module handles automated parameter selection for linear models.
 
-
 Automated Parameter Selection
 End-members
 
 Note: All magnetic parameters from literature for now.
 Note: No fitting below 298 K (so neglect third law issues for now).
-Note: Should use calculate(..., mode='numpy') for this step for performance reasons.
 
 For each step, add one parameter at a time and compute AIC with max likelihood.
 
 Cp - TlnT, T**2, T**-1, T**3 - 4 candidate models
-(S and H only have one required parameter each -- will fit in full MCMC procedure)
+(S and H only have one required parameter each. Will fit in full MCMC procedure)
 
 Choose parameter set with best AIC score.
 
@@ -44,14 +42,13 @@ Looks straightforward: see Tikhonov regularization on Wikipedia
 I think we're okay on parameter correlations if we build the matrix correctly
 
 If we do pinv method like ZKL suggested, it's like doing Bayesian regression
-with uninformative priors. With bias of AIC toward complex models, I think doing regularization
-with ridge regression is advisible.
+with uninformative priors. With bias of AIC toward complex models, I think doing
+regularization with ridge regression is advisible.
 """
 import itertools
 import json
 import textwrap
 import time
-from datetime import datetime
 
 import dask
 import numpy as np
@@ -84,20 +81,14 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
     """
     Solve Ax = b, where 'feature_matrix' is A and 'data_quantities' is b.
 
-    Parameters
-    ==========
-    feature_matrix : ndarray (M*N)
-        Regressor matrix
-    data_quantities : ndarray (M,)
-        Response vector
-    feature_tuple : tuple
-        Polynomial coefficient corresponding to each column of 'feature_matrix'
+    Args:
+        feature_matrix (ndarray): (M*N) regressor matrix.
+        data_quantities (ndarray): (M,) response vector
+        feature_tuple ((float)): Polynomial coefficient corresponding to each column of 'feature_matrix'
 
-    Returns
-    =======
-    parameters : OrderedDict
-       Maps 'feature_tuple' to fitted parameter value.
-       If a coefficient is not used, it maps to zero.
+    Returns:
+        OrderedDict: {featured_tuple: fitted_parameter}. Maps 'feature_tuple'
+        to fitted parameter value. If a coefficient is not used, it maps to zero.
     """
     # Now generate candidate models; add parameters one at a time
     model_scores = []
@@ -115,9 +106,6 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
         model_scores.append(score)
         results[num_params - 1, :num_params] = clf.coef_
         print(feature_tuple[:num_params], 'rss:', rss, 'AIC:', score)
-    #cov = EmpiricalCovariance(store_precision=False, assume_centered=False)
-    #cov.fit(feature_matrix[:, :np.argmin(model_scores)+1], data_quantities)
-    #print(cov.covariance_)
     return OrderedDict(zip(feature_tuple, results[np.argmin(model_scores), :]))
 
 
@@ -132,7 +120,9 @@ def _build_feature_matrix(prop, features, desired_data):
 
 
 def _shift_reference_state(desired_data, feature_transform, fixed_model):
-    "Shift data to a new common reference state."
+    """
+    Shift data to a new common reference state.
+    """
     total_response = []
     for dataset in desired_data:
         values = np.asarray(dataset['values'], dtype=np.object)
@@ -160,28 +150,19 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     overfitting. The "best" set of parameters minimizes the error
     without overfitting.
 
-    Parameters
-    ==========
-    dbf : Database
-        Partially complete, so we know what degrees of freedom to fix.
-    comps : list of str
-        Names of the relevant components.
-    phase_name : str
-        Name of the desired phase for which the parameters will be found.
-    configuration : ndarray
-        Configuration of the sublattices for the fitting procedure.
-    symmetry : set of set of int or None
-        Symmetry of the sublattice configuration.
-    datasets : tinydb of Dataset
-        All the datasets desired to fit to.
-    features : dict (optional)
-        Maps "property" to a list of features for the linear model.
-        These will be transformed from "GM" coefficients
-        e.g., {"CPM_FORM": (v.T*sympy.log(v.T), v.T**2, v.T**-1, v.T**3)}
+    Args:
+        dbf (Database): pycalphad Database. Partially complete, so we know what degrees of freedom to fix.
+        comps ([str]): Names of the relevant components.
+        phase_name (str): Name of the desired phase for which the parameters will be found.
+        configuration (ndarray): Configuration of the sublattices for the fitting procedure.
+        symmetry ([[int]]): Symmetry of the sublattice configuration.
+        datasets (PickleableTinyDB): All the datasets desired to fit to.
+        features (dict): Maps "property" to a list of features for the linear model.
+            These will be transformed from "GM" coefficients
+            e.g., {"CPM_FORM": (v.T*sympy.log(v.T), v.T**2, v.T**-1, v.T**3)}
 
-    Returns
-    =======
-    dict of feature: estimated value
+    Returns:
+        dict: {feature: estimated_value}
     """
     if features is None:
         features = [("CPM_FORM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3)),
@@ -261,7 +242,6 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
             fixed_portion = np.array(features[desired_props[0]], dtype=np.object)
             fixed_portion = np.dot(fixed_portion, [parameters[feature] for feature in features[desired_props[0]]])
             fixed_portions.append(fixed_portion)
-
     return parameters
 
 
@@ -296,27 +276,22 @@ def _generate_symmetric_group(configuration, symmetry):
 
 def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=None):
     """
-    Generate an initial CALPHAD model for a given phase and
-    sublattice model.
+    Generate an initial CALPHAD model for a given phase and sublattice model.
 
-    Parameters
-    ==========
-    dbf : Database
-        Database to add parameters to.
-    phase_name : str
-        Name of the phase.
-    symmetry : set of set of int or None
-        Sublattice model symmetry.
-    subl_model : list of tuple
-        Sublattice model for the phase of interest.
-    site_ratios : list of float
-        Number of sites in each sublattice, normalized to one atom.
-    datasets : tinydb of datasets
-        All datasets to consider for the calculation.
-    refdata : dict
-        Maps tuple(element, phase_name) -> SymPy object defining energy relative to SER
-    aliases : list or None
-        Alternative phase names. Useful for matching against reference data or other datasets.
+    Args:
+        dbf (Database): pycalphad Database to add parameters to.
+        phase_name (str): Name of the phase.
+        symmetry ([[int]]): Sublattice model symmetry.
+        subl_model ([[str]]): Sublattice model for the phase of interest.
+        site_ratios ([float]): Number of sites in each sublattice, normalized to one atom.
+        datasets (PickleableTinyDB): All datasets to consider for the calculation.
+        refdata (dict): Maps tuple(element, phase_name) -> SymPy object defining
+            energy relative to SER
+        aliases ([str]): Alternative phase names. Useful for matching against
+            reference data or other datasets.
+
+    Returns:
+        None: modifies the dbf.
     """
     if not hasattr(dbf, 'varcounter'):
         dbf.varcounter = 0
@@ -453,8 +428,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
             if degree_polys[degree] != 0:
                 for syminter in symmetric_interactions:
                     dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
-    # Now fit ternary interactions
-
+    # TODO: fit ternary interactions
     if hasattr(dbf, 'varcounter'):
         del dbf.varcounter
 
@@ -468,8 +442,6 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
             if val is None:
                 cond_dict[key] = np.nan
         cond_dict.update(current_statevars)
-        # print('COND_DICT (MULTI)', cond_dict)
-        # print('PHASE FLAG', phase_flag)
         if np.any(np.isnan(list(cond_dict.values()))):
             # This composition is unknown -- it doesn't contribute to hyperplane estimation
             pass
@@ -478,27 +450,6 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
             # Note that we consider all phases in the system, not just ones in this tie region
             multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, verbose=False,
                                        model=phase_models, scheduler=dask.local.get_sync, parameters=parameters)
-            if np.all(np.isnan(multi_eqdata.NP.values)):
-                error_time = time.time()
-                template_error = """
-                from pycalphad import Database, equilibrium
-                from pycalphad.variables import T, P, X
-                import dask
-                dbf_string = \"\"\"
-                {0}
-                \"\"\"
-                dbf = Database(dbf_string)
-                comps = {1}
-                phases = {2}
-                cond_dict = {3}
-                parameters = {4}
-                equilibrium(dbf, comps, phases, cond_dict, scheduler=dask.local.get_sync, parameters=parameters)
-                """
-                template_error = textwrap.dedent(template_error)
-                #print('Dumping', 'error-'+str(error_time)+'.py')
-                #with open('error-'+str(error_time)+'.py', 'w') as f:
-                #    f.write(template_error.format(dbf.to_string(fmt='tdb'), comps, phases, cond_dict, {key: float(x) for key, x in parameters.items()}))
-            # print('MULTI_EQDATA', multi_eqdata)
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
             num_phases = len(np.squeeze(multi_eqdata['Phase'].values != ''))
@@ -507,24 +458,19 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
                 region_chemical_potentials.append(np.full_like(np.squeeze(multi_eqdata['MU'].values), np.nan))
             else:
                 region_chemical_potentials.append(np.squeeze(multi_eqdata['MU'].values))
-    # print('REGION_CHEMICAL_POTENTIALS', region_chemical_potentials)
     region_chemical_potentials = np.nanmean(region_chemical_potentials, axis=0, dtype=np.float)
     return region_chemical_potentials
 
 
 def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
                   phase_models, parameters):
-    # print('COND_DICT ({})'.format(current_phase), cond_dict)
-    # print('PHASE FLAG', phase_flag)
     if np.any(np.isnan(list(cond_dict.values()))):
         # We don't actually know the phase composition here, so we estimate it
         single_eqdata = calculate(dbf, comps, [current_phase],
                                   T=cond_dict[v.T], P=cond_dict[v.P],
                                   model=phase_models, parameters=parameters, pdens=10)
-        # print('SINGLE_EQDATA (UNKNOWN COMP)', single_eqdata)
         driving_force = np.multiply(region_chemical_potentials,
                                     single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
-        desired_sitefracs = single_eqdata['Y'].values[..., np.argmax(driving_force), :]
         error = float(driving_force.max())
     elif phase_flag == 'disordered':
         # Construct disordered sublattice configuration from composition dict
@@ -536,7 +482,6 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
         dof_idx = 0
         for c in dbf.phases[current_phase].constituents:
             dof = sorted(set(c).intersection(comps))
-            # print('DOF', dof)
             if (len(dof) == 1) and (dof[0] == 'VA'):
                 return 0
             # If it's disordered config of BCC_B2 with VA, disordered config is tiny vacancy count
@@ -546,7 +491,6 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
             sitefracs_to_add[np.isnan(sitefracs_to_add)] = 1 - np.nansum(sitefracs_to_add)
             desired_sitefracs[dof_idx:dof_idx + len(dof)] = sitefracs_to_add
             dof_idx += len(dof)
-        # print('DISORDERED SITEFRACS', desired_sitefracs)
         single_eqdata = calculate(dbf, comps, [current_phase],
                                   T=cond_dict[v.T], P=cond_dict[v.P], points=desired_sitefracs,
                                   model=phase_models, parameters=parameters)
@@ -578,24 +522,16 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
             print('Dumping', 'error-'+str(error_time)+'.py')
             with open('error-'+str(error_time)+'.py', 'w') as f:
                 f.write(template_error.format(dbf.to_string(fmt='tdb'), comps, [current_phase], cond_dict, {key: float(x) for key, x in parameters.items()}))
-        # print('SINGLE_EQDATA', single_eqdata)
         # Sometimes we can get a miscibility gap in our "single-phase" calculation
         # Choose the weighted mixture of site fractions
-        # print('Y FRACTIONS', single_eqdata['Y'].values)
         if np.all(np.isnan(single_eqdata['NP'].values)):
             print('Dropping condition due to calculation failure: ', cond_dict)
             return 0
-        phases_idx = np.nonzero(~np.isnan(np.squeeze(single_eqdata['NP'].values)))
-        cur_vertex = np.nanargmax(np.squeeze(single_eqdata['NP'].values))
-        # desired_sitefracs = np.multiply(single_eqdata['NP'].values[..., phases_idx, np.newaxis],
-        #                                single_eqdata['Y'].values[..., phases_idx, :]).sum(axis=-2)
-        desired_sitefracs = single_eqdata['Y'].values[..., cur_vertex, :]
         select_energy = float(single_eqdata['GM'].values)
         region_comps = []
         for comp in [c for c in sorted(comps) if c != 'VA']:
             region_comps.append(cond_dict.get(v.X(comp), np.nan))
         region_comps[region_comps.index(np.nan)] = 1 - np.nansum(region_comps)
-        # print('REGION_COMPS', region_comps)
         error = np.multiply(region_chemical_potentials, region_comps).sum() - select_energy
         error = float(error)
     return error
@@ -612,8 +548,6 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
-    phase_errors = PickleableTinyDB(storage=tinydb.storages.MemoryStorage)
-    error_id = 0
 
     def safe_get(itms, idxx):
         try:
@@ -626,8 +560,6 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
         payload = data['values']
         conditions = data['conditions']
         data_comps = list(set(data['components']).union({'VA'}))
-        broadcast = data.get('broadcast_conditions', False)
-        #print(conditions)
         phase_regions = defaultdict(lambda: list())
         # TODO: Fix to only include equilibria listed in 'phases'
         for idx, p in enumerate(payload):
@@ -636,7 +568,6 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
                 # Skip single-phase regions for fitting purposes
                 continue
             # Need to sort 'p' here so we have the sorted ordering used in 'phase_key'
-            #print('SORTED P', sorted(p, key=operator.itemgetter(0)))
             # rp[3] optionally contains additional flags, e.g., "disordered", to help the solver
             comp_dicts = [(dict(zip([v.X(x.upper()) for x in rp[1]], rp[2])), safe_get(rp, 3))
                           for rp in sorted(p, key=operator.itemgetter(0))]
@@ -647,9 +578,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
                     value = value[idx]
                 cur_conds[getattr(v, key)] = float(value)
             phase_regions[phase_key].append((cur_conds, comp_dicts))
-        #print('PHASE_REGIONS', phase_regions)
         for region, region_eq in phase_regions.items():
-            #print('REGION', region)
             for req in region_eq:
                 # We are now considering a particular tie region
                 current_statevars, comp_dicts = req
@@ -658,7 +587,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
                                                       phase_models, parameters)
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
                 for current_phase, cond_dict in zip(region, comp_dicts):
-                    # XXX: Messy unpacking
+                    # TODO: Messy unpacking
                     cond_dict, phase_flag = cond_dict
                     # We are now considering a particular tie vertex
                     for key, val in cond_dict.items():
@@ -672,14 +601,12 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
     return errors
 
 
-def error(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
-             symbols_to_fit=None, phase_models=None, scheduler=None, recfile=None):
+def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
+           symbols_to_fit=None, phase_models=None, scheduler=None, recfile=None):
     """
     Returns the error from multiphase fitting as a log probability.
     """
     parameters = {param_name: param for param_name, param in zip(symbols_to_fit, params)}
-    import time
-    enter_time = time.time()
     try:
         iter_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                                      parameters=parameters, scheduler=scheduler)
@@ -697,25 +624,28 @@ def error(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
     #                                                              parameters.values()]) + '\n')
     return np.array(iter_error, dtype=np.float64)
 
-
+# TODO: implement a way to save the chain and database on cancellation
+# TODO: return the optimized parameters as a dict instead of a numpy array
 def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracefile=None):
     """
     Fit thermodynamic and phase equilibria data to a model.
 
-    Parameters
-    ==========
-    input_fname : str
-        Filename for input JSON configuration file.
-    datasets : PickleableTinyDB
-    resume : Database, optional
-        If specified, start multi-phase fitting using this Database.
-        Useful for resuming calculations from Databases generated by 'saveall'.
+    Args:
+        input_fname (str): name of the input file containing the sublattice models.
+        datasets (PickleableTinyDB): database of single- and multi-phase to fit.
+        resume (Database): pycalphad Database of a file to start from. Using this
+            parameters causes single phase fitting to be skipped (multi-phase only).
+        scheduler (callable): Scheduler to use with emcee. Must implement a map method.
+        recfile (file): file-like implementing a write method. Will be used to
+            write proposal parameters.
+        tracefile (str): Filename to store the flattened chain with NumPy.savetxt
 
-    Returns
-    =======
-    dbf : Database
+    Returns:
+        (Database, EnsembleSampler, ndarray):
+            Resulting pycalphad database of optimized parameters
+            emcee sampler for further data wrangling
+            NumPy array of optimized parameters
     """
-    start_time = datetime.utcnow()
     # TODO: Validate input JSON
     data = json.load(open(input_fname))
     if resume is None:
@@ -746,7 +676,6 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
             dbf.add_phase(phase_name, {}, site_ratios)
             dbf.add_phase_constituents(phase_name, subl_model)
             dbf.add_structure_entry(phase_name, phase_name)
-            # phase_fit() adds parameters to dbf
             phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=aliases)
     else:
         print('STARTING FROM USER-SPECIFIED DATABASE')
@@ -791,8 +720,6 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
     print('Building finished', flush=True)
     dbf = dask.delayed(dbf, pure=True)
     phase_models = dask.delayed(phase_models, pure=True)
-    #dbf, phase_models = \
-    #    scheduler.persist([dbf, phase_models], broadcast=True)
 
     # contect for the log probability function
     error_context = {'data': data, 'comps': comps, 'dbf': dbf, 'phases': sorted(data['phases'].keys()),
@@ -814,16 +741,19 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
     import emcee
     import sys
     # the pool must implement a map function
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, error, kwargs=error_context, pool=scheduler)
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_context, pool=scheduler)
     nsteps = 1000
     progbar_width = 30
     # TODO: add incremental saving of the chain
-    for i, result in enumerate(sampler.sample(initial_walker_parameters, iterations=nsteps)):
-        # progress bar
-        n = int((progbar_width + 1) * float(i) / nsteps)
-        sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i+1, nsteps))
-    n = int((progbar_width + 1) * float(i+1) / nsteps)
-    sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, nsteps))
+    try:
+        for i, result in enumerate(sampler.sample(initial_walker_parameters, iterations=nsteps)):
+            # progress bar
+            n = int((progbar_width + 1) * float(i) / nsteps)
+            sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i+1, nsteps))
+        n = int((progbar_width + 1) * float(i+1) / nsteps)
+        sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, nsteps))
+    except:
+        pass
 
     if recfile:
         recfile.close()
