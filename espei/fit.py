@@ -5,15 +5,16 @@ A minimal run must specify an input.json and a datasets folder containing input 
 """
 
 import os
-import sys
-import fnmatch
 import argparse
-import dask
 import logging
 import multiprocessing
-from espei.paramselect import fit, load_datasets, ImmediateClient
+import sys
+
 from distributed import LocalCluster
 from pycalphad import Database
+
+from espei.paramselect import fit
+from espei.utils import ImmediateClient, load_datasets, recursive_glob
 
 parser = argparse.ArgumentParser(description=__doc__)
 
@@ -56,12 +57,6 @@ parser.add_argument(
     default="out.tdb",
     help="Output TDB file")
 
-def recursive_glob(start, pattern):
-    matches = []
-    for root, dirnames, filenames in os.walk(start):
-        for filename in fnmatch.filter(filenames, pattern):
-            matches.append(os.path.join(root, filename))
-    return sorted(matches)
 
 def main():
     args = parser.parse_args(sys.argv[1:])
@@ -69,10 +64,7 @@ def main():
         pass
         args.dask_scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, processes=True)
     client = ImmediateClient(args.dask_scheduler)
-    logging.info(
-        "Running with dask scheduler: %s [%s cores]" % (
-            args.dask_scheduler,
-            sum(client.ncores().values())))
+    logging.info("Running with dask scheduler: %s [%s cores]" % (args.dask_scheduler, sum(client.ncores().values())))
     datasets = load_datasets(sorted(recursive_glob(args.datasets, '*.json')))
     recfile = open(args.iter_record, 'a') if args.iter_record else None
     tracefile = args.tracefile if args.tracefile else None
@@ -87,6 +79,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
