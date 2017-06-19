@@ -13,7 +13,7 @@ import sys
 from distributed import LocalCluster
 from pycalphad import Database
 
-from espei.paramselect import fit
+from espei import fit
 from espei.utils import ImmediateClient, load_datasets, recursive_glob
 
 parser = argparse.ArgumentParser(description=__doc__)
