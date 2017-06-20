@@ -653,7 +653,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
         dbf.elements = set(data['components'])
         # Write reference state to Database
         refdata = getattr(pycalphad.refdata, data['refdata'])
-        stabledata = getattr(refdata, data['refdata']+'Stable')
+        stabledata = getattr(pycalphad.refdata, data['refdata']+'Stable')
         for key, element in refdata.items():
             if isinstance(element, sympy.Piecewise):
                 newargs = element.args + ((0, True),)
