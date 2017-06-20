@@ -19,6 +19,9 @@ class PickleableTinyDB(TinyDB):
     A pickleable version of TinyDB that uses MemoryStorage as a default.
     """
     def __getstate__(self):
+        # first remove the query cache. The cache speed is not important to us.
+        for table_name in self.tables():
+            self.table(table_name)._query_cache = {}
         pickle_dict = {}
         for key, value in self.__dict__.items():
             if key == '_table':
