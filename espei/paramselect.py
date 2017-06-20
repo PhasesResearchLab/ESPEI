@@ -49,6 +49,7 @@ import itertools
 import json
 import textwrap
 import time
+import logging
 
 import dask
 import numpy as np
@@ -105,7 +106,7 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
         score = 2*num_params + current_matrix.shape[-2] * np.log(rss)
         model_scores.append(score)
         results[num_params - 1, :num_params] = clf.coef_
-        print(feature_tuple[:num_params], 'rss:', rss, 'AIC:', score)
+        logging.debug('{} rss: {}, AIC: {}'.format(feature_tuple[:num_params], rss, score))
     return OrderedDict(zip(feature_tuple, results[np.argmin(model_scores), :]))
 
 
@@ -180,8 +181,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         for feature in features.keys():
             all_features = list(itertools.product(redlich_kister_features, features[feature]))
             features[feature] = [i[0]*i[1] for i in all_features]
-        print('ENDMEMBERS FROM INTERACTION: ' + str(
-            endmembers_from_interaction(configuration)))
+        logging.debug('ENDMEMBERS FROM INTERACTION: {}'.format(endmembers_from_interaction(configuration)))
     else:
         # We are only fitting an endmember; no mixing data needed
         fitting_steps = (["CPM_FORM"], ["SM_FORM"], ["HM_FORM"])
@@ -208,7 +208,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
 
     for desired_props in fitting_steps:
         desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
-        print('{}: datasets found: {}'.format(desired_props, len(desired_data)))
+        logging.debug('{}: datasets found: {}'.format(desired_props, len(desired_data)))
         if len(desired_data) > 0:
             # We assume all properties in the same fitting step have the same features (but different ref states)
             feature_matrix = _build_feature_matrix(desired_props[0], features[desired_props[0]], desired_data)
@@ -304,8 +304,8 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
     em_dict = {}
     aliases = [] if aliases is None else aliases
     aliases = sorted(set(aliases + [phase_name]))
-    print('FITTING: ', phase_name)
-    print('{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
+    logging.info('FITTING: {}'.format(phase_name))
+    logging.info('{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
 
     def _to_tuple(x):
         if isinstance(x, list) or isinstance(x, tuple):
@@ -315,7 +315,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
 
     all_endmembers = []
     for endmember in endmembers:
-        print('ENDMEMBER: '+str(endmember))
+        logging.debug('ENDMEMBER: {}'.format(endmember))
         # Some endmembers are fixed by our choice of standard lattice stabilities, e.g., SGTE91
         # If a (phase, pure component endmember) tuple is fixed, we should use that value instead of fitting
         endmember_comps = list(set(endmember))
@@ -361,7 +361,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 ref = ref + ratio * sympy.Symbol('GHSER'+subl)
             fit_eq += ref
         symmetric_endmembers = _generate_symmetric_group(endmember, symmetry)
-        print('SYMMETRIC_ENDMEMBERS: ', symmetric_endmembers)
+        logging.debug('SYMMETRIC_ENDMEMBERS: {}'.format(symmetric_endmembers))
         all_endmembers.extend(symmetric_endmembers)
         for em in symmetric_endmembers:
             em_dict[em] = fit_eq
@@ -387,7 +387,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
     bin_interactions = sorted(set(
         canonicalize(i, symmetry) for i in transformed_bin_interactions),
                               key=bin_int_sort_key)
-    print('{0} distinct binary interactions'.format(len(bin_interactions)))
+    logging.debug('{0} distinct binary interactions'.format(len(bin_interactions)))
     for interaction in bin_interactions:
         ixx = []
         for i in interaction:
@@ -396,7 +396,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
             else:
                 ixx.append(i)
         ixx = tuple(ixx)
-        print('INTERACTION: '+str(ixx))
+        logging.debug('INTERACTION: {}'.format(ixx))
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(10, dtype=np.object)
@@ -421,7 +421,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                     keys_to_remove.append(key)
             for key in keys_to_remove:
                 parameters.pop(key)
-        print(degree_polys)
+        logging.debug('Polynomial coefs: {}'.format(degree_polys))
         # Insert into database
         symmetric_interactions = _generate_symmetric_group(interaction, symmetry)
         for degree in np.arange(degree_polys.shape[0]):
@@ -463,7 +463,7 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
 
 
 def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
-                  phase_models, parameters):
+                  phase_models, parameters, debug_mode=False):
     if np.any(np.isnan(list(cond_dict.values()))):
         # We don't actually know the phase composition here, so we estimate it
         single_eqdata = calculate(dbf, comps, [current_phase],
@@ -519,13 +519,13 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
             equilibrium(dbf, comps, phases, cond_dict, scheduler=dask.local.get_sync, parameters=parameters)
             """
             template_error = textwrap.dedent(template_error)
-            print('Dumping', 'error-'+str(error_time)+'.py')
-            with open('error-'+str(error_time)+'.py', 'w') as f:
-                f.write(template_error.format(dbf.to_string(fmt='tdb'), comps, [current_phase], cond_dict, {key: float(x) for key, x in parameters.items()}))
+            if debug_mode:
+                logging.warning('Dumping', 'error-'+str(error_time)+'.py')
+                with open('error-'+str(error_time)+'.py', 'w') as f:
+                    f.write(template_error.format(dbf.to_string(fmt='tdb'), comps, [current_phase], cond_dict, {key: float(x) for key, x in parameters.items()}))
         # Sometimes we can get a miscibility gap in our "single-phase" calculation
         # Choose the weighted mixture of site fractions
-        if np.all(np.isnan(single_eqdata['NP'].values)):
-            print('Dropping condition due to calculation failure: ', cond_dict)
+            logging.warning('Dropping condition due to calculation failure: ', cond_dict)
             return 0
         select_energy = float(single_eqdata['GM'].values)
         region_comps = []
@@ -540,9 +540,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
 def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None, scheduler=None):
     scheduler = scheduler or dask.local
     # TODO: support distributed schedulers for mutli_phase_fit.
-    # support mostly has to do with being able to either
-    # 1. pickle dask schedulers in the emcee sampler
-    # 2. handle sampling directly with dask
+    # This can be done if the scheduler passed is a distributed.worker_client
     if scheduler is not dask.local:
         raise ValueError('Schedulers other than dask.local are not currently supported for multiphase fitting.')
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
@@ -611,8 +609,6 @@ def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
         iter_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                                      parameters=parameters, scheduler=scheduler)
     except ValueError as e:
-        print(e)
-        print('value error')
         iter_error = [np.inf]
     iter_error = [np.inf if np.isnan(x) else x ** 2 for x in iter_error]
     iter_error = -np.sum(iter_error)
@@ -678,7 +674,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
             dbf.add_structure_entry(phase_name, phase_name)
             phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=aliases)
     else:
-        print('STARTING FROM USER-SPECIFIED DATABASE')
+        logging.info('STARTING FROM USER-SPECIFIED DATABASE')
         dbf = resume
 
     comps = sorted(data['components'])
@@ -687,10 +683,12 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
 
     if len(symbols_to_fit) == 0:
         raise ValueError('No degrees of freedom. Database must contain symbols starting with \'V\' or \'VV\', followed by a number.')
+    else:
+        logging.info('Fitting {} degrees of freedom.'.format(len(symbols_to_fit)))
 
     for x in symbols_to_fit:
         if isinstance(dbf.symbols[x], sympy.Piecewise):
-            print('Replacing', x)
+            logging.debug('Replacing {} in database'.format(x))
             dbf.symbols[x] = dbf.symbols[x].args[0].expr
 
     # for now we are just going to use the standard sampling method.
@@ -706,18 +704,18 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
     # get guesses for the parameters and remove these from the database
     # we'll replace them with SymPy symbols initialized to 0 in the phase models
     initial_parameters = [np.array(float(dbf.symbols[x])) for x in symbols_to_fit]
-    print(initial_parameters)
+    logging.debug('Initial parameters: {}'.format(initial_parameters))
     for x in symbols_to_fit:
         del dbf.symbols[x]
 
     # construct the models for each phase, substituting in the SymPy symbol to fit.
     phase_models = dict()
-    print('Building functions', flush=True)
+    logging.info('Building phase models')
     # 0 is placeholder value
     for phase_name in sorted(data['phases'].keys()):
         mod = CompiledModel(dbf, comps, phase_name, parameters=OrderedDict([(sympy.Symbol(s), 0) for s in symbols_to_fit]))
         phase_models[phase_name] = mod
-    print('Building finished', flush=True)
+    logging.info('Finished building phase models')
     dbf = dask.delayed(dbf, pure=True)
     phase_models = dask.delayed(phase_models, pure=True)
 
@@ -752,7 +750,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
             sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i+1, nsteps))
         n = int((progbar_width + 1) * float(i+1) / nsteps)
         sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, nsteps))
-    except:
+    except KeyboardInterrupt:
         pass
 
     if recfile:
