@@ -75,7 +75,6 @@ def main():
     logging.basicConfig(level=verbosity[user_verbosity])
     # create the scheduler if not passed
     if not args.dask_scheduler:
-        pass
         args.dask_scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, processes=True)
     client = ImmediateClient(args.dask_scheduler)
     logging.info("Running with dask scheduler: %s [%s cores]" % (args.dask_scheduler, sum(client.ncores().values())))
