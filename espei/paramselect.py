@@ -733,7 +733,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
     # but for testing purposes we'll just generate an initial array randomly
     initial_parameters = np.array(initial_parameters)
     ndim = len(initial_parameters)
-    nwalkers = 14 # walkers must be of size (2n*ndim)
+    nwalkers = 2*ndim # walkers must be of size (2n*ndim)
     random_scaling = np.random.rand(ndim*nwalkers).reshape((nwalkers,ndim))
     initial_walker_parameters = random_scaling*initial_parameters[np.newaxis, :]
 
