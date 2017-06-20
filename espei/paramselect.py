@@ -620,8 +620,7 @@ def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
     #                                                              parameters.values()]) + '\n')
     return np.array(iter_error, dtype=np.float64)
 
-# TODO: implement a way to save the chain and database on cancellation
-# TODO: return the optimized parameters as a dict instead of a numpy array
+# TODO: implement a more robust way to save the chain and database on cancellation
 def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracefile=None):
     """
     Fit thermodynamic and phase equilibria data to a model.
@@ -753,14 +752,19 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
     except KeyboardInterrupt:
         pass
 
+    flatchain = sampler.flatchain
+    if tracefile:
+        logging.debug('Writing chain to {}'.format(tracefile))
+        np.savetxt(tracefile, flatchain)
     if recfile:
         recfile.close()
-
-    if tracefile:
-        np.savetxt(tracefile, sampler.flatchain)
-
-    optimal_parameters = np.mean(sampler.flatchain, axis=0)
+    optimal_parameters = np.mean(flatchain, axis=0)
+    logging.debug('Intial parameters: {}'.format(initial_parameters))
+    logging.debug('Optimal parameters: {}'.format(optimal_parameters))
+    logging.debug('Change in parameters: {}'.format(np.abs(initial_parameters - optimal_parameters) / initial_parameters))
+    parameters_dict = {param_name: value for param_name, value in zip(symbols_to_fit, optimal_parameters)}
+    for param_name, value in parameters_dict.items():
+        dbf.symbols[param_name] = value
     dbf = dbf.compute()
-    for key, variable in zip(symbols_to_fit, optimal_parameters):
-        dbf.symbols[key] = variable
-    return dbf, sampler, optimal_parameters
+
+    return dbf, sampler, parameters_dict
