@@ -612,15 +612,9 @@ def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
         iter_error = [np.inf]
     iter_error = [np.inf if np.isnan(x) else x ** 2 for x in iter_error]
     iter_error = -np.sum(iter_error)
-    # TODO: support writing to a rec file, or at least saving state somehow
-    # if recfile:
-    #     print(time.time() - enter_time, 'exit', iter_error, flush=True)
-    #     recfile.write(','.join(
-    #         [str(-iter_error), str(time.time() - enter_time)] + [str(x) for x in
-    #                                                              parameters.values()]) + '\n')
     return np.array(iter_error, dtype=np.float64)
 
-# TODO: implement a more robust way to save the chain and database on cancellation
+
 def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracefile=None):
     """
     Fit thermodynamic and phase equilibria data to a model.
@@ -690,17 +684,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
             logging.debug('Replacing {} in database'.format(x))
             dbf.symbols[x] = dbf.symbols[x].args[0].expr
 
-    # for now we are just going to use the standard sampling method.
-    # but it looks like we could pass mh_proposal in EnsembleSampler.sample
-    # with a callable given walker positions that returns samples.
-    # Though we might not want to do this because I think we would lose the
-    # benefit of the affine-invariant sampler. It's unclear how the sampling
-    # distrubtions are chosen with this method and how that would affect the
-    # large ranges of scaling in our params. It seems like params are sampled by
-    # ((self.a - 1.) * self._random.rand(Ns) + 1) ** 2. / self.a
-    # where a is a scaling factor (default = 2)
-
-    # get guesses for the parameters and remove these from the database
+    # get initial parameters and remove these from the database
     # we'll replace them with SymPy symbols initialized to 0 in the phase models
     initial_parameters = [np.array(float(dbf.symbols[x])) for x in symbols_to_fit]
     logging.debug('Initial parameters: {}'.format(initial_parameters))
