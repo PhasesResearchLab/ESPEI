@@ -615,7 +615,7 @@ def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
     return np.array(iter_error, dtype=np.float64)
 
 
-def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracefile=None):
+def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracefile=None, save_chain=100):
     """
     Fit thermodynamic and phase equilibria data to a model.
 
@@ -628,6 +628,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
         recfile (file): file-like implementing a write method. Will be used to
             write proposal parameters.
         tracefile (str): Filename to store the flattened chain with NumPy.savetxt
+        save_chain (int): interval of steps to save the chain to the tracefile.
 
     Returns:
         (Database, EnsembleSampler, ndarray):
@@ -708,6 +709,11 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
                      'phase_models': phase_models, 'recfile': recfile}
 
 
+    def save_tracefile(sampler):
+        if tracefile:
+            logging.debug('Writing chain to {}'.format(tracefile))
+            np.savetxt(tracefile, sampler.flatchain)
+
     # set up the MCMC run
     # set up the initial parameters
     # apply a Gaussian random to each parameter with std dev of 0.5*parameter
@@ -728,6 +734,8 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
     try:
         for i, result in enumerate(sampler.sample(walkers, iterations=nsteps)):
             # progress bar
+            if i+1 % save_chain == 0:
+                save_tracefile(sampler)
             n = int((progbar_width + 1) * float(i) / nsteps)
             sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i+1, nsteps))
         n = int((progbar_width + 1) * float(i+1) / nsteps)
@@ -736,9 +744,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
         pass
 
     flatchain = sampler.flatchain
-    if tracefile:
-        logging.debug('Writing chain to {}'.format(tracefile))
-        np.savetxt(tracefile, flatchain)
+    save_tracefile(sampler)
     if recfile:
         recfile.close()
     optimal_parameters = np.mean(flatchain, axis=0)
