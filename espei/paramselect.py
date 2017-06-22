@@ -16,34 +16,8 @@ Choose parameter set with best AIC score.
 
 4. G (full MCMC) - all parameters selected at least once by above procedure
 
-Choice of priors:
-
-(const.): Normal(mean=0, sd=1e6)
-T:        Normal(mean=0, sd=50)
-TlnT:     Normal(mean=0, sd=20)
-T**2:     Normal(mean=0, sd=10)
-T**-1:    Normal(mean=0, sd=1e6)
-T**3:     Normal(mean=0, sd=5)
-
-Should we use the ridge regression method instead of MCMC for selection?
-If we use zero-mean normally-distributed priors, we just construct
-a diagonal weighting matrix like 1/variance, and it's actually
-equivalent. (But much, much faster to calculate.)
-But then how do we compute a model score?
-We compute AIC from 2k - 2ln(L_max), where L_max is max likelihood and k is
-the number of parameters. All we need, then, is our likelihood estimate.
-How do we get that from the regression result?
-1. Use lstsq (or ridge) to get parameter values at max likelihood (min error).
-2. Plug parameter values into likelihood function to get L_max.
-3. Compute AIC.
-4. Choose model with minimum AIC.
-
-Looks straightforward: see Tikhonov regularization on Wikipedia
-I think we're okay on parameter correlations if we build the matrix correctly
-
-If we do pinv method like ZKL suggested, it's like doing Bayesian regression
-with uninformative priors. With bias of AIC toward complex models, I think doing
-regularization with ridge regression is advisible.
+MCMC uses an EnsembleSampler based on Goodman and Weare, Ensemble Samplers with
+Affine Invariance. Commun. Appl. Math. Comput. Sci. 5, 65-80 (2010).
 """
 import itertools
 import json
@@ -615,7 +589,8 @@ def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
     return np.array(iter_error, dtype=np.float64)
 
 
-def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracefile=None, save_chain=100):
+def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None,
+        tracefile=None, nsteps=1000, save_chain=100):
     """
     Fit thermodynamic and phase equilibria data to a model.
 
@@ -627,7 +602,9 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
         scheduler (callable): Scheduler to use with emcee. Must implement a map method.
         recfile (file): file-like implementing a write method. Will be used to
             write proposal parameters.
-        tracefile (str): Filename to store the flattened chain with NumPy.savetxt
+        tracefile (str): filename to store the flattened chain with NumPy.savetxt
+        nsteps (int): number of chain steps to calculate in MCMC. Note the flattened
+            chain will have nsteps*DOF values.
         save_chain (int): interval of steps to save the chain to the tracefile.
 
     Returns:
@@ -716,21 +693,20 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
 
     # set up the MCMC run
     # set up the initial parameters
-    # apply a Gaussian random to each parameter with std dev of 0.5*parameter
+    # apply a Gaussian random to each parameter with std dev of 0.10*parameter
     initial_parameters = np.array(initial_parameters)
     ndim = len(initial_parameters)
     nwalkers = 2*ndim # walkers must be of size (2n*ndim)
     initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
-    walkers = np.random.normal(initial_walkers, np.abs(initial_walkers*0.5))
+    walkers = np.random.normal(initial_walkers, np.abs(initial_walkers*0.10))
 
     # set up with emcee
     import emcee
     import sys
     # the pool must implement a map function
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_context, pool=scheduler)
-    nsteps = 1000
     progbar_width = 30
-    # TODO: add incremental saving of the chain
+    logging.info('Running MCMC with {} steps.'.format(nsteps))
     try:
         for i, result in enumerate(sampler.sample(walkers, iterations=nsteps)):
             # progress bar
