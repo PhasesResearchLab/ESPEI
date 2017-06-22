@@ -710,13 +710,12 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
 
     # set up the MCMC run
     # set up the initial parameters
-    # emcee docs say that we should initialize the walkers in a small gaussian sphere,
-    # but for testing purposes we'll just generate an initial array randomly
+    # apply a Gaussian random to each parameter with std dev of 0.5*parameter
     initial_parameters = np.array(initial_parameters)
     ndim = len(initial_parameters)
     nwalkers = 2*ndim # walkers must be of size (2n*ndim)
-    random_scaling = np.random.rand(ndim*nwalkers).reshape((nwalkers,ndim))
-    initial_walker_parameters = random_scaling*initial_parameters[np.newaxis, :]
+    initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
+    walkers = np.random.normal(initial_walkers, np.abs(initial_walkers*0.5))
 
     # set up with emcee
     import emcee
@@ -727,7 +726,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None, tracef
     progbar_width = 30
     # TODO: add incremental saving of the chain
     try:
-        for i, result in enumerate(sampler.sample(initial_walker_parameters, iterations=nsteps)):
+        for i, result in enumerate(sampler.sample(walkers, iterations=nsteps)):
             # progress bar
             n = int((progbar_width + 1) * float(i) / nsteps)
             sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i+1, nsteps))
