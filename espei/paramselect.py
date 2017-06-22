@@ -39,6 +39,7 @@ from pycalphad import calculate, equilibrium, Database, Model, CompiledModel, \
     variables as v
 from sklearn.linear_model import LinearRegression
 from numpy.linalg import LinAlgError
+from emcee.utils import MPIPool
 
 from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort_key, \
     list_to_tuple, endmembers_from_interaction, build_sitefractions
@@ -750,8 +751,9 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         nwalkers = 2*ndim # walkers must be of size (2n*ndim)
         initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
         walkers = rng.normal(initial_walkers, np.abs(initial_walkers*0.10))
-
         # set up with emcee
+        import emcee
+        import sys
         # the pool must implement a map function
         sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_context, pool=scheduler)
         progbar_width = 30
@@ -759,7 +761,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         try:
             for i, result in enumerate(sampler.sample(walkers, iterations=mcmc_steps)):
                 # progress bar
-                if (i+1) % save_interval == 0:
+                if i+1 % save_interval == 0:
                     save_sampler_state(sampler)
                     logging.debug('Acceptance ratios for parameters: {}'.format(sampler.acceptance_fraction))
                 n = int((progbar_width + 1) * float(i) / mcmc_steps)
@@ -768,7 +770,10 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
             sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, mcmc_steps))
         except KeyboardInterrupt:
             pass
-
+        # close the pool if it is an MPIPool.
+        if isinstance(scheduler, MPIPool):
+            scheduler.close()
+        # final processing
         flatchain = sampler.flatchain
         save_sampler_state(sampler)
         optimal_parameters = flatchain[np.nanargmin(-sampler.flatlnprobability)]

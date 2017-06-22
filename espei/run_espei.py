@@ -10,7 +10,6 @@ import logging
 import multiprocessing
 import sys
 
-from distributed import LocalCluster
 from pycalphad import Database
 
 from espei import fit
@@ -27,9 +26,9 @@ parser.add_argument(
     )
 
 parser.add_argument(
-    "--dask-scheduler",
+    "--scheduler",
     metavar="HOST:PORT",
-    help="Host and port of dask distributed scheduler")
+    help="Host and port of dask distributed scheduler or 'MPIPool' to use MPI.")
 
 parser.add_argument(
     "--tracefile",
@@ -120,14 +119,27 @@ def main():
 
     # run ESPEI fitting
     # create the scheduler if not passed
-    if not args.dask_scheduler:
-        args.dask_scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, processes=True)
-    client = ImmediateClient(args.dask_scheduler)
-    logging.info("Running with dask scheduler: %s [%s cores]" % (args.dask_scheduler, sum(client.ncores().values())))
-    try:
-        logging.info("bokeh server for dask scheduler at localhost:{}".format(client.scheduler_info()['services']['bokeh']))
-    except KeyError:
-        logging.info("Install bokeh to use the dask bokeh server.")
+    if args.scheduler == 'MPIPool':
+        from emcee.utils import MPIPool
+        # code recommended by emcee: if not master, wait for instructions then exit
+        client = MPIPool()
+        logging.info("Using MPIPool on {} MPI ranks".format(client.rank))
+        if not client.is_master():
+            logging.warning('MPIPool is not master. Waiting for instructions...')
+            client.wait()
+            sys.exit(0)
+        logging.info('Using MPIPool')
+    elif not args.scheduler:
+        from distributed import LocalCluster
+        args.scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, processes=True)
+        client = ImmediateClient(args.scheduler)
+        logging.info("Running with dask scheduler: %s [%s cores]" % (args.scheduler, sum(client.ncores().values())))
+        try:
+            logging.info("bokeh server for dask scheduler at localhost:{}".format(client.scheduler_info()['services']['bokeh']))
+        except KeyError:
+            logging.info("Install bokeh to use the dask bokeh server.")
+    else:
+        raise ValueError('Custom schedulers not supported. Use \'MPIPool\' or accept the default Dask LocalCluster.')
     # load datasets and handle i/o
     datasets = load_datasets(sorted(recursive_glob(args.datasets, '*.json')))
     tracefile = args.tracefile if args.tracefile else None
