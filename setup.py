@@ -19,7 +19,7 @@ setup(
     install_requires=[
         'numpy', 
         'scipy', 
-        'dask>0.15', 
+        'dask>=0.15', 
         'distributed', 
         'tinydb<3', 
         'scikit-learn', 
@@ -38,6 +38,8 @@ setup(
 
         'License :: OSI Approved :: MIT License',
 
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
