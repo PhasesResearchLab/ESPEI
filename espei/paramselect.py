@@ -444,7 +444,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
         # We don't actually know the phase composition here, so we estimate it
         single_eqdata = calculate(dbf, comps, [current_phase],
                                   T=cond_dict[v.T], P=cond_dict[v.P],
-                                  model=phase_models, parameters=parameters, pdens=10)
+                                  model=phase_models, parameters=parameters, pdens=100)
         driving_force = np.multiply(region_chemical_potentials,
                                     single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
         error = float(driving_force.max())
