@@ -74,6 +74,11 @@ parser.add_argument(
     metavar="",
     help="Controls the interval for saving the MCMC chain")
 
+parser.add_argument(
+    "--no-mcmc",
+    action="store_true",
+    help="Turns off MCMC calculation. Useful for first-principles only run.")
+
 def main():
     args = parser.parse_args(sys.argv[1:])
     # handle verbosity
@@ -91,12 +96,13 @@ def main():
     # load datasets and handle i/o
     datasets = load_datasets(sorted(recursive_glob(args.datasets, '*.json')))
     tracefile = args.tracefile if args.tracefile else None
+    run_mcmc = not args.no_mcmc
     if args.input_tdb:
         resume = Database(args.input_tdb)
     else:
         resume = None
     dbf, sampler, parameters = fit(args.fit_settings, datasets, scheduler=client,
-                                   tracefile=tracefile, resume=resume,
+                                   tracefile=tracefile, resume=resume, run_mcmc=run_mcmc,
                                    mcmc_steps=args.mcmc_steps, save_interval=args.save_interval)
     dbf.to_file(args.output_tdb, if_exists='overwrite')
 

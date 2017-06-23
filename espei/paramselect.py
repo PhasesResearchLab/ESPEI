@@ -576,7 +576,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
 
 
 def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
-           symbols_to_fit=None, phase_models=None, scheduler=None, recfile=None):
+           symbols_to_fit=None, phase_models=None, scheduler=None):
     """
     Returns the error from multiphase fitting as a log probability.
     """
@@ -591,7 +591,7 @@ def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
     return np.array(iter_error, dtype=np.float64)
 
 
-def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None,
+def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         tracefile=None, mcmc_steps=1000, save_interval=100):
     """
     Fit thermodynamic and phase equilibria data to a model.
@@ -602,8 +602,8 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None,
         resume (Database): pycalphad Database of a file to start from. Using this
             parameters causes single phase fitting to be skipped (multi-phase only).
         scheduler (callable): Scheduler to use with emcee. Must implement a map method.
-        recfile (file): file-like implementing a write method. Will be used to
-            write proposal parameters.
+        run_mcmc (bool): Controls if MCMC should be run. Default is True. Useful
+            for first-principles (single-phase only) runs.
         tracefile (str): filename to store the flattened chain with NumPy.savetxt
         mcmc_steps (int): number of chain steps to calculate in MCMC. Note the flattened
             chain will have (mcmc_steps*DOF) values.
@@ -650,88 +650,91 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None,
         logging.info('STARTING FROM USER-SPECIFIED DATABASE')
         dbf = resume
 
-    comps = sorted(data['components'])
-    pattern = re.compile("^V[V]?([0-9]+)$")
-    symbols_to_fit = sorted([x for x in sorted(dbf.symbols.keys()) if pattern.match(x)])
+    if run_mcmc:
+        comps = sorted(data['components'])
+        pattern = re.compile("^V[V]?([0-9]+)$")
+        symbols_to_fit = sorted([x for x in sorted(dbf.symbols.keys()) if pattern.match(x)])
 
-    if len(symbols_to_fit) == 0:
-        raise ValueError('No degrees of freedom. Database must contain symbols starting with \'V\' or \'VV\', followed by a number.')
+        if len(symbols_to_fit) == 0:
+            raise ValueError('No degrees of freedom. Database must contain symbols starting with \'V\' or \'VV\', followed by a number.')
+        else:
+            logging.info('Fitting {} degrees of freedom.'.format(len(symbols_to_fit)))
+
+        for x in symbols_to_fit:
+            if isinstance(dbf.symbols[x], sympy.Piecewise):
+                logging.debug('Replacing {} in database'.format(x))
+                dbf.symbols[x] = dbf.symbols[x].args[0].expr
+
+        # get initial parameters and remove these from the database
+        # we'll replace them with SymPy symbols initialized to 0 in the phase models
+        initial_parameters = [np.array(float(dbf.symbols[x])) for x in symbols_to_fit]
+        logging.debug('Initial parameters: {}'.format(initial_parameters))
+        for x in symbols_to_fit:
+            del dbf.symbols[x]
+
+        # construct the models for each phase, substituting in the SymPy symbol to fit.
+        phase_models = dict()
+        logging.info('Building phase models')
+        # 0 is placeholder value
+        for phase_name in sorted(data['phases'].keys()):
+            mod = CompiledModel(dbf, comps, phase_name, parameters=OrderedDict([(sympy.Symbol(s), 0) for s in symbols_to_fit]))
+            phase_models[phase_name] = mod
+        logging.info('Finished building phase models')
+        dbf = dask.delayed(dbf, pure=True)
+        phase_models = dask.delayed(phase_models, pure=True)
+
+        # contect for the log probability function
+        error_context = {'data': data, 'comps': comps, 'dbf': dbf, 'phases': sorted(data['phases'].keys()),
+                         'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
+                         'phase_models': phase_models}
+
+
+        def save_tracefile(sampler):
+            if tracefile:
+                logging.debug('Writing chain to {}'.format(tracefile))
+                np.savetxt(tracefile, sampler.flatchain)
+
+        # initialize the RNG
+        rng = np.random.RandomState(1769)
+        # set up the MCMC run
+        # set up the initial parameters
+        # apply a Gaussian random to each parameter with std dev of 0.10*parameter
+        initial_parameters = np.array(initial_parameters)
+        ndim = len(initial_parameters)
+        nwalkers = 2*ndim # walkers must be of size (2n*ndim)
+        initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
+        walkers = rng.normal(initial_walkers, np.abs(initial_walkers*0.10))
+
+        # set up with emcee
+        # the pool must implement a map function
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_context, pool=scheduler)
+        progbar_width = 30
+        logging.info('Running MCMC with {} steps.'.format(mcmc_steps))
+        try:
+            for i, result in enumerate(sampler.sample(walkers, iterations=mcmc_steps)):
+                # progress bar
+                if i+1 % save_interval == 0:
+                    save_tracefile(sampler)
+                n = int((progbar_width + 1) * float(i) / mcmc_steps)
+                sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i+1, mcmc_steps))
+            n = int((progbar_width + 1) * float(i+1) / mcmc_steps)
+            sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, mcmc_steps))
+        except KeyboardInterrupt:
+            pass
+
+        flatchain = sampler.flatchain
+        save_tracefile(sampler)
+        optimal_parameters = np.mean(flatchain, axis=0)
+        logging.debug('Intial parameters: {}'.format(initial_parameters))
+        logging.debug('Optimal parameters: {}'.format(optimal_parameters))
+        logging.debug('Change in parameters: {}'.format(np.abs(initial_parameters - optimal_parameters) / initial_parameters))
+        parameters_dict = {param_name: value for param_name, value in zip(symbols_to_fit, optimal_parameters)}
+        dbf = dbf.compute()
+        for param_name, value in parameters_dict.items():
+            dbf.symbols[param_name] = value
+
+        return dbf, sampler, parameters_dict
+
     else:
-        logging.info('Fitting {} degrees of freedom.'.format(len(symbols_to_fit)))
-
-    for x in symbols_to_fit:
-        if isinstance(dbf.symbols[x], sympy.Piecewise):
-            logging.debug('Replacing {} in database'.format(x))
-            dbf.symbols[x] = dbf.symbols[x].args[0].expr
-
-    # get initial parameters and remove these from the database
-    # we'll replace them with SymPy symbols initialized to 0 in the phase models
-    initial_parameters = [np.array(float(dbf.symbols[x])) for x in symbols_to_fit]
-    logging.debug('Initial parameters: {}'.format(initial_parameters))
-    for x in symbols_to_fit:
-        del dbf.symbols[x]
-
-    # construct the models for each phase, substituting in the SymPy symbol to fit.
-    phase_models = dict()
-    logging.info('Building phase models')
-    # 0 is placeholder value
-    for phase_name in sorted(data['phases'].keys()):
-        mod = CompiledModel(dbf, comps, phase_name, parameters=OrderedDict([(sympy.Symbol(s), 0) for s in symbols_to_fit]))
-        phase_models[phase_name] = mod
-    logging.info('Finished building phase models')
-    dbf = dask.delayed(dbf, pure=True)
-    phase_models = dask.delayed(phase_models, pure=True)
-
-    # contect for the log probability function
-    error_context = {'data': data, 'comps': comps, 'dbf': dbf, 'phases': sorted(data['phases'].keys()),
-                     'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
-                     'phase_models': phase_models, 'recfile': recfile}
-
-
-    def save_tracefile(sampler):
-        if tracefile:
-            logging.debug('Writing chain to {}'.format(tracefile))
-            np.savetxt(tracefile, sampler.flatchain)
-
-    # initialize the RNG
-    rng = np.random.RandomState(1769)
-    # set up the MCMC run
-    # set up the initial parameters
-    # apply a Gaussian random to each parameter with std dev of 0.10*parameter
-    initial_parameters = np.array(initial_parameters)
-    ndim = len(initial_parameters)
-    nwalkers = 2*ndim # walkers must be of size (2n*ndim)
-    initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
-    walkers = rng.normal(initial_walkers, np.abs(initial_walkers*0.10))
-
-    # set up with emcee
-    # the pool must implement a map function
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_context, pool=scheduler)
-    progbar_width = 30
-    logging.info('Running MCMC with {} steps.'.format(mcmc_steps))
-    try:
-        for i, result in enumerate(sampler.sample(walkers, iterations=mcmc_steps)):
-            # progress bar
-            if i+1 % save_interval == 0:
-                save_tracefile(sampler)
-            n = int((progbar_width + 1) * float(i) / mcmc_steps)
-            sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i+1, mcmc_steps))
-        n = int((progbar_width + 1) * float(i+1) / mcmc_steps)
-        sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, mcmc_steps))
-    except KeyboardInterrupt:
-        pass
-
-    flatchain = sampler.flatchain
-    save_tracefile(sampler)
-    if recfile:
-        recfile.close()
-    optimal_parameters = np.mean(flatchain, axis=0)
-    logging.debug('Intial parameters: {}'.format(initial_parameters))
-    logging.debug('Optimal parameters: {}'.format(optimal_parameters))
-    logging.debug('Change in parameters: {}'.format(np.abs(initial_parameters - optimal_parameters) / initial_parameters))
-    parameters_dict = {param_name: value for param_name, value in zip(symbols_to_fit, optimal_parameters)}
-    dbf = dbf.compute()
-    for param_name, value in parameters_dict.items():
-        dbf.symbols[param_name] = value
-
-    return dbf, sampler, parameters_dict
+        logging.info('Not running MCMC. Returning the single-phase fit database.')
+        return dbf, None, None
