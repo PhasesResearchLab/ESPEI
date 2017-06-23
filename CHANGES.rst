@@ -2,6 +2,12 @@
 What's New
 ==========
 
+0.1.3 (2017-06-23)
+==================
+
+* Fix bad version pinning in setup.py
+* Explicitly support Python 2.7
+
 0.1.2 (2017-06-23)
 ==================
 
