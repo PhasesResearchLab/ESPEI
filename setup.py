@@ -19,7 +19,7 @@ setup(
     install_requires=[
         'numpy', 
         'scipy', 
-        'dask', 
+        'dask>0.15', 
         'distributed', 
         'tinydb<3', 
         'scikit-learn', 
