@@ -64,6 +64,19 @@ parser.add_argument(
     default="out.tdb",
     help="Output TDB file")
 
+parser.add_argument(
+    "--mcmc-steps",
+    default=1000,
+    type=int,
+    metavar="",
+    help="Number of MCMC steps. Total chain steps is (mcmc steps * DOF).")
+
+parser.add_argument(
+    "--save-interval",
+    default=100,
+    type=int,
+    metavar="",
+    help="Controls the interval for saving the MCMC chain")
 
 def main():
     args = parser.parse_args(sys.argv[1:])
@@ -88,7 +101,9 @@ def main():
     else:
         resume = None
     # fitting
-    dbf, sampler, parameters = fit(args.fit_settings, datasets, scheduler=client, recfile=recfile, tracefile=tracefile, resume=resume)
+    dbf, sampler, parameters = fit(args.fit_settings, datasets, scheduler=client,
+                                   recfile=recfile, tracefile=tracefile, resume=resume,
+                                   mcmc_steps=args.mcmc_steps, save_interval=args.save_interval)
     dbf.to_file(args.output_tdb, if_exists='overwrite')
 
 if __name__ == '__main__':

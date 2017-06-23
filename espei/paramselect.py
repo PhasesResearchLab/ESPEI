@@ -590,7 +590,7 @@ def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
 
 
 def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None,
-        tracefile=None, nsteps=1000, save_chain=100):
+        tracefile=None, mcmc_steps=1000, save_interval=100):
     """
     Fit thermodynamic and phase equilibria data to a model.
 
@@ -603,9 +603,9 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None,
         recfile (file): file-like implementing a write method. Will be used to
             write proposal parameters.
         tracefile (str): filename to store the flattened chain with NumPy.savetxt
-        nsteps (int): number of chain steps to calculate in MCMC. Note the flattened
-            chain will have nsteps*DOF values.
-        save_chain (int): interval of steps to save the chain to the tracefile.
+        mcmc_steps (int): number of chain steps to calculate in MCMC. Note the flattened
+            chain will have (mcmc_steps*DOF) values.
+        save_interval (int): interval of steps to save the chain to the tracefile.
 
     Returns:
         (Database, EnsembleSampler, ndarray):
@@ -706,16 +706,16 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None,
     # the pool must implement a map function
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_context, pool=scheduler)
     progbar_width = 30
-    logging.info('Running MCMC with {} steps.'.format(nsteps))
+    logging.info('Running MCMC with {} steps.'.format(mcmc_steps))
     try:
-        for i, result in enumerate(sampler.sample(walkers, iterations=nsteps)):
+        for i, result in enumerate(sampler.sample(walkers, iterations=mcmc_steps)):
             # progress bar
-            if i+1 % save_chain == 0:
+            if i+1 % save_interval == 0:
                 save_tracefile(sampler)
-            n = int((progbar_width + 1) * float(i) / nsteps)
-            sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i+1, nsteps))
-        n = int((progbar_width + 1) * float(i+1) / nsteps)
-        sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, nsteps))
+            n = int((progbar_width + 1) * float(i) / mcmc_steps)
+            sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i+1, mcmc_steps))
+        n = int((progbar_width + 1) * float(i+1) / mcmc_steps)
+        sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, mcmc_steps))
     except KeyboardInterrupt:
         pass
 
