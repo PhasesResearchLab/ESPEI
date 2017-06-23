@@ -515,7 +515,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
 
 def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None, scheduler=None):
     scheduler = scheduler or dask.local
-    # TODO: support distributed schedulers for mutli_phase_fit.
+    # TODO: support distributed schedulers for multi_phase_fit.
     # This can be done if the scheduler passed is a distributed.worker_client
     if scheduler is not dask.local:
         raise ValueError('Schedulers other than dask.local are not currently supported for multiphase fitting.')
@@ -693,6 +693,8 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None,
             logging.debug('Writing chain to {}'.format(tracefile))
             np.savetxt(tracefile, sampler.flatchain)
 
+    # initialize the RNG
+    rng = np.random.RandomState(1769)
     # set up the MCMC run
     # set up the initial parameters
     # apply a Gaussian random to each parameter with std dev of 0.10*parameter
@@ -700,7 +702,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None,
     ndim = len(initial_parameters)
     nwalkers = 2*ndim # walkers must be of size (2n*ndim)
     initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
-    walkers = np.random.normal(initial_walkers, np.abs(initial_walkers*0.10))
+    walkers = rng.normal(initial_walkers, np.abs(initial_walkers*0.10))
 
     # set up with emcee
     # the pool must implement a map function
