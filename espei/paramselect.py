@@ -728,8 +728,8 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None,
     logging.debug('Optimal parameters: {}'.format(optimal_parameters))
     logging.debug('Change in parameters: {}'.format(np.abs(initial_parameters - optimal_parameters) / initial_parameters))
     parameters_dict = {param_name: value for param_name, value in zip(symbols_to_fit, optimal_parameters)}
+    dbf = dbf.compute()
     for param_name, value in parameters_dict.items():
         dbf.symbols[param_name] = value
-    dbf = dbf.compute()
 
     return dbf, sampler, parameters_dict
