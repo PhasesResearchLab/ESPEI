@@ -24,6 +24,7 @@ import json
 import textwrap
 import time
 import logging
+import sys
 
 import dask
 import numpy as np
@@ -32,6 +33,7 @@ import pycalphad.refdata
 import re
 import sympy
 import tinydb
+import emcee
 from collections import OrderedDict, defaultdict
 from pycalphad import calculate, equilibrium, Database, Model, CompiledModel, \
     variables as v
@@ -701,8 +703,6 @@ def fit(input_fname, datasets, resume=None, scheduler=None, recfile=None,
     walkers = np.random.normal(initial_walkers, np.abs(initial_walkers*0.10))
 
     # set up with emcee
-    import emcee
-    import sys
     # the pool must implement a map function
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_context, pool=scheduler)
     progbar_width = 30
