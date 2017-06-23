@@ -31,14 +31,10 @@ parser.add_argument(
     help="Host and port of dask distributed scheduler")
 
 parser.add_argument(
-    "--iter-record",
-    metavar="FILE",
-    help="Output file for recording iterations (CSV)")
-
-parser.add_argument(
     "--tracefile",
     metavar="FILE",
-    help="Output file for recording MCMC trace (HDF5)")
+    default='chain.txt',
+    help="Output file for recording MCMC trace (txt). Defaults to chain.txt")
 
 parser.add_argument(
     "--fit-settings",
@@ -94,15 +90,13 @@ def main():
     logging.info("bokeh server for dask scheduler at localhost:{}".format(client.scheduler_info()['services']['bokeh']))
     # load datasets and handle i/o
     datasets = load_datasets(sorted(recursive_glob(args.datasets, '*.json')))
-    recfile = open(args.iter_record, 'a') if args.iter_record else None
     tracefile = args.tracefile if args.tracefile else None
     if args.input_tdb:
         resume = Database(args.input_tdb)
     else:
         resume = None
-    # fitting
     dbf, sampler, parameters = fit(args.fit_settings, datasets, scheduler=client,
-                                   recfile=recfile, tracefile=tracefile, resume=resume,
+                                   tracefile=tracefile, resume=resume,
                                    mcmc_steps=args.mcmc_steps, save_interval=args.save_interval)
     dbf.to_file(args.output_tdb, if_exists='overwrite')
 
