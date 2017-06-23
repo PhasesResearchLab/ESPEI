@@ -16,7 +16,15 @@ setup(
     license='MIT',
     long_description=readme('README.rst'),
     url='https://espei.org/',
-    install_requires=['numpy', 'scipy', 'dask', 'distributed', 'scikit-learn', 'emcee', 'pycalphad'],
+    install_requires=[
+        'numpy', 
+        'scipy', 
+        'dask', 
+        'distributed', 
+        'tinydb<3', 
+        'scikit-learn', 
+        'emcee', 
+        'pycalphad'],
     classifiers=[
         # How mature is this project? Common values are
         #   3 - Alpha
