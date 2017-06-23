@@ -713,7 +713,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         try:
             for i, result in enumerate(sampler.sample(walkers, iterations=mcmc_steps)):
                 # progress bar
-                if i+1 % save_interval == 0:
+                if (i+1) % save_interval == 0:
                     save_tracefile(sampler)
                 n = int((progbar_width + 1) * float(i) / mcmc_steps)
                 sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i+1, mcmc_steps))
