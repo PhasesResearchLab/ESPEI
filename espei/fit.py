@@ -92,7 +92,10 @@ def main():
         args.dask_scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, processes=True)
     client = ImmediateClient(args.dask_scheduler)
     logging.info("Running with dask scheduler: %s [%s cores]" % (args.dask_scheduler, sum(client.ncores().values())))
-    logging.info("bokeh server for dask scheduler at localhost:{}".format(client.scheduler_info()['services']['bokeh']))
+    try:
+        logging.info("bokeh server for dask scheduler at localhost:{}".format(client.scheduler_info()['services']['bokeh']))
+    except KeyError:
+        logging.info("Install bokeh to use the dask bokeh server.")
     # load datasets and handle i/o
     datasets = load_datasets(sorted(recursive_glob(args.datasets, '*.json')))
     tracefile = args.tracefile if args.tracefile else None
