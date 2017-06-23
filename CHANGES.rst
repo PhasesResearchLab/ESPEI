@@ -2,7 +2,12 @@
 What's New
 ==========
 
-0.1.0 (2017-06-23)
+0.1.1 (2017-06-23)
+==================
+
+* Fix a bug that caused logging to raise if bokeh isn't installed
+
+0.1 (2017-06-23)
 ==================
 
 ESPEI is now a package! New features include
