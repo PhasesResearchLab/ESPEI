@@ -2,6 +2,14 @@
 ESPEI
 =====
 
+.. image:: https://travis-ci.org/PhasesResearchLab/ESPEI.svg?branch=master
+    :target: https://travis-ci.org/PhasesResearchLab/ESPEI
+    :alt: Travis-CI Build
+
+.. image:: http://readthedocs.org/projects/espei/badge/?version=latest
+    :target: http://espei.org/en/latest/?badge=latest
+    :alt: Documentation Status
+
 ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for automated thermodynamic database development within the CALPHAD method.
 
 The ESPEI package is based on a fork of `pycalphad-fitting`_ and uses `pycalphad`_ for calculating Gibbs free energies of thermodynamic models.
