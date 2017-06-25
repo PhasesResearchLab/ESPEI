@@ -24,7 +24,7 @@ setup(
         'tinydb<3', 
         'scikit-learn', 
         'emcee', 
-        'pycalphad'],
+        'pycalphad>=0.5'],
     extras_require={
         'dev': [
             'sphinx',
