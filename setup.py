@@ -25,6 +25,14 @@ setup(
         'scikit-learn', 
         'emcee', 
         'pycalphad'],
+    extras_require={
+        'dev': [
+            'sphinx',
+            'sphinx_rtd_theme',
+            'pytest',
+            'twine',
+        ]
+    },
     classifiers=[
         # How mature is this project? Common values are
         #   3 - Alpha
