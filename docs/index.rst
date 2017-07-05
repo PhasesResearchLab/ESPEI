@@ -110,6 +110,17 @@ Run ``espei -h`` to see  all of the configurable options.
 .. _sublattice fit settings: https://github.com/PhasesResearchLab/ESPEI/blob/7a9f681757b5773e7394f72836357e4cbc4e54cc/input.json
 
 
+FAQ
+---
+
+Q: There is an error in my JSON files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A: Common mistakes are using single quotes instead of the double quotes required by JSON files.
+Another common source of errors is misaligned open/closing brackets.
+
+To find the offending files, you can rename the datasets to anything not ending in ``.json``, such as ``my_datasets.json.disabled``. The renamed files will be ignored and it allows you to track down any problematic files.
+
 Module Hierarchy
 ================
 
