@@ -62,7 +62,7 @@ def load_datasets(dataset_filenames):
             try:
                 ds_database.insert(json.load(file_))
             except ValueError as e:
-                print('JSON Error in {}: {}'.format(fname, e))
+                raise ValueError('JSON Error in {}: {}'.format(fname, e))
     return ds_database
 
 def recursive_glob(start, pattern):
