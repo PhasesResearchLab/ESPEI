@@ -50,10 +50,10 @@ Run ``espei -h`` to see the options in the command utility.
 ESPEI has two different fitting modes: single-phase and multi-phase fitting.
 You can run either of these modes or both of them sequentially.
 
-A better format for storing thermodynamic data is under development, but there are examples of the `current datasets format`_
-
-To define the sublattice models you must create a JSON file as well.
-Again, this is under development, but here is a working example of `sublattice fit settings`_.
+To run either of the modes, you need to have a fit settings file that describes the phases in the system using the standard CALPHAD approach within the compound energy formalism.
+You also need to describe the data to fit.
+You will need single-phase and multi-phase data for a full run.
+Fit settings and all datasets are stored as JSON files and described in detail at the :ref:`Input Files` page.
 
 The main output result is going to be a database (defaults to ``out.tdb``)
 and an array of the steps in the MCMC chain (defaults to ``chain.txt``).
@@ -138,7 +138,8 @@ ESPEI is MIT licensed. See LICENSE.
 .. toctree::
    :maxdepth: 2
    :caption: Contents
-    
+
+   input_files
    CHANGES
    api/modules
 
