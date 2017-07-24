@@ -6,6 +6,8 @@ Subpackages
 
 .. toctree::
 
+    espei.tests
+
 Submodules
 ----------
 
