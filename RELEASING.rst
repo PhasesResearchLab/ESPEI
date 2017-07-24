@@ -29,9 +29,3 @@ Uploading to PyPI
 
    ``twine upload -r pypi -u bocklund dist/*``
 
-Uploading Docs
---------------
-
-1. ``python setup.py build_sphinx``
-#. ``python setup.py upload_sphinx``
-
