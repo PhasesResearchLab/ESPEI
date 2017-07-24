@@ -2,6 +2,12 @@
 What's New
 ==========
 
+0.1.4 (2017-07-24)
+==================
+
+* Documentation improvements for usage and API docs
+* Fail fast on JSON errors
+
 0.1.3 (2017-06-23)
 ==================
 
@@ -31,3 +37,4 @@ ESPEI is now a package! New features include
 * Control over output with logging over printing
 * Significant code cleanup
 * Better usage documentation
+
