@@ -49,8 +49,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'ESPEI'
-copyright = '2017, Brandon Bocklund'
-author = 'Brandon Bocklund'
+copyright = '2017, Richard Otis and Brandon Bocklund'
+author = 'Richard Otis and Brandon Bocklund'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

@@ -106,9 +106,6 @@ In all cases, ESPEI lets you control certain aspects of your calculations from t
 
 Run ``espei -h`` to see  all of the configurable options.
 
-.. _current datasets format: https://github.com/PhasesResearchLab/ESPEI/tree/7a9f681757b5773e7394f72836357e4cbc4e54cc/Al-Ni/input-json
-.. _sublattice fit settings: https://github.com/PhasesResearchLab/ESPEI/blob/7a9f681757b5773e7394f72836357e4cbc4e54cc/input.json
-
 
 FAQ
 ---
