@@ -19,12 +19,13 @@ Single-phase and multi-phase fitting methods are described in Chapter 3 of `Rich
 
 The benefit of this approach is the automated, simultaneous fitting for many parameters that yields uncertainty quantification, as shown in Otis and Liu High-Throughput Thermodynamic Modeling and Uncertainty Quantification for ICME. `Jom 69, (2017)`_.
 
-The name and idea of ESPEI are originally based off of Shang, Wang, and Liu, ESPEI: Extensible, Self-optimizing Phase Equilibrium Infrastructure for Magnesium Alloys Magnes. Technol. 2010 617–622 (2010).  
+The name and idea of ESPEI are originally based off of Shang, Wang, and Liu, ESPEI: Extensible, Self-optimizing Phase Equilibrium Infrastructure for Magnesium Alloys `Magnes. Technol. 2010 617-622 (2010)`_.  
 
 .. _pycalphad-fitting: https://github.com/richardotis/pycalphad-fitting
 .. _pycalphad: http://pycalphad.org
 .. _Richard Otis's thesis: https://etda.libraries.psu.edu/catalog/s1784k73d
 .. _Jom 69, (2017): http://dx.doi.org/10.1007/s11837-017-2318-6
+.. _Magnes. Technol. 2010 617-622 (2010): http://www.phases.psu.edu/wp-content/uploads/2010-Shang-Shunli-MagTech-ESPEI-0617-1.pdf
 
 Installation
 ============
