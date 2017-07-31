@@ -17,6 +17,7 @@ For those unfamiliar with JSON, it is fairly similar to Python dictionaries with
 
 These errors can be challenging to track down, particularly if you are only reading the JSON error messages in Python. 
 A visual editor is encouraged for debugging JSON files such as `JSONLint`_.
+A quick reference to the format can be found at `Learn JSON in Y minutes <https://learnxinyminutes.com/docs/json/>`_.
 
 .. _JSONLint: https://jsonlint.com
 
