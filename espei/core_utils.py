@@ -70,19 +70,22 @@ def get_samples(desired_data):
 
 
 def canonicalize(configuration, equivalent_sublattices):
-    """
-    Sort a sequence with symmetry. This routine gives the sequence
+    """Sort a sequence with symmetry. This routine gives the sequence
     a deterministic ordering while respecting symmetry.
 
-    Args:
-        configuration ([str]): Sublattice configuration to sort.
-        equivalent_sublattices ({{int}}): Indices of 'configuration' which should be equivalent by symmetry, i.e.,
-            [[0, 4], [1, 2, 3]] means permuting elements 0 and 4, or 1, 2 and 3, respectively,
-            has no effect on the equivalence of the sequence.
+    Parameters
+    ----------
+    configuration : [str]
+        Sublattice configuration to sort.
+    equivalent_sublattices : {{int}}
+        Indices of 'configuration' which should be equivalent by symmetry, i.e.,
+        [[0, 4], [1, 2, 3]] means permuting elements 0 and 4, or 1, 2 and 3, respectively,
+        has no effect on the equivalence of the sequence.
 
-
-    Returns:
-        (str) : sorted tuple that has been canonicalized.
+    Returns
+    -------
+    str
+        sorted tuple that has been canonicalized.
 
     """
     canonicalized = list(configuration)
@@ -143,19 +146,25 @@ def endmembers_from_interaction(configuration):
 
 
 def build_sitefractions(phase_name, sublattice_configurations, sublattice_occupancies):
-    """
-    Convert nested lists of sublattice configurations and occupancies to a list
+    """Convert nested lists of sublattice configurations and occupancies to a list
     of dictionaries. The dictionaries map SiteFraction symbols to occupancy
     values. Note that zero occupancy site fractions will need to be added
     separately since the total degrees of freedom aren't known in this function.
 
-    Args:
-        phase_name (str): Name of the phase
-        sublattice_configurations ([[str]]): sublattice configuration
-        sublattice_occupancies ([[float]]): occupancy of each sublattice
+    Parameters
+    ----------
+    phase_name : str
+        Name of the phase
+    sublattice_configurations : [[str]]
+        sublattice configuration
+    sublattice_occupancies : [[float]]
+        occupancy of each sublattice
 
-    Returns:
-        [[float]]: a list of site fractions over sublattices
+    Returns
+    -------
+    [[float]]
+        a list of site fractions over sublattices
+
     """
     result = []
     for config, occ in zip(sublattice_configurations, sublattice_occupancies):

@@ -55,17 +55,23 @@ feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
 
 
 def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
-    """
-    Solve Ax = b, where 'feature_matrix' is A and 'data_quantities' is b.
+    """Solve Ax = b, where 'feature_matrix' is A and 'data_quantities' is b.
 
-    Args:
-        feature_matrix (ndarray): (M*N) regressor matrix.
-        data_quantities (ndarray): (M,) response vector
-        feature_tuple ((float)): Polynomial coefficient corresponding to each column of 'feature_matrix'
+    Parameters
+    ----------
+    feature_matrix : ndarray
+        (M*N) regressor matrix.
+    data_quantities : ndarray
+        (M,) response vector
+    feature_tuple : (float
+        Polynomial coefficient corresponding to each column of 'feature_matrix'
 
-    Returns:
-        OrderedDict: {featured_tuple: fitted_parameter}. Maps 'feature_tuple'
+    Returns
+    -------
+    OrderedDict
+        {featured_tuple: fitted_parameter}. Maps 'feature_tuple'
         to fitted parameter value. If a coefficient is not used, it maps to zero.
+
     """
     # Now generate candidate models; add parameters one at a time
     model_scores = []
@@ -120,26 +126,36 @@ def _shift_reference_state(desired_data, feature_transform, fixed_model):
 
 
 def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, features=None):
-    """
-    Find suitable linear model parameters for the given phase.
+    """Find suitable linear model parameters for the given phase.
     We do this by successively fitting heat capacities, entropies and
     enthalpies of formation, and selecting against criteria to prevent
     overfitting. The "best" set of parameters minimizes the error
     without overfitting.
 
-    Args:
-        dbf (Database): pycalphad Database. Partially complete, so we know what degrees of freedom to fix.
-        comps ([str]): Names of the relevant components.
-        phase_name (str): Name of the desired phase for which the parameters will be found.
-        configuration (ndarray): Configuration of the sublattices for the fitting procedure.
-        symmetry ([[int]]): Symmetry of the sublattice configuration.
-        datasets (PickleableTinyDB): All the datasets desired to fit to.
-        features (dict): Maps "property" to a list of features for the linear model.
-            These will be transformed from "GM" coefficients
-            e.g., {"CPM_FORM": (v.T*sympy.log(v.T), v.T**2, v.T**-1, v.T**3)}
+    Parameters
+    ----------
+    dbf : Database
+        pycalphad Database. Partially complete, so we know what degrees of freedom to fix.
+    comps : [str]
+        Names of the relevant components.
+    phase_name : str
+        Name of the desired phase for which the parameters will be found.
+    configuration : ndarray
+        Configuration of the sublattices for the fitting procedure.
+    symmetry : [[int]]
+        Symmetry of the sublattice configuration.
+    datasets : PickleableTinyDB
+        All the datasets desired to fit to.
+    features : dict
+        Maps "property" to a list of features for the linear model.
+        These will be transformed from "GM" coefficients
+        e.g., {"CPM_FORM": (v.T*sympy.log(v.T), v.T**2, v.T**-1, v.T**3)} (Default value = None)
 
-    Returns:
-        dict: {feature: estimated_value}
+    Returns
+    -------
+    dict
+        {feature: estimated_value}
+
     """
     if features is None:
         features = [("CPM_FORM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3)),
@@ -251,23 +267,34 @@ def _generate_symmetric_group(configuration, symmetry):
 
 
 def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=None):
-    """
-    Generate an initial CALPHAD model for a given phase and sublattice model.
+    """Generate an initial CALPHAD model for a given phase and sublattice model.
 
-    Args:
-        dbf (Database): pycalphad Database to add parameters to.
-        phase_name (str): Name of the phase.
-        symmetry ([[int]]): Sublattice model symmetry.
-        subl_model ([[str]]): Sublattice model for the phase of interest.
-        site_ratios ([float]): Number of sites in each sublattice, normalized to one atom.
-        datasets (PickleableTinyDB): All datasets to consider for the calculation.
-        refdata (dict): Maps tuple(element, phase_name) -> SymPy object defining
-            energy relative to SER
-        aliases ([str]): Alternative phase names. Useful for matching against
-            reference data or other datasets.
+    Parameters
+    ----------
+    dbf : Database
+        pycalphad Database to add parameters to.
+    phase_name : str
+        Name of the phase.
+    symmetry : [[int]]
+        Sublattice model symmetry.
+    subl_model : [[str]]
+        Sublattice model for the phase of interest.
+    site_ratios : [float]
+        Number of sites in each sublattice, normalized to one atom.
+    datasets : PickleableTinyDB
+        All datasets to consider for the calculation.
+    refdata : dict
+        Maps tuple(element, phase_name) -> SymPy object defining
+        energy relative to SER
+    aliases : [str]
+        Alternative phase names. Useful for matching against
+        reference data or other datasets. (Default value = None)
 
-    Returns:
-        None: modifies the dbf.
+    Returns
+    -------
+    None
+        Modifies the dbf.
+
     """
     if not hasattr(dbf, 'varcounter'):
         dbf.varcounter = 0
@@ -593,27 +620,40 @@ def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
 
 def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         tracefile=None, mcmc_steps=1000, save_interval=100):
-    """
-    Fit thermodynamic and phase equilibria data to a model.
+    """Fit thermodynamic and phase equilibria data to a model.
+    
+    Parameters
+    ----------
+    input_fname : str
+        name of the input file containing the sublattice models.
+    datasets : PickleableTinyDB
+        database of single- and multi-phase to fit.
+    resume : Database
+        pycalphad Database of a file to start from. Using this parameter causes
+        single phase fitting to be skipped (multi-phase only).
+    scheduler : callable
+        Scheduler to use with emcee. Must implement a map method.
+    run_mcmc : bool
+        Controls if MCMC should be run. Default is True. Useful for
+        first-principles (single-phase only) runs.
+    tracefile : str
+        filename to store the flattened chain with NumPy.savetxt
+    mcmc_steps : int
+        number of chain steps to calculate in MCMC. Note the flattened chain will
+        have (mcmc_steps*DOF) values.
+        int (Default value = 1000)
+    save_interval : int
+        interval of steps to save the chain to the tracefile.
 
-    Args:
-        input_fname (str): name of the input file containing the sublattice models.
-        datasets (PickleableTinyDB): database of single- and multi-phase to fit.
-        resume (Database): pycalphad Database of a file to start from. Using this
-            parameters causes single phase fitting to be skipped (multi-phase only).
-        scheduler (callable): Scheduler to use with emcee. Must implement a map method.
-        run_mcmc (bool): Controls if MCMC should be run. Default is True. Useful
-            for first-principles (single-phase only) runs.
-        tracefile (str): filename to store the flattened chain with NumPy.savetxt
-        mcmc_steps (int): number of chain steps to calculate in MCMC. Note the flattened
-            chain will have (mcmc_steps*DOF) values.
-        save_interval (int): interval of steps to save the chain to the tracefile.
+    Returns
+    -------
+    dbf : Database
+        Resulting pycalphad database of optimized parameters
+    sampler : EnsembleSampler, ndarray)
+        emcee sampler for further data wrangling
+    parameters_dict : dict
+        Optimized parameters
 
-    Returns:
-        (Database, EnsembleSampler, ndarray):
-            Resulting pycalphad database of optimized parameters
-            emcee sampler for further data wrangling
-            NumPy array of optimized parameters
     """
     # TODO: Validate input JSON
     data = json.load(open(input_fname))

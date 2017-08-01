@@ -15,9 +15,7 @@ from tinydb.storages import MemoryStorage
 
 
 class PickleableTinyDB(TinyDB):
-    """
-    A pickleable version of TinyDB that uses MemoryStorage as a default.
-    """
+    """A pickleable version of TinyDB that uses MemoryStorage as a default."""
     def __getstate__(self):
         # first remove the query cache. The cache speed is not important to us.
         for table_name in self.tables():
@@ -47,14 +45,16 @@ class ImmediateClient(Client):
 
 
 def load_datasets(dataset_filenames):
-    """
-    Create a PickelableTinyDB with the data from a list of filenames.
+    """Create a PickelableTinyDB with the data from a list of filenames.
 
-    Args:
-        dataset_filenames ([str]):
+    Parameters
+    ----------
+    dataset_filenames : [str]
+        List of filenames to load as datasets
 
     Returns:
-        PickleableTinyDB
+    --------
+    PickleableTinyDB
     """
     ds_database = PickleableTinyDB(storage=MemoryStorage)
     for fname in dataset_filenames:
@@ -66,15 +66,20 @@ def load_datasets(dataset_filenames):
     return ds_database
 
 def recursive_glob(start, pattern):
-    """
-    Recursively glob for the given pattern from the start directory.
+    """Recursively glob for the given pattern from the start directory.
 
-    Args:
-        start (str): Path of the directory to walk while for file globbing
-        pattern (str): Filename pattern to match in the glob
+    Parameters
+    ----------
+    start : str
+        Path of the directory to walk while for file globbing
+    pattern : str
+        Filename pattern to match in the glob
 
-    Returns:
-        [str]: List of matched filenames
+    Returns
+    -------
+    [str]
+        List of matched filenames
+
     """
     matches = []
     for root, dirnames, filenames in os.walk(start):
@@ -84,9 +89,7 @@ def recursive_glob(start, pattern):
 
 
 def sigfigs(x, n):
-    """
-    Round x to n significant digits
-    """
+    """Round x to n significant digits"""
     if x != 0:
         return np.around(x, -(np.floor(np.log10(np.abs(x)))).astype(np.int) + (n - 1))
     else:
