@@ -17,10 +17,20 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+from unittest.mock import Mock
+sys.path.insert(0, os.path.abspath('..'))
 
+MOCK_MODULES = ['dask', 'distributed', 'emcee', 'matplotlib',
+                'matplotlib.pyplot', 'numpy', 'pycalphad',
+                'pycalphad.plot.utils', 'pycalphad.refdata',
+                'pycalphad.variables', 'scipy', 'sklearn',
+                'sklearn.linear_model', 'sympy', 'tinydb', 'tinydb.storages'
+                ]
+
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = Mock()
 
 # -- General configuration ------------------------------------------------
 
