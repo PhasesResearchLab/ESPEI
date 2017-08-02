@@ -14,7 +14,7 @@ from distributed import LocalCluster
 from pycalphad import Database
 
 from espei import fit
-from espei.utils import ImmediateClient, load_datasets, recursive_glob
+from espei.utils import ImmediateClient, load_datasets, recursive_glob, DatasetError
 
 parser = argparse.ArgumentParser(description=__doc__)
 
@@ -79,14 +79,39 @@ parser.add_argument(
     action="store_true",
     help="Turns off MCMC calculation. Useful for first-principles only run.")
 
+parser.add_argument(
+    "--check-input",
+    metavar="PATH",
+    default=None,
+    help="Check input files at the path. Does not run a fit.")
+
+
 def main():
     args = parser.parse_args(sys.argv[1:])
+
     # handle verbosity
     verbosity = {0: logging.WARNING,
                  1: logging.INFO,
                  2: logging.DEBUG}
     user_verbosity = args.verbose if args.verbose < 2 else 2
     logging.basicConfig(level=verbosity[user_verbosity])
+
+    # if desired, check datasets and return
+    if args.check_input:
+        dataset_filenames = sorted(recursive_glob(args.check_input, '*.json'))
+        errors = []
+        for dataset in dataset_filenames:
+            try:
+                load_datasets([dataset])
+            except (ValueError, DatasetError) as e:
+                errors.append(e)
+        if len(errors) > 0:
+            print(*errors, sep='\n')
+            return 1
+        else:
+            return 0
+
+    # run ESPEI fitting
     # create the scheduler if not passed
     if not args.dask_scheduler:
         args.dask_scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, processes=True)
