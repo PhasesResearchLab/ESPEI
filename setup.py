@@ -54,6 +54,6 @@ setup(
         'Programming Language :: Python :: 3.6'
     ],
     entry_points={'console_scripts': [
-                  'espei = espei.fit:main']}
+                  'espei = espei.run_espei:main']}
 
 )
