@@ -98,7 +98,7 @@ def main():
 
     # if desired, check datasets and return
     if args.check_datasets:
-        dataset_filenames = sorted(recursive_glob(args.check_input, '*.json'))
+        dataset_filenames = sorted(recursive_glob(args.check_datasets, '*.json'))
         errors = []
         for dataset in dataset_filenames:
             try:
