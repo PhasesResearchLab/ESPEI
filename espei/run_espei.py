@@ -14,7 +14,8 @@ from distributed import LocalCluster
 from pycalphad import Database
 
 from espei import fit
-from espei.utils import ImmediateClient, load_datasets, recursive_glob, DatasetError
+from espei.utils import ImmediateClient
+from espei.datasets import DatasetError, load_datasets, recursive_glob
 
 parser = argparse.ArgumentParser(description=__doc__)
 
