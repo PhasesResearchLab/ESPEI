@@ -86,6 +86,13 @@ def check_dataset(dataset):
         sublattice_configurations = solver['sublattice_configurations']
         sublattice_site_ratios = solver['sublattice_site_ratios']
         sublattice_occupancies = solver.get('sublattice_occupancies', None)
+        # check for mixing
+        is_mixing = any([any([isinstance(subl, list) for subl in config]) for config in sublattice_configurations])
+        # pad the values of sublattice occupancies if there is no mixing
+        if sublattice_occupancies is None and not is_mixing:
+            sublattice_occupancies = [None]*len(sublattice_configurations)
+        elif sublattice_occupancies is None:
+            raise DatasetError('At least one sublattice in the following sublattice configurations is mixing, but the "sublattice_occupancies" key is empty: {}'.format(sublattice_configurations))
 
     # check that the shape of conditions match the values
     num_pressure = np.atleast_1d(conditions['P']).size
@@ -153,6 +160,17 @@ def check_dataset(dataset):
                 # check that the shape of components list and mole fractions list is the same
                 if len(component_list) != len(mole_fraction_list):
                     raise DatasetError('The length of the components list and mole fractions list in tieline {} for the ZPF point {} should be the same.'.format(tieline, zpf))
+
+    # check that the site ratios are valid as well as site occupancies, if applicable
+    if is_single_phase:
+        for configuration, occupancy in zip(sublattice_configurations, sublattice_occupancies):
+            if len(configuration) != len(sublattice_site_ratios):
+                raise DatasetError('Sublattice configuration {} and sublattice site ratio {} describe different numbers of sublattices ({} and {}).'.format(configuration, sublattice_site_ratios, len(configuration), len(sublattice_site_ratios)))
+            if is_mixing:
+                configuration_shape = tuple(len(sl) if isinstance(sl, list) else 1 for sl in configuration)
+                occupancy_shape = tuple(len(sl) if isinstance(sl, list) else 1 for sl in occupancy)
+                if configuration_shape != occupancy_shape:
+                    raise DatasetError('The shape of sublattice configuration {} ({}) does not match the shape of occupancies {} ({})'.format(configuration, configuration_shape, occupancy, occupancy_shape))
 
 
 def load_datasets(dataset_filenames):
