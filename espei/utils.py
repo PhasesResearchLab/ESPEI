@@ -83,7 +83,7 @@ def check_dataset(dataset):
     num_temperature = np.atleast_1d(dataset['conditions']['T']).size
     if is_single_phase:
         values_shape = np.array(dataset['values']).shape
-        num_configs = np.atleast_1d(dataset['solver']['sublattice_configurations']).shape[0]
+        num_configs = len(dataset['solver']['sublattice_configurations'])
         conditions_shape = (num_pressure, num_temperature, num_configs)
         if conditions_shape != values_shape:
             raise DatasetError('Shape of conditions (P, T, configs): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
@@ -92,7 +92,7 @@ def check_dataset(dataset):
         values_shape = (len(values))
         conditions_shape = (num_temperature)
         if conditions_shape != values_shape:
-            raise DatasetError('Shape of conditions (P, T): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
+            raise DatasetError('Shape of conditions (T): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
 
 
 def load_datasets(dataset_filenames):

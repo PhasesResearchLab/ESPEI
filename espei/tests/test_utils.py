@@ -13,7 +13,8 @@ dataset_single_valid = {
   "phases": ["BCC_B2"],
   "solver": {
           "sublattice_site_ratios": [0.5, 0.5, 1],
-          "sublattice_configurations": [["AL", "NI", "VA"]],
+	      "sublattice_occupancies": [[1, [0.25, 0.75], 1]],
+          "sublattice_configurations": [["AL", ["AL", "NI"], "VA"]],
           "comment": "NiAl sublattice configuration (2SL)"
   },
   "conditions": {
@@ -39,8 +40,9 @@ dataset_single_misaligned = {
   "components": ["AL", "NI", "VA"],
   "phases": ["BCC_B2"],
   "solver": {
+	      "sublattice_occupancies": [[1, [0.25, 0.75], 1]],
           "sublattice_site_ratios": [0.5, 0.5, 1],
-          "sublattice_configurations": [["AL", "NI", "VA"]],
+          "sublattice_configurations": [["AL", ["AL", "NI"], "VA"]],
           "comment": "NiAl sublattice configuration (2SL)"
   },
   "conditions": {
