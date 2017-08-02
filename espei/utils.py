@@ -126,10 +126,13 @@ def check_dataset(dataset):
     else:
         for zpf in values:
             for tieline in zpf:
-                components_used.update(set(tieline[1]))
+                tieline_comps = set(tieline[1])
+                components_used.update(tieline_comps)
+                if len(components_entered - tieline_comps) != 1:
+                    raise DatasetError('Degree of freedom error for entered components {} in tieline {} of ZPF {}'.format(components_entered, tieline, zpf))
         # handle special case of mass balance in ZPFs
         comp_dof = 1
-    if len(components_entered - components_used) != comp_dof or len(components_used - components_entered) > 0:
+    if len(components_entered - components_used) > comp_dof or len(components_used - components_entered) > 0:
         raise DatasetError('Components entered {} do not match components used.'.format(components_entered, components_used))
 
 
