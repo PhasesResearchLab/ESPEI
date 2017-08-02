@@ -2,6 +2,15 @@
 What's New
 ==========
 
+0.1.5 (2017-08-02)
+==================
+
+* Significant error checking of JSON inputs.
+* Add new ``--check-datasets`` option to check the datasets at path. It should be run before you run ESPEI fittings. All errors must be resolved before you run.
+* Move the espei script module from ``fit.py`` to ``run_espei.py``.
+* Better docs building with mocking
+* Google docstrings are now NumPy docstrings
+
 0.1.4 (2017-07-24)
 ==================
 
