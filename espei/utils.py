@@ -128,12 +128,12 @@ def check_dataset(dataset):
             for tieline in zpf:
                 tieline_comps = set(tieline[1])
                 components_used.update(tieline_comps)
-                if len(components_entered - tieline_comps) != 1:
+                if len(components_entered - tieline_comps - {'VA'}) != 1:
                     raise DatasetError('Degree of freedom error for entered components {} in tieline {} of ZPF {}'.format(components_entered, tieline, zpf))
         # handle special case of mass balance in ZPFs
         comp_dof = 1
-    if len(components_entered - components_used) > comp_dof or len(components_used - components_entered) > 0:
-        raise DatasetError('Components entered {} do not match components used.'.format(components_entered, components_used))
+    if len(components_entered - components_used - {'VA'}) > comp_dof or len(components_used - components_entered) > 0:
+        raise DatasetError('Components entered {} do not match components used {}.'.format(components_entered, components_used))
 
     # check that the ZPF values are formatted properly
     if not is_single_phase:
@@ -148,7 +148,7 @@ def check_dataset(dataset):
                     raise DatasetError('The first element in the tieline {} for the ZPF point {} should be a string. Instead it is a {} of value {}'.format(tieline, zpf, type(phase), phase))
                 if not all([isinstance(comp, str) for comp in component_list]):
                     raise DatasetError('The second element in the tieline {} for the ZPF point {} should be a list of strings. Instead it is a {} of value {}'.format(tieline, zpf, type(component_list), component_list))
-                if not all([isinstance(mole_frac, (int, float)) for mole_frac in mole_fraction_list]):
+                if not all([(isinstance(mole_frac, (int, float)) or mole_frac is None)  for mole_frac in mole_fraction_list]):
                     raise DatasetError('The last element in the tieline {} for the ZPF point {} should be a list of numbers. Instead it is a {} of value {}'.format(tieline, zpf, type(mole_fraction_list), mole_fraction_list))
                 # check that the shape of components list and mole fractions list is the same
                 if len(component_list) != len(mole_fraction_list):

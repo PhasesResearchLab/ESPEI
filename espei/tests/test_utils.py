@@ -55,7 +55,7 @@ dataset_single_misaligned = {
 }
 
 dataset_multi_valid = {
-  "components": ["AL", "NI"],
+  "components": ["AL", "NI", "VA"],
   "phases": ["AL3NI2", "BCC_B2"],
   "conditions": {
           "P": 101325,
@@ -63,7 +63,7 @@ dataset_multi_valid = {
   },
   "output": "ZPF",
   "values":   [
-               [["AL3NI2", ["NI"], [0.4083]], ["BCC_B2", ["NI"], [0.4340]]],
+               [["AL3NI2", ["NI"], [0.4083]], ["BCC_B2", ["NI"], [None]]],
                [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4456]]],
                [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4532]]]
               ],
@@ -169,7 +169,7 @@ dataset_multi_incorrect_components_underspecified = {
 }
 
 dataset_multi_incorrect_components_overspecified = {
-  "components": ["AL", "NI", "VA"],
+  "components": ["AL", "NI", "FE"],
   "phases": ["AL3NI2", "BCC_B2"],
   "conditions": {
           "P": 101325,
