@@ -19,6 +19,11 @@ These errors can be challenging to track down, particularly if you are only read
 A visual editor is encouraged for debugging JSON files such as `JSONLint`_.
 A quick reference to the format can be found at `Learn JSON in Y minutes <https://learnxinyminutes.com/docs/json/>`_.
 
+ESPEI has support for checking all of your input datasets for errors, which you should always use before you attempt to run ESPEI.
+This error checking will report all of the errors at once and all errors should be fixed.
+Errors in the datasets will prevent fitting.
+To check the datasets at path ``my-input-data/`` you can run ``espei --check-datasets my-input-data``.
+
 .. _JSONLint: https://jsonlint.com
 
 

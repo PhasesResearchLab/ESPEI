@@ -19,10 +19,10 @@ espei\.core\_utils module
     :undoc-members:
     :show-inheritance:
 
-espei\.fit module
------------------
+espei\.datasets module
+----------------------
 
-.. automodule:: espei.fit
+.. automodule:: espei.datasets
     :members:
     :undoc-members:
     :show-inheritance:
@@ -39,6 +39,14 @@ espei\.plot module
 ------------------
 
 .. automodule:: espei.plot
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+espei\.run\_espei module
+------------------------
+
+.. automodule:: espei.run_espei
     :members:
     :undoc-members:
     :show-inheritance:

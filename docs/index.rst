@@ -55,6 +55,7 @@ To run either of the modes, you need to have a fit settings file that describes 
 You also need to describe the data to fit.
 You will need single-phase and multi-phase data for a full run.
 Fit settings and all datasets are stored as JSON files and described in detail at the :ref:`Input Files` page.
+All of your input datasets should be validated by running ``espei --check-datasets my-input-datasets``, where ``my-input-datasets`` is a folder of all your JSON files.
 
 The main output result is going to be a database (defaults to ``out.tdb``)
 and an array of the steps in the MCMC chain (defaults to ``chain.txt``).
