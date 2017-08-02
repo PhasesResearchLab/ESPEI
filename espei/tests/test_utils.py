@@ -3,8 +3,82 @@ Test espei.utils classes and functions.
 """
 import pickle
 
+import pytest
 from tinydb import where
-from espei.utils import ImmediateClient, PickleableTinyDB, MemoryStorage
+from espei.utils import ImmediateClient, PickleableTinyDB, MemoryStorage, \
+    DatasetError, check_dataset
+
+dataset_single_valid = {
+  "components": ["AL", "NI", "VA"],
+  "phases": ["BCC_B2"],
+  "solver": {
+          "sublattice_site_ratios": [0.5, 0.5, 1],
+          "sublattice_configurations": [["AL", "NI", "VA"]],
+          "comment": "NiAl sublattice configuration (2SL)"
+  },
+  "conditions": {
+          "P": 101325,
+          "T": [  0,  10,  20,  30,  40,  50,  60,  70,  80,  90, 100, 110]
+  },
+  "output": "CPM_FORM",
+  "values":   [[[ 0      ],
+                [-0.0173 ],
+                [-0.01205],
+                [ 0.12915],
+                [ 0.24355],
+                [ 0.13305],
+                [-0.1617 ],
+                [-0.51625],
+                [-0.841  ],
+                [-1.0975 ],
+                [-1.28045],
+                [-1.3997 ]]]
+}
+
+dataset_single_misaligned = {
+  "components": ["AL", "NI", "VA"],
+  "phases": ["BCC_B2"],
+  "solver": {
+          "sublattice_site_ratios": [0.5, 0.5, 1],
+          "sublattice_configurations": [["AL", "NI", "VA"]],
+          "comment": "NiAl sublattice configuration (2SL)"
+  },
+  "conditions": {
+          "P": 101325,
+          "T": [  0 ]
+  },
+  "output": "CPM_FORM",
+  "values":   [[[ 0      ],
+                [-0.0173 ]]]
+}
+
+dataset_multi_valid = {
+  "components": ["AL", "NI"],
+  "phases": ["AL3NI2", "BCC_B2"],
+  "conditions": {
+          "P": 101325,
+          "T": [1348, 1176, 977]
+  },
+  "output": "ZPF",
+  "values":   [
+               [["AL3NI2", ["NI"], [0.4083]], ["BCC_B2", ["NI"], [0.4340]]],
+               [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4456]]],
+               [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4532]]]
+              ],
+}
+
+dataset_multi_misaligned = {
+  "components": ["AL", "NI"],
+  "phases": ["AL3NI2", "BCC_B2"],
+  "conditions": {
+          "P": 101325,
+          "T": [1348, 977]
+  },
+  "output": "ZPF",
+  "values":   [
+               [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4532]]]
+              ],
+}
 
 def test_immediate_client_returns_map_results_directly():
     """Calls ImmediateClient.map should return the results, instead of Futures."""
@@ -22,3 +96,17 @@ def test_pickelable_tinydb_can_be_pickled_and_unpickled():
     db.insert(test_dict)
     db = pickle.loads(pickle.dumps(db))
     assert db.search(where('test_key'))[0] == test_dict
+
+
+def test_check_datasets_run_on_good_data():
+    """Passed valid datasets that should raise DatasetError."""
+    check_dataset(dataset_single_valid)
+    check_dataset(dataset_multi_valid)
+
+
+def test_check_datasets_raises_on_misaligned_data():
+    """Passed datasets that have misaligned data and conditions should raise DatasetError."""
+    with pytest.raises(DatasetError):
+        check_dataset(dataset_single_misaligned)
+    with pytest.raises(DatasetError):
+        check_dataset(dataset_multi_misaligned)

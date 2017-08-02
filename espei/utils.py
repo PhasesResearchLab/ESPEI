@@ -7,12 +7,15 @@ Classes and functions defined here should have some reuse potential.
 import json
 
 import fnmatch
-import numpy as np
 import os
+import numpy as np
 from distributed import Client
 from tinydb import TinyDB
 from tinydb.storages import MemoryStorage
 
+class DatasetError(Exception):
+    """Exception raised when datasets are invalid."""
+    pass
 
 class PickleableTinyDB(TinyDB):
     """A pickleable version of TinyDB that uses MemoryStorage as a default."""
@@ -44,6 +47,54 @@ class ImmediateClient(Client):
         return result
 
 
+def check_dataset(dataset):
+    """Ensure that the dataset is valid and consistent.
+
+    Currently supports the following validation checks:
+    * data shape is valid
+
+    Planned validation checks:
+    * all required keys are present
+    * phases and components in conditions match phases and conditions in keys
+    * individual shapes of keys, such as ZPF, sublattice configs and site ratios
+
+    Note that this follows some of the implicit assumptions in ESPEI at the time
+    of writing, such that conditions are only P, T, configs for single phase and
+    essentially only T for ZPF data.
+
+    Parameters
+    ----------
+    dataset : dict
+        Dictionary of the standard ESPEI dataset.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    DatasetError
+        If an error is found in the dataset
+    """
+    is_single_phase = dataset['output'] != 'ZPF'
+
+    # check that the shape of conditions match the values
+    num_pressure = np.atleast_1d(dataset['conditions']['P']).size
+    num_temperature = np.atleast_1d(dataset['conditions']['T']).size
+    if is_single_phase:
+        values_shape = np.array(dataset['values']).shape
+        num_configs = np.atleast_1d(dataset['solver']['sublattice_configurations']).shape[0]
+        conditions_shape = (num_pressure, num_temperature, num_configs)
+        if conditions_shape != values_shape:
+            raise DatasetError('Shape of conditions (P, T, configs): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
+    else:
+        values = dataset['values']
+        values_shape = (len(values))
+        conditions_shape = (num_temperature)
+        if conditions_shape != values_shape:
+            raise DatasetError('Shape of conditions (P, T): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
+
+
 def load_datasets(dataset_filenames):
     """Create a PickelableTinyDB with the data from a list of filenames.
 
@@ -60,9 +111,13 @@ def load_datasets(dataset_filenames):
     for fname in dataset_filenames:
         with open(fname) as file_:
             try:
-                ds_database.insert(json.load(file_))
+                d = json.load(file_)
+                check_dataset(d)
+                ds_database.insert(d)
             except ValueError as e:
                 raise ValueError('JSON Error in {}: {}'.format(fname, e))
+            except DatasetError as e:
+                raise DatasetError('Dataset Error in {}: {}'.format(fname, e))
     return ds_database
 
 def recursive_glob(start, pattern):
