@@ -52,10 +52,10 @@ def check_dataset(dataset):
 
     Currently supports the following validation checks:
     * data shape is valid
+    * phases and components used match phases and components entered
 
     Planned validation checks:
     * all required keys are present
-    * phases and components in conditions match phases and conditions in keys
     * individual shapes of keys, such as ZPF, sublattice configs and site ratios
 
     Note that this follows some of the implicit assumptions in ESPEI at the time
@@ -77,11 +77,19 @@ def check_dataset(dataset):
         If an error is found in the dataset
     """
     is_single_phase = dataset['output'] != 'ZPF'
+    components = dataset['components']
+    conditions = dataset['conditions']
     values = dataset['values']
+    phases = dataset['phases']
+    if is_single_phase:
+        solver = dataset['solver']
+        sublattice_configurations = solver['sublattice_configurations']
+        sublattice_site_ratios = solver['sublattice_site_ratios']
+        sublattice_occupancies = solver.get('sublattice_occupancies', None)
 
     # check that the shape of conditions match the values
-    num_pressure = np.atleast_1d(dataset['conditions']['P']).size
-    num_temperature = np.atleast_1d(dataset['conditions']['T']).size
+    num_pressure = np.atleast_1d(conditions['P']).size
+    num_temperature = np.atleast_1d(conditions['T']).size
     if is_single_phase:
         values_shape = np.array(values).shape
         num_configs = len(dataset['solver']['sublattice_configurations'])
@@ -96,13 +104,33 @@ def check_dataset(dataset):
 
     # check that all of the correct phases are present
     if not is_single_phase:
-        phases_entered = set(dataset['phases'])
+        phases_entered = set(phases)
         phases_used = set()
         for zpf in values:
             for tieline in zpf:
                 phases_used.add(tieline[0])
         if len(phases_entered - phases_used) > 0:
             raise DatasetError('Phases entered {} do not match phases used {}.'.format(phases_entered, phases_used))
+
+    # check that all of the components used match the components entered
+    components_entered = set(components)
+    components_used = set()
+    if is_single_phase:
+        for config in sublattice_configurations:
+            for sl in config:
+                if isinstance(sl, list):
+                    components_used.update(set(sl))
+                else:
+                    components_used.add(sl)
+        comp_dof = 0
+    else:
+        for zpf in values:
+            for tieline in zpf:
+                components_used.update(set(tieline[1]))
+        # handle special case of mass balance in ZPFs
+        comp_dof = 1
+    if len(components_entered - components_used) != comp_dof or len(components_used - components_entered) > 0:
+        raise DatasetError('Components entered {} do not match components used.'.format(components_entered, components_used))
 
 
 def load_datasets(dataset_filenames):
