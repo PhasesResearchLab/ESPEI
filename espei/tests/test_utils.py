@@ -183,6 +183,48 @@ dataset_multi_incorrect_components_overspecified = {
               ],
 }
 
+dataset_multi_malformed_zpfs_components_not_list = {
+  "components": ["AL", "NI"],
+  "phases": ["AL3NI2", "BCC_B2"],
+  "conditions": {
+          "P": 101325,
+          "T": [1348, 977]
+  },
+  "output": "ZPF",
+  "values":   [
+               [["AL3NI2", ["NI"], [0.4083]], ["BCC_B2", ["NI"], [0.4340]]],
+               [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", "NI", [0.4532]]]
+              ],
+}
+
+dataset_multi_malformed_zpfs_fractions_do_not_match_components = {
+  "components": ["AL", "NI"],
+  "phases": ["AL3NI2", "BCC_B2"],
+  "conditions": {
+          "P": 101325,
+          "T": [1348, 977]
+  },
+  "output": "ZPF",
+  "values":   [
+               [["AL3NI2", ["NI"], [0.4083]], ["BCC_B2", ["NI"], [0.4340]]],
+               [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4532, 0.4532]]]
+              ],
+}
+
+dataset_multi_malformed_zpfs_components_do_not_match_fractions = {
+  "components": ["AL", "NI"],
+  "phases": ["AL3NI2", "BCC_B2"],
+  "conditions": {
+          "P": 101325,
+          "T": [1348, 977]
+  },
+  "output": "ZPF",
+  "values":   [
+               [["AL3NI2", ["NI"], [0.4083]], ["BCC_B2", ["NI"], [0.4340]]],
+               [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI", "AL"], [0.4532,]]]
+              ],
+}
+
 def test_immediate_client_returns_map_results_directly():
     """Calls ImmediateClient.map should return the results, instead of Futures."""
     from distributed import LocalCluster
@@ -220,6 +262,7 @@ def test_check_datasets_raises_with_incorrect_zpf_phases():
     with pytest.raises(DatasetError):
         check_dataset(dataset_multi_incorrect_phases)
 
+
 def test_check_datasets_raises_with_incorrect_components():
     """Passed datasets that have incorrect components entered vs. used should raise."""
     with pytest.raises(DatasetError):
@@ -230,3 +273,13 @@ def test_check_datasets_raises_with_incorrect_components():
         check_dataset(dataset_multi_incorrect_components_overspecified)
     with pytest.raises(DatasetError):
         check_dataset(dataset_multi_incorrect_components_underspecified)
+
+
+def test_check_datasets_raises_with_malformed_zpf():
+    """Passed datasets that have malformed ZPF values should raise."""
+    with pytest.raises(DatasetError):
+        check_dataset(dataset_multi_malformed_zpfs_components_not_list)
+    with pytest.raises(DatasetError):
+        check_dataset(dataset_multi_malformed_zpfs_fractions_do_not_match_components)
+    with pytest.raises(DatasetError):
+        check_dataset(dataset_multi_malformed_zpfs_components_do_not_match_fractions)

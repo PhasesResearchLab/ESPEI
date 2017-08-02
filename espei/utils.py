@@ -135,6 +135,25 @@ def check_dataset(dataset):
     if len(components_entered - components_used) > comp_dof or len(components_used - components_entered) > 0:
         raise DatasetError('Components entered {} do not match components used.'.format(components_entered, components_used))
 
+    # check that the ZPF values are formatted properly
+    if not is_single_phase:
+        for zpf in values:
+            for tieline in zpf:
+                phase = tieline[0]
+                component_list = tieline[1]
+                mole_fraction_list = tieline[2]
+                # check that the phase is a string, components a list of strings,
+                #  and the fractions are a list of float
+                if not isinstance(phase, str):
+                    raise DatasetError('The first element in the tieline {} for the ZPF point {} should be a string. Instead it is a {} of value {}'.format(tieline, zpf, type(phase), phase))
+                if not all([isinstance(comp, str) for comp in component_list]):
+                    raise DatasetError('The second element in the tieline {} for the ZPF point {} should be a list of strings. Instead it is a {} of value {}'.format(tieline, zpf, type(component_list), component_list))
+                if not all([isinstance(mole_frac, (int, float)) for mole_frac in mole_fraction_list]):
+                    raise DatasetError('The last element in the tieline {} for the ZPF point {} should be a list of numbers. Instead it is a {} of value {}'.format(tieline, zpf, type(mole_fraction_list), mole_fraction_list))
+                # check that the shape of components list and mole fractions list is the same
+                if len(component_list) != len(mole_fraction_list):
+                    raise DatasetError('The length of the components list and mole fractions list in tieline {} for the ZPF point {} should be the same.'.format(tieline, zpf))
+
 
 def load_datasets(dataset_filenames):
     """Create a PickelableTinyDB with the data from a list of filenames.
