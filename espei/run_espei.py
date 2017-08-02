@@ -80,10 +80,10 @@ parser.add_argument(
     help="Turns off MCMC calculation. Useful for first-principles only run.")
 
 parser.add_argument(
-    "--check-input",
+    "--check-datasets",
     metavar="PATH",
     default=None,
-    help="Check input files at the path. Does not run a fit.")
+    help="Check input datasets at the path. Does not run a fit.")
 
 
 def main():
@@ -97,7 +97,7 @@ def main():
     logging.basicConfig(level=verbosity[user_verbosity])
 
     # if desired, check datasets and return
-    if args.check_input:
+    if args.check_datasets:
         dataset_filenames = sorted(recursive_glob(args.check_input, '*.json'))
         errors = []
         for dataset in dataset_filenames:
