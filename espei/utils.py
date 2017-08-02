@@ -77,22 +77,32 @@ def check_dataset(dataset):
         If an error is found in the dataset
     """
     is_single_phase = dataset['output'] != 'ZPF'
+    values = dataset['values']
 
     # check that the shape of conditions match the values
     num_pressure = np.atleast_1d(dataset['conditions']['P']).size
     num_temperature = np.atleast_1d(dataset['conditions']['T']).size
     if is_single_phase:
-        values_shape = np.array(dataset['values']).shape
+        values_shape = np.array(values).shape
         num_configs = len(dataset['solver']['sublattice_configurations'])
         conditions_shape = (num_pressure, num_temperature, num_configs)
         if conditions_shape != values_shape:
             raise DatasetError('Shape of conditions (P, T, configs): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
     else:
-        values = dataset['values']
         values_shape = (len(values))
         conditions_shape = (num_temperature)
         if conditions_shape != values_shape:
             raise DatasetError('Shape of conditions (T): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
+
+    # check that all of the correct phases are present
+    if not is_single_phase:
+        phases_entered = set(dataset['phases'])
+        phases_used = set()
+        for zpf in values:
+            for tieline in zpf:
+                phases_used.add(tieline[0])
+        if len(phases_entered - phases_used) > 0:
+            raise DatasetError('Phases entered {} do not match phases used {}.'.format(phases_entered, phases_used))
 
 
 def load_datasets(dataset_filenames):

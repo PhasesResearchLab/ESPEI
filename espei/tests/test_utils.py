@@ -82,6 +82,22 @@ dataset_multi_misaligned = {
               ],
 }
 
+dataset_multi_incorrect_phases = {
+  "components": ["AL", "NI"],
+  "phases": ["AL3NI2", "BCC_A2"],
+  "conditions": {
+          "P": 101325,
+          "T": [1348, 1176, 977]
+  },
+  "output": "ZPF",
+  "values":   [
+               [["AL3NI2", ["NI"], [0.4083]], ["BCC_B2", ["NI"], [0.4340]]],
+               [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4456]]],
+               [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4532]]]
+              ],
+}
+
+
 def test_immediate_client_returns_map_results_directly():
     """Calls ImmediateClient.map should return the results, instead of Futures."""
     from distributed import LocalCluster
@@ -112,3 +128,9 @@ def test_check_datasets_raises_on_misaligned_data():
         check_dataset(dataset_single_misaligned)
     with pytest.raises(DatasetError):
         check_dataset(dataset_multi_misaligned)
+
+
+def test_check_datasets_raises_with_incorrect_zpf_phases():
+    """Passed datasets that have incorrect phases entered than used should raise."""
+    with pytest.raises(DatasetError):
+        check_dataset(dataset_multi_incorrect_phases)
