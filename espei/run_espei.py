@@ -4,6 +4,8 @@ Automated fitting script.
 A minimal run must specify an input.json and a datasets folder containing input files.
 """
 
+from __future__ import print_function
+
 import os
 import argparse
 import logging
