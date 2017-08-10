@@ -117,9 +117,9 @@ def check_dataset(dataset):
                 mole_fraction_list = tieline[2]
                 # check that the phase is a string, components a list of strings,
                 #  and the fractions are a list of float
-                if not isinstance(phase, str):
+                if not isinstance(phase, basestring):
                     raise DatasetError('The first element in the tieline {} for the ZPF point {} should be a string. Instead it is a {} of value {}'.format(tieline, zpf, type(phase), phase))
-                if not all([isinstance(comp, str) for comp in component_list]):
+                if not all([isinstance(comp, basestring) for comp in component_list]):
                     raise DatasetError('The second element in the tieline {} for the ZPF point {} should be a list of strings. Instead it is a {} of value {}'.format(tieline, zpf, type(component_list), component_list))
                 if not all([(isinstance(mole_frac, (int, float)) or mole_frac is None)  for mole_frac in mole_fraction_list]):
                     raise DatasetError('The last element in the tieline {} for the ZPF point {} should be a list of numbers. Instead it is a {} of value {}'.format(tieline, zpf, type(mole_fraction_list), mole_fraction_list))
