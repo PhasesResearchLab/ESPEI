@@ -17,13 +17,14 @@ setup(
     long_description=readme('README.rst'),
     url='https://espei.org/',
     install_requires=[
-        'numpy', 
-        'scipy', 
-        'dask>=0.15', 
-        'distributed', 
-        'tinydb<3', 
-        'scikit-learn', 
-        'emcee', 
+        'numpy',
+        'scipy',
+        'six',
+        'dask>=0.15',
+        'distributed',
+        'tinydb<3',
+        'scikit-learn',
+        'emcee',
         'pycalphad>=0.5'],
     extras_require={
         'dev': [
