@@ -31,6 +31,9 @@ setup(
             'sphinx_rtd_theme',
             'pytest',
             'twine',
+        ],
+        'mpi': [
+            'mpi4py',
         ]
     },
     classifiers=[
