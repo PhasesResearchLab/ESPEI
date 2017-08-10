@@ -32,6 +32,9 @@ setup(
             'pytest',
             'mock',
             'twine',
+        ],
+        'mpi': [
+            'mpi4py',
         ]
     },
     classifiers=[
