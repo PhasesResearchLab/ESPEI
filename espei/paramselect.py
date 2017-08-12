@@ -761,7 +761,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         try:
             for i, result in enumerate(sampler.sample(walkers, iterations=mcmc_steps)):
                 # progress bar
-                if i+1 % save_interval == 0:
+                if (i+1) % save_interval == 0:
                     save_sampler_state(sampler)
                     logging.debug('Acceptance ratios for parameters: {}'.format(sampler.acceptance_fraction))
                 n = int((progbar_width + 1) * float(i) / mcmc_steps)
