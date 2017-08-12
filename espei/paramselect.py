@@ -764,7 +764,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
 
         flatchain = sampler.flatchain
         save_tracefile(sampler)
-        optimal_parameters = np.mean(flatchain, axis=0)
+        optimal_parameters = flatchain[np.nanargmin(-sampler.flatlnprobability)]
         logging.debug('Intial parameters: {}'.format(initial_parameters))
         logging.debug('Optimal parameters: {}'.format(optimal_parameters))
         logging.debug('Change in parameters: {}'.format(np.abs(initial_parameters - optimal_parameters) / initial_parameters))
