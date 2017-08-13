@@ -6,7 +6,7 @@ import tinydb
 from collections import OrderedDict
 from pycalphad import Model, calculate, equilibrium, variables as v
 from pycalphad.plot.utils import phase_legend
-from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable
+from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_condition
 
 from espei.core_utils import get_data, get_samples, list_to_tuple, \
     endmembers_from_interaction, build_sitefractions
@@ -73,31 +73,57 @@ def dataplot(eq, datasets, ax=None):
     -------
     A plot of phase equilibria points as a figure
     """
-    # TODO: support isotherm plotting
     # TODO: support reference legend
-    import matplotlib.pyplot as plt
-    plots = [('ZPF', 'T')]
-    real_components = sorted(set(comps) - {'VA'})
+    conds = OrderedDict([(_map_coord_to_variable(key), unpack_condition(np.asarray(value)))
+                         for key, value in sorted(eq.coords.items(), key=str)
+                         if (key == 'T') or (key == 'P') or (key.startswith('X_'))])
+    indep_comps = sorted([key for key, value in conds.items() if isinstance(key, v.Composition) and len(value) > 1], key=str)
+    indep_pots = [key for key, value in conds.items() if ((key == v.T) or (key == v.P)) and len(value) > 1]
+
+    # determine what the type of plot will be
+    if len(indep_comps) == 1 and len(indep_pots) == 1:
+        projection = None
+    elif len(indep_comps) == 2 and len(indep_pots) == 0:
+        # TODO: support isotherm plotting
+        raise NotImplementedError('Triangular plotting is not yet implemented')
+        projection = 'triangular'
+    else:
+        raise ValueError('The eqplot projection is not defined and cannot be autodetected. There are {} independent compositions and {} indepedent potentials.'.format(len(indep_comps), len(indep_pots)))
+
+    if projection is None:
+        x = indep_comps[0]
+        y = indep_pots[0]
+
+    phases = map(str, sorted(set(np.array(eq.Phase.values.ravel(), dtype='U')) - {''}, key=str))
+    comps = map(str, sorted(np.array(eq.coords['component'].values, dtype='U'), key=str))
     legend_handles, phase_color_map = phase_legend(phases)
-    for output, indep_var in plots:
+
+    # set up plot if not done already
+    if ax is None:
+        ax = fig.gca(projection=projection)
+        ax.set_xlabel('X({})'.format(x))
+        ax.set_ylabel(y)
+        ax.set_xlim((0, 1))
+        ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
+
+    plots = [('ZPF', 'T')]
+    for output, y in plots:
+        # TODO: used to include VA. Should this be added by default. Can't determine presence of VA in eq.
+        # Techincally, VA should not be present in any phase equilibria.
         desired_data = datasets.search((tinydb.where('output') == output) &
                                        (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                        (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
-        ax = ax if ax is not None else plt.gca()
         # TODO: There are lot of ways this could break in multi-component situations
-        chosen_comp = x or real_components[-1]
-        ax.set_xlabel('X({})'.format(chosen_comp))
-        ax.set_ylabel(indep_var)
-        ax.set_xlim((0, 1))
+
         symbol_map = {1: "o", 2: "s", 3: "^"}
         for data in desired_data:
             payload = data['values']
             # TODO: Add broadcast_conditions support
             # Repeat the temperature (or whatever variable) vector to align with the unraveled data
-            temp_repeats = np.zeros(len(np.atleast_1d(data['conditions'][indep_var])), dtype=np.int)
-            for idx, x in enumerate(payload):
-                temp_repeats[idx] = len(x)
-            temps_ravelled = np.repeat(data['conditions'][indep_var], temp_repeats)
+            temp_repeats = np.zeros(len(np.atleast_1d(data['conditions'][y])), dtype=np.int)
+            for idx, p in enumerate(payload):
+                temp_repeats[idx] = len(p)
+            temps_ravelled = np.repeat(data['conditions'][y], temp_repeats)
             payload_ravelled = []
             phases_ravelled = []
             comps_ravelled = []
@@ -109,14 +135,14 @@ def dataplot(eq, datasets, ax=None):
             for rp in payload_ravelled:
                 phases_ravelled.append(rp[0])
                 comp_dict = dict(zip([x.upper() for x in rp[1]], rp[2]))
-                dependent_comp = list(set(real_components) - set(comp_dict.keys()))
+                dependent_comp = list(set(comps) - set(comp_dict.keys()))
                 if len(dependent_comp) > 1:
                     raise ValueError('Dependent components greater than one')
                 elif len(dependent_comp) == 1:
                     dependent_comp = dependent_comp[0]
                     # TODO: Assuming N=1
                     comp_dict[dependent_comp] = 1 - sum(np.array(list(comp_dict.values()), dtype=np.float))
-                chosen_comp_value = comp_dict[chosen_comp]
+                chosen_comp_value = comp_dict[x]
                 comps_ravelled.append(chosen_comp_value)
             symbols_ravelled = np.array(symbols_ravelled)
             comps_ravelled = np.array(comps_ravelled)
@@ -127,7 +153,6 @@ def dataplot(eq, datasets, ax=None):
                 selected = symbols_ravelled == sym
                 ax.scatter(comps_ravelled[selected], temps_ravelled[selected], marker=sym, s=100,
                            c='none', edgecolors=[phase_color_map[x] for x in phases_ravelled[selected]])
-        ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
     return ax
 
 def multi_plot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=None, data_kwargs=None):
