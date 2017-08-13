@@ -72,6 +72,20 @@ def dataplot(eq, datasets, ax=None):
     Returns
     -------
     A plot of phase equilibria points as a figure
+
+    Examples
+    --------
+
+    >>> from pycalphad import equilibrium, Database, variables as v
+    >>> from pycalphad.plot.eqplot import eqplot
+    >>> from espei.datasets import load_datasets, recursive_glob
+    >>> datasets = load_datasets(recursive_glob('.', '*.json'))
+    >>> dbf = Database('my_databases.tdb')
+    >>> my_phases = list(dbf.phases.keys())
+    >>> eq = equilibrium(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)})
+    >>> ax = eqplot(eq)
+    >>> ax = dataplot(eq, datasets, ax=ax)
+
     """
     # TODO: support reference legend
     conds = OrderedDict([(_map_coord_to_variable(key), unpack_condition(np.asarray(value)))
@@ -184,6 +198,18 @@ def multi_plot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=
     Returns
     -------
     A phase diagram with phase equilibria data as a figure
+
+    Examples
+    --------
+
+    >>> from pycalphad import Database, variables as v
+    >>> from pycalphad.plot.eqplot import eqplot
+    >>> from espei.datasets import load_datasets, recursive_glob
+    >>> datasets = load_datasets(recursive_glob('.', '*.json'))
+    >>> dbf = Database('my_databases.tdb')
+    >>> my_phases = list(dbf.phases.keys())
+    >>> multi_plot(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)}, datasets)
+
     """
     eq_kwargs = eq_kwargs or dict()
     plot_kwargs = plot_kwargs or dict()
