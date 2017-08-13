@@ -38,6 +38,7 @@ from collections import OrderedDict, defaultdict
 from pycalphad import calculate, equilibrium, Database, Model, CompiledModel, \
     variables as v
 from sklearn.linear_model import LinearRegression
+from numpy.linalg import LinAlgError
 
 from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort_key, \
     list_to_tuple, endmembers_from_interaction, build_sitefractions
@@ -545,7 +546,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
     # TODO: support distributed schedulers for multi_phase_fit.
     # This can be done if the scheduler passed is a distributed.worker_client
     if scheduler is not dask.local:
-        raise ValueError('Schedulers other than dask.local are not currently supported for multiphase fitting.')
+        raise NotImplementedError('Schedulers other than dask.local are not currently supported for multiphase fitting.')
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
@@ -611,7 +612,7 @@ def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
     try:
         iter_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                                      parameters=parameters, scheduler=scheduler)
-    except ValueError as e:
+    except (ValueError, LinAlgError) as e:
         iter_error = [np.inf]
     iter_error = [np.inf if np.isnan(x) else x ** 2 for x in iter_error]
     iter_error = -np.sum(iter_error)
