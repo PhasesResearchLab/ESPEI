@@ -38,6 +38,12 @@ parser.add_argument(
     help="Output file for recording MCMC trace (txt). Defaults to chain.txt")
 
 parser.add_argument(
+    "--probfile",
+    metavar="FILE",
+    default='lnprob.txt',
+    help="Output file for recording MCMC log probability (txt) corresponding to chain. Defaults to lnprob.txt")
+
+parser.add_argument(
     "--fit-settings",
     metavar="FILE",
     default="input.json",
@@ -125,13 +131,15 @@ def main():
     # load datasets and handle i/o
     datasets = load_datasets(sorted(recursive_glob(args.datasets, '*.json')))
     tracefile = args.tracefile if args.tracefile else None
+    probfile = args.probfile if args.probfile else None
     run_mcmc = not args.no_mcmc
     if args.input_tdb:
         resume = Database(args.input_tdb)
     else:
         resume = None
     dbf, sampler, parameters = fit(args.fit_settings, datasets, scheduler=client,
-                                   tracefile=tracefile, resume=resume, run_mcmc=run_mcmc,
+                                   tracefile=tracefile, probfile=probfile,
+                                   resume=resume, run_mcmc=run_mcmc,
                                    mcmc_steps=args.mcmc_steps, save_interval=args.save_interval)
     dbf.to_file(args.output_tdb, if_exists='overwrite')
 
