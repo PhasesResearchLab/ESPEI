@@ -91,16 +91,17 @@ def dataplot(eq, datasets, ax=None):
         raise ValueError('The eqplot projection is not defined and cannot be autodetected. There are {} independent compositions and {} indepedent potentials.'.format(len(indep_comps), len(indep_pots)))
 
     if projection is None:
-        x = indep_comps[0]
+        x = indep_comps[0].species
         y = indep_pots[0]
 
-    phases = map(str, sorted(set(np.array(eq.Phase.values.ravel(), dtype='U')) - {''}, key=str))
-    comps = map(str, sorted(np.array(eq.coords['component'].values, dtype='U'), key=str))
+    phases = list(map(str, sorted(set(np.array(eq.Phase.values.ravel(), dtype='U')) - {''}, key=str)))
+    comps = list(map(str, sorted(np.array(eq.coords['component'].values, dtype='U'), key=str)))
     legend_handles, phase_color_map = phase_legend(phases)
 
     # set up plot if not done already
     if ax is None:
-        ax = fig.gca(projection=projection)
+        import matplotlib.pyplot as plt
+        ax = plt.gca(projection=projection)
         ax.set_xlabel('X({})'.format(x))
         ax.set_ylabel(y)
         ax.set_xlim((0, 1))
@@ -111,7 +112,7 @@ def dataplot(eq, datasets, ax=None):
         # TODO: used to include VA. Should this be added by default. Can't determine presence of VA in eq.
         # Techincally, VA should not be present in any phase equilibria.
         desired_data = datasets.search((tinydb.where('output') == output) &
-                                       (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
+                                       (tinydb.where('components').test(lambda x: set(x).issubset(comps + ['VA']))) &
                                        (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
         # TODO: There are lot of ways this could break in multi-component situations
 
@@ -154,6 +155,7 @@ def dataplot(eq, datasets, ax=None):
                 ax.scatter(comps_ravelled[selected], temps_ravelled[selected], marker=sym, s=100,
                            c='none', edgecolors=[phase_color_map[x] for x in phases_ravelled[selected]])
     return ax
+
 
 def multi_plot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=None, data_kwargs=None):
     """
