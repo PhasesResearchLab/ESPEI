@@ -6,6 +6,7 @@ import tinydb
 from collections import OrderedDict
 from pycalphad import Model, calculate, variables as v
 from pycalphad.plot.utils import phase_legend
+from pycalphad.plot.eqplot import eqplot
 
 from espei.core_utils import get_data, get_samples, list_to_tuple, \
     endmembers_from_interaction, build_sitefractions
@@ -54,7 +55,56 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
             _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, configuration, x_val, y_val)
 
 
-def multi_plot(dbf, comps, phases, datasets, ax=None):
+
+def dataplot(eq, datasets, ax=None):
+    """
+    Plot datapoints corresponding to the components and phases in the eq Dataset
+
+    Parameters
+    ----------
+    eq : xarray.Dataset
+        Result of equilibrium calculation.
+    datasets : TinyDB
+        Database of phase equilibria datasets
+    ax : matplotlib.Axes
+        Default axes used if not specified.
+
+    Returns
+    -------
+    A plot of phase equilibria points as a figure
+    """
+    # TODO: support isotherm plotting
+    # TODO: support reference legend
+    pass
+
+def multi_plot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=None, data_kwargs=None):
+    """
+    Plot a phase diagram with datapoints described by datasets.
+    This is a wrapper around pycalphad.equilibrium, pycalphad's eqplot, and dataplot.
+
+    Parameters
+    ----------
+    dbf : Database
+        pycalphad thermodynamic database containing the relevant parameters.
+    comps : list
+        Names of components to consider in the calculation.
+    phases : list
+        Names of phases to consider in the calculation.
+    conds : dict
+        Maps StateVariables to values and/or iterables of values.
+    datasets : TinyDB
+        Database of phase equilibria datasets
+    eq_kwargs : dict
+        Keyword arguments passed to pycalphad equilibrium()
+    plot_kwargs : dict
+        Keyword arguments passed to pycalphad eqplot()
+    data_kwargs : dict
+        Keyword arguments passed to dataplot()
+
+    Returns
+    -------
+    A phase diagram with phase equilibria data as a figure
+    """
     import matplotlib.pyplot as plt
     plots = [('ZPF', 'T')]
     real_components = sorted(set(comps) - {'VA'})
@@ -65,7 +115,7 @@ def multi_plot(dbf, comps, phases, datasets, ax=None):
                                        (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
         ax = ax if ax is not None else plt.gca()
         # TODO: There are lot of ways this could break in multi-component situations
-        chosen_comp = real_components[-1]
+        chosen_comp = x or real_components[-1]
         ax.set_xlabel('X({})'.format(chosen_comp))
         ax.set_ylabel(indep_var)
         ax.set_xlim((0, 1))
