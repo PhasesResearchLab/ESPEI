@@ -4,9 +4,9 @@ Plotting of input data and calculated database quantities
 import numpy as np
 import tinydb
 from collections import OrderedDict
-from pycalphad import Model, calculate, variables as v
+from pycalphad import Model, calculate, equilibrium, variables as v
 from pycalphad.plot.utils import phase_legend
-from pycalphad.plot.eqplot import eqplot
+from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable
 
 from espei.core_utils import get_data, get_samples, list_to_tuple, \
     endmembers_from_interaction, build_sitefractions
@@ -75,36 +75,6 @@ def dataplot(eq, datasets, ax=None):
     """
     # TODO: support isotherm plotting
     # TODO: support reference legend
-    pass
-
-def multi_plot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=None, data_kwargs=None):
-    """
-    Plot a phase diagram with datapoints described by datasets.
-    This is a wrapper around pycalphad.equilibrium, pycalphad's eqplot, and dataplot.
-
-    Parameters
-    ----------
-    dbf : Database
-        pycalphad thermodynamic database containing the relevant parameters.
-    comps : list
-        Names of components to consider in the calculation.
-    phases : list
-        Names of phases to consider in the calculation.
-    conds : dict
-        Maps StateVariables to values and/or iterables of values.
-    datasets : TinyDB
-        Database of phase equilibria datasets
-    eq_kwargs : dict
-        Keyword arguments passed to pycalphad equilibrium()
-    plot_kwargs : dict
-        Keyword arguments passed to pycalphad eqplot()
-    data_kwargs : dict
-        Keyword arguments passed to dataplot()
-
-    Returns
-    -------
-    A phase diagram with phase equilibria data as a figure
-    """
     import matplotlib.pyplot as plt
     plots = [('ZPF', 'T')]
     real_components = sorted(set(comps) - {'VA'})
@@ -158,6 +128,44 @@ def multi_plot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=
                 ax.scatter(comps_ravelled[selected], temps_ravelled[selected], marker=sym, s=100,
                            c='none', edgecolors=[phase_color_map[x] for x in phases_ravelled[selected]])
         ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
+    return ax
+
+def multi_plot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=None, data_kwargs=None):
+    """
+    Plot a phase diagram with datapoints described by datasets.
+    This is a wrapper around pycalphad.equilibrium, pycalphad's eqplot, and dataplot.
+
+    Parameters
+    ----------
+    dbf : Database
+        pycalphad thermodynamic database containing the relevant parameters.
+    comps : list
+        Names of components to consider in the calculation.
+    phases : list
+        Names of phases to consider in the calculation.
+    conds : dict
+        Maps StateVariables to values and/or iterables of values.
+    datasets : TinyDB
+        Database of phase equilibria datasets
+    eq_kwargs : dict
+        Keyword arguments passed to pycalphad equilibrium()
+    plot_kwargs : dict
+        Keyword arguments passed to pycalphad eqplot()
+    data_kwargs : dict
+        Keyword arguments passed to dataplot()
+
+    Returns
+    -------
+    A phase diagram with phase equilibria data as a figure
+    """
+    eq_kwargs = eq_kwargs or dict()
+    plot_kwargs = plot_kwargs or dict()
+    data_kwargs = data_kwargs or dict()
+
+    eq_result = equilibrium(dbf, comps, phases, conds, **eq_kwargs)
+    ax = eqplot(eq_result, **plot_kwargs)
+    ax = dataplot(eq_result, datasets, ax=ax, **data_kwargs)
+    return ax
 
 
 def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, configuration, x, y):
