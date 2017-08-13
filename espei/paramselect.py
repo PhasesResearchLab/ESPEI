@@ -528,7 +528,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
                     f.write(template_error.format(dbf.to_string(fmt='tdb'), comps, [current_phase], cond_dict, {key: float(x) for key, x in parameters.items()}))
         # Sometimes we can get a miscibility gap in our "single-phase" calculation
         # Choose the weighted mixture of site fractions
-            logging.warning('Dropping condition due to calculation failure: ', cond_dict)
+            logging.warning('Dropping condition due to calculation failure: {}'.format(cond_dict))
             return 0
         select_energy = float(single_eqdata['GM'].values)
         region_comps = []
