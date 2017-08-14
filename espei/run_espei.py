@@ -125,12 +125,11 @@ def main():
         from emcee.utils import MPIPool
         # code recommended by emcee: if not master, wait for instructions then exit
         client = MPIPool()
-        logging.info("Using MPIPool on {} MPI ranks".format(client.rank))
         if not client.is_master():
             logging.warning('MPIPool is not master. Waiting for instructions...')
             client.wait()
             sys.exit(0)
-        logging.info('Using MPIPool')
+        logging.info("Using MPIPool on {} MPI ranks".format(client.size))
     elif not args.scheduler:
         from distributed import LocalCluster
         args.scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, processes=True)
