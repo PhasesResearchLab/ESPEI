@@ -30,6 +30,7 @@ setup(
             'sphinx',
             'sphinx_rtd_theme',
             'pytest',
+            'mock',
             'twine',
         ]
     },
