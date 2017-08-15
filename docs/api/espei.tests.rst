@@ -12,6 +12,14 @@ espei\.tests\.test\_datasets module
     :undoc-members:
     :show-inheritance:
 
+espei\.tests\.test\_paramselect module
+--------------------------------------
+
+.. automodule:: espei.tests.test_paramselect
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 espei\.tests\.test\_utils module
 --------------------------------
 
