@@ -100,6 +100,7 @@ In all cases, ESPEI lets you control certain aspects of your calculations from t
 
 * ``verbose`` (or ``-v``) controls the logging level. Default is Warning. Using verbose once gives more detail (Info) and twice even more (Debug)
 * ``tracefile`` lets you set the output trace of the chain to any name you want. The default is ``chain.txt``.
+* ``probfile`` lets you set the output log-probability of each step in the chain to any name you want. The default is ``lnprob.txt``.
 * ``output-tdb`` sets the name of the TDB output at the end of the run. Default is ``out.tdb``.
 * ``input-tdb`` is for setting input TDBs. This will skip single phase fitting and fit all parameters defined as FUNCTIONs with names starting with ``VV``.
 * ``no-mcmc`` will do single-phase fitting only. Default is to perform MCMC fitting.
@@ -119,6 +120,24 @@ A: Common mistakes are using single quotes instead of the double quotes required
 Another common source of errors is misaligned open/closing brackets.
 
 To find the offending files, you can rename the datasets to anything not ending in ``.json``, such as ``my_datasets.json.disabled``. The renamed files will be ignored and it allows you to track down any problematic files.
+
+Q: How do I analyze my results?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A: By default, ESPEI will create ``chain.txt`` and ``lnprob.txt`` for the MCMC chain at the end of your run and according to the save interval (defaults to every 100 iterations).
+These are created from arrays via ``numpy.savetxt`` and can thus be loaded with ``numpy.loadtxt()``.
+Note that the arrays are preallocated with zeros.
+These filenames and settings (e.g. save interval) can be changed using the command line options, see ``espei -h``.
+You can then use these chains and corresponding log-probabilities to make corner plots, calculate autocorrelations, find optimal parameters for databases, etc..
+Finally, you can use py:mod:`espei.plot` functions such as ``multiplot`` to plot phase diagrams with your input equilibria data and ``plot_parameters`` to compare single-phase data (e.g. formation and mixing data) with the properties calculated with your database.
+
+Q: Can I run ESPEI on a supercomputer supporting MPI?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A: Yes! ESPEI has MPI support.
+Currently only single node processing is supported, but fixes are coming soon to support multiple nodes.
+To use ESPEI with MPI, you simply call ESPEI in the same way as above with `mpirun` or whichever MPI software you use.
+You also must indicate to ESPEI that it should create an MPI scheduler by passing the option ``--scheduler='MPIPool'`` to ESPEI.
 
 Module Hierarchy
 ================
