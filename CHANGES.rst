@@ -2,6 +2,21 @@
 What's New
 ==========
 
+0.2 (2017-08-15)
+==================
+
+* New ``multiplot`` interface for convienent plotting of phase diagrams + data. ``dataplot`` function underlies key data plotting features and can be used with ``eqplot``. See their API docs for examples. Will break existing code using multiplot.
+* MPI support for local/HPC runs. Only single node runs are explictly supported currently. Use ``--scheduler='MPIPool'`` command line option. Requires ``mpi4py``.
+* Default debug reporting of acceptance ratios
+* Option (and default) to output the log probability array matching the trace. Use ``--probfile`` option to control.
+* Optimal parameters are now chosen based on lowest error in chain.
+* Bug fixes including
+   
+   - py2/3 compatibiltiy
+   - unicode datasets
+   - handling of singular matrix errors from pycalphad's ``equilibrium``
+   - reporting of failed conditions
+
 0.1.5 (2017-08-02)
 ==================
 
