@@ -2,6 +2,14 @@
 What's New
 ==========
 
+0.2.1 (2017-08-17)
+==================
+
+Fixes to the 0.2 release plotting interface
+
+* ``multiplot`` is renamed from ``multi_plot``, as in docs.
+* Fixed an issue where phases in datasets, but not in equilibrium were not plotted by dataplot and raised an error.
+
 0.2 (2017-08-15)
 ==================
 
