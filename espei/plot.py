@@ -110,7 +110,6 @@ def dataplot(eq, datasets, ax=None):
 
     phases = list(map(str, sorted(set(np.array(eq.Phase.values.ravel(), dtype='U')) - {''}, key=str)))
     comps = list(map(str, sorted(np.array(eq.coords['component'].values, dtype='U'), key=str)))
-    legend_handles, phase_color_map = phase_legend(phases)
 
     # set up plot if not done already
     if ax is None:
@@ -119,7 +118,6 @@ def dataplot(eq, datasets, ax=None):
         ax.set_xlabel('X({})'.format(x))
         ax.set_ylabel(y)
         ax.set_xlim((0, 1))
-        ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
 
     plots = [('ZPF', 'T')]
     for output, y in plots:
@@ -128,6 +126,21 @@ def dataplot(eq, datasets, ax=None):
         desired_data = datasets.search((tinydb.where('output') == output) &
                                        (tinydb.where('components').test(lambda x: set(x).issubset(comps + ['VA']))) &
                                        (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
+
+        # The above handled the phases as in the equilibrium, but there may be
+        # phases that are in the datasets but not in the equilibrium diagram that
+        # we would like to plot point for (they need color maps).
+        # To keep consistent colors with the equilibrium diagram, we will append
+        # the new phases from the datasets to the existing phases in the equilibrium
+        # calculation.
+        data_phases = set()
+        for entry in desired_data:
+            data_phases.update(set(entry['phases']))
+        new_phases = sorted(list(data_phases.difference(set(phases))))
+        phases.extend(new_phases)
+        legend_handles, phase_color_map = phase_legend(phases)
+        ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
+
         # TODO: There are lot of ways this could break in multi-component situations
 
         symbol_map = {1: "o", 2: "s", 3: "^"}
@@ -171,7 +184,7 @@ def dataplot(eq, datasets, ax=None):
     return ax
 
 
-def multi_plot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=None, data_kwargs=None):
+def multiplot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=None, data_kwargs=None):
     """
     Plot a phase diagram with datapoints described by datasets.
     This is a wrapper around pycalphad.equilibrium, pycalphad's eqplot, and dataplot.
@@ -208,7 +221,7 @@ def multi_plot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=
     >>> datasets = load_datasets(recursive_glob('.', '*.json'))
     >>> dbf = Database('my_databases.tdb')
     >>> my_phases = list(dbf.phases.keys())
-    >>> multi_plot(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)}, datasets)
+    >>> multiplot(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)}, datasets)
 
     """
     eq_kwargs = eq_kwargs or dict()
