@@ -22,11 +22,14 @@ import sys
 from unittest.mock import Mock
 sys.path.insert(0, os.path.abspath('..'))
 
-MOCK_MODULES = ['dask', 'distributed', 'emcee', 'matplotlib',
+MOCK_MODULES = ['dask', 'distributed', 'emcee', 'emcee.utils',
+                'matplotlib',
                 'matplotlib.pyplot', 'numpy', 'pycalphad',
                 'pycalphad.plot.utils', 'pycalphad.refdata',
-                'pycalphad.variables', 'scipy', 'sklearn',
-                'sklearn.linear_model', 'sympy', 'tinydb', 'tinydb.storages'
+                'pycalphad.variables', 'pycalphad.plot.eqplot',
+                'scipy', 'sklearn', 'sklearn.linear_model',
+                'sympy', 'tinydb', 'pytest',
+                'tinydb.storages', 'numpy.linalg'
                 ]
 
 for mod_name in MOCK_MODULES:
