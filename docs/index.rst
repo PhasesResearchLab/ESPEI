@@ -24,6 +24,15 @@ The name and idea of ESPEI are originally based off of Shang, Wang, and Liu, ESP
 .. _Jom 69, (2017): http://dx.doi.org/10.1007/s11837-017-2318-6
 .. _Magnes. Technol. 2010 617-622 (2010): http://www.phases.psu.edu/wp-content/uploads/2010-Shang-Shunli-MagTech-ESPEI-0617-1.pdf
 
+
+.. figure:: _static/cu-mg-mcmc-phase-diagram.png
+    :alt: Cu-Mg phase diagram
+    :scale: 100%
+
+    Cu-Mg phase diagram from a database created with and optimized by ESPEI.
+    See the :ref:`Cu-Mg Example`.
+
+
 Installation
 ============
 
@@ -119,7 +128,8 @@ Q: There is an error in my JSON files
 A: Common mistakes are using single quotes instead of the double quotes required by JSON files.
 Another common source of errors is misaligned open/closing brackets.
 
-To find the offending files, you can rename the datasets to anything not ending in ``.json``, such as ``my_datasets.json.disabled``. The renamed files will be ignored and it allows you to track down any problematic files.
+To find the offending files, you can rename the datasets to anything not ending in ``.json``, such as ``my_datasets.json.disabled``.
+The renamed files will be ignored and it allows you to track down any problematic files.
 
 Q: How do I analyze my results?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -157,6 +167,7 @@ ESPEI is MIT licensed. See LICENSE.
    :maxdepth: 4
    :caption: Contents
 
+   cu-mg-example
    input_files
    CHANGES
    api/modules
