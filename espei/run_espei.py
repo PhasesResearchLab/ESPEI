@@ -152,6 +152,13 @@ def main():
     tracefile = args.tracefile if args.tracefile else None
     probfile = args.probfile if args.probfile else None
     run_mcmc = not args.no_mcmc
+    # check that the MCMC output files do not already exist
+    # only matters if we are actually running MCMC
+    if run_mcmc:
+        if os.path.exists(tracefile):
+            raise OSError('Tracefile "{}" exists and would be overwritten by a new run. Use --tracefile to set a different name.'.format(tracefile))
+        if os.path.exists(probfile):
+            raise OSError('Probfile "{}" exists and would be overwritten by a new run. Use --probfile to set a different name.'.format(tracefile))
     if args.input_tdb:
         resume_tdb = Database(args.input_tdb)
     else:
