@@ -621,7 +621,8 @@ def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
 
 
 def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
-        tracefile=None, probfile=None, mcmc_steps=1000, save_interval=100):
+        tracefile=None, probfile=None, restart_chain=None, mcmc_steps=1000,
+        save_interval=100):
     """Fit thermodynamic and phase equilibria data to a model.
     
     Parameters
@@ -639,9 +640,12 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         Controls if MCMC should be run. Default is True. Useful for
         first-principles (single-phase only) runs.
     tracefile : str
-        filename to store the flattened chain with NumPy.savetxt
+        filename to store the flattened chain with NumPy.save. Array has shape
+        (nwalkers, iterations, nparams)
     probfile : str
-        filename to store the flattened ln probability with NumPy.savetxt
+        filename to store the flattened ln probability with NumPy.save
+    restart_chain : np.ndarray
+        ndarray of the previous chain. Should have shape (nwalkers, iterations, nparams)
     mcmc_steps : int
         number of chain steps to calculate in MCMC. Note the flattened chain will
         have (mcmc_steps*DOF) values.
@@ -712,7 +716,6 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         # get initial parameters and remove these from the database
         # we'll replace them with SymPy symbols initialized to 0 in the phase models
         initial_parameters = [np.array(float(dbf.symbols[x])) for x in symbols_to_fit]
-        logging.debug('Initial parameters: {}'.format(initial_parameters))
         for x in symbols_to_fit:
             del dbf.symbols[x]
 
@@ -736,21 +739,30 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         def save_sampler_state(sampler):
             if tracefile:
                 logging.debug('Writing chain to {}'.format(tracefile))
-                np.savetxt(tracefile, sampler.flatchain)
+                np.save(tracefile, sampler.chain)
             if probfile:
                 logging.debug('Writing lnprob to {}'.format(probfile))
-                np.savetxt(probfile, sampler.flatlnprobability)
+                np.save(probfile, sampler.lnprobability)
 
-        # initialize the RNG
-        rng = np.random.RandomState(1769)
-        # set up the MCMC run
-        # set up the initial parameters
-        # apply a Gaussian random to each parameter with std dev of 0.10*parameter
-        initial_parameters = np.array(initial_parameters)
-        ndim = len(initial_parameters)
-        nwalkers = 2*ndim # walkers must be of size (2n*ndim)
-        initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
-        walkers = rng.normal(initial_walkers, np.abs(initial_walkers*0.10))
+        # initialize the walkers either fresh or from the restart
+        if restart_chain is not None:
+            walkers = restart_chain[np.nonzero(restart_chain)].reshape((restart_chain.shape[0], -1, restart_chain.shape[2]))[:, -1, :]
+            nwalkers = walkers.shape[0]
+            ndim = walkers.shape[1]
+            logging.debug('Restarting from previous calculation. Parameters on restart: {}'.format(initial_parameters))
+        else:
+            # initialize the RNG
+            rng = np.random.RandomState(1769)
+            # set up the MCMC run
+            # set up the initial parameters
+            # apply a Gaussian random to each parameter with std dev of 0.10*parameter
+            initial_parameters = np.array(initial_parameters)
+            logging.debug('Initial parameters: {}'.format(initial_parameters))
+            ndim = len(initial_parameters)
+            nwalkers = 2*ndim # walkers must be of size (2n*ndim)
+            initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
+            walkers = rng.normal(initial_walkers, np.abs(initial_walkers*0.10))
+
         # set up with emcee
         import emcee
         import sys
@@ -774,8 +786,8 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         if isinstance(scheduler, MPIPool):
             scheduler.close()
         # final processing
-        flatchain = sampler.flatchain
         save_sampler_state(sampler)
+        flatchain = sampler.flatchain
         optimal_parameters = flatchain[np.nanargmin(-sampler.flatlnprobability)]
         logging.debug('Intial parameters: {}'.format(initial_parameters))
         logging.debug('Optimal parameters: {}'.format(optimal_parameters))
