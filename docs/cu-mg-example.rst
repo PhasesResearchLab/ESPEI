@@ -114,7 +114,7 @@ Mixing enthalpies are defined for the for the fcc, hcp, and Laves phases from DF
 
 The following command will generate a database named ``cu-mg_dft.tdb`` with parameters selected and fit by ESPEI::
 
-    espei --no-mcmc --fit-settings=Cu-Mg-input.json --input-data=input-data --output-tdb=cu-mg_dft.tdb
+    espei --no-mcmc --fit-settings=Cu-Mg-input.json --datasets=input-data --output-tdb=cu-mg_dft.tdb
 
 The calculation should be relatively quick, on the order of a minute of runtime.
 With the above command, only mininmal output (warnings) will be reported.
@@ -194,7 +194,7 @@ Now we will use our zero phase fraction equilibria data to optimize our first-pr
 The following command will take the database we created in the single-phase parameter selection and perform a MCMC optimization, creating a ``cu-mg_mcmc.tdb``::
 
 
-    espei --input-tdb=cu-mg_dft.tdb --fit-settings=Cu-Mg-input.json --input-data=input-data --output-tdb=cu-mg_mcmc.tdb
+    espei --input-tdb=cu-mg_dft.tdb --fit-settings=Cu-Mg-input.json --datasets=input-data --output-tdb=cu-mg_mcmc.tdb
 
 ESPEI defaults to run 1000 iterations and depends on calculating equilibrium in pycalphad several times for each iteration and the optimization is compute-bound.
 Fortunately, MCMC optimzations are embarrasingly parallel and ESPEI allows for parallelization using `dask <http://dask.pydata.org/>`_ or with MPI using `mpi4py <http://mpi4py.scipy.org/>`_ (single-node only at the time of writing - we are working on it).
