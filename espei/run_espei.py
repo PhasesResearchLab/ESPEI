@@ -12,6 +12,7 @@ import logging
 import multiprocessing
 import sys
 
+import numpy as np
 from pycalphad import Database
 
 from espei import fit
@@ -35,14 +36,14 @@ parser.add_argument(
 parser.add_argument(
     "--tracefile",
     metavar="FILE",
-    default='chain.txt',
-    help="Output file for recording MCMC trace (txt). Defaults to chain.txt")
+    default='chain.npy',
+    help="Output file for recording MCMC trace array. Defaults to chain.npy")
 
 parser.add_argument(
     "--probfile",
     metavar="FILE",
-    default='lnprob.txt',
-    help="Output file for recording MCMC log probability (txt) corresponding to chain. Defaults to lnprob.txt")
+    default='lnprob.npy',
+    help="Output file for recording MCMC log probability array corresponding to chain. Defaults to lnprob.npy")
 
 parser.add_argument(
     "--fit-settings",
@@ -93,6 +94,11 @@ parser.add_argument(
     default=None,
     help="Check input datasets at the path. Does not run a fit.")
 
+parser.add_argument(
+    "--restart",
+    metavar="FILE",
+    default=None,
+    help="Restart a run with the specified chain trace. Requires input-tdb to be specified.")
 
 def main():
     args = parser.parse_args(sys.argv[1:])
@@ -146,14 +152,29 @@ def main():
     tracefile = args.tracefile if args.tracefile else None
     probfile = args.probfile if args.probfile else None
     run_mcmc = not args.no_mcmc
+    # check that the MCMC output files do not already exist
+    # only matters if we are actually running MCMC
+    if run_mcmc:
+        if os.path.exists(tracefile):
+            raise OSError('Tracefile "{}" exists and would be overwritten by a new run. Use --tracefile to set a different name.'.format(tracefile))
+        if os.path.exists(probfile):
+            raise OSError('Probfile "{}" exists and would be overwritten by a new run. Use --probfile to set a different name.'.format(tracefile))
     if args.input_tdb:
-        resume = Database(args.input_tdb)
+        resume_tdb = Database(args.input_tdb)
     else:
-        resume = None
+        resume_tdb = None
+    if args.restart:
+        if not resume_tdb:
+            raise ValueError('The --input-tdb option must be specified in order to start a run from a previous chain.')
+        restart_chain = np.load(args.restart)
+    else:
+        restart_chain = None
+
     dbf, sampler, parameters = fit(args.fit_settings, datasets, scheduler=client,
                                    tracefile=tracefile, probfile=probfile,
-                                   resume=resume, run_mcmc=run_mcmc,
-                                   mcmc_steps=args.mcmc_steps, save_interval=args.save_interval)
+                                   resume=resume_tdb, run_mcmc=run_mcmc,
+                                   mcmc_steps=args.mcmc_steps, restart_chain=restart_chain,
+                                   save_interval=args.save_interval)
     dbf.to_file(args.output_tdb, if_exists='overwrite')
 
 if __name__ == '__main__':
