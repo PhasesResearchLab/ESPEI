@@ -15,7 +15,7 @@ import sys
 import numpy as np
 from pycalphad import Database
 
-from espei import fit
+from espei import fit, schema
 from espei.utils import ImmediateClient
 from espei.datasets import DatasetError, load_datasets, recursive_glob
 
