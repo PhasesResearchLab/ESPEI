@@ -22,83 +22,43 @@ from espei.datasets import DatasetError, load_datasets, recursive_glob
 parser = argparse.ArgumentParser(description=__doc__)
 
 parser.add_argument(
-    "-v", "--verbose",
-    action="count",
-    default=0,
-    help="Set the logging verbosity. Stacks up to two times (-vv)."
-    )
-
-parser.add_argument(
-    "--scheduler",
-    metavar="HOST:PORT",
-    help="Host and port of dask distributed scheduler or 'MPIPool' to use MPI.")
-
-parser.add_argument(
-    "--tracefile",
-    metavar="FILE",
-    default='chain.npy',
-    help="Output file for recording MCMC trace array. Defaults to chain.npy")
-
-parser.add_argument(
-    "--probfile",
-    metavar="FILE",
-    default='lnprob.npy',
-    help="Output file for recording MCMC log probability array corresponding to chain. Defaults to lnprob.npy")
-
-parser.add_argument(
-    "--fit-settings",
-    metavar="FILE",
-    default="input.json",
-    help="Input JSON file with settings for fit")
-
-parser.add_argument(
-    "--datasets",
-    metavar="PATH",
-    default=os.getcwd(),
-    help="Path containing input datasets as JSON files. Datasets can be organized into sub-directories.")
-
-parser.add_argument(
-    "--input-tdb",
-    metavar="FILE",
+    "--input", "--in",
     default=None,
-    help="Input TDB file, with desired degrees of freedom to fit specified as FUNCTIONs starting with 'VV'")
-
-parser.add_argument(
-    "--output-tdb",
-    metavar="FILE",
-    default="out.tdb",
-    help="Output TDB file")
-
-parser.add_argument(
-    "--mcmc-steps",
-    default=1000,
-    type=int,
-    metavar="",
-    help="Number of MCMC steps. Total chain steps is (mcmc steps * DOF).")
-
-parser.add_argument(
-    "--save-interval",
-    default=100,
-    type=int,
-    metavar="",
-    help="Controls the interval for saving the MCMC chain")
-
-parser.add_argument(
-    "--no-mcmc",
-    action="store_true",
-    help="Turns off MCMC calculation. Useful for first-principles only run.")
+    help="Input file for the run"
+    )
 
 parser.add_argument(
     "--check-datasets",
     metavar="PATH",
     default=None,
-    help="Check input datasets at the path. Does not run a fit.")
+    help="Check input datasets at the path. Does not run ESPEI.")
 
-parser.add_argument(
-    "--restart",
-    metavar="FILE",
-    default=None,
-    help="Restart a run with the specified chain trace. Requires input-tdb to be specified.")
+def get_run_settings(input_dict):
+    """
+    Validate settings from a dict of possible input.
+
+    Performs the following actions:
+    1. Normalize (apply defaults)
+    2. Validate against the schema
+
+    Parameters
+    ----------
+    input_dict : dict
+        Dictionary of input settings
+
+    Returns
+    -------
+    dict
+        Validated run settings
+
+    Raises
+    ------
+    ValueError
+    """
+    run_settings = schema.validate(schema.normalized(input_dict))
+    if not run_settings:
+        raise ValueError(schema.errors)
+    return run_settings
 
 def main():
     args = parser.parse_args(sys.argv[1:])
