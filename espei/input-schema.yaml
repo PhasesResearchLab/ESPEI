@@ -19,6 +19,7 @@ output:
       min: 0
       max: 2
       default: 0
+      required: True
     output_db:
       type: string
       default: out.tdb
@@ -62,12 +63,14 @@ mcmc:
       required: True
     mcmc_save_interval:
       type: integer
-      default: 100
+      default: 20
       min: 1
+      required: True
     scheduler: # scheduler to use for parallelization
       type: string
       default: dask # dask | MPIPool
       regex: 'dask|MPIPool'
+      required: True
     input_db: # TDB file used to start the mcmc run
       type: string
     restart_chain: # restart the mcmc fitting from a previous calculation
