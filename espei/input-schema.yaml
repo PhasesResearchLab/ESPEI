@@ -52,6 +52,9 @@ generate_parameters:
 ##   3. by using chains from a restart_chain for phases in an input_db
 mcmc:
   type: dict
+  oneof_dependencies:
+    - 'mcmc.input_db'
+    - 'generate_parameters'
   schema:
     mcmc_steps:
       type: integer
