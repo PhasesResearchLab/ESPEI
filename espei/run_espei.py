@@ -56,19 +56,17 @@ def get_run_settings(input_dict):
     ValueError
     """
     run_settings = schema.normalized(input_dict)
+    # can't have chain_std_deviation and chains_per_parameters defaults with restart_chain
+    if run_settings.get('mcmc') is not None:
+            if run_settings['mcmc'].get('restart_chain') is None:
+                run_settings['mcmc']['chains_per_parameter'] = 2
+                run_settings['mcmc']['chain_std_deviation'] = 0.1
     if not schema.validate(run_settings):
         raise ValueError(schema.errors)
     return run_settings
 
 def main():
     args = parser.parse_args(sys.argv[1:])
-
-    # handle verbosity
-    verbosity = {0: logging.WARNING,
-                 1: logging.INFO,
-                 2: logging.DEBUG}
-    user_verbosity = args.verbose if args.verbose < 2 else 2
-    logging.basicConfig(level=verbosity[user_verbosity])
 
     # if desired, check datasets and return
     if args.check_datasets:
@@ -84,6 +82,15 @@ def main():
             return 1
         else:
             return 0
+
+    # if we aren't checking datasets, then we will check
+
+    # handle verbosity
+    verbosity = {0: logging.WARNING,
+                 1: logging.INFO,
+                 2: logging.DEBUG}
+    user_verbosity = args.verbose if args.verbose < 2 else 2
+    logging.basicConfig(level=verbosity[user_verbosity])
 
     # run ESPEI fitting
     # create the scheduler if not passed

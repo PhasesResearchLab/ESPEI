@@ -24,7 +24,8 @@ FULL_RUN_DICT = {
 GEN_PARAMS_DICT = {
     'generate_parameters':
         {
-            'excess_model': 'linear', 'ref_state': 'SGTE91'
+            'excess_model': 'linear',
+            'ref_state': 'SGTE91'
         },
     'system':
         {
@@ -135,4 +136,6 @@ def test_correct_defaults_are_applied_from_minimal_specification():
     assert d['output']['probfile'] == 'lnprob.npy'
     assert d['mcmc']['mcmc_save_interval'] == 20
     assert d['mcmc']['scheduler'] == 'dask'
+    assert d['mcmc']['chains_per_parameter'] == 2
+    assert d['mcmc']['chain_std_deviation'] == 0.1
 

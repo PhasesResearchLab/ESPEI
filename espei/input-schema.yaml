@@ -77,3 +77,15 @@ mcmc:
       type: string
       dependencies: input_db
       regex: '.*\.npy$'
+    chains_per_parameter: # even integer multiple of number of chains corresponding to on parameter
+      type: integer
+      iseven: True
+      min: 2
+      allof:
+        - required: True
+        - excludes: restart_chain
+    chain_std_deviation: # fraction of a parameter for the standard deviation in the walkers
+      min: 0
+      allof:
+        - required: True
+        - excludes: restart_chain
