@@ -163,18 +163,23 @@ def main():
             restart_chain = np.load(mcmc_settings.get('restart_chain'))
         else:
             restart_chain = None
+        chains_per_parameter = mcmc_settings.get('chains_per_parameter')
+        chain_std_deviation = mcmc_settings.get('chain_std_deviation')
     else:
         mcmc_steps = None
         save_interval = None
         resume_tdb = None
         restart_chain = None
-        client=None
+        client = None
+        chains_per_parameter = None
+        chain_std_deviation = None
 
     dbf, sampler, parameters = fit(system_settings['phase_models'], datasets, scheduler=client,
                                    tracefile=tracefile, probfile=probfile,
                                    resume=resume_tdb, run_mcmc=mcmc_settings is not None,
                                    mcmc_steps=mcmc_steps, restart_chain=restart_chain,
-                                   save_interval=save_interval)
+                                   save_interval=save_interval, chains_per_parameter=chains_per_parameter,
+                                   chain_std_deviation=chain_std_deviation)
     dbf.to_file(output_settings['output_db'], if_exists='overwrite')
 
 if __name__ == '__main__':

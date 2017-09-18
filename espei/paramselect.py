@@ -622,7 +622,7 @@ def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
 
 def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         tracefile=None, probfile=None, restart_chain=None, mcmc_steps=1000,
-        save_interval=100):
+        save_interval=100, chains_per_parameter=2, chain_std_deviation=0.1):
     """Fit thermodynamic and phase equilibria data to a model.
     
     Parameters
@@ -652,6 +652,12 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         int (Default value = 1000)
     save_interval : int
         interval of steps to save the chain to the tracefile.
+    chains_per_parameter : int
+        number of chains for each parameter. Must be an even integer greater or
+        equal to 2. Defaults to 2.
+    chain_std_deviation : float
+        standard deviation of normal for parameter initialization as a fraction
+        of each parameter. Must be greater than 0. Default is 0.1, which is 10%.
 
     Returns
     -------
@@ -759,9 +765,9 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
             initial_parameters = np.array(initial_parameters)
             logging.debug('Initial parameters: {}'.format(initial_parameters))
             ndim = len(initial_parameters)
-            nwalkers = 2*ndim # walkers must be of size (2n*ndim)
+            nwalkers = chains_per_parameter*ndim # walkers must be of size (2n*ndim)
             initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
-            walkers = rng.normal(initial_walkers, np.abs(initial_walkers*0.10))
+            walkers = rng.normal(initial_walkers, np.abs(initial_walkers*chain_std_deviation))
 
         # set up with emcee
         import emcee
