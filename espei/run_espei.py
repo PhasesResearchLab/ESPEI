@@ -155,18 +155,20 @@ def main():
         else:
             raise ValueError(
                 'Custom schedulers not supported. Use \'MPIPool\' or accept the default Dask LocalCluster.')
-
+        if mcmc_settings.get('input_db'):
+            resume_tdb = Database(mcmc_settings.get('input_db'))
+        else:
+            resume_tdb = None
+        if mcmc_settings.get('restart_chain'):
+            restart_chain = np.load(mcmc_settings.get('restart_chain'))
+        else:
+            restart_chain = None
     else:
         mcmc_steps = None
         save_interval = None
-    if mcmc_settings.get('input_db'):
-        resume_tdb = Database(mcmc_settings.get('input_db'))
-    else:
         resume_tdb = None
-    if mcmc_settings.get('restart_chain'):
-        restart_chain = np.load(mcmc_settings.get('restart_chain'))
-    else:
         restart_chain = None
+        client=None
 
     dbf, sampler, parameters = fit(system_settings['phase_models'], datasets, scheduler=client,
                                    tracefile=tracefile, probfile=probfile,
