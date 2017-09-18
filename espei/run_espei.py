@@ -55,8 +55,8 @@ def get_run_settings(input_dict):
     ------
     ValueError
     """
-    run_settings = schema.validate(schema.normalized(input_dict))
-    if not run_settings:
+    run_settings = schema.normalized(input_dict)
+    if not schema.validate(run_settings):
         raise ValueError(schema.errors)
     return run_settings
 
