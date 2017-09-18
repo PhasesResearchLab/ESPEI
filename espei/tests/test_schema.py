@@ -47,15 +47,11 @@ MCMC_RUN_DICT = {
 }
 
 MCMC_RESTART_DICT = {
-    'generate_parameters':
-        {
-            'excess_model': 'linear', 'ref_state': 'SGTE91'
-        },
     'mcmc':
         {
             'mcmc_steps': 1000,
             'input_db': 'input.tdb',
-            'restart': 'restart_chain.npy'
+            'restart_chain': 'restart_chain.npy'
         },
     'system':
         {
