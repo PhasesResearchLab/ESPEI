@@ -114,26 +114,6 @@ def main():
                  2: logging.DEBUG}
     logging.basicConfig(level=verbosity[output_settings['verbosity']])
 
-    if mcmc_settings['scheduler'] == 'MPIPool':
-        from emcee.utils import MPIPool
-        # code recommended by emcee: if not master, wait for instructions then exit
-        client = MPIPool()
-        if not client.is_master():
-            logging.warning('MPIPool is not master. Waiting for instructions...')
-            client.wait()
-            sys.exit(0)
-        logging.info("Using MPIPool on {} MPI ranks".format(client.size))
-    elif mcmc_settings['scheduler'] == 'dask':
-        from distributed import LocalCluster
-        scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, processes=True)
-        client = ImmediateClient(scheduler)
-        logging.info("Running with dask scheduler: %s [%s cores]" % (scheduler, sum(client.ncores().values())))
-        try:
-            logging.info("bokeh server for dask scheduler at localhost:{}".format(client.scheduler_info()['services']['bokeh']))
-        except KeyError:
-            logging.info("Install bokeh to use the dask bokeh server.")
-    else:
-        raise ValueError('Custom schedulers not supported. Use \'MPIPool\' or accept the default Dask LocalCluster.')
     # load datasets and handle i/o
     datasets = load_datasets(sorted(recursive_glob(system_settings['datasets'], '*.json')))
     tracefile = output_settings['tracefile']
@@ -147,6 +127,35 @@ def main():
             raise OSError('Probfile "{}" exists and would be overwritten by a new run. Use --probfile to set a different name.'.format(tracefile))
         mcmc_steps = mcmc_settings.get('mcmc_steps')
         save_interval = mcmc_settings.get('mcmc_steps')
+        # scheduler setup
+        if mcmc_settings['scheduler'] == 'MPIPool':
+            from emcee.utils import MPIPool
+            # code recommended by emcee: if not master, wait for instructions then exit
+            client = MPIPool()
+            if not client.is_master():
+                logging.warning(
+                    'MPIPool is not master. Waiting for instructions...')
+                client.wait()
+                sys.exit(0)
+            logging.info("Using MPIPool on {} MPI ranks".format(client.size))
+        elif mcmc_settings['scheduler'] == 'dask':
+            from distributed import LocalCluster
+            scheduler = LocalCluster(
+                n_workers=int(multiprocessing.cpu_count() / 2),
+                threads_per_worker=1, processes=True)
+            client = ImmediateClient(scheduler)
+            logging.info("Running with dask scheduler: %s [%s cores]" % (
+            scheduler, sum(client.ncores().values())))
+            try:
+                logging.info(
+                    "bokeh server for dask scheduler at localhost:{}".format(
+                        client.scheduler_info()['services']['bokeh']))
+            except KeyError:
+                logging.info("Install bokeh to use the dask bokeh server.")
+        else:
+            raise ValueError(
+                'Custom schedulers not supported. Use \'MPIPool\' or accept the default Dask LocalCluster.')
+
     else:
         mcmc_steps = None
         save_interval = None
