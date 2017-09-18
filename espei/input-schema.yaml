@@ -69,4 +69,5 @@ mcmc:
       type: string
     restart_chain: # restart the mcmc fitting from a previous calculation
       type: string
+      dependencies: input_db
       regex: '.*\.npy$'
