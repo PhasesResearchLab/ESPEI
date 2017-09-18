@@ -11,8 +11,10 @@ import argparse
 import logging
 import multiprocessing
 import sys
+import json
 
 import numpy as np
+import yaml
 from pycalphad import Database
 
 from espei import fit, schema
@@ -24,7 +26,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument(
     "--input", "--in",
     default=None,
-    help="Input file for the run"
+    help="Input file for the run. Should be either a `YAML` or `JSON` file."
     )
 
 parser.add_argument(
@@ -83,18 +85,36 @@ def main():
         else:
             return 0
 
-    # if we aren't checking datasets, then we will check
+    # if we aren't checking datasets, then we will check that the input file exists
+    input_file = args.input
+    if input_file is None:
+        raise ValueError('To run ESPEI, provide an input file with the `--input` option.')
+
+    # continue with setup
+    # load the settings
+    ext = os.path.splitext(input_file)[-1]
+    if ext == '.yml' or ext == '.yaml':
+        with open(input_file) as f:
+            input_settings = yaml.load(f)
+    elif ext == '.json':
+        with open(input_file) as f:
+            input_settings = json.load(f)
+    else:
+        raise ValueError('Unknown filetype {} for input file {}. YAML and JSON are supported'.format(ext, input_file))
+    run_settings = get_run_settings(input_settings)
+    system_settings = run_settings['system']
+    output_settings = run_settings['output']
+    generate_parameters_settings = run_settings.get('generate_parameters')
+    mcmc_settings = run_settings.get('mcmc')
+
 
     # handle verbosity
     verbosity = {0: logging.WARNING,
                  1: logging.INFO,
                  2: logging.DEBUG}
-    user_verbosity = args.verbose if args.verbose < 2 else 2
-    logging.basicConfig(level=verbosity[user_verbosity])
+    logging.basicConfig(level=verbosity[output_settings['verbosity']])
 
-    # run ESPEI fitting
-    # create the scheduler if not passed
-    if args.scheduler == 'MPIPool':
+    if mcmc_settings['scheduler'] == 'MPIPool':
         from emcee.utils import MPIPool
         # code recommended by emcee: if not master, wait for instructions then exit
         client = MPIPool()
@@ -103,11 +123,11 @@ def main():
             client.wait()
             sys.exit(0)
         logging.info("Using MPIPool on {} MPI ranks".format(client.size))
-    elif not args.scheduler:
+    elif mcmc_settings['scheduler'] == 'dask':
         from distributed import LocalCluster
-        args.scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, processes=True)
-        client = ImmediateClient(args.scheduler)
-        logging.info("Running with dask scheduler: %s [%s cores]" % (args.scheduler, sum(client.ncores().values())))
+        scheduler = LocalCluster(n_workers=int(multiprocessing.cpu_count()/2), threads_per_worker=1, processes=True)
+        client = ImmediateClient(scheduler)
+        logging.info("Running with dask scheduler: %s [%s cores]" % (scheduler, sum(client.ncores().values())))
         try:
             logging.info("bokeh server for dask scheduler at localhost:{}".format(client.scheduler_info()['services']['bokeh']))
         except KeyError:
@@ -115,34 +135,36 @@ def main():
     else:
         raise ValueError('Custom schedulers not supported. Use \'MPIPool\' or accept the default Dask LocalCluster.')
     # load datasets and handle i/o
-    datasets = load_datasets(sorted(recursive_glob(args.datasets, '*.json')))
-    tracefile = args.tracefile if args.tracefile else None
-    probfile = args.probfile if args.probfile else None
-    run_mcmc = not args.no_mcmc
+    datasets = load_datasets(sorted(recursive_glob(system_settings['datasets'], '*.json')))
+    tracefile = output_settings['tracefile']
+    probfile = output_settings['probfile']
     # check that the MCMC output files do not already exist
     # only matters if we are actually running MCMC
-    if run_mcmc:
+    if mcmc_settings is not None:
         if os.path.exists(tracefile):
             raise OSError('Tracefile "{}" exists and would be overwritten by a new run. Use --tracefile to set a different name.'.format(tracefile))
         if os.path.exists(probfile):
             raise OSError('Probfile "{}" exists and would be overwritten by a new run. Use --probfile to set a different name.'.format(tracefile))
-    if args.input_tdb:
-        resume_tdb = Database(args.input_tdb)
+        mcmc_steps = mcmc_settings.get('mcmc_steps')
+        save_interval = mcmc_settings.get('mcmc_steps')
+    else:
+        mcmc_steps = None
+        save_interval = None
+    if mcmc_settings.get('input_db'):
+        resume_tdb = Database(mcmc_settings.get('input_db'))
     else:
         resume_tdb = None
-    if args.restart:
-        if not resume_tdb:
-            raise ValueError('The --input-tdb option must be specified in order to start a run from a previous chain.')
-        restart_chain = np.load(args.restart)
+    if mcmc_settings.get('restart_chain'):
+        restart_chain = np.load(mcmc_settings.get('restart_chain'))
     else:
         restart_chain = None
 
-    dbf, sampler, parameters = fit(args.fit_settings, datasets, scheduler=client,
+    dbf, sampler, parameters = fit(system_settings['phase_models'], datasets, scheduler=client,
                                    tracefile=tracefile, probfile=probfile,
-                                   resume=resume_tdb, run_mcmc=run_mcmc,
-                                   mcmc_steps=args.mcmc_steps, restart_chain=restart_chain,
-                                   save_interval=args.save_interval)
-    dbf.to_file(args.output_tdb, if_exists='overwrite')
+                                   resume=resume_tdb, run_mcmc=mcmc_settings is not None,
+                                   mcmc_steps=mcmc_steps, restart_chain=restart_chain,
+                                   save_interval=save_interval)
+    dbf.to_file(output_settings['output_db'], if_exists='overwrite')
 
 if __name__ == '__main__':
     main()
