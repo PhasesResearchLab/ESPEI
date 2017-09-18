@@ -1,2 +1,3 @@
 include versioneer.py
 include espei/_version.py
+include espei/input-schema.yaml

@@ -1,0 +1,91 @@
+# core run settings
+system: # phase models and input data
+  type: dict
+  schema:
+    phase_models: # describes the CALPHAD models for the phases
+      type: string
+      required: True
+      regex: '.*\.json$'
+    datasets: # path to datasets. Defaults to current directory.
+      type: string
+      required: True
+
+output:
+  type: dict
+  default: {}
+  schema:
+    verbosity: # integer verbosity level 0 | 1 | 2, where 2 is most verbose.
+      type: integer
+      min: 0
+      max: 2
+      default: 0
+      required: True
+    output_db:
+      type: string
+      default: out.tdb
+    tracefile: # name of the file containing the mcmc chain array
+      type: string
+      default: chain.npy
+      regex: '.*\.npy$'
+    probfile: # name of the file containing the mcmc ln probability array
+      type: string
+      default: lnprob.npy
+      regex: '.*\.npy$'
+
+## if present, will do a single phase fitting
+generate_parameters:
+  type: dict
+  schema:
+    excess_model:
+      type: string
+      required: True
+      regex: 'linear'
+    ref_state:
+      type: string
+      required: True
+      regex: 'SGTE91'
+
+## if present, will run mcmc fitting
+## you must specifiy some kind of input for the parameters.
+## Parameters can come from
+##   1. a preceding generate_parameters step
+##   2. by generating chains from a previous input_db
+##   3. by using chains from a restart_chain for phases in an input_db
+mcmc:
+  type: dict
+  oneof_dependencies:
+    - 'mcmc.input_db'
+    - 'generate_parameters'
+  schema:
+    mcmc_steps:
+      type: integer
+      min: 1
+      required: True
+    mcmc_save_interval:
+      type: integer
+      default: 20
+      min: 1
+      required: True
+    scheduler: # scheduler to use for parallelization
+      type: string
+      default: dask # dask | MPIPool
+      regex: 'dask|MPIPool'
+      required: True
+    input_db: # TDB file used to start the mcmc run
+      type: string
+    restart_chain: # restart the mcmc fitting from a previous calculation
+      type: string
+      dependencies: input_db
+      regex: '.*\.npy$'
+    chains_per_parameter: # even integer multiple of number of chains corresponding to on parameter
+      type: integer
+      iseven: True
+      min: 2
+      allof:
+        - required: True
+        - excludes: restart_chain
+    chain_std_deviation: # fraction of a parameter for the standard deviation in the walkers
+      min: 0
+      allof:
+        - required: True
+        - excludes: restart_chain
