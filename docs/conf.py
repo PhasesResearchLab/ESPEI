@@ -29,7 +29,8 @@ MOCK_MODULES = ['dask', 'distributed', 'emcee', 'emcee.utils',
                 'pycalphad.variables', 'pycalphad.plot.eqplot',
                 'scipy', 'sklearn', 'sklearn.linear_model',
                 'sympy', 'tinydb', 'pytest',
-                'tinydb.storages', 'numpy.linalg'
+                'tinydb.storages', 'numpy.linalg',
+                'cerberus', 'yaml',
                 ]
 
 for mod_name in MOCK_MODULES:
