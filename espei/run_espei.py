@@ -122,9 +122,9 @@ def main():
     # only matters if we are actually running MCMC
     if mcmc_settings is not None:
         if os.path.exists(tracefile):
-            raise OSError('Tracefile "{}" exists and would be overwritten by a new run. Use --tracefile to set a different name.'.format(tracefile))
+            raise OSError('Tracefile "{}" exists and would be overwritten by a new run. Use the ``output.tracefile`` setting to set a different name.'.format(tracefile))
         if os.path.exists(probfile):
-            raise OSError('Probfile "{}" exists and would be overwritten by a new run. Use --probfile to set a different name.'.format(tracefile))
+            raise OSError('Probfile "{}" exists and would be overwritten by a new run. Use the ``output.probfile`` setting to set a different name.'.format(tracefile))
         mcmc_steps = mcmc_settings.get('mcmc_steps')
         save_interval = mcmc_settings.get('mcmc_steps')
         # scheduler setup
