@@ -63,7 +63,7 @@ phase_models
 :default: required
 
 The JSON file describing the CALPHAD models for each phase.
-See :ref:`input_phase_descriptions`_ for an example of how to write this file.
+See :ref:`input_phase_descriptions` for an example of how to write this file.
 
 datasets
 --------
