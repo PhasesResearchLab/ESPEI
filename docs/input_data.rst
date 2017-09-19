@@ -1,8 +1,8 @@
-.. _Input Files:
+.. _Input data:
 
-===================
-Writing input files
-===================
+====================
+Gathering input data
+====================
 
 JSON Format
 ===========
@@ -26,6 +26,7 @@ To check the datasets at path ``my-input-data/`` you can run ``espei --check-dat
 
 .. _JSONLint: https://jsonlint.com
 
+.. _input_phase_descriptions:
 
 Phase Descriptions
 ==================

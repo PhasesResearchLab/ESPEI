@@ -20,7 +20,7 @@ The data in this repository is Creative Commons Attribution 4.0 (CC-BY-4.0) lice
 In order to run ESPEI with the data in ESPEI-datasets, you should clone this repository to your computer.
 Files referred to throughout this tutorial are found in the `CU-MG` folder.
 The input files will be very breifly explained in this tutorial so that you are able to know their use.
-A more detailed description of the files is found on the :ref:`Input Files` page.
+A more detailed description of the files is found on the :ref:`Input data` page.
 
 If you make changes or additions, you are encouraged to share these back to the ESPEI-datasets repository so that others may benefit from this data as you have.
 You may then add your name to the CONTRIBUTORS file as described in the README.
@@ -93,7 +93,7 @@ Running the following commmand (assuming from here on that you are in the ``CU-M
     espei --check-datasets input-data
 
 The benefit of the this approach is that all of the datasets will be checked and reported at once.
-If there are any failures, a list of them will be reported with the two main types of errors being ``JSONError``, for which you should read the JSON section of :ref:`Input Files`,
+If there are any failures, a list of them will be reported with the two main types of errors being ``JSONError``, for which you should read the JSON section of :ref:`Input data`,
 or ``DatasetError``, which are related to the validity of your datasets scientifically (maching conditions and values shape, etc.).
 The ``DatasetError`` messages are designed to be clear, so please open an `issue on GitHub <https://github.com/PhasesResearchLab/ESPEI/issues>`_ if there is any confusion.
 
@@ -114,11 +114,27 @@ Mixing enthalpies are defined for the for the fcc, hcp, and Laves phases from DF
 
 The following command will generate a database named ``cu-mg_dft.tdb`` with parameters selected and fit by ESPEI::
 
-    espei --no-mcmc --fit-settings=Cu-Mg-input.json --datasets=input-data --output-tdb=cu-mg_dft.tdb
+    espei --input espei-in.yaml 
+
+
+where ``espei-in.yaml`` is a :ref:`ESPEI input file <Writing input files>` with the following contents
+
+
+.. code-block:: yaml
+
+   system:
+     phase_models: Cu-Mg-input.json
+     datasets: input-data
+   generate_parameters:
+     excess_model: linear
+     ref_state: SGTE91
+   output:
+     output_db: cu-mg_dft.tdb
+
 
 The calculation should be relatively quick, on the order of a minute of runtime.
 With the above command, only mininmal output (warnings) will be reported.
-You can increase the verbosity to report info messages with ``-v`` or debug messages with ``-vv`` flags.
+You can increase the verbosity to report info messages by setting the ``output.verbosity`` key to ``1`` or debug messages with ``2``.
 
 With the following code, we can look at the generated phase diagram and compare it to our data.
 
@@ -194,7 +210,21 @@ Now we will use our zero phase fraction equilibria data to optimize our first-pr
 The following command will take the database we created in the single-phase parameter selection and perform a MCMC optimization, creating a ``cu-mg_mcmc.tdb``::
 
 
-    espei --input-tdb=cu-mg_dft.tdb --fit-settings=Cu-Mg-input.json --datasets=input-data --output-tdb=cu-mg_mcmc.tdb
+    espei --input espei-in.yaml
+
+where ``espei-in.yaml`` is an :ref:`ESPEI input file <Writing input files>` with the following structure
+
+.. code-block:: YAML
+
+    system:
+      phase_models: Cu-Mg-input.json
+      datasets: input-data
+    mcmc:
+      mcmc_steps: 1000
+      input_db: cu-mg_dft.tdb
+    output:
+      output_db: cu-mg_mcmc.tdb
+
 
 ESPEI defaults to run 1000 iterations and depends on calculating equilibrium in pycalphad several times for each iteration and the optimization is compute-bound.
 Fortunately, MCMC optimzations are embarrasingly parallel and ESPEI allows for parallelization using `dask <http://dask.pydata.org/>`_ or with MPI using `mpi4py <http://mpi4py.scipy.org/>`_ (single-node only at the time of writing - we are working on it).
