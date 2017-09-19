@@ -37,7 +37,15 @@ Installation
 ============
 
 Creating a virual environment is highly recommended.
-You can install ESPEI from PyPI
+ESPEI does require any special compiler, but several dependencies do.
+Therefore it is suggested to install ESPEI from conda-forge
+
+.. code-block:: bash
+
+    conda config --add channels conda-forge
+    conda create -n my_env espei
+
+Alternatively, ESPEI is available from PyPI
 
 .. code-block:: bash
 

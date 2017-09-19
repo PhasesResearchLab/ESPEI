@@ -20,6 +20,14 @@ espei\.tests\.test\_paramselect module
     :undoc-members:
     :show-inheritance:
 
+espei\.tests\.test\_schema module
+---------------------------------
+
+.. automodule:: espei.tests.test_schema
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 espei\.tests\.test\_utils module
 --------------------------------
 
