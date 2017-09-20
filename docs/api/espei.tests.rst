@@ -4,6 +4,14 @@ espei\.tests package
 Submodules
 ----------
 
+espei\.tests\.test\_core\_utils module
+--------------------------------------
+
+.. automodule:: espei.tests.test_core_utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 espei\.tests\.test\_datasets module
 -----------------------------------
 
