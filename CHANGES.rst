@@ -2,6 +2,16 @@
 What's New
 ==========
 
+0.3 (2017-09-20)
+================
+
+* **ESPEI input is now described by a file.** This change is breaking. Old command line arguments are not supported. See `Writing input files <http://espei.org/en/latest/writing_input.html>`_ for a full description of all the inputs.
+* New input options are supported, including modifying the number of chains and standard deviation from the mean
+* ESPEI is now available on conda-forge
+* TinyDB 2 support is dropped in favor of TinyDB 3 for conda-forge deployment
+* Allow for restarting previous mcmc calculations with a trace file
+* Add Cu-Mg example to documentation
+
 0.2.1 (2017-08-17)
 ==================
 
