@@ -21,4 +21,4 @@ def test_pickelable_tinydb_can_be_pickled_and_unpickled():
     db = PickleableTinyDB(storage=MemoryStorage)
     db.insert(test_dict)
     db = pickle.loads(pickle.dumps(db))
-    assert db.search(where('test_key'))[0] == test_dict
+    assert db.search(where('test_key').exists())[0] == test_dict
