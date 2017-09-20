@@ -2,6 +2,11 @@
 What's New
 ==========
 
+0.3.post2 (2017-09-20)
+======================
+
+* Add input-schema.yaml file to installer
+
 0.3.post1 (2017-09-20)
 ======================
 

@@ -13,6 +13,9 @@ setup(
     author_email='brandonbocklund@gmail.com',
     description='Fitting thermodynamic models with pycalphad.',
     packages=['espei'],
+    package_data={
+        'espei': ['input-schema.yaml']
+    },
     license='MIT',
     long_description=readme('README.rst'),
     url='https://espei.org/',
@@ -20,12 +23,13 @@ setup(
         'numpy',
         'scipy',
         'six',
-        'dask>=0.15',
+        'dask[complete]>=0.15',
         'distributed',
         'tinydb>=3',
         'scikit-learn',
         'emcee',
         'pycalphad>=0.5',
+        'pyyaml',
         'cerberus'],
     extras_require={
         'dev': [
