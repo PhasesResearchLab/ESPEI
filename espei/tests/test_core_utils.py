@@ -22,9 +22,7 @@ def test_get_data_for_a_minimal_example():
             "T": 298.15
         },
         "output": "HM_FORM",
-            "values":   [[[-15720, 34720, 7000, 15500]]],
-        "reference": "Zhou2007",
-        "comment": "DFT reported in S. H. Zhou et al., J. Phase Equilibria Diffus. 28, 158–166 (2007)."
+            "values":   [[[-15720, 34720, 7000, 15500]]]
     }
     datasets = PickleableTinyDB(storage=MemoryStorage)
     datasets.insert(SAMPLE_DATASET)
