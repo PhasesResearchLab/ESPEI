@@ -11,7 +11,6 @@ from pycalphad import variables as v
 
 
 def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
-    configuration = list(configuration)
     desired_data = datasets.search((tinydb.where('output').test(lambda x: x in prop)) &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('solver').test(symmetry_filter, configuration, symmetry)) &
