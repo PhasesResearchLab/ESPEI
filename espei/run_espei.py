@@ -143,7 +143,7 @@ def main():
         elif mcmc_settings['scheduler'] == 'dask':
             from distributed import LocalCluster
             scheduler = LocalCluster(
-                n_workers=int(multiprocessing.cpu_count() / 2),
+                n_workers=int(multiprocessing.cpu_count()),
                 threads_per_worker=1, processes=True)
             client = ImmediateClient(scheduler)
             logging.info("Running with dask scheduler: %s [%s cores]" % (
