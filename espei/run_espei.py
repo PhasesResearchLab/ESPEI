@@ -126,7 +126,7 @@ def main():
         if os.path.exists(probfile):
             raise OSError('Probfile "{}" exists and would be overwritten by a new run. Use the ``output.probfile`` setting to set a different name.'.format(tracefile))
         mcmc_steps = mcmc_settings.get('mcmc_steps')
-        save_interval = mcmc_settings.get('mcmc_steps')
+        save_interval = mcmc_settings.get('mcmc_save_interval')
         # scheduler setup
         if mcmc_settings['scheduler'] == 'MPIPool':
             from emcee.utils import MPIPool
