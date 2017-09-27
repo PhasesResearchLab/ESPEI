@@ -133,7 +133,7 @@ def main():
             # code recommended by emcee: if not master, wait for instructions then exit
             client = MPIPool()
             if not client.is_master():
-                logging.warning(
+                logging.debug(
                     'MPIPool is not master. Waiting for instructions...')
                 client.wait()
                 sys.exit(0)
