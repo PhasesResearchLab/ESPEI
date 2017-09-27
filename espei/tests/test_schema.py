@@ -139,3 +139,16 @@ def test_correct_defaults_are_applied_from_minimal_specification():
     assert d['mcmc']['chains_per_parameter'] == 2
     assert d['mcmc']['chain_std_deviation'] == 0.1
 
+
+def test_chains_per_parameter_read_correctly():
+    """The chains per parameter option should take effect when passed."""
+    d = {k: v for k,v in MCMC_RUN_DICT.items()}
+    d['mcmc']['chains_per_parameter'] = 6
+    parsed_settings = get_run_settings(d)
+    assert parsed_settings['mcmc']['chains_per_parameter'] == 6
+
+    d['mcmc']['chains_per_parameter'] = 5
+    with pytest.raises(ValueError):
+        get_run_settings(d)
+
+

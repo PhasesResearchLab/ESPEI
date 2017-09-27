@@ -61,8 +61,8 @@ def get_run_settings(input_dict):
     # can't have chain_std_deviation and chains_per_parameters defaults with restart_chain
     if run_settings.get('mcmc') is not None:
             if run_settings['mcmc'].get('restart_chain') is None:
-                run_settings['mcmc']['chains_per_parameter'] = 2
-                run_settings['mcmc']['chain_std_deviation'] = 0.1
+                run_settings['mcmc']['chains_per_parameter'] = run_settings['mcmc'].get('chains_per_parameter', 2)
+                run_settings['mcmc']['chain_std_deviation'] = run_settings['mcmc'].get('chain_std_deviation', 0.1)
     if not schema.validate(run_settings):
         raise ValueError(schema.errors)
     return run_settings
