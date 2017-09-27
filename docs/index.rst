@@ -218,6 +218,13 @@ ESPEI is MIT licensed. See LICENSE.
    writing_input
    api/modules
 
+.. toctree::
+   :maxdepth: 4
+   :caption: Developer
+
+   contributing
+
+
 Indices and tables
 ==================
 
