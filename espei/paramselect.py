@@ -310,7 +310,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
     aliases = [] if aliases is None else aliases
     aliases = sorted(set(aliases + [phase_name]))
     logging.info('FITTING: {}'.format(phase_name))
-    logging.info('{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
+    logging.debug('{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
 
     def _to_tuple(x):
         if isinstance(x, list) or isinstance(x, tuple):
@@ -530,7 +530,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
                     f.write(template_error.format(dbf.to_string(fmt='tdb'), comps, [current_phase], cond_dict, {key: float(x) for key, x in parameters.items()}))
         # Sometimes we can get a miscibility gap in our "single-phase" calculation
         # Choose the weighted mixture of site fractions
-            logging.warning('Dropping condition due to calculation failure: {}'.format(cond_dict))
+            logging.debug('Calculation failure: all NaN phases with conditions: {}'.format(cond_dict))
             return 0
         select_energy = float(single_eqdata['GM'].values)
         region_comps = []
@@ -672,6 +672,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
     # TODO: Validate input JSON
     data = json.load(open(input_fname))
     if resume is None:
+        logging.info('Generating parameters.')
         dbf = Database()
         dbf.elements = set(data['components'])
         # Write reference state to Database
@@ -700,8 +701,10 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
             dbf.add_phase_constituents(phase_name, subl_model)
             dbf.add_structure_entry(phase_name, phase_name)
             phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=aliases)
+            logging.info('Finished generating parameters.')
+
     else:
-        logging.info('STARTING FROM USER-SPECIFIED DATABASE')
+        logging.info('Starting from a user-specified database.')
         dbf = resume
 
     if run_mcmc:
@@ -727,12 +730,12 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
 
         # construct the models for each phase, substituting in the SymPy symbol to fit.
         phase_models = dict()
-        logging.info('Building phase models')
+        logging.debug('Building phase models')
         # 0 is placeholder value
         for phase_name in sorted(data['phases'].keys()):
             mod = CompiledModel(dbf, comps, phase_name, parameters=OrderedDict([(sympy.Symbol(s), 0) for s in symbols_to_fit]))
             phase_models[phase_name] = mod
-        logging.info('Finished building phase models')
+        logging.debug('Finished building phase models')
         dbf = dask.delayed(dbf, pure=True)
         phase_models = dask.delayed(phase_models, pure=True)
 
@@ -755,7 +758,10 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
             walkers = restart_chain[np.nonzero(restart_chain)].reshape((restart_chain.shape[0], -1, restart_chain.shape[2]))[:, -1, :]
             nwalkers = walkers.shape[0]
             ndim = walkers.shape[1]
-            logging.debug('Restarting from previous calculation. Parameters on restart: {}'.format(initial_parameters))
+            initial_parameters = walkers.mean(axis=0)
+            logging.info('Restarting from previous calculation with {} chains ({} per parameter).'.format(nwalkers, nwalkers/ndim))
+            logging.debug('Means of restarting parameters are {}'.format(initial_parameters))
+            logging.debug('Standard deviations of restarting parameters are {}'.format(walkers.std(axis=0)))
         else:
             # initialize the RNG
             rng = np.random.RandomState(1769)
@@ -768,6 +774,7 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
             nwalkers = chains_per_parameter*ndim # walkers must be of size (2n*ndim)
             initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
             walkers = rng.normal(initial_walkers, np.abs(initial_walkers*chain_std_deviation))
+            logging.info('Initializing {} chains with {} chains per parameter.'.format(nwalkers, chains_per_parameter))
 
         # set up with emcee
         import emcee
@@ -802,9 +809,9 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         dbf = dbf.compute()
         for param_name, value in parameters_dict.items():
             dbf.symbols[param_name] = value
+        logging.info('MCMC complete.')
 
         return dbf, sampler, parameters_dict
 
     else:
-        logging.info('Not running MCMC. Returning the single-phase fit database.')
         return dbf, None, None

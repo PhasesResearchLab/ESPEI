@@ -115,7 +115,9 @@ def main():
     logging.basicConfig(level=verbosity[output_settings['verbosity']])
 
     # load datasets and handle i/o
+    logging.debug('Loading and checking datasets.')
     datasets = load_datasets(sorted(recursive_glob(system_settings['datasets'], '*.json')))
+    logging.debug('Finished checking datasets')
     tracefile = output_settings['tracefile']
     probfile = output_settings['probfile']
     # check that the MCMC output files do not already exist
@@ -152,9 +154,6 @@ def main():
                         client.scheduler_info()['services']['bokeh']))
             except KeyError:
                 logging.info("Install bokeh to use the dask bokeh server.")
-        else:
-            raise ValueError(
-                'Custom schedulers not supported. Use \'MPIPool\' or accept the default Dask LocalCluster.')
         if mcmc_settings.get('input_db'):
             resume_tdb = Database(mcmc_settings.get('input_db'))
         else:
