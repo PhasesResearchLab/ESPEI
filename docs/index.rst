@@ -37,7 +37,7 @@ Installation
 ============
 
 Creating a virual environment is highly recommended.
-ESPEI does require any special compiler, but several dependencies do.
+ESPEI does not require any special compiler, but several dependencies do.
 Therefore it is suggested to install ESPEI from conda-forge
 
 .. code-block:: bash
