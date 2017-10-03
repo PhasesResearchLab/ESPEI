@@ -20,6 +20,27 @@ Then clone the source and install ESPEI in development mode with pip:
 Even if you use Anaconda, it is recommended that you use either ``pip`` or ``python setup.py develop`` to install ESPEI in development mode.
 This is because the ``conda-build`` tool, which would typically be used for this, is not well maintained at the time of writing.
 
+Develop mode on Windows
+-----------------------
+
+Because of compiler issues, ESPEI's dependencies are challenging to install on Windows.
+As mentioned above, ideally the ``conda-build`` tool could be used, but it is not able to be used.
+Therefore the recommended way to install ESPEI is to
+
+1. Install ESPEI into a virtual environment from Anaconda, pulling all of the packages with it
+#. Remove ESPEI without removing the other packages
+#. Install ESPEI in develop mode with pip or setuptools from the source repository
+
+The steps to do this on the command line are as follows
+
+.. code-block:: bash
+
+    conda create -n espei_dev espei
+    activate espei_dev
+    conda remove --force espei
+    git clone https://github.com/PhasesResearchLab/espei.git
+    pip install --editable espei
+
 
 Tests
 =====
