@@ -184,6 +184,13 @@ To use ESPEI with MPI, you simply call ESPEI in the same way as above with `mpir
 You also must indicate to ESPEI that it should create an MPI scheduler by setting the input option ``scheduler: MPIPool`` in the ``mcmc`` heading.
 Be aware that ``mpi4py`` must be compiled with an MPI-enabled compiler, see the `mpi4py installation instructions <https://mpi4py.readthedocs.io/en/stable/install.html>`_.
 
+Getting Help
+============
+
+For help on installing and using ESPEI, please join the `PhasesResearchLab/ESPEI Gitter room <https://gitter.im/PhasesResearchLab/ESPEI>`_.
+
+Bugs and software issues should be reported on `GitHub <https://github.com/PhasesResearchLab/ESPEI/issues>`_.
+
 Module Hierarchy
 ================
 
