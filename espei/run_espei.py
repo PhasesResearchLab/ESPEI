@@ -135,25 +135,31 @@ def main():
             # code recommended by emcee: if not master, wait for instructions then exit
             client = MPIPool()
             if not client.is_master():
-                logging.debug(
+                logging.warning(
                     'MPIPool is not master. Waiting for instructions...')
                 client.wait()
                 sys.exit(0)
             logging.info("Using MPIPool on {} MPI ranks".format(client.size))
-        elif mcmc_settings['scheduler'] == 'dask':
+        if mcmc_settings['scheduler'] == 'dask':
             from distributed import LocalCluster
+            cores = mcmc_settings['cores']
             scheduler = LocalCluster(
-                n_workers=int(multiprocessing.cpu_count()),
+                n_workers=cores,
                 threads_per_worker=1, processes=True)
             client = ImmediateClient(scheduler)
             logging.info("Running with dask scheduler: %s [%s cores]" % (
-            scheduler, sum(client.ncores().values())))
+                scheduler, sum(client.ncores().values())))
             try:
                 logging.info(
                     "bokeh server for dask scheduler at localhost:{}".format(
                         client.scheduler_info()['services']['bokeh']))
             except KeyError:
                 logging.info("Install bokeh to use the dask bokeh server.")
+        elif mcmc_settings['scheduler'] == 'emcee':
+            from emcee.interruptible_pool import InterruptiblePool
+            cores = mcmc_settings['cores']
+            client = InterruptiblePool(processes = cores)
+            logging.info("Using multiprocessing on {} cores".format(cores))
         if mcmc_settings.get('input_db'):
             resume_tdb = Database(mcmc_settings.get('input_db'))
         else:
