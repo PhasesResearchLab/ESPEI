@@ -68,9 +68,12 @@ mcmc:
       required: True
     scheduler: # scheduler to use for parallelization
       type: string
-      default: dask # dask | MPIPool
-      regex: 'dask|MPIPool'
+      default: emcee # dask | MPIPool | emcee
+      regex: 'dask|MPIPool|emcee'
       required: True
+    cores:
+      type: integer
+      min: 1
     input_db: # TDB file used to start the mcmc run
       type: string
     restart_chain: # restart the mcmc fitting from a previous calculation
