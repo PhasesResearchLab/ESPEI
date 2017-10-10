@@ -29,7 +29,7 @@ import sys
 import dask
 import numpy as np
 import operator
-import pycalphad.refdata
+import espei.refdata
 import re
 import sympy
 import tinydb
@@ -676,8 +676,8 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         dbf = Database()
         dbf.elements = set(data['components'])
         # Write reference state to Database
-        refdata = getattr(pycalphad.refdata, data['refdata'])
-        stabledata = getattr(pycalphad.refdata, data['refdata']+'Stable')
+        refdata = getattr(espei.refdata, data['refdata'])
+        stabledata = getattr(espei.refdata, data['refdata']+'Stable')
         for key, element in refdata.items():
             if isinstance(element, sympy.Piecewise):
                 newargs = element.args + ((0, True),)
