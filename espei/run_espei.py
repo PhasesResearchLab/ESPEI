@@ -131,16 +131,19 @@ def main():
         save_interval = mcmc_settings.get('mcmc_save_interval')
         # scheduler setup
         if mcmc_settings['scheduler'] == 'MPIPool':
+            # check that cores is not an input setting
+            if mcmc_settings['cores'] != None:
+                logging.info("MPI does not take the cores input setting.")
             from emcee.utils import MPIPool
             # code recommended by emcee: if not master, wait for instructions then exit
             client = MPIPool()
             if not client.is_master():
-                logging.warning(
+                logging.debug(
                     'MPIPool is not master. Waiting for instructions...')
                 client.wait()
                 sys.exit(0)
             logging.info("Using MPIPool on {} MPI ranks".format(client.size))
-        if mcmc_settings['scheduler'] == 'dask':
+        elif mcmc_settings['scheduler'] == 'dask':
             from distributed import LocalCluster
             cores = mcmc_settings['cores']
             scheduler = LocalCluster(
