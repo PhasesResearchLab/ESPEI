@@ -133,7 +133,7 @@ def main():
         if mcmc_settings['scheduler'] == 'MPIPool':
             # check that cores is not an input setting
             if mcmc_settings['cores'] != None:
-                logging.info("MPI does not take the cores input setting.")
+                logging.warning("MPI does not take the cores input setting.")
             from emcee.utils import MPIPool
             # code recommended by emcee: if not master, wait for instructions then exit
             client = MPIPool()
@@ -146,6 +146,10 @@ def main():
         elif mcmc_settings['scheduler'] == 'dask':
             from distributed import LocalCluster
             cores = mcmc_settings['cores']
+            if (mcmc_settings['cores'] > multiprocessing.cpu_count()):
+                logging.warning("The number of cores chosen is larger than available. "
+                                "Defaulting to run on the {} available cores.".format(multiprocessing.cpu_count()))
+                cores = multiprocessing.cpu_count()
             scheduler = LocalCluster(
                 n_workers=cores,
                 threads_per_worker=1, processes=True)
@@ -161,6 +165,10 @@ def main():
         elif mcmc_settings['scheduler'] == 'emcee':
             from emcee.interruptible_pool import InterruptiblePool
             cores = mcmc_settings['cores']
+            if (mcmc_settings['cores'] > multiprocessing.cpu_count()):
+                logging.warning("The number of cores chosen is larger than available. "
+                                "Defaulting to run on the {} available cores.".format(multiprocessing.cpu_count()))
+                cores = multiprocessing.cpu_count()
             client = InterruptiblePool(processes = cores)
             logging.info("Using multiprocessing on {} cores".format(cores))
         if mcmc_settings.get('input_db'):
