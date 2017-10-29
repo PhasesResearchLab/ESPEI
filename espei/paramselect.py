@@ -45,6 +45,13 @@ from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort
     list_to_tuple, endmembers_from_interaction, build_sitefractions
 from espei.utils import PickleableTinyDB, sigfigs
 
+# backwards compatibility:
+# TODO: drop support on release pycalphad 0.7
+try:
+    from pycalphad.io.database import Species
+except ImportError:
+    Species = None
+
 feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
                       "CPM_MIX": lambda x: -v.T*sympy.diff(x, v.T, 2),
                       "CPM": lambda x: -v.T*sympy.diff(x, v.T, 2),
@@ -675,6 +682,9 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         logging.info('Generating parameters.')
         dbf = Database()
         dbf.elements = set(data['components'])
+        for el in dbf.elements:
+            if Species is not None: # TODO: drop this on release of pycalphad 0.7
+                dbf.species.add(Species(el, {el: 1}, 0))
         # Write reference state to Database
         refdata = getattr(espei.refdata, data['refdata'])
         stabledata = getattr(espei.refdata, data['refdata']+'Stable')
