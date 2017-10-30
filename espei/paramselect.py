@@ -722,7 +722,7 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
     sampler : EnsembleSampler, ndarray)
         emcee sampler for further data wrangling
     """
-    comps = sorted([sp.name for sp in dbf.species])
+    comps = sorted([sp for sp in dbf.elements])
     pattern = re.compile("^V[V]?([0-9]+)$")
     symbols_to_fit = sorted([x for x in sorted(dbf.symbols.keys()) if pattern.match(x)])
 
