@@ -611,7 +611,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
     return errors
 
 
-def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
+def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
            symbols_to_fit=None, phase_models=None, scheduler=None):
     """
     Returns the error from multiphase fitting as a log probability.
@@ -627,25 +627,84 @@ def lnprob(params, data=None, comps=None, dbf=None, phases=None, datasets=None,
     return np.array(iter_error, dtype=np.float64)
 
 
-def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
-        tracefile=None, probfile=None, restart_chain=None, mcmc_steps=1000,
-        save_interval=100, chains_per_parameter=2, chain_std_deviation=0.1):
-    """Fit thermodynamic and phase equilibria data to a model.
-    
+def generate_parameters(phase_models, datasets, refdata, excess_model):
+    """Generate parameters from given phase models and datasets
+
     Parameters
     ----------
-    input_fname : str
-        name of the input file containing the sublattice models.
+    phase_models : dict
+        Dictionary of components and phases to fit.
     datasets : PickleableTinyDB
         database of single- and multi-phase to fit.
-    resume : Database
-        pycalphad Database of a file to start from. Using this parameter causes
-        single phase fitting to be skipped (multi-phase only).
+    refdata : str
+        String of the reference data to use, e.g. 'SGTE91'
+    excess_model : str
+        String of the type of excess model to fit to, e.g. 'linear'
+
+    Returns
+    -------
+    Database
+    """
+    logging.info('Generating parameters.')
+    dbf = Database()
+    dbf.elements = set(phase_models['components'])
+    for el in dbf.elements:
+        if Species is not None:  # TODO: drop this on release of pycalphad 0.7
+            dbf.species.add(Species(el, {el: 1}, 0))
+    # Write reference state to Database
+    refdata = getattr(espei.refdata, phase_models['refdata'])
+    stabledata = getattr(espei.refdata, phase_models['refdata'] + 'Stable')
+    for key, element in refdata.items():
+        if isinstance(element, sympy.Piecewise):
+            newargs = element.args + ((0, True),)
+            refdata[key] = sympy.Piecewise(*newargs)
+    for key, element in stabledata.items():
+        if isinstance(element, sympy.Piecewise):
+            newargs = element.args + ((0, True),)
+            stabledata[key] = sympy.Piecewise(*newargs)
+    comp_refs = {c.upper(): stabledata[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
+    comp_refs['VA'] = 0
+    dbf.symbols.update({'GHSER' + c.upper(): data for c, data in comp_refs.items()})
+    for phase_name, phase_obj in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
+        # Perform parameter selection and single-phase fitting based on input
+        # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
+        symmetry = phase_obj.get('equivalent_sublattices', None)
+        aliases = phase_obj.get('aliases', None)
+        # TODO: More advanced phase data searching
+        site_ratios = phase_obj['sublattice_site_ratios']
+        subl_model = phase_obj['sublattice_model']
+        dbf.add_phase(phase_name, dict(), site_ratios)
+        dbf.add_phase_constituents(phase_name, subl_model)
+        dbf.add_structure_entry(phase_name, phase_name)
+        phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=aliases)
+    logging.info('Finished generating parameters.')
+    return dbf
+
+
+def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_parameter=2,
+                 chain_std_deviation=0.1, scheduler=None, tracefile=None, probfile=None, restart_chain=None):
+    """Run Markov Chain Monte Carlo on the Database given datasets
+
+    Parameters
+    ----------
+    dbf : Database
+        A pycalphad Database to fit with symbols to fit prefixed with `VV`
+        followed by a number, e.g. `VV0001`
+    datasets : PickleableTinyDB
+        A database of single- and multi-phase to fit
+    mcmc_steps : int
+        Number of chain steps to calculate in MCMC. Note the flattened chain will
+        have (mcmc_steps*DOF) values. Default is 1000 steps.
+    save_interval :int
+        interval of steps to save the chain to the tracefile and probfile
+    chains_per_parameter : int
+        number of chains for each parameter. Must be an even integer greater or
+        equal to 2. Defaults to 2.
+    chain_std_deviation : float
+        standard deviation of normal for parameter initialization as a fraction
+        of each parameter. Must be greater than 0. Default is 0.1, which is 10%.
     scheduler : callable
         Scheduler to use with emcee. Must implement a map method.
-    run_mcmc : bool
-        Controls if MCMC should be run. Default is True. Useful for
-        first-principles (single-phase only) runs.
     tracefile : str
         filename to store the flattened chain with NumPy.save. Array has shape
         (nwalkers, iterations, nparams)
@@ -653,18 +712,6 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         filename to store the flattened ln probability with NumPy.save
     restart_chain : np.ndarray
         ndarray of the previous chain. Should have shape (nwalkers, iterations, nparams)
-    mcmc_steps : int
-        number of chain steps to calculate in MCMC. Note the flattened chain will
-        have (mcmc_steps*DOF) values.
-        int (Default value = 1000)
-    save_interval : int
-        interval of steps to save the chain to the tracefile.
-    chains_per_parameter : int
-        number of chains for each parameter. Must be an even integer greater or
-        equal to 2. Defaults to 2.
-    chain_std_deviation : float
-        standard deviation of normal for parameter initialization as a fraction
-        of each parameter. Must be greater than 0. Default is 0.1, which is 10%.
 
     Returns
     -------
@@ -672,156 +719,115 @@ def fit(input_fname, datasets, resume=None, scheduler=None, run_mcmc=True,
         Resulting pycalphad database of optimized parameters
     sampler : EnsembleSampler, ndarray)
         emcee sampler for further data wrangling
-    parameters_dict : dict
-        Optimized parameters
-
     """
-    # TODO: Validate input JSON
-    data = json.load(open(input_fname))
-    if resume is None:
-        logging.info('Generating parameters.')
-        dbf = Database()
-        dbf.elements = set(data['components'])
-        for el in dbf.elements:
-            if Species is not None: # TODO: drop this on release of pycalphad 0.7
-                dbf.species.add(Species(el, {el: 1}, 0))
-        # Write reference state to Database
-        refdata = getattr(espei.refdata, data['refdata'])
-        stabledata = getattr(espei.refdata, data['refdata']+'Stable')
-        for key, element in refdata.items():
-            if isinstance(element, sympy.Piecewise):
-                newargs = element.args + ((0, True),)
-                refdata[key] = sympy.Piecewise(*newargs)
-        for key, element in stabledata.items():
-            if isinstance(element, sympy.Piecewise):
-                newargs = element.args + ((0, True),)
-                stabledata[key] = sympy.Piecewise(*newargs)
-        comp_refs = {c.upper(): stabledata[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
-        comp_refs['VA'] = 0
-        dbf.symbols.update({'GHSER'+c.upper(): data for c, data in comp_refs.items()})
-        for phase_name, phase_obj in sorted(data['phases'].items(), key=operator.itemgetter(0)):
-            # Perform parameter selection and single-phase fitting based on input
-            # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
-            symmetry = phase_obj.get('equivalent_sublattices', None)
-            aliases = phase_obj.get('aliases', None)
-            # TODO: More advanced phase data searching
-            site_ratios = phase_obj['sublattice_site_ratios']
-            subl_model = phase_obj['sublattice_model']
-            dbf.add_phase(phase_name, {}, site_ratios)
-            dbf.add_phase_constituents(phase_name, subl_model)
-            dbf.add_structure_entry(phase_name, phase_name)
-            phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=aliases)
-            logging.info('Finished generating parameters.')
+    comps = sorted([sp.name for sp in dbf.species])
+    pattern = re.compile("^V[V]?([0-9]+)$")
+    symbols_to_fit = sorted([x for x in sorted(dbf.symbols.keys()) if pattern.match(x)])
 
+    if len(symbols_to_fit) == 0:
+        raise ValueError('No degrees of freedom. Database must contain symbols starting with \'V\' or \'VV\', followed by a number.')
     else:
-        logging.info('Starting from a user-specified database.')
-        dbf = resume
+        logging.info('Fitting {} degrees of freedom.'.format(len(symbols_to_fit)))
 
-    if run_mcmc:
-        comps = sorted(data['components'])
-        pattern = re.compile("^V[V]?([0-9]+)$")
-        symbols_to_fit = sorted([x for x in sorted(dbf.symbols.keys()) if pattern.match(x)])
+    for x in symbols_to_fit:
+        if isinstance(dbf.symbols[x], sympy.Piecewise):
+            logging.debug('Replacing {} in database'.format(x))
+            dbf.symbols[x] = dbf.symbols[x].args[0].expr
 
-        if len(symbols_to_fit) == 0:
-            raise ValueError('No degrees of freedom. Database must contain symbols starting with \'V\' or \'VV\', followed by a number.')
-        else:
-            logging.info('Fitting {} degrees of freedom.'.format(len(symbols_to_fit)))
+    # get initial parameters and remove these from the database
+    # we'll replace them with SymPy symbols initialized to 0 in the phase models
+    initial_parameters = [np.array(float(dbf.symbols[x])) for x in symbols_to_fit]
+    for x in symbols_to_fit:
+        del dbf.symbols[x]
 
-        for x in symbols_to_fit:
-            if isinstance(dbf.symbols[x], sympy.Piecewise):
-                logging.debug('Replacing {} in database'.format(x))
-                dbf.symbols[x] = dbf.symbols[x].args[0].expr
+    # construct the models for each phase, substituting in the SymPy symbol to fit.
+    phase_models = dict()
+    logging.debug('Building phase models')
+    # 0 is placeholder value
+    phases = sorted(dbf.phases.keys())
+    for phase_name in phases:
+        mod = CompiledModel(dbf, comps, phase_name, parameters=OrderedDict(
+            [(sympy.Symbol(s), 0) for s in symbols_to_fit]))
+        phase_models[phase_name] = mod
+    logging.debug('Finished building phase models')
+    dbf = dask.delayed(dbf, pure=True)
+    phase_models = dask.delayed(phase_models, pure=True)
 
-        # get initial parameters and remove these from the database
-        # we'll replace them with SymPy symbols initialized to 0 in the phase models
-        initial_parameters = [np.array(float(dbf.symbols[x])) for x in symbols_to_fit]
-        for x in symbols_to_fit:
-            del dbf.symbols[x]
+    # contect for the log probability function
+    error_context = {'comps': comps, 'dbf': dbf,
+                     'phases': phases, 'phase_models': phase_models,
+                     'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
+                     }
 
-        # construct the models for each phase, substituting in the SymPy symbol to fit.
-        phase_models = dict()
-        logging.debug('Building phase models')
-        # 0 is placeholder value
-        for phase_name in sorted(data['phases'].keys()):
-            mod = CompiledModel(dbf, comps, phase_name, parameters=OrderedDict([(sympy.Symbol(s), 0) for s in symbols_to_fit]))
-            phase_models[phase_name] = mod
-        logging.debug('Finished building phase models')
-        dbf = dask.delayed(dbf, pure=True)
-        phase_models = dask.delayed(phase_models, pure=True)
-
-        # contect for the log probability function
-        error_context = {'data': data, 'comps': comps, 'dbf': dbf, 'phases': sorted(data['phases'].keys()),
-                         'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
-                         'phase_models': phase_models}
+    def save_sampler_state(sampler):
+        if tracefile:
+            logging.debug('Writing chain to {}'.format(tracefile))
+            np.save(tracefile, sampler.chain)
+        if probfile:
+            logging.debug('Writing lnprob to {}'.format(probfile))
+            np.save(probfile, sampler.lnprobability)
 
 
-        def save_sampler_state(sampler):
-            if tracefile:
-                logging.debug('Writing chain to {}'.format(tracefile))
-                np.save(tracefile, sampler.chain)
-            if probfile:
-                logging.debug('Writing lnprob to {}'.format(probfile))
-                np.save(probfile, sampler.lnprobability)
-
-        # initialize the walkers either fresh or from the restart
-        if restart_chain is not None:
-            walkers = restart_chain[np.nonzero(restart_chain)].reshape((restart_chain.shape[0], -1, restart_chain.shape[2]))[:, -1, :]
-            nwalkers = walkers.shape[0]
-            ndim = walkers.shape[1]
-            initial_parameters = walkers.mean(axis=0)
-            logging.info('Restarting from previous calculation with {} chains ({} per parameter).'.format(nwalkers, nwalkers/ndim))
-            logging.debug('Means of restarting parameters are {}'.format(initial_parameters))
-            logging.debug('Standard deviations of restarting parameters are {}'.format(walkers.std(axis=0)))
-        else:
-            # initialize the RNG
-            rng = np.random.RandomState(1769)
-            # set up the MCMC run
-            # set up the initial parameters
-            # apply a Gaussian random to each parameter with std dev of 0.10*parameter
-            initial_parameters = np.array(initial_parameters)
-            logging.debug('Initial parameters: {}'.format(initial_parameters))
-            ndim = len(initial_parameters)
-            nwalkers = chains_per_parameter*ndim # walkers must be of size (2n*ndim)
-            initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
-            walkers = rng.normal(initial_walkers, np.abs(initial_walkers*chain_std_deviation))
-            logging.info('Initializing {} chains with {} chains per parameter.'.format(nwalkers, chains_per_parameter))
-
-        # set up with emcee
-        import emcee
-        import sys
-        # the pool must implement a map function
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_context, pool=scheduler)
-        progbar_width = 30
-        logging.info('Running MCMC with {} steps.'.format(mcmc_steps))
-        try:
-            for i, result in enumerate(sampler.sample(walkers, iterations=mcmc_steps)):
-                # progress bar
-                if (i+1) % save_interval == 0:
-                    save_sampler_state(sampler)
-                    logging.debug('Acceptance ratios for parameters: {}'.format(sampler.acceptance_fraction))
-                n = int((progbar_width + 1) * float(i) / mcmc_steps)
-                sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i+1, mcmc_steps))
-            n = int((progbar_width + 1) * float(i+1) / mcmc_steps)
-            sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, mcmc_steps))
-        except KeyboardInterrupt:
-            pass
-        # close the pool if it is an MPIPool.
-        if isinstance(scheduler, MPIPool):
-            scheduler.close()
-        # final processing
-        save_sampler_state(sampler)
-        flatchain = sampler.flatchain
-        optimal_parameters = flatchain[np.nanargmin(-sampler.flatlnprobability)]
-        logging.debug('Intial parameters: {}'.format(initial_parameters))
-        logging.debug('Optimal parameters: {}'.format(optimal_parameters))
-        logging.debug('Change in parameters: {}'.format(np.abs(initial_parameters - optimal_parameters) / initial_parameters))
-        parameters_dict = {param_name: value for param_name, value in zip(symbols_to_fit, optimal_parameters)}
-        dbf = dbf.compute()
-        for param_name, value in parameters_dict.items():
-            dbf.symbols[param_name] = value
-        logging.info('MCMC complete.')
-
-        return dbf, sampler, parameters_dict
-
+    # initialize the walkers either fresh or from the restart
+    if restart_chain is not None:
+        walkers = restart_chain[np.nonzero(restart_chain)].reshape(
+            (restart_chain.shape[0], -1, restart_chain.shape[2]))[:, -1, :]
+        nwalkers = walkers.shape[0]
+        ndim = walkers.shape[1]
+        initial_parameters = walkers.mean(axis=0)
+        logging.info('Restarting from previous calculation with {} chains ({} per parameter).'.format(nwalkers, nwalkers / ndim))
+        logging.debug('Means of restarting parameters are {}'.format(initial_parameters))
+        logging.debug('Standard deviations of restarting parameters are {}'.format(walkers.std(axis=0)))
     else:
-        return dbf, None, None
+        # initialize the RNG
+        rng = np.random.RandomState(1769)
+        # set up the MCMC run
+        # set up the initial parameters
+        # apply a Gaussian random to each parameter with std dev of 0.10*parameter
+        initial_parameters = np.array(initial_parameters)
+        logging.debug('Initial parameters: {}'.format(initial_parameters))
+        ndim = len(initial_parameters)
+        nwalkers = chains_per_parameter * ndim  # walkers must be of size (2n*ndim)
+        initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
+        walkers = rng.normal(initial_walkers, np.abs(initial_walkers * chain_std_deviation))
+        logging.info('Initializing {} chains with {} chains per parameter.'.format(nwalkers, chains_per_parameter))
+
+    # set up with emcee
+    import emcee
+    import sys
+
+    # the pool must implement a map function
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_context, pool=scheduler)
+    progbar_width = 30
+    logging.info('Running MCMC with {} steps.'.format(mcmc_steps))
+    try:
+        for i, result in enumerate(sampler.sample(walkers, iterations=mcmc_steps)):
+            # progress bar
+            if (i + 1) % save_interval == 0:
+                save_sampler_state(sampler)
+                logging.debug('Acceptance ratios for parameters: {}'.format(sampler.acceptance_fraction))
+            n = int((progbar_width + 1) * float(i) / mcmc_steps)
+            sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#'*n, ' '*(progbar_width - n), i + 1, mcmc_steps))
+        n = int((progbar_width + 1) * float(i + 1) / mcmc_steps)
+        sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#'*n, ' '*(progbar_width - n), i + 1, mcmc_steps))
+    except KeyboardInterrupt:
+        pass
+    # close the pool if it is an MPIPool.
+    if isinstance(scheduler, MPIPool):
+        scheduler.close()
+    # final processing
+    save_sampler_state(sampler)
+    flatchain = sampler.flatchain
+    optimal_parameters = flatchain[np.nanargmin(-sampler.flatlnprobability)]
+    logging.debug('Intial parameters: {}'.format(initial_parameters))
+    logging.debug('Optimal parameters: {}'.format(optimal_parameters))
+    logging.debug('Change in parameters: {}'.format(
+        np.abs(initial_parameters - optimal_parameters) / initial_parameters))
+    parameters_dict = {param_name: value for param_name, value in
+                       zip(symbols_to_fit, optimal_parameters)}
+    dbf = dbf.compute()
+    for param_name, value in parameters_dict.items():
+        dbf.symbols[param_name] = value
+    logging.info('MCMC complete.')
+
+    return dbf, sampler
