@@ -1,4 +1,4 @@
-"""The test_integration module contains integration tests that ensure ESPEI behaves correctly"""
+"""The test_parameter_generation module tests that parameter selection is correct"""
 
 from tinydb import where
 
@@ -52,3 +52,24 @@ def test_mixing_energies_are_fit(datasets_db):
     assert set(read_dbf.phases.keys()) == {'LIQUID', 'FCC_A1'}
     assert len(read_dbf._parameters.search(where('parameter_type') == 'L')) == 1
 
+def test_sgte_reference_state_naming_is_correct_for_character_element(datasets_db):
+    """Elements with single character names should get the correct GHSER reference state name (V => GHSERVV)"""
+    phase_models = {
+        "components": ["AL", "V"],
+        "refdata": "SGTE91",
+        "phases": {
+            "LIQUID" : {
+                "sublattice_model": [["AL", "V"]],
+                "sublattice_site_ratios": [1]
+            },
+            "BCC_A2" : {
+                "sublattice_model": [["AL", "V"]],
+                "sublattice_site_ratios": [1]
+            }
+        }
+    }
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    assert dbf.symbols['GBCCV'].args[0][0].__str__() == 'GHSERVV'
+    assert 'GHSERVV' in dbf.symbols.keys()
+    assert 'GHSERAL' in dbf.symbols.keys()

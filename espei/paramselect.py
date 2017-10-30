@@ -194,7 +194,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
 
     # These is our previously fit partial model
     # Subtract out all of these contributions (zero out reference state because these are formation properties)
-    fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
+    fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
     fixed_model.models['idmix'] = 0
     fixed_portions = [0]
 
@@ -370,6 +370,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
             for subl, ratio in zip(endmember, site_ratios):
                 if subl == 'VA':
                     continue
+                subl = (subl.upper()*2)[:2]
                 ref = ref + ratio * sympy.Symbol('GHSER'+subl)
             fit_eq += ref
         symmetric_endmembers = _generate_symmetric_group(endmember, symmetry)
@@ -664,7 +665,8 @@ def generate_parameters(phase_models, datasets, refdata, excess_model):
             stabledata[key] = sympy.Piecewise(*newargs)
     comp_refs = {c.upper(): stabledata[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
     comp_refs['VA'] = 0
-    dbf.symbols.update({'GHSER' + c.upper(): data for c, data in comp_refs.items()})
+    # note that the `c.upper()*2)[:2]` returns 'AL' for c.upper()=='AL' and 'VV' for c.upper()=='V'
+    dbf.symbols.update({'GHSER' + (c.upper()*2)[:2]: data for c, data in comp_refs.items()})
     for phase_name, phase_obj in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
         # Perform parameter selection and single-phase fitting based on input
         # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
