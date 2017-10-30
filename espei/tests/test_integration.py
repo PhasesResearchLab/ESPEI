@@ -1,16 +1,13 @@
 """The test_integration module contains integration tests that ensure ESPEI behaves correctly"""
 
-import os
-import json
 from tinydb import where
 
 from espei.tests.fixtures import datasets_db
-from espei.paramselect import fit
+from espei.paramselect import generate_parameters
 
-# TODO: clean up this test when the need for phase_models to be a file is decoupled from fitting
 def test_mixing_energies_are_fit(datasets_db):
     """Tests that given mixing energy data, the excess parameter is fit."""
-    phases_dict = {
+    phase_models = {
         "components": ["AL", "B"],
         "refdata": "SGTE91",
         "phases": {
@@ -24,11 +21,6 @@ def test_mixing_energies_are_fit(datasets_db):
             }
         }
     }
-
-    # create a dummy file
-    dummy_phase_models = 'temp_test_mixing_energies.json'
-    with open(dummy_phase_models, 'w') as fp:
-        fp.write(json.dumps(phases_dict))
 
     dataset_excess_mixing = {
         "components": ["AL", "B"],
@@ -48,10 +40,7 @@ def test_mixing_energies_are_fit(datasets_db):
     }
     datasets_db.insert(dataset_excess_mixing)
 
-    dbf, sampler, parameters = fit(dummy_phase_models, datasets_db, run_mcmc=False)
-
-    # clean up the temporary file we created
-    os.remove(dummy_phase_models)
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
 
     assert dbf.elements == {'AL', 'B'}
     assert set(dbf.phases.keys()) == {'LIQUID', 'FCC_A1'}

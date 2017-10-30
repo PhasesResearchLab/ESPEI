@@ -17,7 +17,7 @@ import numpy as np
 import yaml
 from pycalphad import Database
 
-from espei import fit, schema
+from espei import generate_parameters, mcmc_fit, schema
 from espei.utils import ImmediateClient
 from espei.datasets import DatasetError, load_datasets, recursive_glob
 
@@ -67,46 +67,24 @@ def get_run_settings(input_dict):
         raise ValueError(schema.errors)
     return run_settings
 
-def main():
-    args = parser.parse_args(sys.argv[1:])
 
-    # if desired, check datasets and return
-    if args.check_datasets:
-        dataset_filenames = sorted(recursive_glob(args.check_datasets, '*.json'))
-        errors = []
-        for dataset in dataset_filenames:
-            try:
-                load_datasets([dataset])
-            except (ValueError, DatasetError) as e:
-                errors.append(e)
-        if len(errors) > 0:
-            print(*errors, sep='\n')
-            return 1
-        else:
-            return 0
+def run_espei(run_settings):
+    """Wrapper around the ESPEI fitting procedure, taking only a settings dictionary.
 
-    # if we aren't checking datasets, then we will check that the input file exists
-    input_file = args.input
-    if input_file is None:
-        raise ValueError('To run ESPEI, provide an input file with the `--input` option.')
+    Parameters
+    ----------
+    run_settings : dict
+        Dictionary of input settings
 
-    # continue with setup
-    # load the settings
-    ext = os.path.splitext(input_file)[-1]
-    if ext == '.yml' or ext == '.yaml':
-        with open(input_file) as f:
-            input_settings = yaml.load(f)
-    elif ext == '.json':
-        with open(input_file) as f:
-            input_settings = json.load(f)
-    else:
-        raise ValueError('Unknown filetype {} for input file {}. YAML and JSON are supported'.format(ext, input_file))
-    run_settings = get_run_settings(input_settings)
+    Returns
+    -------
+    Either a Database (for generate parameters only) or a tuple of (Database, sampler)
+    """
+    run_settings = get_run_settings(run_settings)
     system_settings = run_settings['system']
     output_settings = run_settings['output']
     generate_parameters_settings = run_settings.get('generate_parameters')
     mcmc_settings = run_settings.get('mcmc')
-
 
     # handle verbosity
     verbosity = {0: logging.WARNING,
@@ -118,17 +96,26 @@ def main():
     logging.debug('Loading and checking datasets.')
     datasets = load_datasets(sorted(recursive_glob(system_settings['datasets'], '*.json')))
     logging.debug('Finished checking datasets')
-    tracefile = output_settings['tracefile']
-    probfile = output_settings['probfile']
-    # check that the MCMC output files do not already exist
-    # only matters if we are actually running MCMC
+
+    with open(system_settings['phase_models']) as fp:
+        phase_models = json.load(fp)
+
+    if generate_parameters_settings is not None:
+        refdata = generate_parameters_settings['ref_state']
+        excess_model = generate_parameters_settings['excess_model']
+        dbf = generate_parameters(phase_models, datasets, refdata, excess_model)
+        dbf.to_file(output_settings['output_db'], if_exists='overwrite')
+
     if mcmc_settings is not None:
+        tracefile = output_settings['tracefile']
+        probfile = output_settings['probfile']
+        # check that the MCMC output files do not already exist
+        # only matters if we are actually running MCMC
         if os.path.exists(tracefile):
             raise OSError('Tracefile "{}" exists and would be overwritten by a new run. Use the ``output.tracefile`` setting to set a different name.'.format(tracefile))
         if os.path.exists(probfile):
             raise OSError('Probfile "{}" exists and would be overwritten by a new run. Use the ``output.probfile`` setting to set a different name.'.format(probfile))
-        mcmc_steps = mcmc_settings.get('mcmc_steps')
-        save_interval = mcmc_settings.get('mcmc_save_interval')
+
         # scheduler setup
         if mcmc_settings['scheduler'] == 'MPIPool':
             # check that cores is not an input setting
@@ -168,32 +155,74 @@ def main():
                                 "Defaulting to run on the {} available cores.".format(cores))
             client = InterruptiblePool(processes=cores)
             logging.info("Using multiprocessing on {} cores".format(cores))
+
+        # get a Database
         if mcmc_settings.get('input_db'):
-            resume_tdb = Database(mcmc_settings.get('input_db'))
-        else:
-            resume_tdb = None
+            dbf = Database(mcmc_settings.get('input_db'))
+
+        # load the restart chain if needed
         if mcmc_settings.get('restart_chain'):
             restart_chain = np.load(mcmc_settings.get('restart_chain'))
         else:
             restart_chain = None
+
+        # load the remaning mcmc fitting parameters
+        mcmc_steps = mcmc_settings.get('mcmc_steps')
+        save_interval = mcmc_settings.get('mcmc_save_interval')
         chains_per_parameter = mcmc_settings.get('chains_per_parameter')
         chain_std_deviation = mcmc_settings.get('chain_std_deviation')
-    else:
-        mcmc_steps = None
-        save_interval = None
-        resume_tdb = None
-        restart_chain = None
-        client = None
-        chains_per_parameter = None
-        chain_std_deviation = None
 
-    dbf, sampler, parameters = fit(system_settings['phase_models'], datasets, scheduler=client,
-                                   tracefile=tracefile, probfile=probfile,
-                                   resume=resume_tdb, run_mcmc=mcmc_settings is not None,
-                                   mcmc_steps=mcmc_steps, restart_chain=restart_chain,
-                                   save_interval=save_interval, chains_per_parameter=chains_per_parameter,
-                                   chain_std_deviation=chain_std_deviation)
-    dbf.to_file(output_settings['output_db'], if_exists='overwrite')
+        dbf, sampler = mcmc_fit(dbf, datasets, scheduler=client, mcmc_steps=mcmc_steps,
+                                chains_per_parameter=chains_per_parameter,
+                                chain_std_deviation=chain_std_deviation,
+                                save_interval=save_interval,
+                                tracefile=tracefile, probfile=probfile,
+                                restart_chain=restart_chain,
+                                )
+
+        dbf.to_file(output_settings['output_db'], if_exists='overwrite')
+        return dbf, sampler
+    return dbf
+
+def main():
+    """Handle starting ESPEI from the command line.
+    Parse command line arguments and input file.
+    """
+    args = parser.parse_args(sys.argv[1:])
+
+    # if desired, check datasets and return
+    if args.check_datasets:
+        dataset_filenames = sorted(recursive_glob(args.check_datasets, '*.json'))
+        errors = []
+        for dataset in dataset_filenames:
+            try:
+                load_datasets([dataset])
+            except (ValueError, DatasetError) as e:
+                errors.append(e)
+        if len(errors) > 0:
+            print(*errors, sep='\n')
+            return 1
+        else:
+            return 0
+
+    # if we aren't checking datasets, then we will check that the input file exists
+    input_file = args.input
+    if input_file is None:
+        raise ValueError('To run ESPEI, provide an input file with the `--input` option.')
+
+    # continue with setup
+    # load the settings
+    ext = os.path.splitext(input_file)[-1]
+    if ext == '.yml' or ext == '.yaml':
+        with open(input_file) as f:
+            input_settings = yaml.load(f)
+    elif ext == '.json':
+        with open(input_file) as f:
+            input_settings = json.load(f)
+    else:
+        raise ValueError('Unknown file type {} for input file {}. YAML and JSON are supported'.format(ext, input_file))
+
+    run_espei(input_settings)
 
 if __name__ == '__main__':
     main()
