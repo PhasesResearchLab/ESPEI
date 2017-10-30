@@ -41,6 +41,7 @@ All of the possible keys are
    mcmc:
      mcmc_steps
      mcmc_save_interval
+     cores
      scheduler
      input_db
      restart_chain
@@ -190,25 +191,34 @@ Each iteration consists of accepting one step for each chain in the ensemble.
 mcmc_save_interval
 ------------------
 
-:yype: int
+:type: int
 :default: 20
 
 Controls the interval for saving the MCMC chain and probability files.
+
+cores
+-----
+:type: int
+:min: 1
+
+How many cores from available cores to use during parallelization with dask or emcee.
+If the chosen number of cores is larger than available, then this value is ignored and espei defaults to using the number available.
+
+Cores does not take affect for MPIPool scheduler option. MPIPool requires the number of processors be set directly with MPI.
 
 scheduler
 ---------
 
 :type: string
-:default: dask
-:options: dask | MPIPool
+:default: emcee
+:options: dask | emcee | MPIPool
 
 Which scheduler to use for parallelization.
-You can choose from either `dask` or `MPIPool`.
+You can choose from either `dask`, `emcee`, or `MPIPool`.
 
-Choosing dask will result in allocating half of your hyperthreaded cores to running ESPEI.
-This cannot currently be controlled from the input file, but is planned.
+Choosing dask or emcee allows for the choice of cores used through the cores key.
 
-Choosing MPIPool will allow you to set the number of processors directly using MPI.
+Choosing MPIPool will allow you to set the number of cores directly using MPI.
 
 It is recommended to use MPIPool if you will be running jobs on supercomputing clusters.
 
