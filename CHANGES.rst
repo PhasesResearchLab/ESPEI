@@ -2,6 +2,11 @@
 What's New
 ==========
 
+0.3.1.post1 (2017-10-31)
+========================
+
+* Fix for module name/function conflict in entry point
+
 0.3.1 (2017-10-31)
 ==================
 

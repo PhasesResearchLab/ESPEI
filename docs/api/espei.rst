@@ -27,6 +27,14 @@ espei\.datasets module
     :undoc-members:
     :show-inheritance:
 
+espei\.espei\_script module
+---------------------------
+
+.. automodule:: espei.espei_script
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 espei\.paramselect module
 -------------------------
 
@@ -47,14 +55,6 @@ espei\.refdata module
 ---------------------
 
 .. automodule:: espei.refdata
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-espei\.run\_espei module
-------------------------
-
-.. automodule:: espei.run_espei
     :members:
     :undoc-members:
     :show-inheritance:
