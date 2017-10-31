@@ -2,6 +2,15 @@
 What's New
 ==========
 
+0.3.1 (2017-10-31)
+==================
+
+* ESPEI is much easier to run interactively in Python and in Jupyter Notebooks
+* Reference data is now included in ESPEI instead of in pycalphad
+* Several reference data fixes including support for single character elements ('V', 'B', 'C', ...)
+* Support for using multiprocessing to parallelize MCMC runs, used by default (@olivia-higgins)
+* Improved documentation for installing and developing ESPEI
+
 0.3.post2 (2017-09-20)
 ======================
 
