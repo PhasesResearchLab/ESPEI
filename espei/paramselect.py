@@ -20,7 +20,6 @@ MCMC uses an EnsembleSampler based on Goodman and Weare, Ensemble Samplers with
 Affine Invariance. Commun. Appl. Math. Comput. Sci. 5, 65-80 (2010).
 """
 import itertools
-import json
 import textwrap
 import time
 import logging
@@ -793,10 +792,6 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
         walkers = rng.normal(initial_walkers, np.abs(initial_walkers * chain_std_deviation))
         logging.info('Initializing {} chains with {} chains per parameter.'.format(nwalkers, chains_per_parameter))
-
-    # set up with emcee
-    import emcee
-    import sys
 
     # the pool must implement a map function
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_context, pool=scheduler)
