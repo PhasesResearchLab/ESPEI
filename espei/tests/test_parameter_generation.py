@@ -1,16 +1,13 @@
-"""The test_integration module contains integration tests that ensure ESPEI behaves correctly"""
+"""The test_parameter_generation module tests that parameter selection is correct"""
 
-import os
-import json
 from tinydb import where
 
 from espei.tests.fixtures import datasets_db
-from espei.paramselect import fit
+from espei.paramselect import generate_parameters
 
-# TODO: clean up this test when the need for phase_models to be a file is decoupled from fitting
 def test_mixing_energies_are_fit(datasets_db):
     """Tests that given mixing energy data, the excess parameter is fit."""
-    phases_dict = {
+    phase_models = {
         "components": ["AL", "B"],
         "refdata": "SGTE91",
         "phases": {
@@ -24,11 +21,6 @@ def test_mixing_energies_are_fit(datasets_db):
             }
         }
     }
-
-    # create a dummy file
-    dummy_phase_models = 'temp_test_mixing_energies.json'
-    with open(dummy_phase_models, 'w') as fp:
-        fp.write(json.dumps(phases_dict))
 
     dataset_excess_mixing = {
         "components": ["AL", "B"],
@@ -48,10 +40,7 @@ def test_mixing_energies_are_fit(datasets_db):
     }
     datasets_db.insert(dataset_excess_mixing)
 
-    dbf, sampler, parameters = fit(dummy_phase_models, datasets_db, run_mcmc=False)
-
-    # clean up the temporary file we created
-    os.remove(dummy_phase_models)
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
 
     assert dbf.elements == {'AL', 'B'}
     assert set(dbf.phases.keys()) == {'LIQUID', 'FCC_A1'}
@@ -63,3 +52,24 @@ def test_mixing_energies_are_fit(datasets_db):
     assert set(read_dbf.phases.keys()) == {'LIQUID', 'FCC_A1'}
     assert len(read_dbf._parameters.search(where('parameter_type') == 'L')) == 1
 
+def test_sgte_reference_state_naming_is_correct_for_character_element(datasets_db):
+    """Elements with single character names should get the correct GHSER reference state name (V => GHSERVV)"""
+    phase_models = {
+        "components": ["AL", "V"],
+        "refdata": "SGTE91",
+        "phases": {
+            "LIQUID" : {
+                "sublattice_model": [["AL", "V"]],
+                "sublattice_site_ratios": [1]
+            },
+            "BCC_A2" : {
+                "sublattice_model": [["AL", "V"]],
+                "sublattice_site_ratios": [1]
+            }
+        }
+    }
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    assert dbf.symbols['GBCCV'].args[0][0].__str__() == 'GHSERVV'
+    assert 'GHSERVV' in dbf.symbols.keys()
+    assert 'GHSERAL' in dbf.symbols.keys()
