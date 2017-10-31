@@ -3,7 +3,7 @@ Tests for input file validation
 """
 
 import pytest
-from espei.run_espei import get_run_settings
+from espei.espei_script import get_run_settings
 
 FULL_RUN_DICT = {
     'generate_parameters':

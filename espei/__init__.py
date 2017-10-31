@@ -23,4 +23,4 @@ with open(os.path.join(MODULE_DIR, 'input-schema.yaml')) as f:
     schema = ESPEIValidator(yaml.load(f))
 
 from espei.paramselect import generate_parameters, mcmc_fit
-from espei.run_espei import run_espei
+from espei.espei_script import run_espei
