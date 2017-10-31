@@ -32,7 +32,7 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
     comps = sorted(comps)
     mod = Model(dbf, comps, phase_name)
     # This is for computing properties of formation
-    mod_norefstate = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
+    mod_norefstate = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
     # Is this an interaction parameter or endmember?
     if any([isinstance(conf, list) or isinstance(conf, tuple) for conf in configuration]):
         plots = mix_plots
