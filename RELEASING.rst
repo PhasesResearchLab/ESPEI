@@ -29,3 +29,10 @@ Uploading to PyPI
 
    ``twine upload -r pypi -u bocklund dist/*``
 
+Updating the conda-forge feedstock
+----------------------------------
+
+1. Get the sha-256 hash of the tarball via ``openssl sha256 dist/espei-0.3.1.tar.gz`` or at `pypi.org <https://pypi.org/project/espei>`_.
+2. Fork the `conda forge ESPEI feedstock <https://github.com/conda-forge/espei-feedstock/>`_.
+3. Update the version number and hash in the recipe
+4. Open a PR and merge once the tests complete and pass
