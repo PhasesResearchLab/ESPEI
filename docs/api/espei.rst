@@ -43,6 +43,14 @@ espei\.plot module
     :undoc-members:
     :show-inheritance:
 
+espei\.refdata module
+---------------------
+
+.. automodule:: espei.refdata
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 espei\.run\_espei module
 ------------------------
 
