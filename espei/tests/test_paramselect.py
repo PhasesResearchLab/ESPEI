@@ -5,7 +5,7 @@ from numpy.linalg import LinAlgError
 from pycalphad import Database
 
 from espei.paramselect import lnprob
-from espei.utils import PickleableTinyDB, MemoryStorage
+from espei.tests.fixtures import datasets_db
 
 TDB = """$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 $ Date: 2017-09-27 21:10
@@ -127,52 +127,32 @@ PARAMETER L(LIQUID,CU,MG;3) 1 VV0014#; 10000 N !
 """
 dbf = Database.from_string(TDB, fmt='tdb')
 
-datasets = PickleableTinyDB(storage=MemoryStorage)
 zpf_data = """{
     "components": ["CU", "MG", "VA"],
-    "phases": ["LIQUID", "FCC_A1", "LAVES_C15", "CUMG2", "HCP_A3"],
+    "phases": ["LIQUID", "FCC_A1"],
     "conditions": {
 	      "P": 101325,
-	      "T": [1337.97, 1262.238, 1170.215, 1009.008, 1060.684,
-		          1070.972, 1072.518, 1065.141, 1063.229, 1048.453, 877.544, 838.242, 842.121,
-		          844.463, 841.966, 833.645, 783.774, 823.756, 889.248]
+	      "T": [1337.97, 1262.238]
     },
     "broadcast_conditions": false,
     "output": "ZPF",
     "values":   [
         [["LIQUID", ["MG"], [0.0246992]], ["FCC_A1", ["MG"],  [null]]],
-	    [["LIQUID", ["MG"], [0.0712664]], ["FCC_A1", ["MG"],  [null]]],
-	    [["LIQUID", ["MG"], [0.128725]], ["FCC_A1", ["MG"],  [null]]],
-        [["LIQUID", ["MG"], [0.221676]], ["FCC_A1", ["MG"],  [null]]],
-	    [["LIQUID", ["MG"], [0.280253]], ["LAVES_C15", ["MG"],  [null]]],
-        [["LIQUID", ["MG"], [0.334848]], ["LAVES_C15", ["MG"], [null]]],
-	    [["LIQUID", ["MG"], [0.350877]], ["LAVES_C15", ["MG"], [null]]],
-	    [["LIQUID", ["MG"], [0.365138]], ["LAVES_C15", ["MG"], [null]]],
-        [["LIQUID", ["MG"], [0.424301]], ["LAVES_C15", ["MG"], [null]]],
-        [["LIQUID", ["MG"], [0.457622]], ["LAVES_C15", ["MG"], [null]]],
-	    [["LIQUID", ["MG"], [0.542388]], ["LAVES_C15", ["MG"], [null]]],
-	    [["LIQUID", ["MG"], [0.610445]], ["CUMG2", ["MG"], [null]]],
-        [["LIQUID", ["MG"], [0.647318]], ["CUMG2", ["MG"], [null]]],
-        [["LIQUID", ["MG"], [0.666563]], ["CUMG2", ["MG"], [null]]],
-        [["LIQUID", ["MG"], [0.679315]], ["CUMG2", ["MG"], [null]]],
-        [["LIQUID", ["MG"], [0.720758]], ["CUMG2", ["MG"], [null]]],
-        [["LIQUID", ["MG"], [0.791814]], ["CUMG2", ["MG"], [null]]],
-        [["LIQUID", ["MG"], [0.917371]], ["HCP_A3", ["MG"], [null]]],
-        [["LIQUID", ["MG"], [0.97301]], ["HCP_A3", ["MG"], [null]]]
+	    [["LIQUID", ["MG"], [0.0712664]], ["FCC_A1", ["MG"],  [null]]]
     ],
     "reference": "Sahmen1908"
 }
 """
 zpf_json = json.loads(zpf_data)
-datasets.insert(zpf_json)
 
-def test_lnprob_calculates_probability_for_success():
+def test_lnprob_calculates_probability_for_success(datasets_db):
     """lnprob() successfully calculates the probability for equilibrium """
+    datasets_db.insert(zpf_json)
     res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf,
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
-                 datasets=datasets, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)
+                 datasets=datasets_db, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)
     assert np.isreal(res)
-    assert np.isclose(res, -24726876.089694317)
+    assert np.isclose(res, -5740.542839073727)
 
 
 def _eq_LinAlgError(*args, **kwargs):
@@ -184,19 +164,21 @@ def _eq_ValueError(*args, **kwargs):
 
 
 @mock.patch('espei.paramselect.equilibrium', _eq_LinAlgError)
-def test_lnprob_does_not_raise_on_LinAlgError():
+def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
     """lnprob() should catch LinAlgError raised by equilibrium and return -np.inf"""
+    datasets_db.insert(zpf_json)
     res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf,
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
-                 datasets=datasets, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)
+                 datasets=datasets_db, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)
     assert np.isneginf(res)
 
 
 @mock.patch('espei.paramselect.equilibrium', _eq_ValueError)
-def test_lnprob_does_not_raise_on_ValueError():
+def test_lnprob_does_not_raise_on_ValueError(datasets_db):
     """lnprob() should catch ValueError raised by equilibrium and return -np.inf"""
+    datasets_db.insert(zpf_json)
     res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf,
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
-                 datasets=datasets, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)
+                 datasets=datasets_db, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)
     assert np.isneginf(res)
 
