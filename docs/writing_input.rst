@@ -211,14 +211,16 @@ scheduler
 
 :type: string
 :default: emcee
-:options: dask | emcee | MPIPool
+:options: emcee | MPIPool | dask | None
 
 Which scheduler to use for parallelization.
-You can choose from either `dask`, `emcee`, or `MPIPool`.
+You can choose from either `dask`, `emcee`, `MPIPool` or `None`.
 
 Choosing dask or emcee allows for the choice of cores used through the cores key.
 
 Choosing MPIPool will allow you to set the number of cores directly using MPI.
+
+Choosing None will result in no parallel scheduler being used. This is useful for debugging.
 
 It is recommended to use MPIPool if you will be running jobs on supercomputing clusters.
 

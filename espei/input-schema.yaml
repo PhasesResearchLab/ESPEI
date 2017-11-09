@@ -68,8 +68,8 @@ mcmc:
       required: True
     scheduler: # scheduler to use for parallelization
       type: string
-      default: emcee # dask | MPIPool | emcee
-      regex: 'dask|MPIPool|emcee'
+      default: emcee # emcee | MPIPool | dask | None
+      regex: 'emcee|MPIPool|dask|None'
       required: True
     cores:
       type: integer

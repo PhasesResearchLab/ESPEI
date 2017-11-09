@@ -155,6 +155,9 @@ def run_espei(run_settings):
                                 "Defaulting to run on the {} available cores.".format(cores))
             client = InterruptiblePool(processes=cores)
             logging.info("Using multiprocessing on {} cores".format(cores))
+        elif mcmc_settings['scheduler'] == 'None':
+            client = None
+            logging.info("Not using a parallel scheduler. ESPEI is running MCMC on a single core.")
 
         # get a Database
         if mcmc_settings.get('input_db'):
