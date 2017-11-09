@@ -139,6 +139,7 @@ def run_espei(run_settings):
                                 "Defaulting to run on the {} available cores.".format(cores))
             scheduler = LocalCluster(n_workers=cores, threads_per_worker=1, processes=True)
             client = ImmediateClient(scheduler)
+            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']])
             logging.info("Running with dask scheduler: %s [%s cores]" % (scheduler, sum(client.ncores().values())))
             try:
                 logging.info(
