@@ -151,4 +151,8 @@ def test_chains_per_parameter_read_correctly():
     with pytest.raises(ValueError):
         get_run_settings(d)
 
-
+def test_SR2016_refdata():
+    d = {k: v for k,v in GEN_PARAMS_DICT.items()}
+    d['generate_parameters']['ref_state'] = 'SR2016'
+    parsed_settings = get_run_settings(d)
+    assert parsed_settings['generate_parameters']['ref_state'] == 'SR2016'

@@ -43,7 +43,7 @@ generate_parameters:
     ref_state:
       type: string
       required: True
-      regex: 'SGTE91'
+      regex: 'SGTE91|SR2016'
 
 ## if present, will run mcmc fitting
 ## you must specifiy some kind of input for the parameters.

@@ -9,7 +9,6 @@ def test_mixing_energies_are_fit(datasets_db):
     """Tests that given mixing energy data, the excess parameter is fit."""
     phase_models = {
         "components": ["AL", "B"],
-        "refdata": "SGTE91",
         "phases": {
             "LIQUID" : {
                 "sublattice_model": [["AL", "B"]],
@@ -56,7 +55,6 @@ def test_sgte_reference_state_naming_is_correct_for_character_element(datasets_d
     """Elements with single character names should get the correct GHSER reference state name (V => GHSERVV)"""
     phase_models = {
         "components": ["AL", "V"],
-        "refdata": "SGTE91",
         "phases": {
             "LIQUID" : {
                 "sublattice_model": [["AL", "V"]],

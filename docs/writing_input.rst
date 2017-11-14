@@ -160,12 +160,12 @@ ref_state
 
 :type: string
 :default: required
-:options: SGTE91
+:options: SGTE91 | SR2016
 
 The reference state to use for the pure elements and lattice stabilities.
-Currently only `SGTE91` is supported.
+Currently only `SGTE91` and `SR2016` (for certain elements) is supported.
 
-There are plans to extend to the SGTE Unary 5 and also support custom reference states.
+There are plans to extend to support custom reference states.
 
 
 mcmc

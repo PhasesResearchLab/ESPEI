@@ -627,7 +627,7 @@ def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
     return np.array(iter_error, dtype=np.float64)
 
 
-def generate_parameters(phase_models, datasets, refdata, excess_model):
+def generate_parameters(phase_models, datasets, ref_state, excess_model):
     """Generate parameters from given phase models and datasets
 
     Parameters
@@ -636,8 +636,8 @@ def generate_parameters(phase_models, datasets, refdata, excess_model):
         Dictionary of components and phases to fit.
     datasets : PickleableTinyDB
         database of single- and multi-phase to fit.
-    refdata : str
-        String of the reference data to use, e.g. 'SGTE91'
+    ref_state : str
+        String of the reference data to use, e.g. 'SGTE91' or 'SR2016'
     excess_model : str
         String of the type of excess model to fit to, e.g. 'linear'
 
@@ -652,8 +652,8 @@ def generate_parameters(phase_models, datasets, refdata, excess_model):
         if Species is not None:  # TODO: drop this on release of pycalphad 0.7
             dbf.species.add(Species(el, {el: 1}, 0))
     # Write reference state to Database
-    refdata = getattr(espei.refdata, phase_models['refdata'])
-    stabledata = getattr(espei.refdata, phase_models['refdata'] + 'Stable')
+    refdata = getattr(espei.refdata, ref_state)
+    stabledata = getattr(espei.refdata, ref_state + 'Stable')
     for key, element in refdata.items():
         if isinstance(element, sympy.Piecewise):
             newargs = element.args + ((0, True),)
