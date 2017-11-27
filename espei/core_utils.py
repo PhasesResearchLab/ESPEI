@@ -13,7 +13,7 @@ from pycalphad import variables as v
 def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
     desired_data = datasets.search((tinydb.where('output').test(lambda x: x in prop)) &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
-                                   (tinydb.where('solver').test(symmetry_filter, configuration, symmetry)) &
+                                   (tinydb.where('solver').test(symmetry_filter, configuration, list_to_tuple(symmetry) if symmetry else symmetry)) &
                                    (tinydb.where('phases') == [phase_name]))
     # This seems to be necessary because the 'values' member does not modify 'datasets'
     # But everything else does!
@@ -101,6 +101,25 @@ def canonicalize(configuration, equivalent_sublattices):
 
 
 def symmetry_filter(x, config, symmetry):
+    """
+    Return True if the candidate sublattice configuration has any symmetry
+    which matches the phase model symmetry.
+
+    Parameters
+    ----------
+    x : the candidate dataset 'solver' dict. Must contain the "sublattice_configurations" key
+    config : the configuratino of interest: e.g. ['AL', ['AL', 'NI'], 'VA']
+    symmetry : tuple of tuples where each inner tuple is a group of equivalent
+               sublattices. A value of ((0, 1), (2, 3, 4)) means that sublattices
+               at indices 0 and 1 are symmetrically equivalent to each other and
+               sublattices at indices 2, 3, and 4 are symetrically equivalent to
+               each other.
+
+    Returns
+    -------
+    bool
+
+    """
     if x['mode'] == 'manual':
         if len(config) != len(x['sublattice_configurations'][0]):
             return False
