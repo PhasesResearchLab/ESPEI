@@ -25,12 +25,14 @@ sys.path.insert(0, os.path.abspath('..'))
 MOCK_MODULES = ['dask', 'distributed', 'emcee', 'emcee.utils',
                 'matplotlib',
                 'matplotlib.pyplot', 'numpy', 'pycalphad',
-                'pycalphad.plot.utils', 'pycalphad.refdata',
+                'pycalphad.plot.utils',
+                'espei.refdata',
                 'pycalphad.variables', 'pycalphad.plot.eqplot',
                 'scipy', 'sklearn', 'sklearn.linear_model',
                 'sympy', 'tinydb', 'pytest',
                 'tinydb.storages', 'numpy.linalg',
                 'cerberus', 'yaml',
+                'sympy'
                 ]
 
 for mod_name in MOCK_MODULES:

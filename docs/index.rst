@@ -223,6 +223,7 @@ ESPEI is MIT licensed. See LICENSE.
    :caption: Reference
 
    writing_input
+   theory
    api/modules
 
 .. toctree::
