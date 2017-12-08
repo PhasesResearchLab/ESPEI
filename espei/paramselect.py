@@ -683,7 +683,6 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model):
 
 
 def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_parameter=2,
-                 chain_std_deviation=0.1, scheduler=None, tracefile=None, probfile=None, restart_chain=None):
              chain_std_deviation=0.1, scheduler=None, tracefile=None, probfile=None,
              restart_chain=None, deterministic=True,):
     """Run Markov Chain Monte Carlo on the Database given datasets
