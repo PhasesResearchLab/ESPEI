@@ -47,6 +47,7 @@ All of the possible keys are
      restart_chain
      chains_per_parameter
      chain_std_deviation
+     deterministic
 
 
 The next sections describe each of the keys individually.
@@ -285,3 +286,26 @@ If you are restarting a calculation, the standard deviation for your chains are 
 You may technically set this to any positive value, you would like.
 Be warned that too small of a standard deviation may cause convergence to a local minimum in parameter space and slow convergence, while a standard deviation that is too large may cause convergence to meaningless thermodynamic descriptions. 
 
+deterministic
+-------------
+
+:type: bool
+:default: True
+
+Toggles whether ESPEI runs are deterministic. If this is True, running
+ESPEI with the same Database and initial settings (either the same
+``chains_per_parameter`` and ``chain_std_deviation`` or the same
+``restart_chain``) will result in exactly the same results.
+
+Starting two runs with the same TDB or with parameter generation
+(which is deterministic) will result in the chains being at exactly
+the same position after 100 steps. If these are both restarted after
+100 steps for another 50 steps, then the final chain after 150 steps
+will be the same.
+
+It is important to note that this is only explictly True when
+*starting* at the same point. If Run 1 and Run 2 are started with the
+same initial parameters and Run 1 proceeds 50 steps while Run 2
+proceeds 100 steps, restarting Run 1 for 100 steps and Run 2 for 50
+steps (so they are both at 150 total steps) will **NOT** give the same
+result.

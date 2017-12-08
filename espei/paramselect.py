@@ -684,6 +684,8 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model):
 
 def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_parameter=2,
                  chain_std_deviation=0.1, scheduler=None, tracefile=None, probfile=None, restart_chain=None):
+             chain_std_deviation=0.1, scheduler=None, tracefile=None, probfile=None,
+             restart_chain=None, deterministic=True,):
     """Run Markov Chain Monte Carlo on the Database given datasets
 
     Parameters
@@ -713,6 +715,11 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         filename to store the flattened ln probability with NumPy.save
     restart_chain : np.ndarray
         ndarray of the previous chain. Should have shape (nwalkers, iterations, nparams)
+    deterministic : bool
+        If True, the emcee sampler will be seeded to give deterministic sampling
+        draws. This will ensure that the runs with the exact same database,
+        chains_per_parameter, and chain_std_deviation (or restart_chain) will
+        produce exactly the same results.
 
     Returns
     -------
@@ -795,6 +802,10 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
 
     # the pool must implement a map function
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_context, pool=scheduler)
+    if deterministic:
+        from espei.rstate import numpy_rstate
+        sampler.random_state = numpy_rstate
+        logging.info('Using a deterministic ensemble sampler.')
     progbar_width = 30
     logging.info('Running MCMC with {} steps.'.format(mcmc_steps))
     try:

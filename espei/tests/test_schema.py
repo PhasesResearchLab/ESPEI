@@ -138,6 +138,7 @@ def test_correct_defaults_are_applied_from_minimal_specification():
     assert d['mcmc']['scheduler'] == 'emcee'
     assert d['mcmc']['chains_per_parameter'] == 2
     assert d['mcmc']['chain_std_deviation'] == 0.1
+    assert d['mcmc']['deterministic'] == True
 
 
 def test_chains_per_parameter_read_correctly():

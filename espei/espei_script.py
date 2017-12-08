@@ -175,6 +175,7 @@ def run_espei(run_settings):
         save_interval = mcmc_settings.get('mcmc_save_interval')
         chains_per_parameter = mcmc_settings.get('chains_per_parameter')
         chain_std_deviation = mcmc_settings.get('chain_std_deviation')
+        deterministic = mcmc_settings.get('deterministic')
 
         dbf, sampler = mcmc_fit(dbf, datasets, scheduler=client, mcmc_steps=mcmc_steps,
                                 chains_per_parameter=chains_per_parameter,
@@ -182,6 +183,7 @@ def run_espei(run_settings):
                                 save_interval=save_interval,
                                 tracefile=tracefile, probfile=probfile,
                                 restart_chain=restart_chain,
+                                deterministic=deterministic,
                                 )
 
         dbf.to_file(output_settings['output_db'], if_exists='overwrite')

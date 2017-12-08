@@ -92,3 +92,7 @@ mcmc:
       allof:
         - required: True
         - excludes: restart_chain
+    deterministic:
+      type: boolean
+      default: True
+      required: True
