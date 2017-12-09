@@ -42,7 +42,7 @@ from emcee.utils import MPIPool
 
 from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort_key, \
     list_to_tuple, endmembers_from_interaction, build_sitefractions
-from espei.utils import PickleableTinyDB, sigfigs
+from espei.utils import PickleableTinyDB, sigfigs, ImmediateClient
 
 # backwards compatibility:
 # TODO: drop support on release pycalphad 0.7
@@ -819,9 +819,10 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#'*n, ' '*(progbar_width - n), i + 1, mcmc_steps))
     except KeyboardInterrupt:
         pass
-    # close the pool if it is an MPIPool.
-    if isinstance(scheduler, MPIPool):
+    # close the pool if possible.
+    if hasattr(scheduler, 'close'):
         scheduler.close()
+        logging.debug('Closing the scheduler.')
     # final processing
     save_sampler_state(sampler)
     flatchain = sampler.flatchain
