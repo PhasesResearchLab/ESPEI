@@ -35,7 +35,8 @@ class ImmediateClient(Client):
     returned by map.
     """
     def map (self, *args, **kwargs):
-        result = super(ImmediateClient, self).map(*args, **kwargs)
+        pure = kwargs.pop('pure', False)
+        result = super(ImmediateClient, self).map(*args, pure=pure, **kwargs)
         result = self.gather(result)
         return result
 
