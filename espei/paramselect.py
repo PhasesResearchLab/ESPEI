@@ -29,7 +29,6 @@ import dask
 import numpy as np
 import operator
 import espei.refdata
-import re
 import sympy
 import tinydb
 import emcee
@@ -42,7 +41,7 @@ from emcee.utils import MPIPool
 
 from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort_key, \
     list_to_tuple, endmembers_from_interaction, build_sitefractions
-from espei.utils import PickleableTinyDB, sigfigs
+from espei.utils import PickleableTinyDB, sigfigs, database_symbols_to_fit
 
 # backwards compatibility:
 # TODO: drop support on release pycalphad 0.7
@@ -728,8 +727,7 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         emcee sampler for further data wrangling
     """
     comps = sorted([sp for sp in dbf.elements])
-    pattern = re.compile("^V[V]?([0-9]+)$")
-    symbols_to_fit = sorted([x for x in sorted(dbf.symbols.keys()) if pattern.match(x)])
+    symbols_to_fit = database_symbols_to_fit(dbf)
 
     if len(symbols_to_fit) == 0:
         raise ValueError('No degrees of freedom. Database must contain symbols starting with \'V\' or \'VV\', followed by a number.')
