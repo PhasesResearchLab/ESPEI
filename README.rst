@@ -71,7 +71,7 @@ ESPEI package, and replaces it with the package from GitHub.
     conda remove --force espei
     pip install -e .
 
-Upgrading ESPEI later requires you to run ``git pull` in this directory.
+Upgrading ESPEI later requires you to run ``git pull`` in this directory.
 
 
 Usage
