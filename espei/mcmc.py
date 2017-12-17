@@ -11,7 +11,7 @@ from numpy.linalg import LinAlgError
 from pycalphad import calculate, equilibrium, CompiledModel, variables as v
 import emcee
 
-from espei.utils import database_symbols_to_fit
+from espei.utils import database_symbols_to_fit, optimal_parameters
 
 
 def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters):
@@ -284,7 +284,7 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
 
     # get initial parameters and remove these from the database
     # we'll replace them with SymPy symbols initialized to 0 in the phase models
-    initial_parameters = [np.array(float(dbf.symbols[x])) for x in symbols_to_fit]
+    initial_parameters = np.array([np.array(float(dbf.symbols[x])) for x in symbols_to_fit])
     for x in symbols_to_fit:
         del dbf.symbols[x]
 
@@ -326,7 +326,6 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         logging.debug('Means of restarting parameters are {}'.format(initial_parameters))
         logging.debug('Standard deviations of restarting parameters are {}'.format(walkers.std(axis=0)))
     else:
-        initial_parameters = np.array(initial_parameters)
         logging.debug('Initial parameters: {}'.format(initial_parameters))
         ndim = initial_parameters.size
         nwalkers = ndim * chains_per_parameter
@@ -355,15 +354,12 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         pass
     # final processing
     save_sampler_state(sampler)
-    flatchain = sampler.flatchain
-    optimal_parameters = flatchain[np.nanargmin(-sampler.flatlnprobability)]
+    optimal_params = optimal_parameters(sampler.chain, sampler.lnprobability)
     logging.debug('Intial parameters: {}'.format(initial_parameters))
-    logging.debug('Optimal parameters: {}'.format(optimal_parameters))
-    logging.debug('Change in parameters: {}'.format(np.abs(initial_parameters - optimal_parameters) / initial_parameters))
-    parameters_dict = {param_name: value for param_name, value in zip(symbols_to_fit, optimal_parameters)}
+    logging.debug('Optimal parameters: {}'.format(optimal_params))
+    logging.debug('Change in parameters: {}'.format(np.abs(initial_parameters - optimal_params) / initial_parameters))
     dbf = dbf.compute()
-    for param_name, value in parameters_dict.items():
+    for param_name, value in zip(symbols_to_fit, optimal_params):
         dbf.symbols[param_name] = value
     logging.info('MCMC complete.')
-
     return dbf, sampler
