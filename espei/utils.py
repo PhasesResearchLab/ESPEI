@@ -10,7 +10,9 @@ from distributed import Client
 from tinydb import TinyDB
 from tinydb.storages import MemoryStorage
 from six import string_types
-
+import bibtexparser
+from bibtexparser.bparser import BibTexParser
+from bibtexparser.customization import convert_to_unicode
 
 class PickleableTinyDB(TinyDB):
     """A pickleable version of TinyDB that uses MemoryStorage as a default."""
@@ -129,3 +131,30 @@ def flexible_open_string(obj):
         return read_string
     else:
         raise ValueError('Unable to determine how to extract the string of the passed object ({}) of type {}. Expected a raw string, file-like, or path-like.'.format(obj, type(obj)))
+
+
+bibliography_database = PickleableTinyDB(storage=MemoryStorage)
+
+def add_bibtex_to_bib_database(bibtex, bib_db=None):
+    """
+    Add entries from a bibtex file to the bibliography database
+
+    Parameters
+    ----------
+    bibtex :
+        Either a multiline string, a path, or a file-like object of a bibtex file
+    bib_db: PickleableTinyDB
+        Database to put the bibtex entries. Defaults to a module-level default database
+
+    Returns
+    -------
+    The modified bibliographic database
+    """
+    if not bib_db:
+        bib_db = bibliography_database
+    bibtex_string = flexible_open_string(bibtex)
+    parser = BibTexParser()
+    parser.customization = convert_to_unicode
+    parsed_bibtex = bibtexparser.loads(bibtex_string, parser=parser)
+    bib_db.insert_multiple(parsed_bibtex.entries)
+    return bib_db

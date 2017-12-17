@@ -4,9 +4,12 @@ Test espei.utils classes and functions.
 import pickle, time, os
 
 from tinydb import where
-from espei.utils import ImmediateClient, PickleableTinyDB, MemoryStorage, flexible_open_string
+from espei.utils import ImmediateClient, PickleableTinyDB, MemoryStorage, \
+    flexible_open_string, add_bibtex_to_bib_database
 
 import pytest
+from espei.tests.fixtures import datasets_db
+
 
 MULTILINE_HIPSTER_IPSUM = """Lorem ipsum dolor amet wayfarers kale chips chillwave
 adaptogen schlitz lo-fi jianbing ennui occupy pabst health goth chicharrones.
@@ -65,3 +68,30 @@ def test_flexible_open_string_path_like(tmp_file):
     fname = tmp_file
     returned_string = flexible_open_string(fname)
     assert returned_string == MULTILINE_HIPSTER_IPSUM
+
+
+def test_adding_bibtex_entries_to_bibliography_db(datasets_db):
+    """Adding a bibtex entries to a database works and the database can be searched."""
+    TEST_BIBTEX = """@article{Roe1952gamma,
+author = {Roe, W. P. and Fishel, W. P.},
+journal = {Trans. Am. Soc. Met.},
+keywords = {Fe-Cr,Fe-Ti,Fe-Ti-Cr},
+pages = {1030--1041},
+title = {{Gamma Loop Studies in the Fe-Ti, Fe-Cr, and Fe-Ti-Cr Systems}},
+volume = {44},
+year = {1952}
+}
+
+@phdthesis{shin2007thesis,
+author = {Shin, D},
+keywords = {Al-Cu,Al-Cu-Mg,Al-Cu-Si,Al-Mg,Al-Mg-Si,Al-Si,Cu-Mg,Mg-Si,SQS},
+number = {May},
+school = {The Pennsylvania State University},
+title = {{Thermodynamic properties of solid solutions from special quasirandom structures and CALPHAD modeling: Application to aluminum-copper-magnesium-silicon and hafnium-silicon-oxygen}},
+year = {2007}
+}"""
+    db = add_bibtex_to_bib_database(TEST_BIBTEX, datasets_db)
+    search_res = db.search(where('ID') == 'Roe1952gamma')
+    assert len(search_res) == 1
+    assert len(db.all()) == 2
+
