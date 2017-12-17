@@ -55,44 +55,44 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
             _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, configuration, x_val, y_val)
 
 
-
-def dataplot(eq, datasets, ax=None):
+def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
     """
-    Plot datapoints corresponding to the components and phases in the eq Dataset
+    Plot datapoints corresponding to the components, phases, and conditions.
+
 
     Parameters
     ----------
-    eq : xarray.Dataset
-        Result of equilibrium calculation.
-    datasets : TinyDB
-        Database of phase equilibria datasets
+    comps : list
+        Names of components to consider in the calculation.
+    phases : []
+        Names of phases to consider in the calculation.
+    conds : dict
+        Maps StateVariables to values and/or iterables of values.
+    datasets : PickleableTinyDB
     ax : matplotlib.Axes
         Default axes used if not specified.
 
     Returns
     -------
-    A plot of phase equilibria points as a figure
+    matplotlib.Axes
+        A plot of phase equilibria points as a figure
 
     Examples
     --------
 
-    >>> from pycalphad import equilibrium, Database, variables as v
-    >>> from pycalphad.plot.eqplot import eqplot
     >>> from espei.datasets import load_datasets, recursive_glob
+    >>> from espei.plot import dataplot
     >>> datasets = load_datasets(recursive_glob('.', '*.json'))
-    >>> dbf = Database('my_databases.tdb')
-    >>> my_phases = list(dbf.phases.keys())
-    >>> eq = equilibrium(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)})
-    >>> ax = eqplot(eq)
-    >>> ax = dataplot(eq, datasets, ax=ax)
+    >>> my_phases = ['BCC_A2', 'CUMG2', 'FCC_A1', 'LAVES_C15', 'LIQUID']
+    >>> my_components = ['CU', 'MG' 'VA']
+    >>> conditions = {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)}
+    >>> dataplot(my_components, my_phases, conditions, datasets)
 
     """
-    # TODO: support reference legend
-    conds = OrderedDict([(_map_coord_to_variable(key), unpack_condition(np.asarray(value)))
-                         for key, value in sorted(eq.coords.items(), key=str)
-                         if (key == 'T') or (key == 'P') or (key.startswith('X_'))])
-    indep_comps = sorted([key for key, value in conds.items() if isinstance(key, v.Composition) and len(value) > 1], key=str)
-    indep_pots = [key for key, value in conds.items() if ((key == v.T) or (key == v.P)) and len(value) > 1]
+    indep_comps = [key for key, value in conds.items() if isinstance(key, v.Composition) and len(np.atleast_1d(value)) > 1]
+    indep_pots = [key for key, value in conds.items() if ((key == v.T) or (key == v.P)) and len(np.atleast_1d(value)) > 1]
+    plot_kwargs = plot_kwargs or {}
+    phases = sorted(phases)
 
     # determine what the type of plot will be
     if len(indep_comps) == 1 and len(indep_pots) == 1:
@@ -108,15 +108,18 @@ def dataplot(eq, datasets, ax=None):
         x = indep_comps[0].species
         y = indep_pots[0]
 
-    phases = list(map(str, sorted(set(np.array(eq.Phase.values.ravel(), dtype='U')) - {''}, key=str)))
-    comps = list(map(str, sorted(np.array(eq.coords['component'].values, dtype='U'), key=str)))
-
     # set up plot if not done already
     if ax is None:
         import matplotlib.pyplot as plt
         ax = plt.gca(projection=projection)
-        ax.set_xlabel('X({})'.format(x))
-        ax.set_ylabel(y)
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+        ax.tick_params(axis='both', which='major', labelsize=14)
+        ax.grid(True)
+        plot_title = '-'.join([component.title() for component in sorted(comps) if component != 'VA'])
+        ax.set_title(plot_title, fontsize=20)
+        ax.set_xlabel('X({})'.format(x), labelpad=15, fontsize=20)
+        ax.set_ylabel(plot_mapping.get(str(y), y), fontsize=20)
         ax.set_xlim((0, 1))
 
     plots = [('ZPF', 'T')]
@@ -163,7 +166,7 @@ def dataplot(eq, datasets, ax=None):
             for rp in payload_ravelled:
                 phases_ravelled.append(rp[0])
                 comp_dict = dict(zip([x.upper() for x in rp[1]], rp[2]))
-                dependent_comp = list(set(comps) - set(comp_dict.keys()))
+                dependent_comp = list(set(comps) - set(comp_dict.keys()) - set(['VA']))
                 if len(dependent_comp) > 1:
                     raise ValueError('Dependent components greater than one')
                 elif len(dependent_comp) == 1:
@@ -179,8 +182,56 @@ def dataplot(eq, datasets, ax=None):
             # We can't pass an array of markers to scatter, sadly
             for sym in symbols_ravelled:
                 selected = symbols_ravelled == sym
-                ax.scatter(comps_ravelled[selected], temps_ravelled[selected], marker=sym, s=100,
-                           c='none', edgecolors=[phase_color_map[x] for x in phases_ravelled[selected]])
+                scatter_kwargs = {'s': 50}
+                scatter_kwargs.update(plot_kwargs)
+                ax.scatter(comps_ravelled[selected], temps_ravelled[selected], marker=sym,
+                           c='none', edgecolors=[phase_color_map[x] for x in phases_ravelled[selected]],
+                           **scatter_kwargs)
+    return ax
+
+
+def eqdataplot(eq, datasets, ax=None, plot_kwargs=None):
+    """
+    Plot datapoints corresponding to the components and phases in the eq Dataset.
+    A convenience function for dataplot.
+
+    Parameters
+    ----------
+    eq : xarray.Dataset
+        Result of equilibrium calculation.
+    datasets : PickleableTinyDB
+        Database of phase equilibria datasets
+    ax : matplotlib.Axes
+        Default axes used if not specified.
+
+    Returns
+    -------
+    A plot of phase equilibria points as a figure
+
+    Examples
+    --------
+
+    >>> from pycalphad import equilibrium, Database, variables as v
+    >>> from pycalphad.plot.eqplot import eqplot
+    >>> from espei.datasets import load_datasets, recursive_glob
+    >>> datasets = load_datasets(recursive_glob('.', '*.json'))
+    >>> dbf = Database('my_databases.tdb')
+    >>> my_phases = list(dbf.phases.keys())
+    >>> eq = equilibrium(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)})
+    >>> ax = eqplot(eq)
+    >>> ax = eqdataplot(eq, datasets, ax=ax)
+
+    """
+    # TODO: support reference legend
+    conds = OrderedDict([(_map_coord_to_variable(key), unpack_condition(np.asarray(value)))
+                         for key, value in sorted(eq.coords.items(), key=str)
+                         if (key == 'T') or (key == 'P') or (key.startswith('X_'))])
+
+    phases = list(map(str, sorted(set(np.array(eq.Phase.values.ravel(), dtype='U')) - {''}, key=str)))
+    comps = list(map(str, sorted(np.array(eq.coords['component'].values, dtype='U'), key=str)))
+
+    ax = dataplot(comps, phases, conds, datasets, ax=ax, plot_kwargs=plot_kwargs)
+
     return ax
 
 
@@ -199,7 +250,7 @@ def multiplot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=N
         Names of phases to consider in the calculation.
     conds : dict
         Maps StateVariables to values and/or iterables of values.
-    datasets : TinyDB
+    datasets : PickleableTinyDB
         Database of phase equilibria datasets
     eq_kwargs : dict
         Keyword arguments passed to pycalphad equilibrium()
@@ -230,7 +281,7 @@ def multiplot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=N
 
     eq_result = equilibrium(dbf, comps, phases, conds, **eq_kwargs)
     ax = eqplot(eq_result, **plot_kwargs)
-    ax = dataplot(eq_result, datasets, ax=ax, **data_kwargs)
+    ax = eqdataplot(eq_result, datasets, ax=ax, plot_kwargs=data_kwargs)
     return ax
 
 
