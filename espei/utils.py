@@ -9,6 +9,7 @@ import numpy as np
 from distributed import Client
 from tinydb import TinyDB
 from tinydb.storages import MemoryStorage
+from six import string_types
 
 
 class PickleableTinyDB(TinyDB):
@@ -97,3 +98,34 @@ def database_symbols_to_fit(dbf, symbol_regex="^V[V]?([0-9]+)$"):
     """
     pattern = re.compile(symbol_regex)
     return sorted([x for x in sorted(dbf.symbols.keys()) if pattern.match(x)])
+
+
+def flexible_open_string(obj):
+    """
+    Return the string of a an object that is either file-like, a file path, or the raw string.
+
+    Parameters
+    ----------
+    obj : string-like or file-like
+        Either a multiline string, a path, or a file-like object
+
+    Returns
+    -------
+    str
+    """
+    if isinstance(obj, string_types):
+        # the obj is a string
+        if '\n' in obj:
+            # if the string has linebreaks, then we assume it's a raw string. Return it.
+            return obj
+        else:
+            # assume it is a path
+            with open(obj) as fp:
+                read_string = fp.read()
+            return read_string
+    elif hasattr(obj, 'read'):
+        # assume it is file-like
+        read_string = obj.read()
+        return read_string
+    else:
+        raise ValueError('Unable to determine how to extract the string of the passed object ({}) of type {}. Expected a raw string, file-like, or path-like.'.format(obj, type(obj)))
