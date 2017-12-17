@@ -1,15 +1,14 @@
 """
 Test espei.utils classes and functions.
 """
-import pickle, time, os
+import pickle
 
 from tinydb import where
 from espei.utils import ImmediateClient, PickleableTinyDB, MemoryStorage, \
     flexible_open_string, add_bibtex_to_bib_database
 
 import pytest
-from espei.tests.fixtures import datasets_db
-
+from espei.tests.fixtures import datasets_db, tmp_file
 
 MULTILINE_HIPSTER_IPSUM = """Lorem ipsum dolor amet wayfarers kale chips chillwave
 adaptogen schlitz lo-fi jianbing ennui occupy pabst health goth chicharrones.
@@ -18,16 +17,6 @@ bulb poutine, chicharrones neutra swag farm-to-table lyft meggings mixtape
 pork belly. DIY iceland schlitz YOLO, four loko pok pok single-origin coffee
 normcore. Shabby chic helvetica mustache taxidermy tattooed kombucha cliche
 gastropub gentrify ramps hexagon waistcoat authentic snackwave."""
-
-
-@pytest.fixture
-def tmp_file():
-    """Create a temporary file and return the file name"""
-    fname = 'tmp_file-' + str(time.time()).split('.')[0]
-    with open(fname, 'w') as fp:
-        fp.write(MULTILINE_HIPSTER_IPSUM)
-    yield fname
-    os.remove(fname)
 
 
 def test_immediate_client_returns_map_results_directly():
@@ -57,7 +46,7 @@ def test_flexible_open_string_raw_string():
 
 def test_flexible_open_string_file_like(tmp_file):
     """File-like objects support read methods should have their content returned by flexible_open_string."""
-    fname = tmp_file
+    fname = tmp_file(MULTILINE_HIPSTER_IPSUM)
     with open(fname) as fp:
         returned_string = flexible_open_string(fp)
     assert returned_string == MULTILINE_HIPSTER_IPSUM
@@ -65,7 +54,7 @@ def test_flexible_open_string_file_like(tmp_file):
 
 def test_flexible_open_string_path_like(tmp_file):
     """Path-like strings should be opened, read and returned"""
-    fname = tmp_file
+    fname = tmp_file(MULTILINE_HIPSTER_IPSUM)
     returned_string = flexible_open_string(fname)
     assert returned_string == MULTILINE_HIPSTER_IPSUM
 
