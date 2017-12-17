@@ -4,7 +4,7 @@ import numpy as np
 from numpy.linalg import LinAlgError
 from pycalphad import Database
 
-from espei.mcmc import lnprob
+from espei.mcmc import lnprob, generate_parameter_distribution
 from espei.tests.fixtures import datasets_db
 
 TDB = """$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -181,4 +181,15 @@ def test_lnprob_does_not_raise_on_ValueError(datasets_db):
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
                  datasets=datasets_db, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)
     assert np.isneginf(res)
+
+def test_parameter_initialization():
+    """Determinisitically generated parameters should match."""
+    initial_parameters = np.array([1, 10, 100, 1000])
+    deterministic_params = generate_parameter_distribution(initial_parameters, 4, 0.10, deterministic=True)
+    expected_parameters = np.array([
+        [9.81708401e-01, 9.39027722e+00, 1.08016748e+02, 9.13512881e+02],
+        [1.03116874,     9.01412995,     112.79594345,   916.44725799],
+        [1.00664662e+00, 1.07178898e+01, 9.63696718e+01, 1.36872292e+03],
+        [1.07642366e+00, 1.16413520e+01, 8.71742457e+01, 9.61836382e+02]])
+    assert np.all(np.isclose(deterministic_params, expected_parameters))
 
