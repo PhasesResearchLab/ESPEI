@@ -197,6 +197,34 @@ def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
     return np.array(iter_error, dtype=np.float64)
 
 
+def generate_parameter_distribution(parameters, num_samples, std_deviation, deterministic=True):
+    """
+    Return an array of num_samples from a Gaussian distribution about each parameter.
+
+    Parameters
+    ----------
+    parameters : ndarray
+        1D array of initial parameters that will be the mean of the distribution.
+    num_samples : int
+        Number of chains to initialize.
+    std_deviation : float
+        Fractional standard deviation of the parameters to use for initialization.
+    deterministic : bool
+        True if the parameters should be generated deterministically.
+
+    Returns
+    -------
+    ndarray
+    """
+    if deterministic:
+        rng = np.random.RandomState(1769)
+    else:
+        rng = np.random.RandomState()
+    # apply a Gaussian random to each parameter with std dev of std_deviation*parameter
+    tiled_parameters = np.tile(parameters, (num_samples, 1))
+    return rng.normal(tiled_parameters, np.abs(tiled_parameters * std_deviation))
+
+
 def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_parameter=2,
              chain_std_deviation=0.1, scheduler=None, tracefile=None, probfile=None,
              restart_chain=None, deterministic=True,):
@@ -299,18 +327,12 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         logging.debug('Means of restarting parameters are {}'.format(initial_parameters))
         logging.debug('Standard deviations of restarting parameters are {}'.format(walkers.std(axis=0)))
     else:
-        # initialize the RNG
-        rng = np.random.RandomState(1769)
-        # set up the MCMC run
-        # set up the initial parameters
-        # apply a Gaussian random to each parameter with std dev of 0.10*parameter
         initial_parameters = np.array(initial_parameters)
         logging.debug('Initial parameters: {}'.format(initial_parameters))
-        ndim = len(initial_parameters)
-        nwalkers = chains_per_parameter * ndim  # walkers must be of size (2n*ndim)
-        initial_walkers = np.tile(initial_parameters, (nwalkers, 1))
-        walkers = rng.normal(initial_walkers, np.abs(initial_walkers * chain_std_deviation))
+        ndim = initial_parameters.size
+        nwalkers = ndim * chains_per_parameter
         logging.info('Initializing {} chains with {} chains per parameter.'.format(nwalkers, chains_per_parameter))
+        walkers = generate_parameter_distribution(initial_parameters, nwalkers, chain_std_deviation, deterministic=deterministic)
 
     # the pool must implement a map function
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_context, pool=scheduler)
