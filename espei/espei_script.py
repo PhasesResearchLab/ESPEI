@@ -187,6 +187,9 @@ def run_espei(run_settings):
                                 )
 
         dbf.to_file(output_settings['output_db'], if_exists='overwrite')
+        # close the scheduler, if possible
+        if hasattr(client, 'close'):
+                client.close()
         return dbf, sampler
     return dbf
 

@@ -10,7 +10,6 @@ import tinydb
 from numpy.linalg import LinAlgError
 from pycalphad import calculate, equilibrium, CompiledModel, variables as v
 import emcee
-from emcee.utils import MPIPool
 
 from espei.utils import database_symbols_to_fit
 
@@ -354,9 +353,6 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#'*n, ' '*(progbar_width - n), i + 1, mcmc_steps))
     except KeyboardInterrupt:
         pass
-    # close the pool if it is an MPIPool.
-    if isinstance(scheduler, MPIPool):
-        scheduler.close()
     # final processing
     save_sampler_state(sampler)
     flatchain = sampler.flatchain
