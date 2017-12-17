@@ -94,7 +94,10 @@ def run_espei(run_settings):
 
     # load datasets and handle i/o
     logging.debug('Loading and checking datasets.')
-    datasets = load_datasets(sorted(recursive_glob(system_settings['datasets'], '*.json')))
+    dataset_path = system_settings['datasets']
+    datasets = load_datasets(sorted(recursive_glob(dataset_path, '*.json')))
+    if len(datasets.all()) == 0:
+        logging.warning('No datasets were found in the path {}. This should be a directory containing dataset files ending in `.json`.'.format(dataset_path))
     logging.debug('Finished checking datasets')
 
     with open(system_settings['phase_models']) as fp:

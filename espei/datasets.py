@@ -1,11 +1,7 @@
-import json
+import fnmatch, warnings, json, os
 
-import fnmatch
 import numpy as np
-import os
-
 from six import string_types
-
 from tinydb.storages import MemoryStorage
 
 from espei.utils import PickleableTinyDB
@@ -150,8 +146,8 @@ def load_datasets(dataset_filenames):
     dataset_filenames : [str]
         List of filenames to load as datasets
 
-    Returns:
-    --------
+    Returns
+    -------
     PickleableTinyDB
     """
     ds_database = PickleableTinyDB(storage=MemoryStorage)
