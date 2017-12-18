@@ -193,7 +193,7 @@ def bib_marker_map(bib_keys, markers=None):
     # TODO: support custom formatting from looking up keys in a bib_db
     if not markers:
         filled_markers = ['o', 'v', 's', 'd', 'P', 'X', '^', '<', '>']
-        fill_styles = ['full', 'top', 'right', 'bottom', 'left']
+        fill_styles = ['none', 'full', 'top', 'right', 'bottom', 'left']
         markers = itertools.product(fill_styles, filled_markers)
     b_m_map = dict()
     for ref, marker_tuple in zip(sorted(bib_keys), markers):

@@ -90,11 +90,11 @@ def test_bib_marker_map():
     EXEMPLAR_DICT = {
         'bocklund2018': {
             'formatted': 'bocklund2018',
-            'markers': {'fillstyle': 'full', 'marker': 'o'}
+            'markers': {'fillstyle': 'none', 'marker': 'o'}
         },
         'otis2016': {
             'formatted': 'otis2016',
-            'markers': {'fillstyle': 'full', 'marker': 'v'}
+            'markers': {'fillstyle': 'none', 'marker': 'v'}
         }
     }
     assert EXEMPLAR_DICT == marker_dict
