@@ -1,10 +1,12 @@
 """
 Plotting of input data and calculated database quantities
 """
+import warnings
+from collections import OrderedDict
+
+from cycler import cycler
 import numpy as np
 import tinydb
-from matplotlib.markers import MarkerStyle
-from collections import OrderedDict
 from pycalphad import Model, calculate, equilibrium, variables as v
 from pycalphad.plot.utils import phase_legend
 from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_condition
@@ -124,6 +126,15 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
         ax.set_ylabel(plot_mapping.get(str(y), y), fontsize=20)
         ax.set_xlim((0, 1))
 
+    # handle plotting kwargs
+    scatter_kwargs = {'markersize': 6, 'markeredgewidth': 0.2}
+    # raise warnings if any of the aliased versions of the default values are used
+    possible_aliases = [('markersize', 'ms'), ('markeredgewidth', 'mew')]
+    for actual_arg, aliased_arg in possible_aliases:
+        if aliased_arg in plot_kwargs:
+            warnings.warn("'{0}' passed as plotting keyword argument to dataplot, but the alias '{1}' is already set to '{2}'. Use the full version of the keyword argument '{1}' to override the default.".format(aliased_arg, actual_arg, scatter_kwargs.get(actual_arg)))
+    scatter_kwargs.update(plot_kwargs)
+
     plots = [('ZPF', 'T')]
     for output, y in plots:
         # TODO: used to include VA. Should this be added by default. Can't determine presence of VA in eq.
@@ -149,7 +160,6 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
         # TODO: There are lot of ways this could break in multi-component situations
 
         # get all the possible references from the data and create the bibliography map
-        # TODO: update the symbols_ravelled to use the right symbol from the new symbol map and reference
         # TODO: Try to make a *second* legend that has the key for the symbols without reference to color
         # TODO: explore building tielines from multiphase equilibria. Should we do this?
         bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
@@ -191,16 +201,15 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
             # We can't pass an array of markers to scatter, sadly
             for fill_sym in symbols_ravelled:
                 # fill_sym is a tuple of ('fillstyle', 'marker')
-                # create a marker object from this
-                sym = MarkerStyle(fillstyle=fill_sym[0], marker=fill_sym[1])
-                sym = MarkerStyle(fillstyle='bottom', marker=fill_sym[1])
                 selected = np.all(symbols_ravelled == fill_sym, axis=1)
-                scatter_kwargs = {'s': 100}
-                scatter_kwargs.update(plot_kwargs)
+                # ax.plot does not seem to be able to take a list of hex values
+                # for colors in the same was as ax.scatter. To get around this,
+                # we'll use the set_prop_cycler for each plot cycle
                 phase_colors = [phase_color_map[x] for x in phases_ravelled[selected]]
-                ax.scatter(comps_ravelled[selected], temps_ravelled[selected], marker=sym,
-                           c=phase_colors, edgecolors=phase_colors,
-                           **scatter_kwargs)
+                ax.set_prop_cycle(cycler('color', phase_colors))
+                ax.plot(comps_ravelled[selected], temps_ravelled[selected],
+                        fillstyle=fill_sym[0], marker=fill_sym[1], linestyle='',
+                        **scatter_kwargs)
     return ax
 
 
