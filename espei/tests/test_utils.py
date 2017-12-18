@@ -5,7 +5,7 @@ import pickle
 
 from tinydb import where
 from espei.utils import ImmediateClient, PickleableTinyDB, MemoryStorage, \
-    flexible_open_string, add_bibtex_to_bib_database
+    flexible_open_string, add_bibtex_to_bib_database, bib_marker_map
 
 import pytest
 from espei.tests.fixtures import datasets_db, tmp_file
@@ -60,7 +60,7 @@ def test_flexible_open_string_path_like(tmp_file):
 
 
 def test_adding_bibtex_entries_to_bibliography_db(datasets_db):
-    """Adding a bibtex entries to a database works and the database can be searched."""
+    """Adding a BibTeX entries to a database works and the database can be searched."""
     TEST_BIBTEX = """@article{Roe1952gamma,
 author = {Roe, W. P. and Fishel, W. P.},
 journal = {Trans. Am. Soc. Met.},
@@ -84,3 +84,17 @@ year = {2007}
     assert len(search_res) == 1
     assert len(db.all()) == 2
 
+def test_bib_marker_map():
+    """bib_marker_map should return a proper dict"""
+    marker_dict = bib_marker_map(['otis2016', 'bocklund2018'])
+    EXEMPLAR_DICT = {
+        'bocklund2018': {
+            'formatted': 'bocklund2018',
+            'markers': {'fillstyle': 'full', 'marker': 'o'}
+        },
+        'otis2016': {
+            'formatted': 'otis2016',
+            'markers': {'fillstyle': 'full', 'marker': 'v'}
+        }
+    }
+    assert EXEMPLAR_DICT == marker_dict

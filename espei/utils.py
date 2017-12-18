@@ -4,7 +4,7 @@ Utilities for ESPEI
 Classes and functions defined here should have some reuse potential.
 """
 
-import re
+import re, itertools
 import numpy as np
 from distributed import Client
 from tinydb import TinyDB
@@ -137,14 +137,14 @@ bibliography_database = PickleableTinyDB(storage=MemoryStorage)
 
 def add_bibtex_to_bib_database(bibtex, bib_db=None):
     """
-    Add entries from a bibtex file to the bibliography database
+    Add entries from a BibTeX file to the bibliography database
 
     Parameters
     ----------
     bibtex :
-        Either a multiline string, a path, or a file-like object of a bibtex file
+        Either a multiline string, a path, or a file-like object of a BibTeX file
     bib_db: PickleableTinyDB
-        Database to put the bibtex entries. Defaults to a module-level default database
+        Database to put the BibTeX entries. Defaults to a module-level default database
 
     Returns
     -------
@@ -158,3 +158,50 @@ def add_bibtex_to_bib_database(bibtex, bib_db=None):
     parsed_bibtex = bibtexparser.loads(bibtex_string, parser=parser)
     bib_db.insert_multiple(parsed_bibtex.entries)
     return bib_db
+
+
+def bib_marker_map(bib_keys, custom_markers=None):
+    """
+    Return a dict with reference keys and marker dicts
+
+    Parameters
+    ----------
+    bib_keys :
+    custom_markers : list
+        List of 2-tuples of ('marker', 'fillstyle') e.g. [('o', 'top'), ('s', 'left')].
+        Defaults to cycling through the filled markers, the different fill styles.
+
+    Returns
+    -------
+    dict
+        Dictionary with bib_keys as keys, dict values of formatted strings and marker dicts
+
+    Examples
+    --------
+    >>> bib_marker_map(['otis2016', 'bocklund2018'])
+    {
+    'bocklund2018': {
+                    'formatted': 'bocklund2018',
+                    'markers': {'fillstyle': 'full', 'marker': 'o'}
+                },
+    'otis2016': {
+                    'formatted': 'otis2016',
+                    'markers': {'fillstyle': 'full', 'marker': 'v'}
+                }
+    }
+    """
+    # TODO: support custom formatting from looking up keys in a bib_db
+    filled_markers = ['o', 'v', 's', 'd', 'P', 'X', '^', '<', '>']
+    fill_styles = ['full', 'top', 'right', 'bottom', 'left']
+    fill_marker_tuples = itertools.product(fill_styles, filled_markers)
+    b_m_map = dict()
+    for ref, marker_tuple in zip(sorted(bib_keys), fill_marker_tuples):
+        fill, marker = marker_tuple
+        b_m_map[ref] = {
+            'formatted': ref, # just use the key for formatting
+            'markers': {
+                'fillstyle': fill,
+                'marker': marker
+            }
+        }
+    return b_m_map
