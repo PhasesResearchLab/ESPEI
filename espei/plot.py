@@ -3,11 +3,13 @@ Plotting of input data and calculated database quantities
 """
 import numpy as np
 import tinydb
+from matplotlib.markers import MarkerStyle
 from collections import OrderedDict
 from pycalphad import Model, calculate, equilibrium, variables as v
 from pycalphad.plot.utils import phase_legend
 from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_condition
 
+from espei.utils import bib_marker_map
 from espei.core_utils import get_data, get_samples, list_to_tuple, \
     endmembers_from_interaction, build_sitefractions
 
@@ -146,7 +148,12 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
 
         # TODO: There are lot of ways this could break in multi-component situations
 
-        symbol_map = {1: "o", 2: "s", 3: "^"}
+        # get all the possible references from the data and create the bibliography map
+        # TODO: update the symbols_ravelled to use the right symbol from the new symbol map and reference
+        # TODO: Try to make a *second* legend that has the key for the symbols without reference to color
+        # TODO: explore building tielines from multiphase equilibria. Should we do this?
+        bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
+        symbol_map = bib_marker_map(bib_reference_keys)
         for data in desired_data:
             payload = data['values']
             # TODO: Add broadcast_conditions support
@@ -161,7 +168,9 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
             symbols_ravelled = []
             # TODO: Fix to only include equilibria listed in 'phases'
             for p in payload:
-                symbols_ravelled.extend([symbol_map[len(p)]] * len(p))
+                markers = symbol_map[data['reference']]['markers']
+                fill_sym_tuple = (markers['fillstyle'], markers['marker'])
+                symbols_ravelled.extend([fill_sym_tuple] * len(p))
                 payload_ravelled.extend(p)
             for rp in payload_ravelled:
                 phases_ravelled.append(rp[0])
@@ -180,12 +189,17 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
             temps_ravelled = np.array(temps_ravelled)
             phases_ravelled = np.array(phases_ravelled)
             # We can't pass an array of markers to scatter, sadly
-            for sym in symbols_ravelled:
-                selected = symbols_ravelled == sym
-                scatter_kwargs = {'s': 50}
+            for fill_sym in symbols_ravelled:
+                # fill_sym is a tuple of ('fillstyle', 'marker')
+                # create a marker object from this
+                sym = MarkerStyle(fillstyle=fill_sym[0], marker=fill_sym[1])
+                sym = MarkerStyle(fillstyle='bottom', marker=fill_sym[1])
+                selected = np.all(symbols_ravelled == fill_sym, axis=1)
+                scatter_kwargs = {'s': 100}
                 scatter_kwargs.update(plot_kwargs)
+                phase_colors = [phase_color_map[x] for x in phases_ravelled[selected]]
                 ax.scatter(comps_ravelled[selected], temps_ravelled[selected], marker=sym,
-                           c='none', edgecolors=[phase_color_map[x] for x in phases_ravelled[selected]],
+                           c=phase_colors, edgecolors=phase_colors,
                            **scatter_kwargs)
     return ax
 
