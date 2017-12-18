@@ -30,7 +30,8 @@ setup(
         'emcee',
         'pycalphad>=0.5',
         'pyyaml',
-        'cerberus'],
+        'cerberus',
+        'bibtexparser'],
     extras_require={
         'dev': [
             'sphinx',

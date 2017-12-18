@@ -32,7 +32,10 @@ MOCK_MODULES = ['dask', 'distributed', 'emcee', 'emcee.utils',
                 'sympy', 'tinydb', 'pytest',
                 'tinydb.storages', 'numpy.linalg',
                 'cerberus', 'yaml',
-                'sympy'
+                'sympy',
+                'bibtexparser',
+                'bibtexparser.bparser',
+                'bibtexparser.customization',
                 ]
 
 for mod_name in MOCK_MODULES:
