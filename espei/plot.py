@@ -145,7 +145,6 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
                                        (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
 
         # get all the possible references from the data and create the bibliography map
-        # TODO: Try to make a *second* legend that has the key for the symbols without reference to color
         # TODO: explore building tielines from multiphase equilibria. Should we do this?
         bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
         symbol_map = bib_marker_map(bib_reference_keys)
@@ -166,12 +165,18 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
         # now we will add the symbols for the references to the legend handles
         for ref_key in bib_reference_keys:
             mark = symbol_map[ref_key]['markers']
+            # The legend marker edge width appears smaller than in the plot.
+            # We will add this small hack to increase the width in the legend only.
+            legend_kwargs = scatter_kwargs.copy()
+            legend_kwargs['markeredgewidth'] *= 5
             legend_handles.append(mlines.Line2D([], [], linestyle='',
                                                 color='black', markeredgecolor='black',
                                                 label=symbol_map[ref_key]['formatted'],
                                                 fillstyle=mark['fillstyle'],
                                                 marker=mark['marker'],
-                                                **scatter_kwargs, ))
+                                                **legend_kwargs))
+
+        # finally, add the completed legend
         ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
 
         # TODO: There are lot of ways this could break in multi-component situations
