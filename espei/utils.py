@@ -160,15 +160,15 @@ def add_bibtex_to_bib_database(bibtex, bib_db=None):
     return bib_db
 
 
-def bib_marker_map(bib_keys, custom_markers=None):
+def bib_marker_map(bib_keys, markers=None):
     """
     Return a dict with reference keys and marker dicts
 
     Parameters
     ----------
     bib_keys :
-    custom_markers : list
-        List of 2-tuples of ('marker', 'fillstyle') e.g. [('o', 'top'), ('s', 'left')].
+    markers : list
+        List of 2-tuples of ('fillstyle', 'marker') e.g. [('top', 'o'), ('full', 's')].
         Defaults to cycling through the filled markers, the different fill styles.
 
     Returns
@@ -191,17 +191,18 @@ def bib_marker_map(bib_keys, custom_markers=None):
     }
     """
     # TODO: support custom formatting from looking up keys in a bib_db
-    filled_markers = ['o', 'v', 's', 'd', 'P', 'X', '^', '<', '>']
-    fill_styles = ['full', 'top', 'right', 'bottom', 'left']
-    fill_marker_tuples = itertools.product(fill_styles, filled_markers)
+    if not markers:
+        filled_markers = ['o', 'v', 's', 'd', 'P', 'X', '^', '<', '>']
+        fill_styles = ['full', 'top', 'right', 'bottom', 'left']
+        markers = itertools.product(fill_styles, filled_markers)
     b_m_map = dict()
-    for ref, marker_tuple in zip(sorted(bib_keys), fill_marker_tuples):
-        fill, marker = marker_tuple
+    for ref, marker_tuple in zip(sorted(bib_keys), markers):
+        fill, mark = marker_tuple
         b_m_map[ref] = {
             'formatted': ref, # just use the key for formatting
             'markers': {
                 'fillstyle': fill,
-                'marker': marker
+                'marker': mark
             }
         }
     return b_m_map
