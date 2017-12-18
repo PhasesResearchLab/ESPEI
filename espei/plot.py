@@ -5,6 +5,7 @@ import warnings
 from collections import OrderedDict
 
 from cycler import cycler
+import matplotlib.lines as mlines
 import numpy as np
 import tinydb
 from pycalphad import Model, calculate, equilibrium, variables as v
@@ -143,6 +144,12 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
                                        (tinydb.where('components').test(lambda x: set(x).issubset(comps + ['VA']))) &
                                        (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
 
+        # get all the possible references from the data and create the bibliography map
+        # TODO: Try to make a *second* legend that has the key for the symbols without reference to color
+        # TODO: explore building tielines from multiphase equilibria. Should we do this?
+        bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
+        symbol_map = bib_marker_map(bib_reference_keys)
+
         # The above handled the phases as in the equilibrium, but there may be
         # phases that are in the datasets but not in the equilibrium diagram that
         # we would like to plot point for (they need color maps).
@@ -155,15 +162,20 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
         new_phases = sorted(list(data_phases.difference(set(phases))))
         phases.extend(new_phases)
         legend_handles, phase_color_map = phase_legend(phases)
+
+        # now we will add the symbols for the references to the legend handles
+        for ref_key in bib_reference_keys:
+            mark = symbol_map[ref_key]['markers']
+            legend_handles.append(mlines.Line2D([], [], linestyle='',
+                                                color='black', markeredgecolor='black',
+                                                label=symbol_map[ref_key]['formatted'],
+                                                fillstyle=mark['fillstyle'],
+                                                marker=mark['marker'],
+                                                **scatter_kwargs, ))
         ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
 
         # TODO: There are lot of ways this could break in multi-component situations
 
-        # get all the possible references from the data and create the bibliography map
-        # TODO: Try to make a *second* legend that has the key for the symbols without reference to color
-        # TODO: explore building tielines from multiphase equilibria. Should we do this?
-        bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
-        symbol_map = bib_marker_map(bib_reference_keys)
         for data in desired_data:
             payload = data['values']
             # TODO: Add broadcast_conditions support
