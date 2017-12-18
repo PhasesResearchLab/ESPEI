@@ -141,7 +141,7 @@ def add_bibtex_to_bib_database(bibtex, bib_db=None):
 
     Parameters
     ----------
-    bibtex :
+    bibtex : str
         Either a multiline string, a path, or a file-like object of a BibTeX file
     bib_db: PickleableTinyDB
         Database to put the BibTeX entries. Defaults to a module-level default database
