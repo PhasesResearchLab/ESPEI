@@ -4,12 +4,15 @@ Utilities for ESPEI
 Classes and functions defined here should have some reuse potential.
 """
 
-import re
+import re, itertools
 import numpy as np
 from distributed import Client
 from tinydb import TinyDB
 from tinydb.storages import MemoryStorage
-
+from six import string_types
+import bibtexparser
+from bibtexparser.bparser import BibTexParser
+from bibtexparser.customization import convert_to_unicode
 
 class PickleableTinyDB(TinyDB):
     """A pickleable version of TinyDB that uses MemoryStorage as a default."""
@@ -97,3 +100,109 @@ def database_symbols_to_fit(dbf, symbol_regex="^V[V]?([0-9]+)$"):
     """
     pattern = re.compile(symbol_regex)
     return sorted([x for x in sorted(dbf.symbols.keys()) if pattern.match(x)])
+
+
+def flexible_open_string(obj):
+    """
+    Return the string of a an object that is either file-like, a file path, or the raw string.
+
+    Parameters
+    ----------
+    obj : string-like or file-like
+        Either a multiline string, a path, or a file-like object
+
+    Returns
+    -------
+    str
+    """
+    if isinstance(obj, string_types):
+        # the obj is a string
+        if '\n' in obj:
+            # if the string has linebreaks, then we assume it's a raw string. Return it.
+            return obj
+        else:
+            # assume it is a path
+            with open(obj) as fp:
+                read_string = fp.read()
+            return read_string
+    elif hasattr(obj, 'read'):
+        # assume it is file-like
+        read_string = obj.read()
+        return read_string
+    else:
+        raise ValueError('Unable to determine how to extract the string of the passed object ({}) of type {}. Expected a raw string, file-like, or path-like.'.format(obj, type(obj)))
+
+
+bibliography_database = PickleableTinyDB(storage=MemoryStorage)
+
+def add_bibtex_to_bib_database(bibtex, bib_db=None):
+    """
+    Add entries from a BibTeX file to the bibliography database
+
+    Parameters
+    ----------
+    bibtex : str
+        Either a multiline string, a path, or a file-like object of a BibTeX file
+    bib_db: PickleableTinyDB
+        Database to put the BibTeX entries. Defaults to a module-level default database
+
+    Returns
+    -------
+    The modified bibliographic database
+    """
+    if not bib_db:
+        bib_db = bibliography_database
+    bibtex_string = flexible_open_string(bibtex)
+    parser = BibTexParser()
+    parser.customization = convert_to_unicode
+    parsed_bibtex = bibtexparser.loads(bibtex_string, parser=parser)
+    bib_db.insert_multiple(parsed_bibtex.entries)
+    return bib_db
+
+
+def bib_marker_map(bib_keys, markers=None):
+    """
+    Return a dict with reference keys and marker dicts
+
+    Parameters
+    ----------
+    bib_keys :
+    markers : list
+        List of 2-tuples of ('fillstyle', 'marker') e.g. [('top', 'o'), ('full', 's')].
+        Defaults to cycling through the filled markers, the different fill styles.
+
+    Returns
+    -------
+    dict
+        Dictionary with bib_keys as keys, dict values of formatted strings and marker dicts
+
+    Examples
+    --------
+    >>> bib_marker_map(['otis2016', 'bocklund2018'])
+    {
+    'bocklund2018': {
+                    'formatted': 'bocklund2018',
+                    'markers': {'fillstyle': 'full', 'marker': 'o'}
+                },
+    'otis2016': {
+                    'formatted': 'otis2016',
+                    'markers': {'fillstyle': 'full', 'marker': 'v'}
+                }
+    }
+    """
+    # TODO: support custom formatting from looking up keys in a bib_db
+    if not markers:
+        filled_markers = ['o', 'v', 's', 'd', 'P', 'X', '^', '<', '>']
+        fill_styles = ['none', 'full', 'top', 'right', 'bottom', 'left']
+        markers = itertools.product(fill_styles, filled_markers)
+    b_m_map = dict()
+    for ref, marker_tuple in zip(sorted(bib_keys), markers):
+        fill, mark = marker_tuple
+        b_m_map[ref] = {
+            'formatted': ref, # just use the key for formatting
+            'markers': {
+                'fillstyle': fill,
+                'marker': mark
+            }
+        }
+    return b_m_map
