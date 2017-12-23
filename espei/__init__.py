@@ -25,3 +25,9 @@ with open(os.path.join(MODULE_DIR, 'input-schema.yaml')) as f:
 from espei.paramselect import generate_parameters
 from espei.mcmc import mcmc_fit
 from espei.espei_script import run_espei
+
+# swallow warnings during MCMC runs
+import warnings
+warnings.filterwarnings('ignore', message='Mean of empty slice')
+warnings.filterwarnings('ignore', message='invalid value encountered in subtract')
+warnings.filterwarnings('ignore', message='invalid value encountered in greater')
