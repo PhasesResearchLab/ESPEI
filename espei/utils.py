@@ -55,7 +55,7 @@ def sigfigs(x, n):
 def optimal_parameters(trace_array, lnprob_array, kth=0):
     """
     Return the optimal parameters in the trace based on the highest likelihood.
-    If kth is specified, return the kth optimal parameters.
+    If kth is specified, return the kth set of *unique* optimal parameters.
 
     Parameters
     ----------
@@ -64,7 +64,8 @@ def optimal_parameters(trace_array, lnprob_array, kth=0):
     lnprob_array : ndarray
         Array of shape (number of chains, iterations)
     kth : int
-        Zero-indexed optimum. 0 (the default) is the most optimal solution. 1 is the second most optimal, etc.
+        Zero-indexed optimum. 0 (the default) is the most optimal solution. 1 is
+        the second most optimal, etc.. Only *unique* solutions will be returned.
 
     Returns
     -------
@@ -79,8 +80,20 @@ def optimal_parameters(trace_array, lnprob_array, kth=0):
     # indicies of chains + iterations that have non-zero parameters (that step has run)
     nz = np.nonzero(np.all(trace_array != 0, axis=-1))
     # chain + iteration index with the highest likelihood
-    kth_optimal_index = np.argpartition(-lnprob_array[nz], kth)[kth]
-    return trace_array[nz][kth_optimal_index]
+    unique_params = np.zeros(trace_array.shape[-1])
+    unique_params_found = -1
+    # loop through all possible nonzero iterations
+    for i in range(nz[-1][-1]):
+        # find the next set of parameters parameters
+        candidate_index = np.argpartition(-lnprob_array[nz], i)[i]
+        candidate_params = trace_array[nz][candidate_index]
+        # if the parameters are unique, make them the new unique parameters
+        if np.any(candidate_params != unique_params):
+            unique_params = candidate_params
+            unique_params_found += 1
+        # if we have found the kth set of unique parameters, stop
+        if unique_params_found == kth:
+            return unique_params
 
 
 def database_symbols_to_fit(dbf, symbol_regex="^V[V]?([0-9]+)$"):
