@@ -31,7 +31,7 @@ plot_mapping = {
 }
 
 
-def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=None, fig=None):
+def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=None, fig=None, require_data=True):
     """
     Plot parameters of interest compared with data in subplots of a single figure
 
@@ -51,6 +51,9 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
         ESPEI datasets to compare against. If None, nothing is plotted.
     fig : matplotlib.Figure
         Figure to create with axes as subplots.
+    require_data : bool
+        If True, plot parameters that have data corresponding data. Defaults to
+        True. Will raise an error for non-interaction configurations.
 
     Returns
     -------
@@ -78,8 +81,6 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
         plots = em_plots
 
     # filter which parameters to plot by the data that exists
-    require_data = True # If True, plot parameters that have data corresponding data. Defaults to True.
-    # TODO: make require data work for formation data at the _compare_parameters level
     if require_data and datasets is not None:
         filtered_plots = []
         for x_val, y_val in plots:
@@ -89,6 +90,9 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
                 filtered_plots.append((x_val, y_val, data))
     elif require_data:
         raise ValueError('Plots require datasets, but no datasets were passed.')
+    elif plots == em_plots and not require_data:
+        # How we treat temperature dependence is ambiguous when there is no data, so we raise an error
+        raise ValueError('The "require_data=False" option is not supported for non-mixing configurations.')
     elif datasets is not None:
         filtered_plots = []
         for x_val, y_val in plots:
