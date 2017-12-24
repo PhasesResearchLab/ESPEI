@@ -492,6 +492,9 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
     else:
         raise NotImplementedError('No support for plotting configuration {}'.format(configuration))
 
+    bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
+    symbol_map = bib_marker_map(bib_reference_keys)
+
     for data in desired_data:
         indep_var_data = None
         response_data = np.zeros_like(data['values'], dtype=np.float)
@@ -541,13 +544,16 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         if not bar_chart:
             extra_kwargs = {}
             if len(response_data) < 10:
-                extra_kwargs['markersize'] = 20
-                extra_kwargs['marker'] = '.'
+                extra_kwargs['markersize'] = 8
                 extra_kwargs['linestyle'] = 'none'
                 extra_kwargs['clip_on'] = False
-
-            ax.plot(indep_var_data, response_data, label=data.get('reference', None),
-                           **extra_kwargs)
+            ref = data.get('reference', '')
+            mark = symbol_map[ref]['markers']
+            ax.plot(indep_var_data, response_data,
+                    label=symbol_map[ref]['formatted'],
+                    marker=mark['marker'],
+                    fillstyle=mark['fillstyle'],
+                    **extra_kwargs)
         else:
             bar_labels.append(data.get('reference', None))
             bar_data.append(response_data[0])
