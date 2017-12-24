@@ -5,6 +5,7 @@ import warnings
 from collections import OrderedDict
 
 from cycler import cycler
+import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import numpy as np
 import tinydb
@@ -30,7 +31,42 @@ plot_mapping = {
 }
 
 
-def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=None):
+def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=None, fig=None, require_data=True):
+    """
+    Plot parameters of interest compared with data in subplots of a single figure
+
+    Parameters
+    ----------
+    dbf : Database
+        pycalphad thermodynamic database containing the relevant parameters.
+    comps : list
+        Names of components to consider in the calculation.
+    phase_name : str
+        Name of the considered phase phase
+    configuration : tuple
+        Sublattice configuration to plot, such as ('CU', 'CU') or (('CU', 'MG'), 'CU')
+    symmetry : list
+        List of lists containing indices of symmetric sublattices e.g. [[0, 1], [2, 3]]
+    datasets : PickleableTinyDB
+        ESPEI datasets to compare against. If None, nothing is plotted.
+    fig : matplotlib.Figure
+        Figure to create with axes as subplots.
+    require_data : bool
+        If True, plot parameters that have data corresponding data. Defaults to
+        True. Will raise an error for non-interaction configurations.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    # plot the LAVES_C15 (Cu)(Mg) endmember
+    >>> plot_parameters(dbf, ['CU', 'MG'], 'LAVES_C15', ('CU', 'MG'), symmetry=None, datasets=datasets)
+    # plot the mixing interaction in the first sublattice
+    >>> plot_parameters(dbf, ['CU', 'MG'], 'LAVES_C15', (('CU', 'MG'), 'MG'), symmetry=None, datasets=datasets)
+
+    """
     em_plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
                 ('T', 'HM'), ('T', 'HM_FORM')]
     mix_plots = [('Z', 'HM_FORM'), ('Z', 'HM_MIX'), ('Z', 'SM_MIX')]
@@ -43,21 +79,43 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
         plots = mix_plots
     else:
         plots = em_plots
-    for x_val, y_val in plots:
-        if datasets is not None:
-            if y_val.endswith('_MIX'):
-                desired_props = [y_val.split('_')[0]+'_FORM', y_val]
-            else:
-                desired_props = [y_val]
-            desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
-        else:
-            desired_data = []
-        if len(desired_data) == 0:
-            continue
+
+    # filter which parameters to plot by the data that exists
+    if require_data and datasets is not None:
+        filtered_plots = []
+        for x_val, y_val in plots:
+            desired_props = [y_val.split('_')[0]+'_FORM', y_val] if y_val.endswith('_MIX') else [y_val]
+            data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
+            if len(data) > 0:
+                filtered_plots.append((x_val, y_val, data))
+    elif require_data:
+        raise ValueError('Plots require datasets, but no datasets were passed.')
+    elif plots == em_plots and not require_data:
+        # How we treat temperature dependence is ambiguous when there is no data, so we raise an error
+        raise ValueError('The "require_data=False" option is not supported for non-mixing configurations.')
+    elif datasets is not None:
+        filtered_plots = []
+        for x_val, y_val in plots:
+            desired_props = [y_val.split('_')[0]+'_FORM', y_val] if y_val.endswith('_MIX') else [y_val]
+            data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
+            filtered_plots.append((x_val, y_val, data))
+    else:
+        filtered_plots = [(x_val, y_val, []) for x_val, y_val in plots]
+
+    num_plots = len(filtered_plots)
+    if num_plots == 0:
+        return
+    if not fig:
+        fig = plt.figure(figsize=plt.figaspect(num_plots))
+
+    # plot them
+    for i, (x_val, y_val, data) in enumerate(filtered_plots):
         if y_val.endswith('_FORM'):
-            _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod_norefstate, configuration, x_val, y_val)
+            ax = fig.add_subplot(num_plots, 1, i+1)
+            ax = _compare_data_to_parameters(dbf, comps, phase_name, data, mod_norefstate, configuration, x_val, y_val, ax=ax)
         else:
-            _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, configuration, x_val, y_val)
+            ax = fig.add_subplot(num_plots, 1, i+1)
+            ax = _compare_data_to_parameters(dbf, comps, phase_name, data, mod, configuration, x_val, y_val, ax=ax)
 
 
 def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
@@ -76,6 +134,8 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
     datasets : PickleableTinyDB
     ax : matplotlib.Axes
         Default axes used if not specified.
+    plot_kwargs : dict
+        Additional keyword arguments to pass to the matplotlib plot function
 
     Returns
     -------
@@ -115,7 +175,6 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
 
     # set up plot if not done already
     if ax is None:
-        import matplotlib.pyplot as plt
         ax = plt.gca(projection=projection)
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
@@ -243,6 +302,8 @@ def eqdataplot(eq, datasets, ax=None, plot_kwargs=None):
         Database of phase equilibria datasets
     ax : matplotlib.Axes
         Default axes used if not specified.
+    plot_kwargs : dict
+        Keyword arguments to pass to dataplot
 
     Returns
     -------
@@ -325,8 +386,34 @@ def multiplot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=N
     return ax
 
 
-def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, configuration, x, y):
-    import matplotlib.pyplot as plt
+def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, configuration, x, y, ax=None):
+    """
+    Return one set of plotted Axes with data compared to calculated parameters
+
+    Parameters
+    ----------
+    dbf : Database
+        pycalphad thermodynamic database containing the relevant parameters.
+    comps : list
+        Names of components to consider in the calculation.
+    phase_name : str
+        Name of the considered phase phase
+    desired_data :
+    mod : Model
+        A pycalphad Model. The Model may or may not have the reference state zeroed out for formation properties.
+    configuration :
+    x : str
+        Model property to plot on the x-axis e.g. 'T', 'HM_MIX', 'SM_FORM'
+    y : str
+        Model property to plot on the y-axis e.g. 'T', 'HM_MIX', 'SM_FORM'
+    ax : matplotlib.Axes
+        Default axes used if not specified.
+
+    Returns
+    -------
+    matplotlib.Axes
+
+    """
     all_samples = np.array(get_samples(desired_data), dtype=np.object)
     endpoints = endmembers_from_interaction(configuration)
     interacting_subls = [c for c in list_to_tuple(configuration) if isinstance(c, tuple)]
@@ -336,7 +423,9 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         # In general this is a high-dimensional space; just plot the diagonal to see the disordered mixing
         endpoints = [endpoints[0], endpoints[-1]]
         disordered_config = True
-    fig = plt.figure(figsize=(9, 9))
+    if not ax:
+        fig = plt.figure(figsize=plt.figaspect(1))
+        ax = fig.gca()
     bar_chart = False
     bar_labels = []
     bar_data = []
@@ -368,10 +457,10 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
                 extra_kwargs['marker'] = '.'
                 extra_kwargs['linestyle'] = 'none'
                 extra_kwargs['clip_on'] = False
-            fig.gca().plot(temperatures, response_data,
+            ax.plot(temperatures, response_data,
                            label='This work', color='k', **extra_kwargs)
-            fig.gca().set_xlabel(plot_mapping.get(x, x))
-            fig.gca().set_ylabel(plot_mapping.get(y, y))
+            ax.set_xlabel(plot_mapping.get(x, x))
+            ax.set_ylabel(plot_mapping.get(y, y))
         else:
             bar_labels.append('This work')
             bar_data.append(response_data[0])
@@ -393,16 +482,18 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
                 extra_kwargs['marker'] = '.'
                 extra_kwargs['linestyle'] = 'none'
                 extra_kwargs['clip_on'] = False
-            fig.gca().plot(np.linspace(0, 1, num=100), response_data,
-                           label='This work', color='k', **extra_kwargs)
-            fig.gca().set_xlim((0, 1))
-            fig.gca().set_xlabel(str(':'.join(endpoints[0])) + ' to ' + str(':'.join(endpoints[1])))
-            fig.gca().set_ylabel(plot_mapping.get(y, y))
+            ax.plot(np.linspace(0, 1, num=100), response_data, label='This work', color='k', **extra_kwargs)
+            ax.set_xlim((0, 1))
+            ax.set_xlabel(str(':'.join(endpoints[0])) + ' to ' + str(':'.join(endpoints[1])))
+            ax.set_ylabel(plot_mapping.get(y, y))
         else:
             bar_labels.append('This work')
             bar_data.append(response_data[0])
     else:
         raise NotImplementedError('No support for plotting configuration {}'.format(configuration))
+
+    bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
+    symbol_map = bib_marker_map(bib_reference_keys)
 
     for data in desired_data:
         indep_var_data = None
@@ -453,30 +544,33 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         if not bar_chart:
             extra_kwargs = {}
             if len(response_data) < 10:
-                extra_kwargs['markersize'] = 20
-                extra_kwargs['marker'] = '.'
+                extra_kwargs['markersize'] = 8
                 extra_kwargs['linestyle'] = 'none'
                 extra_kwargs['clip_on'] = False
-
-            fig.gca().plot(indep_var_data, response_data, label=data.get('reference', None),
-                           **extra_kwargs)
+            ref = data.get('reference', '')
+            mark = symbol_map[ref]['markers']
+            ax.plot(indep_var_data, response_data,
+                    label=symbol_map[ref]['formatted'],
+                    marker=mark['marker'],
+                    fillstyle=mark['fillstyle'],
+                    **extra_kwargs)
         else:
             bar_labels.append(data.get('reference', None))
             bar_data.append(response_data[0])
     if bar_chart:
-        fig.gca().barh(0.02 * np.arange(len(bar_data)), bar_data,
+        ax.barh(0.02 * np.arange(len(bar_data)), bar_data,
                        color='k', height=0.01)
         endmember_title = ' to '.join([':'.join(i) for i in endpoints])
-        fig.suptitle('{} (T = {} K)'.format(endmember_title, temperatures), fontsize=20)
-        fig.gca().set_yticks(0.02 * np.arange(len(bar_data)))
-        fig.gca().set_yticklabels(bar_labels, fontsize=20)
+        ax.get_figure().suptitle('{} (T = {} K)'.format(endmember_title, temperatures), fontsize=20)
+        ax.set_yticks(0.02 * np.arange(len(bar_data)))
+        ax.set_yticklabels(bar_labels, fontsize=20)
         # This bar chart is rotated 90 degrees, so "y" is now x
-        fig.gca().set_xlabel(plot_mapping.get(y, y))
+        ax.set_xlabel(plot_mapping.get(y, y))
     else:
-        fig.gca().set_frame_on(False)
-        leg = fig.gca().legend(loc='best')
+        ax.set_frame_on(False)
+        leg = ax.legend(loc='best')
         leg.get_frame().set_edgecolor('black')
-    fig.canvas.draw()
+    return ax
 
 
 def _translate_endmember_to_array(endmember, variables):
