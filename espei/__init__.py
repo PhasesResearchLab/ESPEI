@@ -31,3 +31,4 @@ import warnings
 warnings.filterwarnings('ignore', message='Mean of empty slice')
 warnings.filterwarnings('ignore', message='invalid value encountered in subtract')
 warnings.filterwarnings('ignore', message='invalid value encountered in greater')
+warnings.filterwarnings('ignore', message='divide by zero encountered')
