@@ -35,6 +35,14 @@ espei\.espei\_script module
     :undoc-members:
     :show-inheritance:
 
+espei\.mcmc module
+------------------
+
+.. automodule:: espei.mcmc
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 espei\.paramselect module
 -------------------------
 
@@ -55,6 +63,14 @@ espei\.refdata module
 ---------------------
 
 .. automodule:: espei.refdata
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+espei\.rstate module
+--------------------
+
+.. automodule:: espei.rstate
     :members:
     :undoc-members:
     :show-inheritance:

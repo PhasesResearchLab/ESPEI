@@ -28,18 +28,18 @@ espei\.tests\.test\_datasets module
     :undoc-members:
     :show-inheritance:
 
-espei\.tests\.test\_parameter\_generation module
-------------------------------------------------
+espei\.tests\.test\_mcmc module
+-------------------------------
 
-.. automodule:: espei.tests.test_parameter_generation
+.. automodule:: espei.tests.test_mcmc
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei\.tests\.test\_paramselect module
---------------------------------------
+espei\.tests\.test\_parameter\_generation module
+------------------------------------------------
 
-.. automodule:: espei.tests.test_paramselect
+.. automodule:: espei.tests.test_parameter_generation
     :members:
     :undoc-members:
     :show-inheritance:
