@@ -2,6 +2,29 @@
 What's New
 ==========
 
+0.4 (2017-12-29)
+================
+
+* MCMC is now deterministic by default (can be toggled off with the ``mcmc.deterministic`` setting).
+* Added support for having no scheduler (running with no parallelism) with the ``mcmc.scheduler`` option set to ``None``. This may be useful for debugging.
+* Logging improvements
+
+  - Extraneous warnings that may be confusing for users and dirty the log are silenced.
+  - A warning is added for when there are no datasets found.
+  - Fixed a bug where logging was silenced with the dask scheduler
+
+* Add ``optimal_parameters`` utility function as a helper to get optimal parameter sets for analysis
+* Several improvements to plotting
+
+  - Users can now plot phase diagram data alone with ``dataplot``, useful for checking datasets visually. This changes the API for ``dataplot`` to no longer infer the conditions from an equilibrium ``Dataset`` (from pycalphad). That functionality is preserved in ``eqdataplot``.
+  - Experimental data points are now plotted with unique symbols depending on the reference key in the dataset. This is for both phase diagram and single phase parameter plots.
+  - Options to control plotting parameters (e.g. symbol size) and take user supplied Axes and Figures in the plotting functions. The symbol size is now smaller by default.
+
+* Documentation improvements for API and separation of theory from the Cu-Mg example
+* Fixes a bug where elements with single character names would not find the correct reference state (which are typically named GHSERCC for the example of C).
+* [Developer] All MCMC code is moved from the ``paramselect`` module to the ``mcmc`` module to separate these tasks
+* [Developer] Support for arbitrary user reference states (so long as the reference state is in the ``refdata`` module and follows the same format as SGTE91)
+
 0.3.1.post2 (2017-10-31)
 ========================
 
