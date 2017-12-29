@@ -38,6 +38,7 @@ MOCK_MODULES = ['dask', 'distributed', 'emcee', 'emcee.utils',
                 'bibtexparser.customization',
                 'mock',
                 'matplotlib.lines',
+                'cycler',
                 ]
 
 for mod_name in MOCK_MODULES:
