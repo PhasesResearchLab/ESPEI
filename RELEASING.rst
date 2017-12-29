@@ -8,7 +8,7 @@ When releasing a new version of ESPEI:
 #. Regenerate the API documentation with ``sphinx-apidoc -f -o docs/api/ espei/ -H 'API Documentation'``.
 #. Resolve differences and commit the updated API documentation. 
 #. ``git push`` and verify all tests pass on all CI services.
-#. Generate a list of commits since the last version with ``git log --oneline --decorate --color 0.1^..origin/master``
+#. Generate a list of commits since the last version with ``git log --oneline --no-decorate 0.1^..origin/master``
    Replace ``0.1`` with the tag of the last public version.
 #. Condense the change list into something user-readable. Update and commit CHANGES.rst with the release date.``
 #. ``git tag 0.2 master -m "0.2"`` Replace ``0.2`` with the new version. 
