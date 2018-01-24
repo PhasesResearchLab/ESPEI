@@ -320,7 +320,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
     return calculate_dict
 
 
-def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None):
+def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None, phase_models=None):
     """
     Calculate the weighted single phase error in the Database
 
@@ -336,6 +336,8 @@ def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None):
         Datasets that contain single phase data
     parameters : dict
         Dictionary of symbols that will be overridden in pycalphad.calculate
+    phase_models : dict
+        Phase models to pass to pycalphad calculations
 
     Returns
     -------
@@ -375,7 +377,7 @@ def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None):
         for prop in properties:
             desired_data = get_prop_data(comps, phase_name, prop, datasets)
             if len(desired_data) == 0:
-                logging.debug('Skipping {} in phase {} because no data was found.'.format(prop, phase_name))
+                #logging.debug('Skipping {} in phase {} because no data was found.'.format(prop, phase_name))
                 continue
             calculate_dict = get_prop_samples(dbf, comps, phase_name, desired_data)
             if prop.endswith('_FORM'):
@@ -386,28 +388,29 @@ def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None):
                 calculate_dict['output'] = prop
                 params = parameters
             sample_values = calculate_dict.pop('values')
-            results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, **calculate_dict)[calculate_dict['output']].values
+            results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models, **calculate_dict)[calculate_dict['output']].values
             weight = (property_prefix_weight_factor[prop.split('_')[0]]*np.abs(np.mean(sample_values)))**(-1.0)
             error = np.sum((results-sample_values)**2) * weight
-            logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
+            #logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
             sum_square_error += error
     return -sum_square_error
 
 
 def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
-           symbols_to_fit=None, phase_models=None, scheduler=None):
+           symbols_to_fit=None, phase_models=None, scheduler=None,
+           delayed_dbf=None, delayed_phase_models=None,):
     """
     Returns the error from multiphase fitting as a log probability.
     """
     parameters = {param_name: param for param_name, param in zip(symbols_to_fit, params)}
     try:
-        multi_phase_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=parameters, scheduler=scheduler)
+        multi_phase_error = multi_phase_fit(delayed_dbf, comps, phases, datasets, delayed_phase_models, parameters=parameters, scheduler=scheduler)
     except (ValueError, LinAlgError) as e:
         multi_phase_error = [np.inf]
     multi_phase_error = [np.inf if np.isnan(x) else x ** 2 for x in multi_phase_error]
     multi_phase_error = -np.sum(multi_phase_error)
 
-    single_phase_error = calculate_single_phase_error(dbf, comps, phases, datasets, parameters)
+    single_phase_error = calculate_single_phase_error(dbf, comps, phases, datasets, parameters, phase_models=phase_models)
     total_error = multi_phase_error + single_phase_error
     logging.debug('Single phase error: {:0.2f}. Multi phase error: {:0.2f}. Total error: {:0.2f}'.format(single_phase_error, multi_phase_error, total_error))
     return np.array(total_error, dtype=np.float64)
@@ -514,12 +517,15 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         mod = CompiledModel(dbf, comps, phase_name, parameters=OrderedDict([(sympy.Symbol(s), 0) for s in symbols_to_fit]))
         phase_models[phase_name] = mod
     logging.debug('Finished building phase models')
-    dbf = dask.delayed(dbf, pure=True)
-    phase_models = dask.delayed(phase_models, pure=True)
+    delayed_dbf = dask.delayed(dbf, pure=True)
+    delayed_phase_models = dask.delayed(phase_models, pure=True)
 
     # contect for the log probability function
     error_context = {'comps': comps, 'dbf': dbf,
-                     'phases': phases, 'phase_models': phase_models,
+                     'delayed_dbf': delayed_dbf,
+                     'phases': phases,
+                     'phase_models': phase_models,
+                     'delayed_phase_models': delayed_phase_models,
                      'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
                      }
 
@@ -575,7 +581,6 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
     logging.debug('Intial parameters: {}'.format(initial_parameters))
     logging.debug('Optimal parameters: {}'.format(optimal_params))
     logging.debug('Change in parameters: {}'.format(np.abs(initial_parameters - optimal_params) / initial_parameters))
-    dbf = dbf.compute()
     for param_name, value in zip(symbols_to_fit, optimal_params):
         dbf.symbols[param_name] = value
     logging.info('MCMC complete.')
