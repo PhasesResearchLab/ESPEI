@@ -391,7 +391,7 @@ def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None):
             error = np.sum((results-sample_values)**2) * weight
             logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
             sum_square_error += error
-    return sum_square_error
+    return -sum_square_error
 
 
 def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
@@ -401,13 +401,16 @@ def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
     """
     parameters = {param_name: param for param_name, param in zip(symbols_to_fit, params)}
     try:
-        iter_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models,
-                                     parameters=parameters, scheduler=scheduler)
+        multi_phase_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=parameters, scheduler=scheduler)
     except (ValueError, LinAlgError) as e:
-        iter_error = [np.inf]
-    iter_error = [np.inf if np.isnan(x) else x ** 2 for x in iter_error]
-    iter_error = -np.sum(iter_error)
-    return np.array(iter_error, dtype=np.float64)
+        multi_phase_error = [np.inf]
+    multi_phase_error = [np.inf if np.isnan(x) else x ** 2 for x in multi_phase_error]
+    multi_phase_error = -np.sum(multi_phase_error)
+
+    single_phase_error = calculate_single_phase_error(dbf, comps, phases, datasets, parameters)
+    total_error = multi_phase_error + single_phase_error
+    logging.debug('Single phase error: {:0.2f}. Multi phase error: {:0.2f}. Total error: {:0.2f}'.format(single_phase_error, multi_phase_error, total_error))
+    return np.array(total_error, dtype=np.float64)
 
 
 def generate_parameter_distribution(parameters, num_samples, std_deviation, deterministic=True):
