@@ -358,16 +358,17 @@ def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None):
     if parameters is None:
         parameters = {}
 
-    # property weights, apply by choosing depending on the parameter
-    property_prefix_weights = {
-        'HM': 1.0 / 250.0,  # 250 J, 5% of 5 kJ
-        'SM': 1.0 / 0.25,  # 0.25 J/K, 5% of 5 J/K
-        'CPM': 1.0 / 1.25,  # 1.25 J/K, 5% of 25 J/K
+    # property weights factors as fractions of the parameters
+    # for now they are all set to 5%
+    property_prefix_weight_factor = {
+        'HM': 0.05,
+        'SM': 0.05,
+        'CPM': 0.05,
     }
     propery_suffixes = ('_FORM', '_MIX')
     # the kinds of properties, e.g. 'HM'+suffix =>, 'HM_FORM', 'HM_MIX'
     # we could also include the bare property ('' => 'HM'), but these are rarely used in ESPEI
-    properties = [''.join(prop) for prop in itertools.product(property_prefix_weights.keys(), propery_suffixes)]
+    properties = [''.join(prop) for prop in itertools.product(property_prefix_weight_factor.keys(), propery_suffixes)]
 
     sum_square_error = 0
     for phase_name in phases:
@@ -386,7 +387,7 @@ def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None):
                 params = parameters
             sample_values = calculate_dict.pop('values')
             results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, **calculate_dict)[calculate_dict['output']].values
-            weight = property_prefix_weights[prop.split('_')[0]]
+            weight = (property_prefix_weight_factor[prop.split('_')[0]]*np.abs(np.mean(sample_values)))**(-1.0)
             error = np.sum((results-sample_values)**2) * weight
             logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
             sum_square_error += error
