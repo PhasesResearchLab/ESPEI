@@ -12,6 +12,7 @@ from pycalphad import calculate, equilibrium, CompiledModel, variables as v
 import emcee
 
 from espei.utils import database_symbols_to_fit, optimal_parameters
+from espei.core_utils import ravel_conditions
 
 
 def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters):
@@ -298,13 +299,10 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         datum_P = datum['conditions']['P']
         configurations = datum['solver']['sublattice_configurations']
         occupancies = datum['solver'].get('sublattice_occupancies')
-        values = np.array(datum['values']).flatten()
+        values = np.array(datum['values'])
 
         # broadcast and flatten the conditions arrays
-        P, T, _ = np.meshgrid(datum_P, datum_T, range(len(configurations)))
-        P = P.flatten()
-        T = T.flatten()
-        # _p and _t are thrown away, but we need to make sure we are consistent on shape
+        P, T = ravel_conditions(values, datum_P, datum_T)
         if occupancies is None:
             occupancies = [None] * len(configurations)
 
@@ -315,7 +313,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         calculate_dict['P'] = np.concatenate([calculate_dict['P'], P])
         calculate_dict['T'] = np.concatenate([calculate_dict['T'], T])
         calculate_dict['points'] = np.concatenate([calculate_dict['points'], points], axis=0)
-        calculate_dict['values'] = np.concatenate([calculate_dict['values'], values])
+        calculate_dict['values'] = np.concatenate([calculate_dict['values'], values.flatten()])
 
     return calculate_dict
 
