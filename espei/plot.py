@@ -195,48 +195,51 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
             warnings.warn("'{0}' passed as plotting keyword argument to dataplot, but the alias '{1}' is already set to '{2}'. Use the full version of the keyword argument '{1}' to override the default.".format(aliased_arg, actual_arg, scatter_kwargs.get(actual_arg)))
     scatter_kwargs.update(plot_kwargs)
 
-    plots = [('ZPF', 'T')]
-    for output, y in plots:
-        # TODO: used to include VA. Should this be added by default. Can't determine presence of VA in eq.
-        # Techincally, VA should not be present in any phase equilibria.
-        desired_data = datasets.search((tinydb.where('output') == output) &
-                                       (tinydb.where('components').test(lambda x: set(x).issubset(comps + ['VA']))) &
-                                       (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
+    output = 'ZPF'
+    # TODO: used to include VA. Should this be added by default. Can't determine presence of VA in eq.
+    # Techincally, VA should not be present in any phase equilibria.
+    desired_data = datasets.search((tinydb.where('output') == output) &
+                                   (tinydb.where('components').test(lambda x: set(x).issubset(comps + ['VA']))) &
+                                   (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
 
-        # get all the possible references from the data and create the bibliography map
-        # TODO: explore building tielines from multiphase equilibria. Should we do this?
-        bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
-        symbol_map = bib_marker_map(bib_reference_keys)
+    # get all the possible references from the data and create the bibliography map
+    # TODO: explore building tielines from multiphase equilibria. Should we do this?
+    bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
+    symbol_map = bib_marker_map(bib_reference_keys)
 
-        # The above handled the phases as in the equilibrium, but there may be
-        # phases that are in the datasets but not in the equilibrium diagram that
-        # we would like to plot point for (they need color maps).
-        # To keep consistent colors with the equilibrium diagram, we will append
-        # the new phases from the datasets to the existing phases in the equilibrium
-        # calculation.
-        data_phases = set()
-        for entry in desired_data:
-            data_phases.update(set(entry['phases']))
-        new_phases = sorted(list(data_phases.difference(set(phases))))
-        phases.extend(new_phases)
-        legend_handles, phase_color_map = phase_legend(phases)
+    # The above handled the phases as in the equilibrium, but there may be
+    # phases that are in the datasets but not in the equilibrium diagram that
+    # we would like to plot point for (they need color maps).
+    # To keep consistent colors with the equilibrium diagram, we will append
+    # the new phases from the datasets to the existing phases in the equilibrium
+    # calculation.
+    data_phases = set()
+    for entry in desired_data:
+        data_phases.update(set(entry['phases']))
+    new_phases = sorted(list(data_phases.difference(set(phases))))
+    phases.extend(new_phases)
+    legend_handles, phase_color_map = phase_legend(phases)
 
-        # now we will add the symbols for the references to the legend handles
-        for ref_key in bib_reference_keys:
-            mark = symbol_map[ref_key]['markers']
-            # The legend marker edge width appears smaller than in the plot.
-            # We will add this small hack to increase the width in the legend only.
-            legend_kwargs = scatter_kwargs.copy()
-            legend_kwargs['markeredgewidth'] *= 5
-            legend_handles.append(mlines.Line2D([], [], linestyle='',
-                                                color='black', markeredgecolor='black',
-                                                label=symbol_map[ref_key]['formatted'],
-                                                fillstyle=mark['fillstyle'],
-                                                marker=mark['marker'],
-                                                **legend_kwargs))
+    # now we will add the symbols for the references to the legend handles
+    for ref_key in bib_reference_keys:
+        mark = symbol_map[ref_key]['markers']
+        # The legend marker edge width appears smaller than in the plot.
+        # We will add this small hack to increase the width in the legend only.
+        legend_kwargs = scatter_kwargs.copy()
+        legend_kwargs['markeredgewidth'] *= 5
+        legend_handles.append(mlines.Line2D([], [], linestyle='',
+                                            color='black', markeredgecolor='black',
+                                            label=symbol_map[ref_key]['formatted'],
+                                            fillstyle=mark['fillstyle'],
+                                            marker=mark['marker'],
+                                            **legend_kwargs))
 
-        # finally, add the completed legend
-        ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
+    # finally, add the completed legend
+    ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
+
+    if projection is None:
+        # plot x vs. T
+        y = 'T'
 
         # TODO: There are lot of ways this could break in multi-component situations
 
