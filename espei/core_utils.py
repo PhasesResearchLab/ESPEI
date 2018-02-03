@@ -293,3 +293,70 @@ def ravel_conditions(values, *conditions, zpf=False):
     return tuple(ravelled_conditions)
 
 
+def ravel_zpf_values(desired_data, independent_comps, conditions=None):
+    """
+    Unpack the phases and compositions from ZPF data
+
+    Depdendent components are converted to independent components.
+
+    Parameters
+    ----------
+    desired_data : espei.utils.PickleableTinyDB
+        The selected data
+    independent_comps : list
+        List of indepdendent components. Used for mass balance component conversion
+    conditions : dict
+        Conditions to filter for. Right now only considers fixed temperatures
+
+    Returns
+    -------
+    dict
+        A dictonary of list of lists of tuples. Each dictionary key is the
+        number of phases in equilibrium, e.g. a key "2" might have values
+        [
+          [(PHASE_NAME_1, {'C1': X1, 'C2': X2}, refkey), (PHASE_NAME_2, {'C1': X1, 'C2': X2}, refkey)],
+        ...]
+        Three would have three inner tuples and so on.
+    """
+
+    # integers are the number of equilibria in the phase that are lists of the individual points
+    independent_comps = set(independent_comps)
+    equilibria_dict = {}
+
+    for data in desired_data:
+        values = data['values']
+        T = ravel_conditions(data['values'], data['conditions']['T'], zpf=True)[0]
+
+        for equilbrium, temperature in zip(values, T):
+            if conditions is not None:
+                # make sure that the conditions match
+                if temperature != conditions['T']:
+                    continue
+            # go through each equilibrium phase and ravel it correctly
+            this_equilibrium = []
+            for eq_phase in equilbrium:
+                phase_name = eq_phase[0]
+                components = eq_phase[1]
+                compositions = eq_phase[2]
+
+                # fix up any independent component issues and fill out the component dict
+                comp_dict = {}
+                # assume that there are len(independent_comps)+1 components
+                # therefore mass balance applies
+                if independent_comps != set(components):
+                    mass_balance_dependent_comp = list(set(components).difference(independent_comps))[0]
+                else:
+                    mass_balance_dependent_comp = None
+                for c, x in zip(components, compositions):
+                    if c == mass_balance_dependent_comp:
+                        c = list(independent_comps.difference(set(components)))[0]
+                        x = 1 - sum(compositions)
+                    comp_dict[c] = x
+                this_equilibrium.append((phase_name, comp_dict, data['reference']))
+
+            # add this set of equilibrium phases to the correct key in the equilibria dict
+            n_phases_in_equilibrium = len(equilbrium)
+            list_of_n_phase_equilibria = equilibria_dict.get(n_phases_in_equilibrium, [])
+            list_of_n_phase_equilibria.append(this_equilibrium)
+            equilibria_dict[n_phases_in_equilibrium] = list_of_n_phase_equilibria
+    return equilibria_dict
