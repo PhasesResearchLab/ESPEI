@@ -355,6 +355,7 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
         # We will add this small hack to increase the width in the legend only.
         legend_kwargs = scatter_kwargs.copy()
         legend_kwargs['markeredgewidth'] = 1
+        legend_kwargs['markersize'] = 6
         legend_handles.append(mlines.Line2D([], [], linestyle='',
                                             color='black', markeredgecolor='black',
                                             label=symbol_map[ref_key]['formatted'],
