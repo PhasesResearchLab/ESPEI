@@ -350,7 +350,7 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
                 for c, x in zip(components, compositions):
                     if c == mass_balance_dependent_comp:
                         c = list(independent_comps.difference(set(components)))[0]
-                        x = 1 - sum(compositions)
+                        x = None if any([xx is None for xx in compositions]) else 1 - sum(compositions)
                     comp_dict[c] = x
                 this_equilibrium.append((phase_name, comp_dict, data['reference']))
 
