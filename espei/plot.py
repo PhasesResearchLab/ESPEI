@@ -285,12 +285,10 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
             updated_tieline_plot_kwargs.update(tieline_plot_kwargs)
         for eq in eq_dict.get(2,[]): # list of things in equilibrium
             # plot the scatter points for the right phases
-            x_points = []
-            y_points = []
+            x_points, y_points = [], []
             for phase_name, comp_dict, ref_key in eq:
                 sym_ref = symbol_map[ref_key]
-                x_val = comp_dict[x]
-                y_val = comp_dict[y]
+                x_val, y_val = comp_dict[x], comp_dict[y]
                 if x_val is not None and y_val is not None:
                     ax.plot(x_val, y_val,
                             label=sym_ref['formatted'],
@@ -313,11 +311,9 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
             updated_tieline_plot_kwargs.update(tieline_plot_kwargs)
         for eq in eq_dict.get(3,[]): # list of things in equilibrium
             # plot the scatter points for the right phases
-            x_points = []
-            y_points = []
+            x_points, y_points = [], []
             for phase_name, comp_dict, ref_key in eq:
-                x_val = comp_dict[x]
-                y_val = comp_dict[y]
+                x_val, y_val = comp_dict[x], comp_dict[y]
                 x_points.append(x_val)
                 y_points.append(y_val)
             # Make sure the triangle completes
