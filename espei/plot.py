@@ -152,7 +152,7 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
     >>> datasets = load_datasets(recursive_glob('.', '*.json'))
     >>> my_phases = ['BCC_A2', 'CUMG2', 'FCC_A1', 'LAVES_C15', 'LIQUID']
     >>> my_components = ['CU', 'MG' 'VA']
-    >>> conditions = {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)}
+    >>> conditions = {v.P: 101325, v.T: (500, 1000, 10), v.X('MG'): (0, 1, 0.01)}
     >>> dataplot(my_components, my_phases, conditions, datasets)
 
     """
@@ -397,7 +397,7 @@ def eqdataplot(eq, datasets, ax=None, plot_kwargs=None):
     >>> datasets = load_datasets(recursive_glob('.', '*.json'))
     >>> dbf = Database('my_databases.tdb')
     >>> my_phases = list(dbf.phases.keys())
-    >>> eq = equilibrium(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)})
+    >>> eq = equilibrium(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: (500, 1000, 10), v.X('MG'): (0, 1, 0.01)})
     >>> ax = eqplot(eq)
     >>> ax = eqdataplot(eq, datasets, ax=ax)
 
