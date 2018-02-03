@@ -15,7 +15,7 @@ from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_conditi
 
 from espei.utils import bib_marker_map
 from espei.core_utils import get_data, get_samples, list_to_tuple, \
-    endmembers_from_interaction, build_sitefractions, ravel_zpf_values
+    endmembers_from_interaction, build_sitefractions, ravel_zpf_values, ravel_conditions
 
 plot_mapping = {
     'T': 'Temperature (K)',
@@ -210,7 +210,6 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
 
     # get all the possible references from the data and create the bibliography map
-    # TODO: explore building tielines from multiphase equilibria. Should we do this?
     bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
     symbol_map = bib_marker_map(bib_reference_keys)
 
@@ -228,9 +227,13 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
     legend_handles, phase_color_map = phase_legend(phases)
 
     if projection is None:
+        # TODO: There are lot of ways this could break in multi-component situations
+
         # plot x vs. T
+        y = 'T'
+
         # handle plotting kwargs
-        scatter_kwargs = {'markersize': 6, 'markeredgewidth': 0.2}
+        scatter_kwargs = {'markersize': 6, 'markeredgewidth': 1}
         # raise warnings if any of the aliased versions of the default values are used
         possible_aliases = [('markersize', 'ms'), ('markeredgewidth', 'mew')]
         for actual_arg, aliased_arg in possible_aliases:
@@ -238,56 +241,33 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
                 warnings.warn("'{0}' passed as plotting keyword argument to dataplot, but the alias '{1}' is already set to '{2}'. Use the full version of the keyword argument '{1}' to override the default.".format(aliased_arg, actual_arg, scatter_kwargs.get(actual_arg)))
         scatter_kwargs.update(plot_kwargs)
 
-        y = 'T'
+        eq_dict = ravel_zpf_values(desired_data, [x])
 
-        # TODO: There are lot of ways this could break in multi-component situations
+        # two phase
+        updated_tieline_plot_kwargs = {'linewidth':1, 'color':'k'}
+        if tieline_plot_kwargs is not None:
+            updated_tieline_plot_kwargs.update(tieline_plot_kwargs)
+        for eq in eq_dict.get(2,[]): # list of things in equilibrium
+            # plot the scatter points for the right phases
+            x_points, y_points = [], []
+            for phase_name, comp_dict, ref_key in eq:
+                sym_ref = symbol_map[ref_key]
+                x_val, y_val = comp_dict[x], comp_dict[y]
+                if x_val is not None and y_val is not None:
+                    ax.plot(x_val, y_val,
+                            label=sym_ref['formatted'],
+                            fillstyle=sym_ref['markers']['fillstyle'],
+                            marker=sym_ref['markers']['marker'],
+                            linestyle='',
+                            color=phase_color_map[phase_name],
+                            **scatter_kwargs)
+                x_points.append(x_val)
+                y_points.append(y_val)
 
-        for data in desired_data:
-            payload = data['values']
-            # TODO: Add broadcast_conditions support
-            # Repeat the temperature (or whatever variable) vector to align with the unraveled data
-            temp_repeats = np.zeros(len(np.atleast_1d(data['conditions'][y])), dtype=np.int)
-            for idx, p in enumerate(payload):
-                temp_repeats[idx] = len(p)
-            temps_ravelled = np.repeat(data['conditions'][y], temp_repeats)
-            payload_ravelled = []
-            phases_ravelled = []
-            comps_ravelled = []
-            symbols_ravelled = []
-            # TODO: Fix to only include equilibria listed in 'phases'
-            for p in payload:
-                markers = symbol_map[data['reference']]['markers']
-                fill_sym_tuple = (markers['fillstyle'], markers['marker'])
-                symbols_ravelled.extend([fill_sym_tuple] * len(p))
-                payload_ravelled.extend(p)
-            for rp in payload_ravelled:
-                phases_ravelled.append(rp[0])
-                comp_dict = dict(zip([x.upper() for x in rp[1]], rp[2]))
-                dependent_comp = list(set(comps) - set(comp_dict.keys()) - set(['VA']))
-                if len(dependent_comp) > 1:
-                    raise ValueError('Dependent components greater than one')
-                elif len(dependent_comp) == 1:
-                    dependent_comp = dependent_comp[0]
-                    # TODO: Assuming N=1
-                    comp_dict[dependent_comp] = 1 - sum(np.array(list(comp_dict.values()), dtype=np.float))
-                chosen_comp_value = comp_dict[x]
-                comps_ravelled.append(chosen_comp_value)
-            symbols_ravelled = np.array(symbols_ravelled)
-            comps_ravelled = np.array(comps_ravelled)
-            temps_ravelled = np.array(temps_ravelled)
-            phases_ravelled = np.array(phases_ravelled)
-            # We can't pass an array of markers to scatter, sadly
-            for fill_sym in symbols_ravelled:
-                # fill_sym is a tuple of ('fillstyle', 'marker')
-                selected = np.all(symbols_ravelled == fill_sym, axis=1)
-                # ax.plot does not seem to be able to take a list of hex values
-                # for colors in the same was as ax.scatter. To get around this,
-                # we'll use the set_prop_cycler for each plot cycle
-                phase_colors = [phase_color_map[x] for x in phases_ravelled[selected]]
-                ax.set_prop_cycle(cycler('color', phase_colors))
-                ax.plot(comps_ravelled[selected], temps_ravelled[selected],
-                        fillstyle=fill_sym[0], marker=fill_sym[1], linestyle='',
-                        **scatter_kwargs)
+            # plot the tielines
+            if all([xx is not None and yy is not None for xx, yy in zip(x_points, y_points)]):
+                ax.plot(x_points, y_points, **updated_tieline_plot_kwargs)
+
     elif projection == 'triangular':
         scatter_kwargs = {'markersize': 4, 'markeredgewidth': 0.4}
         # raise warnings if any of the aliased versions of the default values are used

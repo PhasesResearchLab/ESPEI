@@ -352,6 +352,9 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
                         c = list(independent_comps.difference(set(components)))[0]
                         x = None if any([xx is None for xx in compositions]) else 1 - sum(compositions)
                     comp_dict[c] = x
+                if conditions is None:
+                    # assume the other condition is temperature:
+                    comp_dict['T'] = temperature
                 this_equilibrium.append((phase_name, comp_dict, data['reference']))
 
             # add this set of equilibrium phases to the correct key in the equilibria dict
