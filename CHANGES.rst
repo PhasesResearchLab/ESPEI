@@ -2,6 +2,13 @@
 What's New
 ==========
 
+0.4.1 (2018-02-05)
+==================
+
+* Enable plotting of isothermal sections with data using ``dataplot`` (and ``multiplot``, etc.)
+* Tielines are now plotted in ``dataplot`` for isothermal sections and T-x phase diagrams
+* Add a useful ``ravel_conditions`` method to unpack conditions from datasets
+
 0.4 (2017-12-29)
 ================
 
