@@ -239,7 +239,7 @@ def _zpf_conditions_shape(zpf_values):
     return shape[-2]
 
 
-def ravel_conditions(values, *conditions, zpf=False):
+def ravel_conditions(values, *conditions, **kwargs):
     """
     Broadcast and flatten conditions to the shape dictated by the values.
 
@@ -254,8 +254,9 @@ def ravel_conditions(values, *conditions, zpf=False):
         of dimensions of the values array. In code, the following must be True:
         `all([s == len(cond) for s, cond in zip(values.shape, conditions)])`
 
-    zpf : bool
+    zpf : bool, optional
         Whether to consider values as a special case of ZPF data (not an even grid of conditions)
+        Default is False
 
     Returns
     -------
@@ -274,6 +275,8 @@ def ravel_conditions(values, *conditions, zpf=False):
     correct conditions because usually T and P are specified in ZPF (but, again,
     only one can actually be a condition given the current shape).
     """
+    # we have to parse the `zpf` kwarg manually because py27 does not allow named args after *args
+    zpf = kwargs.get('zpf')
     if zpf:
         values_shape = _zpf_conditions_shape(values)
         # we have to make our integers tuples
