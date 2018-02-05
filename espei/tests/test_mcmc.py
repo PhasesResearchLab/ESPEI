@@ -145,15 +145,48 @@ zpf_data = """{
 """
 zpf_json = json.loads(zpf_data)
 
-def test_lnprob_calculates_probability_for_success(datasets_db):
+single_phase_data = """
+{
+    "components": ["CU", "MG"],
+    "phases": ["FCC_A1"],
+    "solver": {
+        "sublattice_site_ratios": [1],
+        "sublattice_occupancies": [[[0.5, 0.5], 1]],
+        "sublattice_configurations": [[["CU", "MG"], "VA"]],
+        "mode": "manual"
+    },
+    "conditions": {
+        "P": 101325,
+        "T": 298.15
+    },
+    "output": "HM_MIX",
+    "values": [[[-1000]]]
+}
+"""
+single_phase_json = json.loads(single_phase_data)
+
+def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
     """lnprob() successfully calculates the probability for equilibrium """
     datasets_db.insert(zpf_json)
-    res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf,
+    res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf, delayed_dbf=dbf,
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
-                 datasets=datasets_db, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)
+                 datasets=datasets_db, symbols_to_fit=['VV0001'],
+                 phase_models=None, delayed_phase_models=None,
+                 scheduler=None,)
     assert np.isreal(res)
     assert np.isclose(res, -5740.542839073727)
 
+
+def test_lnprob_calculates_single_phase_probability_for_success(datasets_db):
+    """lnprob() succesfully calculates the probability from single phase data"""
+    datasets_db.insert(single_phase_json)
+    res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf, delayed_dbf=dbf,
+                 phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
+                 datasets=datasets_db, symbols_to_fit=['VV0001'],
+                 phase_models=None, delayed_phase_models=None,
+                 scheduler=None,)
+    assert np.isreal(res)
+    assert np.isclose(res, -19859.38)
 
 def _eq_LinAlgError(*args, **kwargs):
     raise LinAlgError()
@@ -167,7 +200,7 @@ def _eq_ValueError(*args, **kwargs):
 def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
     """lnprob() should catch LinAlgError raised by equilibrium and return -np.inf"""
     datasets_db.insert(zpf_json)
-    res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf,
+    res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf, delayed_dbf=dbf,
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
                  datasets=datasets_db, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)
     assert np.isneginf(res)
@@ -177,7 +210,7 @@ def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
 def test_lnprob_does_not_raise_on_ValueError(datasets_db):
     """lnprob() should catch ValueError raised by equilibrium and return -np.inf"""
     datasets_db.insert(zpf_json)
-    res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf,
+    res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf, delayed_dbf=dbf,
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
                  datasets=datasets_db, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)
     assert np.isneginf(res)
