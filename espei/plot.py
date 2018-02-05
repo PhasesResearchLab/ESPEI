@@ -15,7 +15,7 @@ from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_conditi
 
 from espei.utils import bib_marker_map
 from espei.core_utils import get_data, get_samples, list_to_tuple, \
-    endmembers_from_interaction, build_sitefractions
+    endmembers_from_interaction, build_sitefractions, ravel_zpf_values, ravel_conditions
 
 plot_mapping = {
     'T': 'Temperature (K)',
@@ -118,7 +118,7 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
             ax = _compare_data_to_parameters(dbf, comps, phase_name, data, mod, configuration, x_val, y_val, ax=ax)
 
 
-def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
+def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_plot_kwargs=None):
     """
     Plot datapoints corresponding to the components, phases, and conditions.
 
@@ -135,7 +135,9 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
     ax : matplotlib.Axes
         Default axes used if not specified.
     plot_kwargs : dict
-        Additional keyword arguments to pass to the matplotlib plot function
+        Additional keyword arguments to pass to the matplotlib plot function for points
+    tieline_plot_kwargs : dict
+        Additional keyword arguments to pass to the matplotlib plot function for tielines
 
     Returns
     -------
@@ -150,7 +152,7 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
     >>> datasets = load_datasets(recursive_glob('.', '*.json'))
     >>> my_phases = ['BCC_A2', 'CUMG2', 'FCC_A1', 'LAVES_C15', 'LIQUID']
     >>> my_components = ['CU', 'MG' 'VA']
-    >>> conditions = {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)}
+    >>> conditions = {v.P: 101325, v.T: (500, 1000, 10), v.X('MG'): (0, 1, 0.01)}
     >>> dataplot(my_components, my_phases, conditions, datasets)
 
     """
@@ -163,8 +165,6 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
     if len(indep_comps) == 1 and len(indep_pots) == 1:
         projection = None
     elif len(indep_comps) == 2 and len(indep_pots) == 0:
-        # TODO: support isotherm plotting
-        raise NotImplementedError('Triangular plotting is not yet implemented')
         projection = 'triangular'
     else:
         raise ValueError('The eqplot projection is not defined and cannot be autodetected. There are {} independent compositions and {} indepedent potentials.'.format(len(indep_comps), len(indep_pots)))
@@ -172,6 +172,9 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
     if projection is None:
         x = indep_comps[0].species
         y = indep_pots[0]
+    elif projection == 'triangular':
+        x = indep_comps[0].species
+        y = indep_comps[1].species
 
     # set up plot if not done already
     if ax is None:
@@ -183,109 +186,162 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None):
         plot_title = '-'.join([component.title() for component in sorted(comps) if component != 'VA'])
         ax.set_title(plot_title, fontsize=20)
         ax.set_xlabel('X({})'.format(x), labelpad=15, fontsize=20)
-        ax.set_ylabel(plot_mapping.get(str(y), y), fontsize=20)
         ax.set_xlim((0, 1))
+        if projection is None:
+            ax.set_ylabel(plot_mapping.get(str(y), y), fontsize=20)
+        elif projection == 'triangular':
+            ax.set_ylabel('X({})'.format(y), labelpad=15, fontsize=20)
+            ax.set_ylim((0, 1))
+            ax.yaxis.label.set_rotation(60)
+            # Here we adjust the x coordinate of the ylabel.
+            # We make it reasonably comparable to the position of the xlabel from the xaxis
+            # As the figure size gets very large, the label approaches ~0.55 on the yaxis
+            # 0.55*cos(60 deg)=0.275, so that is the xcoord we are approaching.
+            ax.yaxis.label.set_va('baseline')
+            fig_x_size = ax.figure.get_size_inches()[0]
+            y_label_offset = 1 / fig_x_size
+            ax.yaxis.set_label_coords(x=(0.275 - y_label_offset), y=0.5)
 
-    # handle plotting kwargs
-    scatter_kwargs = {'markersize': 6, 'markeredgewidth': 0.2}
-    # raise warnings if any of the aliased versions of the default values are used
-    possible_aliases = [('markersize', 'ms'), ('markeredgewidth', 'mew')]
-    for actual_arg, aliased_arg in possible_aliases:
-        if aliased_arg in plot_kwargs:
-            warnings.warn("'{0}' passed as plotting keyword argument to dataplot, but the alias '{1}' is already set to '{2}'. Use the full version of the keyword argument '{1}' to override the default.".format(aliased_arg, actual_arg, scatter_kwargs.get(actual_arg)))
-    scatter_kwargs.update(plot_kwargs)
+    output = 'ZPF'
+    # TODO: used to include VA. Should this be added by default. Can't determine presence of VA in eq.
+    # Techincally, VA should not be present in any phase equilibria.
+    desired_data = datasets.search((tinydb.where('output') == output) &
+                                   (tinydb.where('components').test(lambda x: set(x).issubset(comps + ['VA']))) &
+                                   (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
 
-    plots = [('ZPF', 'T')]
-    for output, y in plots:
-        # TODO: used to include VA. Should this be added by default. Can't determine presence of VA in eq.
-        # Techincally, VA should not be present in any phase equilibria.
-        desired_data = datasets.search((tinydb.where('output') == output) &
-                                       (tinydb.where('components').test(lambda x: set(x).issubset(comps + ['VA']))) &
-                                       (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
+    # get all the possible references from the data and create the bibliography map
+    bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
+    symbol_map = bib_marker_map(bib_reference_keys)
 
-        # get all the possible references from the data and create the bibliography map
-        # TODO: explore building tielines from multiphase equilibria. Should we do this?
-        bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
-        symbol_map = bib_marker_map(bib_reference_keys)
+    # The above handled the phases as in the equilibrium, but there may be
+    # phases that are in the datasets but not in the equilibrium diagram that
+    # we would like to plot point for (they need color maps).
+    # To keep consistent colors with the equilibrium diagram, we will append
+    # the new phases from the datasets to the existing phases in the equilibrium
+    # calculation.
+    data_phases = set()
+    for entry in desired_data:
+        data_phases.update(set(entry['phases']))
+    new_phases = sorted(list(data_phases.difference(set(phases))))
+    phases.extend(new_phases)
+    legend_handles, phase_color_map = phase_legend(phases)
 
-        # The above handled the phases as in the equilibrium, but there may be
-        # phases that are in the datasets but not in the equilibrium diagram that
-        # we would like to plot point for (they need color maps).
-        # To keep consistent colors with the equilibrium diagram, we will append
-        # the new phases from the datasets to the existing phases in the equilibrium
-        # calculation.
-        data_phases = set()
-        for entry in desired_data:
-            data_phases.update(set(entry['phases']))
-        new_phases = sorted(list(data_phases.difference(set(phases))))
-        phases.extend(new_phases)
-        legend_handles, phase_color_map = phase_legend(phases)
-
-        # now we will add the symbols for the references to the legend handles
-        for ref_key in bib_reference_keys:
-            mark = symbol_map[ref_key]['markers']
-            # The legend marker edge width appears smaller than in the plot.
-            # We will add this small hack to increase the width in the legend only.
-            legend_kwargs = scatter_kwargs.copy()
-            legend_kwargs['markeredgewidth'] *= 5
-            legend_handles.append(mlines.Line2D([], [], linestyle='',
-                                                color='black', markeredgecolor='black',
-                                                label=symbol_map[ref_key]['formatted'],
-                                                fillstyle=mark['fillstyle'],
-                                                marker=mark['marker'],
-                                                **legend_kwargs))
-
-        # finally, add the completed legend
-        ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
-
+    if projection is None:
         # TODO: There are lot of ways this could break in multi-component situations
 
-        for data in desired_data:
-            payload = data['values']
-            # TODO: Add broadcast_conditions support
-            # Repeat the temperature (or whatever variable) vector to align with the unraveled data
-            temp_repeats = np.zeros(len(np.atleast_1d(data['conditions'][y])), dtype=np.int)
-            for idx, p in enumerate(payload):
-                temp_repeats[idx] = len(p)
-            temps_ravelled = np.repeat(data['conditions'][y], temp_repeats)
-            payload_ravelled = []
-            phases_ravelled = []
-            comps_ravelled = []
-            symbols_ravelled = []
-            # TODO: Fix to only include equilibria listed in 'phases'
-            for p in payload:
-                markers = symbol_map[data['reference']]['markers']
-                fill_sym_tuple = (markers['fillstyle'], markers['marker'])
-                symbols_ravelled.extend([fill_sym_tuple] * len(p))
-                payload_ravelled.extend(p)
-            for rp in payload_ravelled:
-                phases_ravelled.append(rp[0])
-                comp_dict = dict(zip([x.upper() for x in rp[1]], rp[2]))
-                dependent_comp = list(set(comps) - set(comp_dict.keys()) - set(['VA']))
-                if len(dependent_comp) > 1:
-                    raise ValueError('Dependent components greater than one')
-                elif len(dependent_comp) == 1:
-                    dependent_comp = dependent_comp[0]
-                    # TODO: Assuming N=1
-                    comp_dict[dependent_comp] = 1 - sum(np.array(list(comp_dict.values()), dtype=np.float))
-                chosen_comp_value = comp_dict[x]
-                comps_ravelled.append(chosen_comp_value)
-            symbols_ravelled = np.array(symbols_ravelled)
-            comps_ravelled = np.array(comps_ravelled)
-            temps_ravelled = np.array(temps_ravelled)
-            phases_ravelled = np.array(phases_ravelled)
-            # We can't pass an array of markers to scatter, sadly
-            for fill_sym in symbols_ravelled:
-                # fill_sym is a tuple of ('fillstyle', 'marker')
-                selected = np.all(symbols_ravelled == fill_sym, axis=1)
-                # ax.plot does not seem to be able to take a list of hex values
-                # for colors in the same was as ax.scatter. To get around this,
-                # we'll use the set_prop_cycler for each plot cycle
-                phase_colors = [phase_color_map[x] for x in phases_ravelled[selected]]
-                ax.set_prop_cycle(cycler('color', phase_colors))
-                ax.plot(comps_ravelled[selected], temps_ravelled[selected],
-                        fillstyle=fill_sym[0], marker=fill_sym[1], linestyle='',
-                        **scatter_kwargs)
+        # plot x vs. T
+        y = 'T'
+
+        # handle plotting kwargs
+        scatter_kwargs = {'markersize': 6, 'markeredgewidth': 1}
+        # raise warnings if any of the aliased versions of the default values are used
+        possible_aliases = [('markersize', 'ms'), ('markeredgewidth', 'mew')]
+        for actual_arg, aliased_arg in possible_aliases:
+            if aliased_arg in plot_kwargs:
+                warnings.warn("'{0}' passed as plotting keyword argument to dataplot, but the alias '{1}' is already set to '{2}'. Use the full version of the keyword argument '{1}' to override the default.".format(aliased_arg, actual_arg, scatter_kwargs.get(actual_arg)))
+        scatter_kwargs.update(plot_kwargs)
+
+        eq_dict = ravel_zpf_values(desired_data, [x])
+
+        # two phase
+        updated_tieline_plot_kwargs = {'linewidth':1, 'color':'k'}
+        if tieline_plot_kwargs is not None:
+            updated_tieline_plot_kwargs.update(tieline_plot_kwargs)
+        for eq in eq_dict.get(2,[]): # list of things in equilibrium
+            # plot the scatter points for the right phases
+            x_points, y_points = [], []
+            for phase_name, comp_dict, ref_key in eq:
+                sym_ref = symbol_map[ref_key]
+                x_val, y_val = comp_dict[x], comp_dict[y]
+                if x_val is not None and y_val is not None:
+                    ax.plot(x_val, y_val,
+                            label=sym_ref['formatted'],
+                            fillstyle=sym_ref['markers']['fillstyle'],
+                            marker=sym_ref['markers']['marker'],
+                            linestyle='',
+                            color=phase_color_map[phase_name],
+                            **scatter_kwargs)
+                x_points.append(x_val)
+                y_points.append(y_val)
+
+            # plot the tielines
+            if all([xx is not None and yy is not None for xx, yy in zip(x_points, y_points)]):
+                ax.plot(x_points, y_points, **updated_tieline_plot_kwargs)
+
+    elif projection == 'triangular':
+        scatter_kwargs = {'markersize': 4, 'markeredgewidth': 0.4}
+        # raise warnings if any of the aliased versions of the default values are used
+        possible_aliases = [('markersize', 'ms'), ('markeredgewidth', 'mew')]
+        for actual_arg, aliased_arg in possible_aliases:
+            if aliased_arg in plot_kwargs:
+                warnings.warn("'{0}' passed as plotting keyword argument to dataplot, but the alias '{1}' is already set to '{2}'. Use the full version of the keyword argument '{1}' to override the default.".format(aliased_arg, actual_arg, scatter_kwargs.get(actual_arg)))
+        scatter_kwargs.update(plot_kwargs)
+
+        eq_dict = ravel_zpf_values(desired_data, [x, y], {'T': conds[v.T]})
+
+        # two phase
+        updated_tieline_plot_kwargs = {'linewidth':1, 'color':'k'}
+        if tieline_plot_kwargs is not None:
+            updated_tieline_plot_kwargs.update(tieline_plot_kwargs)
+        for eq in eq_dict.get(2,[]): # list of things in equilibrium
+            # plot the scatter points for the right phases
+            x_points, y_points = [], []
+            for phase_name, comp_dict, ref_key in eq:
+                sym_ref = symbol_map[ref_key]
+                x_val, y_val = comp_dict[x], comp_dict[y]
+                if x_val is not None and y_val is not None:
+                    ax.plot(x_val, y_val,
+                            label=sym_ref['formatted'],
+                            fillstyle=sym_ref['markers']['fillstyle'],
+                            marker=sym_ref['markers']['marker'],
+                            linestyle='',
+                            color=phase_color_map[phase_name],
+                            **scatter_kwargs)
+                x_points.append(x_val)
+                y_points.append(y_val)
+
+            # plot the tielines
+            if all([xx is not None and yy is not None for xx, yy in zip(x_points, y_points)]):
+                ax.plot(x_points, y_points, **updated_tieline_plot_kwargs)
+
+
+        # three phase
+        updated_tieline_plot_kwargs = {'linewidth':1, 'color':'r'}
+        if tieline_plot_kwargs is not None:
+            updated_tieline_plot_kwargs.update(tieline_plot_kwargs)
+        for eq in eq_dict.get(3,[]): # list of things in equilibrium
+            # plot the scatter points for the right phases
+            x_points, y_points = [], []
+            for phase_name, comp_dict, ref_key in eq:
+                x_val, y_val = comp_dict[x], comp_dict[y]
+                x_points.append(x_val)
+                y_points.append(y_val)
+            # Make sure the triangle completes
+            x_points.append(x_points[0])
+            y_points.append(y_points[0])
+            # plot
+            # check for None values
+            if all([xx is not None and yy is not None for xx, yy in zip(x_points, y_points)]):
+                ax.plot(x_points, y_points, **updated_tieline_plot_kwargs)
+
+    # now we will add the symbols for the references to the legend handles
+    for ref_key in bib_reference_keys:
+        mark = symbol_map[ref_key]['markers']
+        # The legend marker edge width appears smaller than in the plot.
+        # We will add this small hack to increase the width in the legend only.
+        legend_kwargs = scatter_kwargs.copy()
+        legend_kwargs['markeredgewidth'] = 1
+        legend_kwargs['markersize'] = 6
+        legend_handles.append(mlines.Line2D([], [], linestyle='',
+                                            color='black', markeredgecolor='black',
+                                            label=symbol_map[ref_key]['formatted'],
+                                            fillstyle=mark['fillstyle'],
+                                            marker=mark['marker'],
+                                            **legend_kwargs))
+
+    # finally, add the completed legend
+    ax.legend(handles=legend_handles, loc='center left', bbox_to_anchor=(1, 0.5))
+
     return ax
 
 
@@ -318,7 +374,7 @@ def eqdataplot(eq, datasets, ax=None, plot_kwargs=None):
     >>> datasets = load_datasets(recursive_glob('.', '*.json'))
     >>> dbf = Database('my_databases.tdb')
     >>> my_phases = list(dbf.phases.keys())
-    >>> eq = equilibrium(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)})
+    >>> eq = equilibrium(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: (500, 1000, 10), v.X('MG'): (0, 1, 0.01)})
     >>> ax = eqplot(eq)
     >>> ax = eqdataplot(eq, datasets, ax=ax)
 
