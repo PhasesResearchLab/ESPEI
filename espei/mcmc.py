@@ -547,10 +547,10 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
     for phase_name in phases:
         mod = Model(dbf, comps, phase_name, parameters=OrderedDict([(sympy.Symbol(s), 0) for s in symbols_to_fit]))
         phase_models[phase_name] = mod
+    eq_callables = eq_callables_dict(dbf, comps, phases, model=Model)
     logging.debug('Finished building phase models')
     #dbf = dask.delayed(dbf, pure=True)
     #phase_models = dask.delayed(phase_models, pure=True)
-    eq_callables = eq_callables_dict(dbf, comps, phases, model=Model)
 
     # context for the log probability function
     error_context = {'comps': comps, 'dbf': dbf,
