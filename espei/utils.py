@@ -6,6 +6,7 @@ Classes and functions defined here should have some reuse potential.
 
 import re, itertools
 import numpy as np
+from sympy import Symbol
 from distributed import Client
 from tinydb import TinyDB
 from tinydb.storages import MemoryStorage
@@ -13,6 +14,12 @@ from six import string_types
 import bibtexparser
 from bibtexparser.bparser import BibTexParser
 from bibtexparser.customization import convert_to_unicode
+
+from pycalphad import Model, variables as v
+from pycalphad.core.sympydiff_utils import build_functions
+from pycalphad.core.utils import unpack_kwarg, unpack_components
+from pycalphad.core.phase_rec import PhaseRecord_from_cython
+
 
 class PickleableTinyDB(TinyDB):
     """A pickleable version of TinyDB that uses MemoryStorage as a default."""
@@ -220,3 +227,125 @@ def bib_marker_map(bib_keys, markers=None):
             }
         }
     return b_m_map
+
+
+def _get_pure_elements(dbf, comps):
+    """
+    Return a list of pure elements in the system
+    Parameters
+    ----------
+    dbf : pycalphad.Database
+        A Database object
+    comps : list
+        A list of component names (species and pure elements)
+
+    Returns
+    -------
+    list
+        A list of pure elements in the Database
+    """
+    comps = sorted(unpack_components(dbf, comps))
+    components = [x for x in comps]
+    desired_active_pure_elements = [list(x.constituents.keys()) for x in components]
+    desired_active_pure_elements = [el.upper() for constituents in desired_active_pure_elements for el in constituents]
+    pure_elements = sorted(set([x for x in desired_active_pure_elements if x != 'VA']))
+    return pure_elements
+
+
+def eq_callables_dict(dbf, comps, phases, model=None):
+    """
+    Create a dictionary of callable dictionaries for phases in equilibrium
+
+    Parameters
+    ----------
+    dbf : pycalphad.Database
+        A pycalphad Database object
+    comps : list
+        List of component names
+    phases : list
+        List of phase names
+    model : dict or type
+        Dictionary of {phase_name: Model subclass} or a type corresponding to a
+        Model subclass. Defaults to ``Model``.
+
+    Returns
+    -------
+    dict
+        Dictionary of keyword argument callables to pass to equilibrium.
+
+    Notes
+    -----
+    Based on the pycalphad equilibrium method for building phases as of commit 37ff75ce.
+
+    Examples
+    --------
+    >>> dbf = Database('AL-NI.tdb')
+    >>> comps = ['AL', 'NI', 'VA']
+    >>> phases = ['FCC_L12', 'BCC_B2', 'LIQUID', 'AL3NI5', 'AL3NI2', 'AL3NI']
+    >>> eq_callables = eq_callables_dict(dbf, comps, phases)
+    >>> equilibrium(dbf, comps, phases, conditions, **eq_callables)
+    """
+    comps = sorted(unpack_components(dbf, comps))
+    pure_elements = _get_pure_elements(dbf, comps)
+
+    eq_callables = {
+        'massfuncs': unpack_kwarg(None),
+        'massgradfuncs': unpack_kwarg(None),
+        'callables': {},
+        'grad_callables': {},
+        'hess_callables': {},
+    }
+
+    models = unpack_kwarg(model, default_arg=Model)
+
+    param_symbols = database_symbols_to_fit(dbf)
+    parameters = {s: dbf.symbols[s] for s in param_symbols}
+    param_values = np.atleast_1d(np.array([z.args[0][0] for z in parameters.values()], dtype=np.float))
+
+    phase_records = {}
+    # create models
+    # starting from pycalphad
+    maximum_internal_dof = 0
+    for name in phases:
+        mod = models[name]
+        if isinstance(mod, type):
+            models[name] = mod = mod(dbf, comps, name, parameters=parameters)
+        site_fracs = mod.site_fractions
+        variables = sorted(site_fracs, key=str)
+        maximum_internal_dof = max(maximum_internal_dof, len(site_fracs))
+        out = models[name].energy
+
+        # Build the callables of the output
+        # Only force undefineds to zero if we're not overriding them
+        undefs = list(out.atoms(Symbol) - out.atoms(v.StateVariable) - set(param_symbols))
+        for undef in undefs:
+            out = out.xreplace({undef: float(0)})
+        cf, gf = build_functions(out, tuple([v.P, v.T] + site_fracs),
+                                 parameters=param_symbols)
+        hf = None
+        if eq_callables['callables'].get('name') is None:
+            eq_callables['callables'][name] = cf
+        if eq_callables['grad_callables'].get('name') is None:
+            eq_callables['grad_callables'][name] = gf
+        if eq_callables['hess_callables'].get('name') is None:
+            eq_callables['hess_callables'][name] = hf
+
+        # Build the callables for mass
+        # TODO: In principle, we should also check for undefs in mod.moles()
+        tup1, tup2 = zip(*[build_functions(mod.moles(el), [v.P, v.T] + variables,
+                                           include_obj=True, include_grad=True,
+                                           parameters=param_symbols)
+                           for el in pure_elements])
+        if eq_callables['massfuncs'].get('name') is None:
+            eq_callables['massfuncs'][name] = tup1
+        if eq_callables['massgradfuncs'].get('name') is None:
+            eq_callables['massgradfuncs'][name] = tup2
+
+        # creating the phase records triggers the compile
+        phase_records[name.upper()] = PhaseRecord_from_cython(comps, variables,
+                                                           np.array(dbf.phases[name].sublattices, dtype=np.float),
+                                                           param_values, eq_callables['callables'][name],
+                                                           eq_callables['grad_callables'][name], eq_callables['hess_callables'][name],
+                                                           eq_callables['massfuncs'][name], eq_callables['massgradfuncs'][name])
+
+    return eq_callables
