@@ -305,14 +305,12 @@ def eq_callables_dict(dbf, comps, phases, model=None):
     phase_records = {}
     # create models
     # starting from pycalphad
-    maximum_internal_dof = 0
     for name in phases:
         mod = models[name]
         if isinstance(mod, type):
             models[name] = mod = mod(dbf, comps, name, parameters=parameters)
         site_fracs = mod.site_fractions
         variables = sorted(site_fracs, key=str)
-        maximum_internal_dof = max(maximum_internal_dof, len(site_fracs))
         out = models[name].energy
 
         # Build the callables of the output
@@ -323,12 +321,9 @@ def eq_callables_dict(dbf, comps, phases, model=None):
         cf, gf = build_functions(out, tuple([v.P, v.T] + site_fracs),
                                  parameters=param_symbols)
         hf = None
-        if eq_callables['callables'].get('name') is None:
-            eq_callables['callables'][name] = cf
-        if eq_callables['grad_callables'].get('name') is None:
-            eq_callables['grad_callables'][name] = gf
-        if eq_callables['hess_callables'].get('name') is None:
-            eq_callables['hess_callables'][name] = hf
+        eq_callables['callables'][name] = cf
+        eq_callables['grad_callables'][name] = gf
+        eq_callables['hess_callables'][name] = hf
 
         # Build the callables for mass
         # TODO: In principle, we should also check for undefs in mod.moles()
@@ -336,10 +331,8 @@ def eq_callables_dict(dbf, comps, phases, model=None):
                                            include_obj=True, include_grad=True,
                                            parameters=param_symbols)
                            for el in pure_elements])
-        if eq_callables['massfuncs'].get('name') is None:
-            eq_callables['massfuncs'][name] = tup1
-        if eq_callables['massgradfuncs'].get('name') is None:
-            eq_callables['massgradfuncs'][name] = tup2
+        eq_callables['massfuncs'][name] = tup1
+        eq_callables['massgradfuncs'][name] = tup2
 
         # creating the phase records triggers the compile
         phase_records[name.upper()] = PhaseRecord_from_cython(comps, variables,
