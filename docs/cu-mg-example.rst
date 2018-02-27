@@ -6,7 +6,7 @@ Cu-Mg Example
 
 The Cu-Mg binary system is an interesting and simple binary subsystem for light
 metal alloys. It has been modeled in the literature by Coughanowr et al. [1]_,
-Zou and Chang [2]_ and Zhou et al. [3]_ and was featured as a case study in
+Zuo and Chang [2]_ and Zhou et al. [3]_ and was featured as a case study in
 Computational Thermodynamics The Calphad Method by Lukas, Fries, & Sundman [4]_.
 
 Here we will combine density functional theory and experimental calculations of
@@ -160,6 +160,7 @@ it to our data.
     from pycalphad import Database, variables as v
     from espei.datasets import load_datasets, recursive_glob
     from espei.plot import multiplot
+    import matplotlib.pyplot as plt
 
     # load the experimental and DFT datasets
     datasets = load_datasets(recursive_glob('input-data', '*.json'))
@@ -172,6 +173,7 @@ it to our data.
 
     # plot the phase diagram and data
     multiplot(dbf, comps, phases, conds, datasets)
+    plt.savefig('cu-mg_dft_phase_diagram.png')
 
 Which should result in the following figure
 
@@ -202,21 +204,6 @@ optimization of many parameters simultaneously is computationally intractable.
 To combat the problem of optimizing many paramters, ESPEI uses MCMC, a
 stochastic optimzation method. For more details on how MCMC is used in ESPEI,
 see the :ref:`Theory` page.
-
-For the Cu-Mg system, it has been experimentally reported that Cu has no
-solubility in Mg, so there are few measurements of solubility reported in the
-literature. In order to properly reproduce this and prevent other parameters to
-be optimized in a way that introduces solubility in the hcp phase, we have added
-the phase equilibria for the hcp phase (pink squares) to have 100% Mg (0% Cu).
-These points effectively anchor the hcp phase to have no solubility. Because
-thermodynamic databases are typically developed for pragmatic reasons, it is
-sensible to use these estimates, even for more complicated equilibria that there
-is no data available for. ESPEI allows thermodynamic database to be easily
-reoptimized with little user interaction, so more data can be added later and
-the database reoptimized at the cost of only computer time. In fact, the
-existing database from estimates can be used as a starting point, rather than
-one directly from first-principles, and the database can simply be modified to
-match any new data.
 
 Now we will use our zero phase fraction equilibria data to optimize our
 first-principles database with MCMC. The following command will take the
@@ -263,6 +250,7 @@ Finally, we can use the newly optimized database to plot the phase diagram
     from pycalphad import Database, variables as v
     from espei.datasets import load_datasets, recursive_glob
     from espei.plot import multiplot
+    import matplotlib.pyplot as plt
 
     # load the experimental and DFT datasets
     datasets = load_datasets(recursive_glob('input-data', '*.json'))
@@ -275,6 +263,8 @@ Finally, we can use the newly optimized database to plot the phase diagram
 
     # plot the phase diagram and data
     multiplot(dbf, comps, phases, conds, datasets)
+    plt.savefig('cu-mg_mcmc_phase_diagram.png')
+
 
 .. figure:: _static/cu-mg-mcmc-phase-diagram.png
     :alt: Cu-Mg phase diagram after 1000 MCMC iterations
@@ -282,6 +272,13 @@ Finally, we can use the newly optimized database to plot the phase diagram
 
     Optimized Cu-Mg phase diagram from the multi-phase fitting in ESPEI
 
+
+ESPEI allows thermodynamic database to be easily
+reoptimized with little user interaction, so more data can be added later and
+the database reoptimized at the cost of only computer time. In fact, the
+existing database from estimates can be used as a starting point, rather than
+one directly from first-principles, and the database can simply be modified to
+match any new data.
 
 References
 ==========
