@@ -429,7 +429,9 @@ def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
     """
     Returns the error from multiphase fitting as a log probability.
     """
+    starttime = time.time()
     parameters = {param_name: param for param_name, param in zip(symbols_to_fit, params)}
+    print(parameters)
     try:
         multi_phase_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                                      parameters=parameters, scheduler=scheduler,
@@ -552,11 +554,12 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
 
     # context for the log probability function
     error_context = {'comps': comps, 'dbf': dbf,
-                     'phases': phases,
+                     'phases': phases, 'phase_models': eq_callables['phase_models'],
                      'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
                      }
 
-    error_context.update(**eq_callables)
+    #error_context.update(**eq_callables)
+    error_context.update(**{'massfuncs': {}, 'massgradfuncs': {}, 'callables': {}, 'grad_callables': {}, 'hess_callables': {}})
 
     def save_sampler_state(sampler):
         if tracefile:
