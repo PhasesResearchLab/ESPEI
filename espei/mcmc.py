@@ -431,7 +431,6 @@ def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
     """
     starttime = time.time()
     parameters = {param_name: param for param_name, param in zip(symbols_to_fit, params)}
-    print(parameters)
     try:
         multi_phase_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models,
                                      parameters=parameters, scheduler=scheduler,
