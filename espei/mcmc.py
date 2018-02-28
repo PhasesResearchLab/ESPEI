@@ -541,7 +541,7 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         del dbf.symbols[x]
 
     # construct the models for each phase, substituting in the SymPy symbol to fit.
-    logging.debug('Building phase models')
+    logging.debug('Building phase models (this may take some time)')
     # 0 is placeholder value
     phases = sorted(dbf.phases.keys())
     eq_callables = eq_callables_dict(dbf, comps, phases, model=Model, param_symbols=sorted([sympy.Symbol(sym) for sym in symbols_to_fit], key=str))
