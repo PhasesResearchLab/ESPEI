@@ -252,7 +252,7 @@ def _get_pure_elements(dbf, comps):
     return pure_elements
 
 
-def eq_callables_dict(dbf, comps, phases, model=None):
+def eq_callables_dict(dbf, comps, phases, model=None, param_symbols=None):
     """
     Create a dictionary of callable dictionaries for phases in equilibrium
 
@@ -267,6 +267,8 @@ def eq_callables_dict(dbf, comps, phases, model=None):
     model : dict or type
         Dictionary of {phase_name: Model subclass} or a type corresponding to a
         Model subclass. Defaults to ``Model``.
+    param_symbols : list
+        SymPy Symbol objects that will be preserved in the callable functions.
 
     Returns
     -------
@@ -297,10 +299,8 @@ def eq_callables_dict(dbf, comps, phases, model=None):
     }
 
     models = unpack_kwarg(model, default_arg=Model)
-
-    param_symbols = database_symbols_to_fit(dbf)
-    parameters = {s: dbf.symbols[s] for s in param_symbols}
-    param_values = np.atleast_1d(np.array([z.args[0][0] for z in parameters.values()], dtype=np.float))
+    param_symbols = param_symbols if param_symbols is not None else []
+    param_values = np.zeros_like(param_symbols, dtype=np.float64)
 
     phase_records = {}
     # create models
@@ -308,7 +308,7 @@ def eq_callables_dict(dbf, comps, phases, model=None):
     for name in phases:
         mod = models[name]
         if isinstance(mod, type):
-            models[name] = mod = mod(dbf, comps, name, parameters=parameters)
+            models[name] = mod = mod(dbf, comps, name)
         site_fracs = mod.site_fractions
         variables = sorted(site_fracs, key=str)
         out = models[name].energy

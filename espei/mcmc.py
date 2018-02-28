@@ -545,7 +545,7 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
     logging.debug('Building phase models')
     # 0 is placeholder value
     phases = sorted(dbf.phases.keys())
-    eq_callables = eq_callables_dict(dbf, comps, phases, model=Model)
+    eq_callables = eq_callables_dict(dbf, comps, phases, model=Model, param_symbols=sorted([sympy.Symbol(sym) for sym in symbols_to_fit], key=str))
     # because error_context expencts 'phase_models' key, change it
     eq_callables['phase_models'] = eq_callables.pop('model')
     logging.debug('Finished building phase models')
@@ -558,8 +558,7 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
                      'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
                      }
 
-    #error_context.update(**eq_callables)
-    error_context.update(**{'massfuncs': {}, 'massgradfuncs': {}, 'callables': {}, 'grad_callables': {}, 'hess_callables': {}})
+    error_context.update(**eq_callables)
 
     def save_sampler_state(sampler):
         if tracefile:
