@@ -168,13 +168,26 @@ single_phase_json = json.loads(single_phase_data)
 def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
     """lnprob() successfully calculates the probability for equilibrium """
     datasets_db.insert(zpf_json)
-    res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf,
-                 phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
-                 datasets=datasets_db, symbols_to_fit=['VV0001'],
-                 phase_models=None,
-                 scheduler=None,)
+    from espei.utils import eq_callables_dict
+    from pycalphad import Model
+    import sympy
+    comps = ['CU','MG', 'VA']
+    phases = ['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2']
+    param = 'VV0001'
+    eq_callables = eq_callables_dict(dbf, comps, phases, model=Model, param_symbols=sorted([sympy.Symbol(sym) for sym in [param]], key=str))
+    eq_callables['phase_models'] = eq_callables.pop('model')
+    orig_val = dbf.symbols.pop(param)
+
+    res = lnprob([10], comps=comps, dbf=dbf,
+                 phases=phases,
+                 datasets=datasets_db, symbols_to_fit=[param], scheduler=None, **eq_callables)
+
+    # replace the value in the database
+    # TODO: make a fixture for this
+    dbf.symbols[param] = orig_val
+
     assert np.isreal(res)
-    assert np.isclose(res, -5740.542839073727)
+    assert np.isclose(res, -5741.61962949)
 
 
 def test_lnprob_calculates_single_phase_probability_for_success(datasets_db):
