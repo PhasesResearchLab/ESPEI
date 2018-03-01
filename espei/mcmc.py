@@ -396,13 +396,13 @@ def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None, 
 
 def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
            symbols_to_fit=None, phase_models=None, scheduler=None,
-           delayed_dbf=None, delayed_phase_models=None,):
+           ):
     """
     Returns the error from multiphase fitting as a log probability.
     """
     parameters = {param_name: param for param_name, param in zip(symbols_to_fit, params)}
     try:
-        multi_phase_error = multi_phase_fit(delayed_dbf, comps, phases, datasets, delayed_phase_models, parameters=parameters, scheduler=scheduler)
+        multi_phase_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=parameters, scheduler=scheduler)
     except (ValueError, LinAlgError) as e:
         multi_phase_error = [np.inf]
     multi_phase_error = [np.inf if np.isnan(x) else x ** 2 for x in multi_phase_error]
@@ -515,15 +515,11 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         mod = CompiledModel(dbf, comps, phase_name, parameters=OrderedDict([(sympy.Symbol(s), 0) for s in symbols_to_fit]))
         phase_models[phase_name] = mod
     logging.debug('Finished building phase models')
-    delayed_dbf = dask.delayed(dbf, pure=True)
-    delayed_phase_models = dask.delayed(phase_models, pure=True)
 
     # contect for the log probability function
     error_context = {'comps': comps, 'dbf': dbf,
-                     'delayed_dbf': delayed_dbf,
                      'phases': phases,
                      'phase_models': phase_models,
-                     'delayed_phase_models': delayed_phase_models,
                      'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
                      }
 
