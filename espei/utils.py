@@ -94,6 +94,7 @@ def optimal_parameters(trace_array, lnprob_array, kth=0):
         # if we have found the kth set of unique parameters, stop
         if unique_params_found == kth:
             return unique_params
+    return np.zeros(trace_array.shape[-1])
 
 
 def database_symbols_to_fit(dbf, symbol_regex="^V[V]?([0-9]+)$"):
