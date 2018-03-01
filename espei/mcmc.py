@@ -540,14 +540,12 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         del dbf.symbols[x]
 
     # construct the models for each phase, substituting in the SymPy symbol to fit.
-    phase_models = dict()
     logging.debug('Building phase models')
     # 0 is placeholder value
     phases = sorted(dbf.phases.keys())
-    for phase_name in phases:
-        mod = Model(dbf, comps, phase_name, parameters=OrderedDict([(sympy.Symbol(s), 0) for s in symbols_to_fit]))
-        phase_models[phase_name] = mod
     eq_callables = eq_callables_dict(dbf, comps, phases, model=Model)
+    # because error_context expencts 'phase_models' key, change it
+    eq_callables['phase_models'] = eq_callables.pop('model')
     logging.debug('Finished building phase models')
     #dbf = dask.delayed(dbf, pure=True)
     #phase_models = dask.delayed(phase_models, pure=True)
@@ -555,7 +553,6 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
     # context for the log probability function
     error_context = {'comps': comps, 'dbf': dbf,
                      'phases': phases,
-                     'phase_models': phase_models,
                      'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
                      }
 

@@ -289,8 +289,8 @@ def eq_callables_dict(dbf, comps, phases, model=None):
     pure_elements = _get_pure_elements(dbf, comps)
 
     eq_callables = {
-        'massfuncs': unpack_kwarg(None),
-        'massgradfuncs': unpack_kwarg(None),
+        'massfuncs': {},
+        'massgradfuncs': {},
         'callables': {},
         'grad_callables': {},
         'hess_callables': {},
@@ -341,4 +341,6 @@ def eq_callables_dict(dbf, comps, phases, model=None):
                                                            eq_callables['grad_callables'][name], eq_callables['hess_callables'][name],
                                                            eq_callables['massfuncs'][name], eq_callables['massgradfuncs'][name])
 
+    # finally, add the models to the eq_callables
+    eq_callables['model'] = dict(models)
     return eq_callables
