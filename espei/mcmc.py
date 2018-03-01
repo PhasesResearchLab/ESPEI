@@ -183,7 +183,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
 
 def calculate_points_array(phase_constituents, configuration, occupancies=None):
     """
-    Calculate a the points array to use in pycalphad calculate calls.
+    Calculate the points array to use in pycalphad calculate calls.
 
     Converts the configuration data (and occupancies for mixing data) into the
     points array by looking up the indices in the active phase constituents.
