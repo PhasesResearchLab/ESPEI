@@ -87,12 +87,18 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
         # Our correction can blow up if (n-k-1) = 0 and if n - 1 < k (we will actually be *lowering* the AICc)
         # So we will prevent blowing up by taking the denominator as 1/(p-n+1) for p > n - 1
         num_samples = data_quantities.size
+        print(num_samples)
+        print(num_params)
         if  (num_samples - 1) > num_params:
+            print('original correction')
             correction_denom = num_samples - num_params - 1
         elif (num_samples - 1) == num_params:
             correction_denom = 0.99
+            print('fixed correction')
         else:
+            print('inverse correction')
             correction_denom = 1 / (num_params - num_samples + 1)
+        print(correction_denom)
         correction = (2*num_params**2 + 2*num_params)/correction_denom
         aic = 2*num_params + num_samples * np.log(rss/num_samples)
         aicc = aic + correction
