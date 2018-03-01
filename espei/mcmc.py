@@ -547,8 +547,6 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
     # because error_context expencts 'phase_models' key, change it
     eq_callables['phase_models'] = eq_callables.pop('model')
     logging.debug('Finished building phase models')
-    #dbf = dask.delayed(dbf, pure=True)
-    #phase_models = dask.delayed(phase_models, pure=True)
 
     # context for the log probability function
     error_context = {'comps': comps, 'dbf': dbf,
