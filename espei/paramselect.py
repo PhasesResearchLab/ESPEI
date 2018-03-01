@@ -94,7 +94,7 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
         else:
             correction_denom = 1 / (num_params - num_samples + 1)
         correction = (2*num_params**2 + 2*num_params)/correction_denom
-        aic = 2*num_params + current_matrix.shape[-2] * np.log(rss)
+        aic = 2*num_params + num_samples * np.log(rss/num_samples)
         aicc = aic + correction
         model_scores.append(aicc)
         results[num_params - 1, :num_params] = clf.coef_
