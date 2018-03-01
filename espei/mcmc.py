@@ -348,7 +348,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
     return calculate_dict
 
 
-def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None, phase_models=None):
+def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, massfuncs=None):
     """
     Calculate the weighted single phase error in the Database
 
@@ -366,6 +366,10 @@ def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None, 
         Dictionary of symbols that will be overridden in pycalphad.calculate
     phase_models : dict
         Phase models to pass to pycalphad calculations
+    callables : dict
+        Callables to pass to pycalphad
+    massfuncs : dict
+        Callabes to pass to pycalphad
 
     Returns
     -------
@@ -416,7 +420,8 @@ def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None, 
                 calculate_dict['output'] = prop
                 params = parameters
             sample_values = calculate_dict.pop('values')
-            results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models, **calculate_dict)[calculate_dict['output']].values
+            results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models, massfuncs=massfuncs,
+                                  callables=callables, **calculate_dict)[calculate_dict['output']].values
             weight = (property_prefix_weight_factor[prop.split('_')[0]]*np.abs(np.mean(sample_values)))**(-1.0)
             error = np.sum((results-sample_values)**2) * weight
             #logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
@@ -443,8 +448,7 @@ def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
         multi_phase_error = [np.inf]
     multi_phase_error = [np.inf if np.isnan(x) else x ** 2 for x in multi_phase_error]
     multi_phase_error = -np.sum(multi_phase_error)
-
-    single_phase_error = calculate_single_phase_error(dbf, comps, phases, datasets, parameters, phase_models=phase_models)
+    single_phase_error = calculate_single_phase_error(dbf, comps, phases, datasets, parameters, phase_models=phase_models,callables=callables,massfuncs=massfuncs)
     total_error = multi_phase_error + single_phase_error
     logging.debug('Single phase error: {:0.2f}. Multi phase error: {:0.2f}. Total error: {:0.2f}'.format(single_phase_error, multi_phase_error, total_error))
     return np.array(total_error, dtype=np.float64)
