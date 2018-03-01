@@ -300,6 +300,9 @@ def eq_callables_dict(dbf, comps, phases, model=None, param_symbols=None):
 
     models = unpack_kwarg(model, default_arg=Model)
     param_symbols = param_symbols if param_symbols is not None else []
+    # wrap param symbols in Symbols if they are strings
+    if all([isinstance(sym, string_types) for sym in param_symbols]):
+        param_symbols = [Symbol(sym) for sym in param_symbols]
     param_values = np.zeros_like(param_symbols, dtype=np.float64)
 
     phase_records = {}
