@@ -79,12 +79,26 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
         # This may not exactly be the correct form for the likelihood
         # We're missing the "ridge" contribution here which could become relevant for sparse data
         rss = np.square(np.dot(current_matrix, clf.coef_) - data_quantities.astype(np.float)).sum()
-        # Compute Aikaike Information Criterion
-        # Form valid under assumption all sample variances are equal and unknown
-        score = 2*num_params + current_matrix.shape[-2] * np.log(rss)
-        model_scores.append(score)
+        # Compute the corrected Aikaike Information Criterion
+        # Form valid under assumption all sample variances are random and Gaussian, model is univariate
+        # Our model is univariate with T
+        # The correction is (2k^2 + 2k)/(n - k - 1)
+        # Our denominator for the correction must always be an integer by this equation.
+        # Our correction can blow up if (n-k-1) = 0 and if n - 1 < k (we will actually be *lowering* the AICc)
+        # So we will prevent blowing up by taking the denominator as 1/(p-n+1) for p > n - 1
+        num_samples = data_quantities.size
+        if  (num_samples - 1.0) > num_params:
+            correction_denom = num_samples - num_params - 1.0
+        elif (num_samples - 1.0) == num_params:
+            correction_denom = 0.99
+        else:
+            correction_denom = 1.0 / (num_params - num_samples + 1.0)
+        correction = (2.0*num_params**2 + 2.0*num_params)/correction_denom
+        aic = 2.0*num_params + num_samples * np.log(rss/num_samples)
+        aicc = aic + correction
+        model_scores.append(aicc)
         results[num_params - 1, :num_params] = clf.coef_
-        logging.debug('{} rss: {}, AIC: {}'.format(feature_tuple[:num_params], rss, score))
+        logging.debug('{} rss: {}, AIC: {}, AICc: {}'.format(feature_tuple[:num_params], rss, aic, aicc))
     return OrderedDict(zip(feature_tuple, results[np.argmin(model_scores), :]))
 
 
