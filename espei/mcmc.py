@@ -9,6 +9,7 @@ import numpy as np
 import tinydb
 from numpy.linalg import LinAlgError
 from pycalphad import calculate, equilibrium, Model, variables as v
+from pycalphad.core.utils import unpack_components
 import emcee
 
 from espei.utils import database_symbols_to_fit, optimal_parameters, eq_callables_dict
@@ -308,9 +309,11 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
 
     """
     # TODO: assumes T, P as conditions
+    # sublattice constituents are Species objects, so we need to be doing intersections with those
+    species_comps = unpack_components(dbf, comps)
     phase_constituents = dbf.phases[phase_name].constituents
     # phase constituents must be filtered to only active:
-    phase_constituents = [sorted(subl_constituents.intersection(set(comps))) for subl_constituents in phase_constituents]
+    phase_constituents = [[c.name for c in sorted(subl_constituents.intersection(set(species_comps)))] for subl_constituents in phase_constituents]
 
     # calculate needs points, state variable lists, and values to compare to
     calculate_dict = {
