@@ -144,9 +144,10 @@ def run_espei(run_settings):
                 cores = multiprocessing.cpu_count()
                 logging.warning("The number of cores chosen is larger than available. "
                                 "Defaulting to run on the {} available cores.".format(cores))
+            # TODO: make dask-scheduler-verbosity a YAML input so that users can debug. Should have the same log levels as verbosity
             scheduler = LocalCluster(n_workers=cores, threads_per_worker=1, processes=True, silence_logs=verbosity[output_settings['verbosity']])
             client = ImmediateClient(scheduler)
-            #client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']])
+            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']])
             logging.info("Running with dask scheduler: %s [%s cores]" % (scheduler, sum(client.ncores().values())))
             logging.info("Full dask scheduler info {}".format(client.scheduler_info()))
             try:
