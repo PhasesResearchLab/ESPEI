@@ -135,6 +135,10 @@ def run_espei(run_settings):
             logging.info("Using MPIPool on {} MPI ranks".format(client.size))
         elif mcmc_settings['scheduler'] == 'dask':
             from distributed import LocalCluster
+            import distributed
+            # set work-stealing to default regardless of the user's choice.
+            # work stealing seems to break dask
+            distributed.config['work-stealing'] = False
             cores = mcmc_settings.get('cores', multiprocessing.cpu_count())
             if (cores > multiprocessing.cpu_count()):
                 cores = multiprocessing.cpu_count()
