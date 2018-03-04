@@ -1,6 +1,6 @@
 """Module for running MCMC in ESPEI"""
 
-import textwrap, time, sys, operator, logging, itertools
+import textwrap, time, sys, operator, logging, itertools, time
 from collections import OrderedDict, defaultdict
 
 import dask
@@ -437,6 +437,7 @@ def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
     """
     Returns the error from multiphase fitting as a log probability.
     """
+    starttime = time.time()
     parameters = {param_name: param for param_name, param in zip(symbols_to_fit, params)}
     try:
         multi_phase_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models,
@@ -451,6 +452,7 @@ def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
     single_phase_error = calculate_single_phase_error(dbf, comps, phases, datasets, parameters, phase_models=phase_models,callables=callables,massfuncs=massfuncs)
     total_error = multi_phase_error + single_phase_error
     logging.debug('Single phase error: {:0.2f}. Multi phase error: {:0.2f}. Total error: {:0.2f}'.format(single_phase_error, multi_phase_error, total_error))
+    logging.debug('lnprob time: {}'.format(time.time() - starttime))
     return np.array(total_error, dtype=np.float64)
 
 
