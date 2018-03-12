@@ -146,26 +146,59 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
                     massfuncs=None, massgradfuncs=None,
                     callables=None, grad_callables=None, hess_callables=None,
                     ):
-    scheduler = scheduler or dask.local
-    # TODO: support distributed schedulers for multi_phase_fit.
-    # This can be done if the scheduler passed is a distributed.worker_client
-    if scheduler is not dask.local:
-        raise NotImplementedError('Schedulers other than dask.local are not currently supported for multiphase fitting.')
+    """
+    Calculate error due to phase equilibria data
+
+    Parameters
+    ----------
+    dbf : pycalphad.Database
+        Database to consider
+    comps : list
+        List of active component names
+    phases : list
+        List of phases to consider
+    datasets : espei.utils.PickleableTinyDB
+        Datasets that contain single phase data
+    phase_models : dict
+        Phase models to pass to pycalphad calculations
+    parameters : dict
+        Dictionary of symbols that will be overridden in pycalphad.equilibrium
+    scheduler : class
+        Scheduler implementing a get_sync method
+    massfuncs : dict
+        Callables of mass derivatives to pass to pycalphad
+    massgradfuncs : dict
+        Gradient callables of mass derivatives to pass to pycalphad
+    callables : dict
+        Callables to pass to pycalphad
+    grad_callables : dict
+        Gradient callables to pass to pycalphad
+    hess_callables : dict
+        Hessian callables to pass to pycalphad
+
+    Returns
+    -------
+    list
+        List of errors from phase equilibria data
+
+    """
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
 
-    def safe_get(itms, idxx):
+    def safe_index(itms, idxx):
         try:
             return itms[idxx]
         except IndexError:
             return None
 
-    fit_jobs = []
+    errors = []
     for data in desired_data:
         payload = data['values']
         conditions = data['conditions']
         data_comps = list(set(data['components']).union({'VA'}))
+        # create a dictionary of each set of phases containing a list of individual points on the tieline
+        # individual tieline points are tuples of (conditions, {composition dictionaries})
         phase_regions = defaultdict(lambda: list())
         # TODO: Fix to only include equilibria listed in 'phases'
         for idx, p in enumerate(payload):
@@ -175,7 +208,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
                 continue
             # Need to sort 'p' here so we have the sorted ordering used in 'phase_key'
             # rp[3] optionally contains additional flags, e.g., "disordered", to help the solver
-            comp_dicts = [(dict(zip([v.X(x.upper()) for x in rp[1]], rp[2])), safe_get(rp, 3))
+            comp_dicts = [(dict(zip([v.X(x.upper()) for x in rp[1]], rp[2])), safe_index(rp, 3))
                           for rp in sorted(p, key=operator.itemgetter(0))]
             cur_conds = {}
             for key, value in conditions.items():
@@ -184,12 +217,11 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
                     value = value[idx]
                 cur_conds[getattr(v, key)] = float(value)
             phase_regions[phase_key].append((cur_conds, comp_dicts))
+        # for each set of phases in equilibrium and their individual tieline points
         for region, region_eq in phase_regions.items():
-            for req in region_eq:
-                # We are now considering a particular tie region
-                current_statevars, comp_dicts = req
-                region_chemical_potentials = \
-                    dask.delayed(estimate_hyperplane)(dbf, data_comps, phases, current_statevars, comp_dicts,
+            # for each tieline region conditions and compositions
+            for current_statevars, comp_dicts in region_eq:
+                region_chemical_potentials = estimate_hyperplane(dbf, data_comps, phases, current_statevars, comp_dicts,
                                                       phase_models, parameters, massfuncs=massfuncs, massgradfuncs=massgradfuncs,
                                                       callables=callables, grad_callables=grad_callables, hess_callables=hess_callables,)
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
@@ -201,11 +233,9 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
                         if val is None:
                             cond_dict[key] = np.nan
                     cond_dict.update(current_statevars)
-                    error = dask.delayed(tieline_error)(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
+                    errors.append(tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
                                                         phase_models, parameters, massfuncs=massfuncs, massgradfuncs=massgradfuncs,
-                                                        callables=callables, grad_callables=grad_callables, hess_callables=hess_callables,)
-                    fit_jobs.append(error)
-    errors = dask.compute(*fit_jobs, get=scheduler.get_sync)
+                                                        callables=callables, grad_callables=grad_callables, hess_callables=hess_callables,))
     return errors
 
 
