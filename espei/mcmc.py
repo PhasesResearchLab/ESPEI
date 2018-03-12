@@ -21,6 +21,15 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
                         callables=None, grad_callables=None,
                         hess_callables=None,
                         ):
+    """
+    Calculate the chemical potentials for a hyperplane, one vertex at a time
+
+    Notes
+    -----
+    This takes just *one* set of phase equilibria, e.g. a dataset point of
+    [['FCC_A1', ['CU'], [0.1]], ['LAVES_C15', ['CU'], [0.3]]]
+    and calculates the chemical potentials given all the phases possible at the given compositions.
+    """
     region_chemical_potentials = []
     parameters = OrderedDict(sorted(parameters.items(), key=str))
     for cond_dict, phase_flag in comp_dicts:
@@ -221,6 +230,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
         for region, region_eq in phase_regions.items():
             # for each tieline region conditions and compositions
             for current_statevars, comp_dicts in region_eq:
+                # a "region" is a set of phase equilibria
                 region_chemical_potentials = estimate_hyperplane(dbf, data_comps, phases, current_statevars, comp_dicts,
                                                       phase_models, parameters, massfuncs=massfuncs, massgradfuncs=massgradfuncs,
                                                       callables=callables, grad_callables=grad_callables, hess_callables=hess_callables,)
