@@ -47,6 +47,9 @@ Therefore it is suggested to install ESPEI from conda-forge.
 
     conda install -c pycalphad -c msys2 -c conda-forge --yes espei
 
+After installation, you must turn off dask's work stealing.
+Change the work stealing setting to ``work-stealing: False`` in ``~/.dask/config.yaml``.
+See the `dask-distributed documentation <https://distributed.readthedocs.io/en/latest/configuration.html>`_ for more.
 
 PyPI
 ----
@@ -59,6 +62,9 @@ dependency of `Ipopt <https://projects.coin-or.org/Ipopt>`_.
 
     pip install espei
 
+After installation, you must turn off dask's work stealing.
+Change the work stealing setting to ``work-stealing: False`` in ``~/.dask/config.yaml``.
+See the `dask-distributed documentation <https://distributed.readthedocs.io/en/latest/configuration.html>`_ for more.
 
 Development versions
 --------------------
@@ -77,6 +83,11 @@ ESPEI package, and replaces it with the package from GitHub.
     pip install -e .
 
 Upgrading ESPEI later requires you to run ``git pull`` in this directory.
+
+After installation, you must turn off dask's work stealing.
+Change the work stealing setting to ``work-stealing: False`` in ``~/.dask/config.yaml``.
+See the `dask-distributed documentation <https://distributed.readthedocs.io/en/latest/configuration.html>`_ for more.
+
 
 Usage
 =====
@@ -197,10 +208,7 @@ Finally, you can use py:mod:`espei.plot` functions such as ``multiplot`` to plot
 Q: Can I run ESPEI on a supercomputer supporting MPI?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A: Yes! ESPEI has MPI support.
-To use ESPEI with MPI, you simply call ESPEI in the same way as above with `mpirun` or whichever MPI software you use.
-You also must indicate to ESPEI that it should create an MPI scheduler by setting the input option ``scheduler: MPIPool`` in the ``mcmc`` heading.
-Be aware that ``mpi4py`` must be compiled with an MPI-enabled compiler, see the `mpi4py installation instructions <https://mpi4py.readthedocs.io/en/stable/install.html>`_.
+A: Yes! ESPEI has MPI support. See the :ref:`MPI` page for more details.
 
 Getting Help
 ============
@@ -242,6 +250,7 @@ ESPEI is MIT licensed. See LICENSE.
 
    writing_input
    theory
+   mpi
    api/modules
 
 .. toctree::

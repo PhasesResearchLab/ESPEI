@@ -211,19 +211,19 @@ scheduler
 ---------
 
 :type: string
-:default: emcee
-:options: emcee | MPIPool | dask | None
+:default: dask
+:options: dask | None | JSON file
 
 Which scheduler to use for parallelization.
-You can choose from either `dask`, `emcee`, `MPIPool` or `None`.
+You can choose from either `dask`, `None`, or pass the path to a JSON scheduler file created by dask-distributed.
 
-Choosing dask or emcee allows for the choice of cores used through the cores key.
-
-Choosing MPIPool will allow you to set the number of cores directly using MPI.
+Choosing dask allows for the choice of cores used through the cores key.
 
 Choosing None will result in no parallel scheduler being used. This is useful for debugging.
 
-It is recommended to use MPIPool if you will be running jobs on supercomputing clusters.
+Passing the path to a JSON scheduler file will use the resources set up by the scheduler.
+JSON file schedulers are most useful because schedulers can be started on MPI clusters using ``dask-mpi`` command.
+See :ref:`MPI` for more information.
 
 input_db
 --------
