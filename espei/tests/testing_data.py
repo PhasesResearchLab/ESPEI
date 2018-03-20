@@ -1,5 +1,7 @@
 """Databases and datasets used in common tests"""
 
+import json
+
 CU_MG_TDB = """$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 $ Date: 2017-09-27 21:10
 $ Components: CU, MG, VA
@@ -118,3 +120,33 @@ PARAMETER L(LIQUID,CU,MG;2) 1 VV0015#; 10000 N !
 PARAMETER L(LIQUID,CU,MG;3) 1 VV0014#; 10000 N !
 
 """
+
+
+CU_MG_EXP_ACTIVITY = json.loads("""{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["LIQUID"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": [1],
+    "sublattice_configurations": [["CU", "MG"]]
+  },
+  "reference_state": {
+    "phases": ["LIQUID"],
+    "conditions": {
+      "P": 101325,
+      "T": 1200,
+      "X_CU": 0.0
+    }
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 1200,
+    "X_CU": [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0]
+  },
+
+  "output": "ACR_MG",
+    "values":   [[[0.0057,0.0264,0.0825,0.1812,0.2645,0.4374,0.5852,0.7296,0.882,1.0]]],
+  "reference": "garg1973thermodynamic",
+  "comment": "Digitized Figure "
+}
+""")
