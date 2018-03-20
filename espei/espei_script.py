@@ -35,6 +35,22 @@ parser.add_argument(
     default=None,
     help="Check input datasets at the path. Does not run ESPEI.")
 
+
+def _raise_dask_work_stealing():
+    """
+    Raise is work stealing is turn on in dask
+
+    Raises
+    -------
+    ValueError
+
+    """
+    import distributed
+    has_work_stealing = distributed.config.get('work-stealing', True)
+    if has_work_stealing:
+        raise ValueError("The parameter 'work-stealing' is on in dask. Enabling this parameter causes some instability. Set 'work-stealing: False' in your '~/.dask/config.yaml' file. See http://distributed.readthedocs.io/en/latest/configuration.html for more.")
+
+
 def get_run_settings(input_dict):
     """
     Validate settings from a dict of possible input.
@@ -120,26 +136,15 @@ def run_espei(run_settings):
             raise OSError('Probfile "{}" exists and would be overwritten by a new run. Use the ``output.probfile`` setting to set a different name.'.format(probfile))
 
         # scheduler setup
-        if mcmc_settings['scheduler'] == 'MPIPool':
-            # check that cores is not an input setting
-            if mcmc_settings.get('cores') != None:
-                logging.warning("MPI does not take the cores input setting.")
-            from emcee.utils import MPIPool
-            # code recommended by emcee: if not master, wait for instructions then exit
-            client = MPIPool()
-            if not client.is_master():
-                logging.debug(
-                    'MPIPool is not master. Waiting for instructions...')
-                client.wait()
-                sys.exit(0)
-            logging.info("Using MPIPool on {} MPI ranks".format(client.size))
-        elif mcmc_settings['scheduler'] == 'dask':
+        if mcmc_settings['scheduler'] == 'dask':
+            _raise_dask_work_stealing()  # check for work-stealing
             from distributed import LocalCluster
             cores = mcmc_settings.get('cores', multiprocessing.cpu_count())
             if (cores > multiprocessing.cpu_count()):
                 cores = multiprocessing.cpu_count()
                 logging.warning("The number of cores chosen is larger than available. "
                                 "Defaulting to run on the {} available cores.".format(cores))
+            # TODO: make dask-scheduler-verbosity a YAML input so that users can debug. Should have the same log levels as verbosity
             scheduler = LocalCluster(n_workers=cores, threads_per_worker=1, processes=True)
             client = ImmediateClient(scheduler)
             client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']])
@@ -150,18 +155,14 @@ def run_espei(run_settings):
                         client.scheduler_info()['services']['bokeh']))
             except KeyError:
                 logging.info("Install bokeh to use the dask bokeh server.")
-        elif mcmc_settings['scheduler'] == 'emcee':
-            from emcee.interruptible_pool import InterruptiblePool
-            cores = mcmc_settings.get('cores', multiprocessing.cpu_count())
-            if (cores > multiprocessing.cpu_count()):
-                cores = multiprocessing.cpu_count()
-                logging.warning("The number of cores chosen is larger than available. "
-                                "Defaulting to run on the {} available cores.".format(cores))
-            client = InterruptiblePool(processes=cores)
-            logging.info("Using multiprocessing on {} cores".format(cores))
         elif mcmc_settings['scheduler'] == 'None':
             client = None
             logging.info("Not using a parallel scheduler. ESPEI is running MCMC on a single core.")
+        else: # we were passed a scheduler file name
+            _raise_dask_work_stealing()  # check for work-stealing
+            client = ImmediateClient(scheduler_file=mcmc_settings['scheduler'])
+            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']])
+            logging.info("Running with dask scheduler: %s [%s cores]" % (client.scheduler, sum(client.ncores().values())))
 
         # get a Database
         if mcmc_settings.get('input_db'):

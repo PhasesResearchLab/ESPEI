@@ -4,11 +4,14 @@ Test espei.utils classes and functions.
 import pickle
 
 from tinydb import where
+from pycalphad import Database
 from espei.utils import ImmediateClient, PickleableTinyDB, MemoryStorage, \
-    flexible_open_string, add_bibtex_to_bib_database, bib_marker_map
+    flexible_open_string, add_bibtex_to_bib_database, bib_marker_map, \
+    eq_callables_dict
 
 import pytest
 from espei.tests.fixtures import datasets_db, tmp_file
+from espei.tests.testing_data import CU_MG_TDB
 
 MULTILINE_HIPSTER_IPSUM = """Lorem ipsum dolor amet wayfarers kale chips chillwave
 adaptogen schlitz lo-fi jianbing ennui occupy pabst health goth chicharrones.
@@ -98,3 +101,18 @@ def test_bib_marker_map():
         }
     }
     assert EXEMPLAR_DICT == marker_dict
+
+
+def test_sympy_build_functions_can_be_pickled():
+    """Wrapped, compiled code from build_functions should be pickleable"""
+    dbf = Database(CU_MG_TDB)
+    callables = eq_callables_dict(dbf, ['CU', 'MG', 'VA'], ['LAVES_C15'], param_symbols=list(dbf.symbols.keys()))
+    pickle.dumps(callables)
+
+
+def test_sympy_build_functions_can_be_cloudpickled():
+    """Wrapped, compiled code from build_functions should be pickleable by cloudpickle"""
+    dbf = Database(CU_MG_TDB)
+    callables = eq_callables_dict(dbf, ['CU', 'MG', 'VA'], ['LAVES_C15'], param_symbols=list(dbf.symbols.keys()))
+    import cloudpickle
+    cloudpickle.dumps(callables)

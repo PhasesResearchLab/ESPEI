@@ -1,6 +1,6 @@
 """Module for running MCMC in ESPEI"""
 
-import textwrap, time, sys, operator, logging, itertools
+import textwrap, time, sys, operator, logging, itertools, time
 from collections import OrderedDict, defaultdict
 
 import dask
@@ -8,14 +8,28 @@ import sympy
 import numpy as np
 import tinydb
 from numpy.linalg import LinAlgError
-from pycalphad import calculate, equilibrium, CompiledModel, variables as v
+from pycalphad import calculate, equilibrium, Model, variables as v
+from pycalphad.core.utils import unpack_components
 import emcee
 
-from espei.utils import database_symbols_to_fit, optimal_parameters
+from espei.utils import database_symbols_to_fit, optimal_parameters, eq_callables_dict
 from espei.core_utils import ravel_conditions
 
 
-def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters):
+def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters,
+                        massfuncs=None, massgradfuncs=None,
+                        callables=None, grad_callables=None,
+                        hess_callables=None,
+                        ):
+    """
+    Calculate the chemical potentials for a hyperplane, one vertex at a time
+
+    Notes
+    -----
+    This takes just *one* set of phase equilibria, e.g. a dataset point of
+    [['FCC_A1', ['CU'], [0.1]], ['LAVES_C15', ['CU'], [0.3]]]
+    and calculates the chemical potentials given all the phases possible at the given compositions.
+    """
     region_chemical_potentials = []
     parameters = OrderedDict(sorted(parameters.items(), key=str))
     for cond_dict, phase_flag in comp_dicts:
@@ -31,7 +45,13 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
             multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, verbose=False,
-                                       model=phase_models, scheduler=dask.local.get_sync, parameters=parameters)
+                                       model=phase_models, scheduler=dask.local.get_sync, parameters=parameters,
+                                       massfuncs=massfuncs,
+                                       massgradfuncs=massgradfuncs,
+                                       callables=callables,
+                                       grad_callables=grad_callables,
+                                       hess_callables=hess_callables,
+                                       )
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
             num_phases = len(np.squeeze(multi_eqdata['Phase'].values != ''))
@@ -45,12 +65,17 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
 
 
 def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
-                  phase_models, parameters, debug_mode=False):
+                  phase_models, parameters, debug_mode=False,
+                  massfuncs=None, massgradfuncs=None,
+                  callables=None, grad_callables=None, hess_callables=None,
+                  ):
     if np.any(np.isnan(list(cond_dict.values()))):
         # We don't actually know the phase composition here, so we estimate it
         single_eqdata = calculate(dbf, comps, [current_phase],
                                   T=cond_dict[v.T], P=cond_dict[v.P],
-                                  model=phase_models, parameters=parameters, pdens=100)
+                                  model=phase_models, parameters=parameters, pdens=100,
+                                  massfuncs=massfuncs, callables=callables,
+                                  )
         driving_force = np.multiply(region_chemical_potentials,
                                     single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
         error = float(driving_force.max())
@@ -75,7 +100,8 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
             dof_idx += len(dof)
         single_eqdata = calculate(dbf, comps, [current_phase],
                                   T=cond_dict[v.T], P=cond_dict[v.P], points=desired_sitefracs,
-                                  model=phase_models, parameters=parameters)
+                                  model=phase_models, parameters=parameters, massfuncs=massfuncs,
+                                  callables=callables,)
         driving_force = np.multiply(region_chemical_potentials,
                                     single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
         error = float(np.squeeze(driving_force))
@@ -83,7 +109,13 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
         # Extract energies from single-phase calculations
         single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, verbose=False,
                                     model=phase_models,
-                                    scheduler=dask.local.get_sync, parameters=parameters)
+                                    scheduler=dask.local.get_sync, parameters=parameters,
+                                    massfuncs=massfuncs,
+                                    massgradfuncs=massgradfuncs,
+                                    callables=callables,
+                                    grad_callables=grad_callables,
+                                    hess_callables=hess_callables,
+                                    )
         if np.all(np.isnan(single_eqdata['NP'].values)):
             error_time = time.time()
             template_error = """
@@ -119,27 +151,63 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
     return error
 
 
-def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None, scheduler=None):
-    scheduler = scheduler or dask.local
-    # TODO: support distributed schedulers for multi_phase_fit.
-    # This can be done if the scheduler passed is a distributed.worker_client
-    if scheduler is not dask.local:
-        raise NotImplementedError('Schedulers other than dask.local are not currently supported for multiphase fitting.')
+def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None, scheduler=None,
+                    massfuncs=None, massgradfuncs=None,
+                    callables=None, grad_callables=None, hess_callables=None,
+                    ):
+    """
+    Calculate error due to phase equilibria data
+
+    Parameters
+    ----------
+    dbf : pycalphad.Database
+        Database to consider
+    comps : list
+        List of active component names
+    phases : list
+        List of phases to consider
+    datasets : espei.utils.PickleableTinyDB
+        Datasets that contain single phase data
+    phase_models : dict
+        Phase models to pass to pycalphad calculations
+    parameters : dict
+        Dictionary of symbols that will be overridden in pycalphad.equilibrium
+    scheduler : class
+        Scheduler implementing a get_sync method
+    massfuncs : dict
+        Callables of mass derivatives to pass to pycalphad
+    massgradfuncs : dict
+        Gradient callables of mass derivatives to pass to pycalphad
+    callables : dict
+        Callables to pass to pycalphad
+    grad_callables : dict
+        Gradient callables to pass to pycalphad
+    hess_callables : dict
+        Hessian callables to pass to pycalphad
+
+    Returns
+    -------
+    list
+        List of errors from phase equilibria data
+
+    """
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
 
-    def safe_get(itms, idxx):
+    def safe_index(itms, idxx):
         try:
             return itms[idxx]
         except IndexError:
             return None
 
-    fit_jobs = []
+    errors = []
     for data in desired_data:
         payload = data['values']
         conditions = data['conditions']
         data_comps = list(set(data['components']).union({'VA'}))
+        # create a dictionary of each set of phases containing a list of individual points on the tieline
+        # individual tieline points are tuples of (conditions, {composition dictionaries})
         phase_regions = defaultdict(lambda: list())
         # TODO: Fix to only include equilibria listed in 'phases'
         for idx, p in enumerate(payload):
@@ -149,7 +217,7 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
                 continue
             # Need to sort 'p' here so we have the sorted ordering used in 'phase_key'
             # rp[3] optionally contains additional flags, e.g., "disordered", to help the solver
-            comp_dicts = [(dict(zip([v.X(x.upper()) for x in rp[1]], rp[2])), safe_get(rp, 3))
+            comp_dicts = [(dict(zip([v.X(x.upper()) for x in rp[1]], rp[2])), safe_index(rp, 3))
                           for rp in sorted(p, key=operator.itemgetter(0))]
             cur_conds = {}
             for key, value in conditions.items():
@@ -158,13 +226,14 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
                     value = value[idx]
                 cur_conds[getattr(v, key)] = float(value)
             phase_regions[phase_key].append((cur_conds, comp_dicts))
+        # for each set of phases in equilibrium and their individual tieline points
         for region, region_eq in phase_regions.items():
-            for req in region_eq:
-                # We are now considering a particular tie region
-                current_statevars, comp_dicts = req
-                region_chemical_potentials = \
-                    dask.delayed(estimate_hyperplane)(dbf, data_comps, phases, current_statevars, comp_dicts,
-                                                      phase_models, parameters)
+            # for each tieline region conditions and compositions
+            for current_statevars, comp_dicts in region_eq:
+                # a "region" is a set of phase equilibria
+                region_chemical_potentials = estimate_hyperplane(dbf, data_comps, phases, current_statevars, comp_dicts,
+                                                      phase_models, parameters, massfuncs=massfuncs, massgradfuncs=massgradfuncs,
+                                                      callables=callables, grad_callables=grad_callables, hess_callables=hess_callables,)
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
                 for current_phase, cond_dict in zip(region, comp_dicts):
                     # TODO: Messy unpacking
@@ -174,10 +243,9 @@ def multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=None,
                         if val is None:
                             cond_dict[key] = np.nan
                     cond_dict.update(current_statevars)
-                    error = dask.delayed(tieline_error)(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
-                                                        phase_models, parameters)
-                    fit_jobs.append(error)
-    errors = dask.compute(*fit_jobs, get=scheduler.get_sync)
+                    errors.append(tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
+                                                        phase_models, parameters, massfuncs=massfuncs, massgradfuncs=massgradfuncs,
+                                                        callables=callables, grad_callables=grad_callables, hess_callables=hess_callables,))
     return errors
 
 
@@ -281,9 +349,11 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
 
     """
     # TODO: assumes T, P as conditions
+    # sublattice constituents are Species objects, so we need to be doing intersections with those
+    species_comps = unpack_components(dbf, comps)
     phase_constituents = dbf.phases[phase_name].constituents
     # phase constituents must be filtered to only active:
-    phase_constituents = [sorted(subl_constituents.intersection(set(comps))) for subl_constituents in phase_constituents]
+    phase_constituents = [[c.name for c in sorted(subl_constituents.intersection(set(species_comps)))] for subl_constituents in phase_constituents]
 
     # calculate needs points, state variable lists, and values to compare to
     calculate_dict = {
@@ -318,7 +388,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
     return calculate_dict
 
 
-def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None, phase_models=None):
+def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, massfuncs=None):
     """
     Calculate the weighted single phase error in the Database
 
@@ -336,6 +406,10 @@ def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None, 
         Dictionary of symbols that will be overridden in pycalphad.calculate
     phase_models : dict
         Phase models to pass to pycalphad calculations
+    callables : dict
+        Callables to pass to pycalphad
+    massfuncs : dict
+        Callabes to pass to pycalphad
 
     Returns
     -------
@@ -386,7 +460,8 @@ def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None, 
                 calculate_dict['output'] = prop
                 params = parameters
             sample_values = calculate_dict.pop('values')
-            results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models, **calculate_dict)[calculate_dict['output']].values
+            results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models, massfuncs=massfuncs,
+                                  callables=callables, **calculate_dict)[calculate_dict['output']].values
             weight = (property_prefix_weight_factor[prop.split('_')[0]]*np.abs(np.mean(sample_values)))**(-1.0)
             error = np.sum((results-sample_values)**2) * weight
             #logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
@@ -396,21 +471,28 @@ def calculate_single_phase_error(dbf, comps, phases, datasets, parameters=None, 
 
 def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
            symbols_to_fit=None, phase_models=None, scheduler=None,
+           massfuncs=None, massgradfuncs=None,
+           callables=None, grad_callables=None, hess_callables=None,
            ):
     """
     Returns the error from multiphase fitting as a log probability.
     """
+    starttime = time.time()
     parameters = {param_name: param for param_name, param in zip(symbols_to_fit, params)}
     try:
-        multi_phase_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models, parameters=parameters, scheduler=scheduler)
+        multi_phase_error = multi_phase_fit(dbf, comps, phases, datasets, phase_models,
+                                     parameters=parameters, scheduler=scheduler,
+                                     massfuncs=massfuncs, massgradfuncs=massgradfuncs,
+                                     callables=callables, grad_callables=grad_callables, hess_callables=hess_callables,
+                                     )
     except (ValueError, LinAlgError) as e:
         multi_phase_error = [np.inf]
     multi_phase_error = [np.inf if np.isnan(x) else x ** 2 for x in multi_phase_error]
     multi_phase_error = -np.sum(multi_phase_error)
-
-    single_phase_error = calculate_single_phase_error(dbf, comps, phases, datasets, parameters, phase_models=phase_models)
+    single_phase_error = calculate_single_phase_error(dbf, comps, phases, datasets, parameters, phase_models=phase_models,callables=callables,massfuncs=massfuncs)
     total_error = multi_phase_error + single_phase_error
     logging.debug('Single phase error: {:0.2f}. Multi phase error: {:0.2f}. Total error: {:0.2f}'.format(single_phase_error, multi_phase_error, total_error))
+    logging.debug('lnprob time: {}'.format(time.time() - starttime))
     return np.array(total_error, dtype=np.float64)
 
 
@@ -507,21 +589,21 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         del dbf.symbols[x]
 
     # construct the models for each phase, substituting in the SymPy symbol to fit.
-    phase_models = dict()
-    logging.debug('Building phase models')
+    logging.debug('Building phase models (this may take some time)')
     # 0 is placeholder value
     phases = sorted(dbf.phases.keys())
-    for phase_name in phases:
-        mod = CompiledModel(dbf, comps, phase_name, parameters=OrderedDict([(sympy.Symbol(s), 0) for s in symbols_to_fit]))
-        phase_models[phase_name] = mod
+    eq_callables = eq_callables_dict(dbf, comps, phases, model=Model, param_symbols=sorted([sympy.Symbol(sym) for sym in symbols_to_fit], key=str))
+    # because error_context expencts 'phase_models' key, change it
+    eq_callables['phase_models'] = eq_callables.pop('model')
     logging.debug('Finished building phase models')
 
-    # contect for the log probability function
+    # context for the log probability function
     error_context = {'comps': comps, 'dbf': dbf,
-                     'phases': phases,
-                     'phase_models': phase_models,
+                     'phases': phases, 'phase_models': eq_callables['phase_models'],
                      'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
                      }
+
+    error_context.update(**eq_callables)
 
     def save_sampler_state(sampler):
         if tracefile:
