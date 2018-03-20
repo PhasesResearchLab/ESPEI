@@ -1,6 +1,6 @@
 """Databases and datasets used in common tests"""
 
-import json
+import yaml
 
 CU_MG_TDB = """$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 $ Date: 2017-09-27 21:10
@@ -122,7 +122,7 @@ PARAMETER L(LIQUID,CU,MG;3) 1 VV0014#; 10000 N !
 """
 
 
-CU_MG_EXP_ACTIVITY = json.loads("""{
+CU_MG_EXP_ACTIVITY = yaml.load("""{
   "components": ["CU", "MG", "VA"],
   "phases": ["LIQUID"],
   "solver": {

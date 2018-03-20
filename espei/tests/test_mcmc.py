@@ -1,5 +1,5 @@
 import mock
-import json
+import yaml
 import numpy as np
 from numpy.linalg import LinAlgError
 from pycalphad import Database
@@ -26,7 +26,7 @@ zpf_data = """{
     "reference": "Sahmen1908"
 }
 """
-zpf_json = json.loads(zpf_data)
+zpf_json = yaml.load(zpf_data)
 
 single_phase_data = """
 {
@@ -46,7 +46,7 @@ single_phase_data = """
     "values": [[[-1000]]]
 }
 """
-single_phase_json = json.loads(single_phase_data)
+single_phase_json = yaml.load(single_phase_data)
 
 def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
     """lnprob() successfully calculates the probability for equilibrium """
