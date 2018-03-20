@@ -92,6 +92,14 @@ Multiple phases can exist with aliases to the same phase, e.g. ``FCC_L12`` and `
     }
 
 
+Units
+=====
+
+- Energies are in ``J/mol-atom`` (and the derivatives follow)
+- All compositions are mole fractions
+- Temperatures are in Kelvin
+- Pressures in Pascal
+
 Single-phase Data
 =================
 
@@ -240,3 +248,39 @@ Note that for higher-order systems the component names and compositions are list
       "reference": "37ALE"
     }
 
+Activity Data
+=============
+
+Activity data is very similar to thermochemical data, except we must enter a reference state.
+Another minor detail is that that non-endmember compositions must be represented by composition conditions rather than as sublattice occupancies because it's the result of equilibrium calculations where we cannot know the sublattice occupancies.
+An example for Cu-Mg activties follows, with data digitized from S.P. Garg, Y.J. Bhatt, C. V. Sundaram, Thermodynamic study of liquid Cu-Mg alloys by vapor pressure measurements, Metall. Trans. 4 (1973) 283–289. doi:10.1007/BF02649628.
+
+.. code-block:: JSON
+
+    {
+      "components": ["CU", "MG", "VA"],
+      "phases": ["LIQUID"],
+      "solver": {
+        "mode": "manual",
+        "sublattice_site_ratios": [1],
+        "sublattice_configurations": [["CU", "MG"]]
+      },
+      "reference_state": {
+        "phases": ["LIQUID"],
+        "conditions": {
+          "P": 101325,
+          "T": 1200,
+          "X_CU": 0.0
+        }
+      },
+      "conditions": {
+        "P": 101325,
+        "T": 1200,
+        "X_CU": [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0]
+      },
+
+      "output": "ACR_MG",
+        "values":   [[[0.0057,0.0264,0.0825,0.1812,0.2645,0.4374,0.5852,0.7296,0.882,1.0]]],
+      "reference": "garg1973thermodynamic",
+      "comment": "Digitized Figure 3 and converted from activity coefficients."
+    }
