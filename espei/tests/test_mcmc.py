@@ -14,14 +14,14 @@ zpf_data = """{
     "components": ["CU", "MG", "VA"],
     "phases": ["LIQUID", "FCC_A1"],
     "conditions": {
-	      "P": 101325,
-	      "T": [1337.97, 1262.238]
+      "P": 101325,
+      "T": [1337.97, 1262.238]
     },
     "broadcast_conditions": false,
     "output": "ZPF",
     "values":   [
         [["LIQUID", ["MG"], [0.0246992]], ["FCC_A1", ["MG"],  [null]]],
-	    [["LIQUID", ["MG"], [0.0712664]], ["FCC_A1", ["MG"],  [null]]]
+        [["LIQUID", ["MG"], [0.0712664]], ["FCC_A1", ["MG"],  [null]]]
     ],
     "reference": "Sahmen1908"
 }
@@ -48,13 +48,14 @@ single_phase_data = """
 """
 single_phase_json = yaml.load(single_phase_data)
 
+
 def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
     """lnprob() successfully calculates the probability for equilibrium """
     datasets_db.insert(zpf_json)
     from espei.utils import eq_callables_dict
     from pycalphad import Model
     import sympy
-    comps = ['CU','MG', 'VA']
+    comps = ['CU', 'MG', 'VA']
     phases = ['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2']
     param = 'VV0001'
     eq_callables = eq_callables_dict(dbf, comps, phases, model=Model, param_symbols=sorted([sympy.Symbol(sym) for sym in [param]], key=str))
@@ -76,13 +77,14 @@ def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
 def test_lnprob_calculates_single_phase_probability_for_success(datasets_db):
     """lnprob() succesfully calculates the probability from single phase data"""
     datasets_db.insert(single_phase_json)
-    res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf,
+    res = lnprob([10], comps=['CU', 'MG', 'VA'], dbf=dbf,
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
                  datasets=datasets_db, symbols_to_fit=['VV0001'],
                  phase_models=None,
-                 scheduler=None,)
+                 scheduler=None, )
     assert np.isreal(res)
     assert np.isclose(res, -19859.38)
+
 
 def _eq_LinAlgError(*args, **kwargs):
     raise LinAlgError()
@@ -96,7 +98,7 @@ def _eq_ValueError(*args, **kwargs):
 def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
     """lnprob() should catch LinAlgError raised by equilibrium and return -np.inf"""
     datasets_db.insert(zpf_json)
-    res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf,
+    res = lnprob([10], comps=['CU', 'MG', 'VA'], dbf=dbf,
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
                  datasets=datasets_db, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)
     assert np.isneginf(res)
@@ -106,10 +108,11 @@ def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
 def test_lnprob_does_not_raise_on_ValueError(datasets_db):
     """lnprob() should catch ValueError raised by equilibrium and return -np.inf"""
     datasets_db.insert(zpf_json)
-    res = lnprob([10], comps=['CU','MG', 'VA'], dbf=dbf,
+    res = lnprob([10], comps=['CU', 'MG', 'VA'], dbf=dbf,
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
                  datasets=datasets_db, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)
     assert np.isneginf(res)
+
 
 def test_parameter_initialization():
     """Determinisitically generated parameters should match."""
@@ -117,8 +120,7 @@ def test_parameter_initialization():
     deterministic_params = generate_parameter_distribution(initial_parameters, 4, 0.10, deterministic=True)
     expected_parameters = np.array([
         [9.81708401e-01, 9.39027722e+00, 1.08016748e+02, 9.13512881e+02],
-        [1.03116874,     9.01412995,     112.79594345,   916.44725799],
+        [1.03116874, 9.01412995, 112.79594345, 916.44725799],
         [1.00664662e+00, 1.07178898e+01, 9.63696718e+01, 1.36872292e+03],
         [1.07642366e+00, 1.16413520e+01, 8.71742457e+01, 9.61836382e+02]])
     assert np.all(np.isclose(deterministic_params, expected_parameters))
-
