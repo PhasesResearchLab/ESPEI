@@ -173,7 +173,7 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
     callables : dict
         Callables to pass to pycalphad
     massfuncs : dict
-        Callabes to pass to pycalphad
+        Callables to pass to pycalphad
 
     Returns
     -------
@@ -203,17 +203,17 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
         'SM': 0.05,
         'CPM': 0.05,
     }
-    propery_suffixes = ('_FORM', '_MIX')
+    property_suffixes = ('_FORM', '_MIX')
     # the kinds of properties, e.g. 'HM'+suffix =>, 'HM_FORM', 'HM_MIX'
     # we could also include the bare property ('' => 'HM'), but these are rarely used in ESPEI
-    properties = [''.join(prop) for prop in itertools.product(property_prefix_weight_factor.keys(), propery_suffixes)]
+    properties = [''.join(prop) for prop in itertools.product(property_prefix_weight_factor.keys(), property_suffixes)]
 
     sum_square_error = 0
     for phase_name in phases:
         for prop in properties:
             desired_data = get_prop_data(comps, phase_name, prop, datasets)
             if len(desired_data) == 0:
-                #logging.debug('Skipping {} in phase {} because no data was found.'.format(prop, phase_name))
+                # logging.debug('Skipping {} in phase {} because no data was found.'.format(prop, phase_name))
                 continue
             calculate_dict = get_prop_samples(dbf, comps, phase_name, desired_data)
             if prop.endswith('_FORM'):
@@ -225,9 +225,9 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
                 params = parameters
             sample_values = calculate_dict.pop('values')
             results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models, massfuncs=massfuncs,
-                                  callables=callables, **calculate_dict)[calculate_dict['output']].values
+                                callables=callables, **calculate_dict)[calculate_dict['output']].values
             weight = (property_prefix_weight_factor[prop.split('_')[0]]*np.abs(np.mean(sample_values)))**(-1.0)
             error = np.sum((results-sample_values)**2) * weight
-            #logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
+            # logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
             sum_square_error += error
     return -sum_square_error
