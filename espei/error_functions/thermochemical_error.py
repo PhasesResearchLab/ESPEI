@@ -31,7 +31,7 @@ def calculate_points_array(phase_constituents, configuration, occupancies=None):
 
     Returns
     -------
-    np.ndarray
+    numpy.ndarray
 
     Notes
     -----
