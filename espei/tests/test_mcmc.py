@@ -92,7 +92,7 @@ def _eq_ValueError(*args, **kwargs):
     raise ValueError()
 
 
-@mock.patch('espei.mcmc.equilibrium', _eq_LinAlgError)
+@mock.patch('espei.error_functions.zpf_error.equilibrium', _eq_LinAlgError)
 def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
     """lnprob() should catch LinAlgError raised by equilibrium and return -np.inf"""
     datasets_db.insert(zpf_json)
@@ -102,7 +102,7 @@ def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
     assert np.isneginf(res)
 
 
-@mock.patch('espei.mcmc.equilibrium', _eq_ValueError)
+@mock.patch('espei.error_functions.zpf_error.equilibrium', _eq_ValueError)
 def test_lnprob_does_not_raise_on_ValueError(datasets_db):
     """lnprob() should catch ValueError raised by equilibrium and return -np.inf"""
     datasets_db.insert(zpf_json)
