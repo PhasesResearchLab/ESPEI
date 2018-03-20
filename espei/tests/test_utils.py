@@ -103,13 +103,6 @@ def test_bib_marker_map():
     assert EXEMPLAR_DICT == marker_dict
 
 
-def test_sympy_build_functions_can_be_pickled():
-    """Wrapped, compiled code from build_functions should be pickleable"""
-    dbf = Database(CU_MG_TDB)
-    callables = eq_callables_dict(dbf, ['CU', 'MG', 'VA'], ['LAVES_C15'], param_symbols=list(dbf.symbols.keys()))
-    pickle.dumps(callables)
-
-
 def test_sympy_build_functions_can_be_cloudpickled():
     """Wrapped, compiled code from build_functions should be pickleable by cloudpickle"""
     dbf = Database(CU_MG_TDB)
