@@ -52,8 +52,8 @@ def test_mixing_energies_are_fit(datasets_db):
     assert len(read_dbf._parameters.search(where('parameter_type') == 'L')) == 1
 
     # the error should be exactly 0 because we are only fitting to one point
-    from espei.mcmc import calculate_single_phase_error
-    assert calculate_single_phase_error(read_dbf, sorted(dbf.elements), sorted(dbf.phases.keys()), datasets_db) == 0
+    from espei.error_functions import calculate_thermochemical_error
+    assert calculate_thermochemical_error(read_dbf, sorted(dbf.elements), sorted(dbf.phases.keys()), datasets_db) == 0
 
 def test_sgte_reference_state_naming_is_correct_for_character_element(datasets_db):
     """Elements with single character names should get the correct GHSER reference state name (V => GHSERVV)"""
