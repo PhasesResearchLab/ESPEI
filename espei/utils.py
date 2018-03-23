@@ -229,9 +229,10 @@ def bib_marker_map(bib_keys, markers=None):
     return b_m_map
 
 
-def _get_pure_elements(dbf, comps):
+def get_pure_elements(dbf, comps):
     """
     Return a list of pure elements in the system
+
     Parameters
     ----------
     dbf : pycalphad.Database
@@ -288,7 +289,7 @@ def eq_callables_dict(dbf, comps, phases, model=None, param_symbols=None):
     >>> equilibrium(dbf, comps, phases, conditions, **eq_callables)
     """
     comps = sorted(unpack_components(dbf, comps))
-    pure_elements = _get_pure_elements(dbf, comps)
+    pure_elements = get_pure_elements(dbf, comps)
 
     eq_callables = {
         'massfuncs': {},
