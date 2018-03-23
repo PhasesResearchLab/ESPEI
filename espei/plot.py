@@ -170,11 +170,11 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
         raise ValueError('The eqplot projection is not defined and cannot be autodetected. There are {} independent compositions and {} indepedent potentials.'.format(len(indep_comps), len(indep_pots)))
 
     if projection is None:
-        x = indep_comps[0].species
+        x = indep_comps[0].species.name
         y = indep_pots[0]
     elif projection == 'triangular':
-        x = indep_comps[0].species
-        y = indep_comps[1].species
+        x = indep_comps[0].species.name
+        y = indep_comps[1].species.name
 
     # set up plot if not done already
     if ax is None:
