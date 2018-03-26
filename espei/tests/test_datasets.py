@@ -1,6 +1,9 @@
 import pytest
 from espei.datasets import DatasetError, check_dataset
 
+from espei.tests.testing_data import CU_MG_EXP_ACTIVITY
+
+
 dataset_single_valid = {
     "components": ["AL", "NI", "VA"],
     "phases": ["BCC_B2"],
@@ -323,3 +326,8 @@ def test_check_datasets_raises_with_malformed_sublattice_configurations():
         check_dataset(dataset_single_malformed_site_occupancies)
     with pytest.raises(DatasetError):
        check_dataset(dataset_single_malformed_site_ratios)
+
+
+def test_check_datasets_works_on_activity_data():
+    """Passed activity datasets should work correctly."""
+    check_dataset(CU_MG_EXP_ACTIVITY)
