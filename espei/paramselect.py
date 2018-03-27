@@ -43,7 +43,8 @@ feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
 
 
 def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
-    """Solve Ax = b, where 'feature_matrix' is A and 'data_quantities' is b.
+    """
+    Solve Ax = b, where 'feature_matrix' is A and 'data_quantities' is b.
 
     Parameters
     ----------
@@ -148,7 +149,8 @@ def _shift_reference_state(desired_data, feature_transform, fixed_model):
 
 
 def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, features=None):
-    """Find suitable linear model parameters for the given phase.
+    """
+    Find suitable linear model parameters for the given phase.
     We do this by successively fitting heat capacities, entropies and
     enthalpies of formation, and selecting against criteria to prevent
     overfitting. The "best" set of parameters minimizes the error
@@ -476,6 +478,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
     # TODO: fit ternary interactions
     if hasattr(dbf, 'varcounter'):
         del dbf.varcounter
+
 
 def generate_parameters(phase_models, datasets, ref_state, excess_model):
     """Generate parameters from given phase models and datasets

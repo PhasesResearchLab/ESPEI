@@ -198,7 +198,8 @@ def run_espei(run_settings):
     return dbf
 
 def main():
-    """Handle starting ESPEI from the command line.
+    """
+    Handle starting ESPEI from the command line.
     Parse command line arguments and input file.
     """
     args = parser.parse_args(sys.argv[1:])

@@ -159,7 +159,8 @@ def check_dataset(dataset):
 
 
 def load_datasets(dataset_filenames):
-    """Create a PickelableTinyDB with the data from a list of filenames.
+    """
+    Create a PickelableTinyDB with the data from a list of filenames.
 
     Parameters
     ----------
@@ -185,7 +186,8 @@ def load_datasets(dataset_filenames):
 
 
 def recursive_glob(start, pattern):
-    """Recursively glob for the given pattern from the start directory.
+    """
+    Recursively glob for the given pattern from the start directory.
 
     Parameters
     ----------

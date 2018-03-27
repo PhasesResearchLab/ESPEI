@@ -112,7 +112,8 @@ def get_samples(desired_data):
 
 
 def canonicalize(configuration, equivalent_sublattices):
-    """Sort a sequence with symmetry. This routine gives the sequence
+    """
+    Sort a sequence with symmetry. This routine gives the sequence
     a deterministic ordering while respecting symmetry.
 
     Parameters
@@ -178,16 +179,21 @@ def canonical_sort_key(x):
     """
     Wrap strings in tuples so they'll sort.
 
-    Args:
-        x ([str]): list of strings
+    Parameters
+    ----------
+    x : list
+        List of strings to sort
 
-    Returns:
-        (str): tuple of strings that can be sorted
+    Returns
+    -------
+    tuple
+        tuple of strings that can be sorted
     """
     return [tuple(i) if isinstance(i, (tuple, list)) else (i,) for i in x]
 
 
 def list_to_tuple(x):
+    """Convert a nested list to a tuple"""
     def _tuplify(y):
         if isinstance(y, list) or isinstance(y, tuple):
             return tuple(_tuplify(i) if isinstance(i, (list, tuple)) else i for i in y)
@@ -197,6 +203,7 @@ def list_to_tuple(x):
 
 
 def endmembers_from_interaction(configuration):
+    """For a given configuration with possible interactions, return all the endmembers"""
     config = []
     for c in configuration:
         if isinstance(c, (list, tuple)):
