@@ -65,6 +65,21 @@ dataset_multi_valid = {
     ],
 }
 
+dataset_multi_valid_ternary = {
+    "components": ["AL", "CR", "NI", "VA"],
+    "phases": ["AL3NI2", "BCC_B2"],
+    "conditions": {
+        "P": 101325,
+        "T": [1348, 1176, 977]
+    },
+    "output": "ZPF",
+    "values": [
+        [["AL3NI2", ["CR", "NI"], [0.2, 0.4083]], ["BCC_B2", ["CR", "NI"], [None, None]]],
+        [["AL3NI2", ["CR", "NI"], [0.2, 0.4114]], ["BCC_B2", ["CR", "NI"], [0.2, 0.4456]]],
+        [["AL3NI2", ["CR", "NI"], [0.2, 0.4114]], ["BCC_B2", ["CR", "NI"], [0.2, 0.4532]]]
+    ],
+}
+
 dataset_multi_misaligned = {
     "components": ["AL", "NI"],
     "phases": ["AL3NI2", "BCC_B2"],
@@ -325,6 +340,7 @@ def test_check_datasets_run_on_good_data():
     """Passed valid datasets that should raise DatasetError."""
     check_dataset(dataset_single_valid)
     check_dataset(dataset_multi_valid)
+    check_dataset(dataset_multi_valid_ternary)
 
 
 def test_check_datasets_raises_on_misaligned_data():

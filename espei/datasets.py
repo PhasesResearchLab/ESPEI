@@ -146,8 +146,8 @@ def check_dataset(dataset):
                 if len(component_list) != len(mole_fraction_list):
                     raise DatasetError('The length of the components list and mole fractions list in tieline {} for the ZPF point {} should be the same.'.format(tieline, zpf))
                 # check that all mole fractions are less than one
-                mf_sum = np.nansum(mole_fraction_list)
-                if mf_sum is not None and mf_sum > 1.0:
+                mf_sum = np.nansum(np.array(mole_fraction_list, dtype=np.float))
+                if any([mf is not None for mf in mole_fraction_list]) and mf_sum > 1.0:
                     raise DatasetError('Mole fractions for tieline {} for the ZPF point {} sum to greater than one.'.format(tieline, zpf))
 
     # check that the site ratios are valid as well as site occupancies, if applicable
