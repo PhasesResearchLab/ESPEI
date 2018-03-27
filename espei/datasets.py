@@ -161,7 +161,7 @@ def check_dataset(dataset):
                     raise DatasetError('The shape of sublattice configuration {} ({}) does not match the shape of occupancies {} ({})'.format(configuration, configuration_shape, occupancy, occupancy_shape))
                 # check that sublattice interactions are in sorted. Related to sorting in espei.core_utils.get_samples
                 for subl in configuration:
-                    if sorted(subl) != subl:
+                    if isinstance(subl, (list, tuple)) and sorted(subl) != subl:
                         raise DatasetError('Sublattice {} in configuration {} is must be sorted in alphabetic order ({})'.format(subl, configuration, sorted(subl)))
 
 
