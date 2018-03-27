@@ -145,6 +145,10 @@ def check_dataset(dataset):
                 # check that the shape of components list and mole fractions list is the same
                 if len(component_list) != len(mole_fraction_list):
                     raise DatasetError('The length of the components list and mole fractions list in tieline {} for the ZPF point {} should be the same.'.format(tieline, zpf))
+                # check that all mole fractions are less than one
+                mf_sum = np.nansum(np.array(mole_fraction_list, dtype=np.float))
+                if any([mf is not None for mf in mole_fraction_list]) and mf_sum > 1.0:
+                    raise DatasetError('Mole fractions for tieline {} for the ZPF point {} sum to greater than one.'.format(tieline, zpf))
 
     # check that the site ratios are valid as well as site occupancies, if applicable
     if is_single_phase:
@@ -156,6 +160,10 @@ def check_dataset(dataset):
                 occupancy_shape = tuple(len(sl) if isinstance(sl, list) else 1 for sl in occupancy)
                 if configuration_shape != occupancy_shape:
                     raise DatasetError('The shape of sublattice configuration {} ({}) does not match the shape of occupancies {} ({})'.format(configuration, configuration_shape, occupancy, occupancy_shape))
+                # check that sublattice interactions are in sorted. Related to sorting in espei.core_utils.get_samples
+                for subl in configuration:
+                    if isinstance(subl, (list, tuple)) and sorted(subl) != subl:
+                        raise DatasetError('Sublattice {} in configuration {} is must be sorted in alphabetic order ({})'.format(subl, configuration, sorted(subl)))
 
 
 def load_datasets(dataset_filenames):
