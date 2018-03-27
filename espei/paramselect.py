@@ -33,11 +33,7 @@ from espei.utils import PickleableTinyDB, sigfigs
 import espei.refdata
 
 # backwards compatibility:
-# TODO: drop support on release pycalphad 0.7
-try:
-    from pycalphad.io.database import Species
-except ImportError:
-    Species = None
+from pycalphad.io.database import Species
 
 feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
                       "CPM_MIX": lambda x: -v.T*sympy.diff(x, v.T, 2),
