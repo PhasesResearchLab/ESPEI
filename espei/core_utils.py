@@ -11,6 +11,30 @@ from pycalphad import variables as v
 
 
 def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
+    """
+    Return list of cleaned single phase datasets matching the passed arguments.
+
+    Parameters
+    ----------
+    comps : list
+        List of string component names
+    phase_name : str
+        Name of phase
+    configuration : tuple
+        Sublattice configuration as a tuple, e.g. ("CU", ("CU", "MG"))
+    symmetry : list of lists
+        List of sublattice indices with symmetry
+    datasets : espei.utils.PickleableTinyDB
+        Database of datasets to search for data
+    prop : str
+        String name of the property of interest.
+
+    Returns
+    -------
+    list
+        List of datasets matching the arguments.
+
+    """
     desired_data = datasets.search((tinydb.where('output').test(lambda x: x in prop)) &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('solver').test(symmetry_filter, configuration, list_to_tuple(symmetry) if symmetry else symmetry)) &
@@ -48,6 +72,27 @@ def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
 
 
 def get_samples(desired_data):
+    """
+    Return the data values from desired_data, transformed to interaction products.
+
+    Parameters
+    ----------
+    desired_data : list
+        List of matched desired data, e.g. for a single property
+
+    Returns
+    -------
+    list
+        List of sample values that are properly transformed.
+
+    Notes
+    -----
+    Transforms data to interaction products, e.g. YS*{}^{xs}G=YS*XS*DXS^{n} {}^{n}L
+
+    """
+    # TODO: binary assumption
+    # TODO does not ravel pressure conditions
+    # TODO: could possibly combine with ravel_conditions if we do the math outside.
     all_samples = []
     for data in desired_data:
         temperatures = np.atleast_1d(data['conditions']['T'])
@@ -58,9 +103,7 @@ def get_samples(desired_data):
         # TODO: Subtle sorting bug here, if the interactions aren't already in sorted order...
         interaction_product = []
         for fracs in site_fractions:
-            interaction_product.append(float(reduce(operator.mul,
-                                                    [f[0] - f[1] for f in fracs if isinstance(f, list) and len(f) == 2],
-                                                    1)))
+            interaction_product.append(float(reduce(operator.mul, [f[0] - f[1] for f in fracs if isinstance(f, list) and len(f) == 2], 1)))
         if len(interaction_product) == 0:
             interaction_product = [0]
         comp_features = zip(site_fraction_product, interaction_product)
@@ -69,7 +112,8 @@ def get_samples(desired_data):
 
 
 def canonicalize(configuration, equivalent_sublattices):
-    """Sort a sequence with symmetry. This routine gives the sequence
+    """
+    Sort a sequence with symmetry. This routine gives the sequence
     a deterministic ordering while respecting symmetry.
 
     Parameters
@@ -108,7 +152,7 @@ def symmetry_filter(x, config, symmetry):
     Parameters
     ----------
     x : the candidate dataset 'solver' dict. Must contain the "sublattice_configurations" key
-    config : the configuratino of interest: e.g. ['AL', ['AL', 'NI'], 'VA']
+    config : the configuration of interest: e.g. ['AL', ['AL', 'NI'], 'VA']
     symmetry : tuple of tuples where each inner tuple is a group of equivalent
                sublattices. A value of ((0, 1), (2, 3, 4)) means that sublattices
                at indices 0 and 1 are symmetrically equivalent to each other and
@@ -135,16 +179,21 @@ def canonical_sort_key(x):
     """
     Wrap strings in tuples so they'll sort.
 
-    Args:
-        x ([str]): list of strings
+    Parameters
+    ----------
+    x : list
+        List of strings to sort
 
-    Returns:
-        (str): tuple of strings that can be sorted
+    Returns
+    -------
+    tuple
+        tuple of strings that can be sorted
     """
     return [tuple(i) if isinstance(i, (tuple, list)) else (i,) for i in x]
 
 
 def list_to_tuple(x):
+    """Convert a nested list to a tuple"""
     def _tuplify(y):
         if isinstance(y, list) or isinstance(y, tuple):
             return tuple(_tuplify(i) if isinstance(i, (list, tuple)) else i for i in y)
@@ -154,6 +203,7 @@ def list_to_tuple(x):
 
 
 def endmembers_from_interaction(configuration):
+    """For a given configuration with possible interactions, return all the endmembers"""
     config = []
     for c in configuration:
         if isinstance(c, (list, tuple)):

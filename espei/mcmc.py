@@ -1,4 +1,10 @@
-"""Module for running MCMC in ESPEI"""
+"""
+Module for running MCMC in ESPEI
+
+MCMC uses an EnsembleSampler based on Goodman and Weare, Ensemble Samplers with
+Affine Invariance. Commun. Appl. Math. Comput. Sci. 5, 65-80 (2010).
+
+"""
 
 import logging, time, sys
 
@@ -72,7 +78,8 @@ def generate_parameter_distribution(parameters, num_samples, std_deviation, dete
 def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_parameter=2,
              chain_std_deviation=0.1, scheduler=None, tracefile=None, probfile=None,
              restart_chain=None, deterministic=True,):
-    """Run Markov Chain Monte Carlo on the Database given datasets
+    """
+    Run Markov Chain Monte Carlo on the Database given datasets
 
     Parameters
     ----------
