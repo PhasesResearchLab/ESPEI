@@ -127,8 +127,6 @@ CU_MG_EXP_ACTIVITY = yaml.load("""{
   "phases": ["LIQUID"],
   "solver": {
     "mode": "manual",
-    "sublattice_site_ratios": [1],
-    "sublattice_configurations": [["CU", "MG"]]
   },
   "reference_state": {
     "phases": ["LIQUID"],

@@ -41,7 +41,9 @@ def check_dataset(dataset):
     DatasetError
         If an error is found in the dataset
     """
-    is_single_phase = dataset['output'] != 'ZPF'
+    is_activity = dataset['output'].startswith('ACR')
+    is_zpf = dataset['output'] == 'ZPF'
+    is_single_phase = (not is_zpf) and (not is_activity)
     components = dataset['components']
     conditions = dataset['conditions']
     values = dataset['values']
@@ -58,24 +60,38 @@ def check_dataset(dataset):
             sublattice_occupancies = [None]*len(sublattice_configurations)
         elif sublattice_occupancies is None:
             raise DatasetError('At least one sublattice in the following sublattice configurations is mixing, but the "sublattice_occupancies" key is empty: {}'.format(sublattice_configurations))
+    if is_activity:
+        conditions = dataset['conditions']
+        ref_state = dataset['reference_state']
+        comp_conditions = {k: v for k, v in conditions.items() if k.startswith('X_')}
+
 
     # check that the shape of conditions match the values
     num_pressure = np.atleast_1d(conditions['P']).size
     num_temperature = np.atleast_1d(conditions['T']).size
-    if is_single_phase:
+    if is_activity:
+        values_shape = np.array(values).shape
+        # check each composition condition is the same shape
+        num_x_conds = [len(v) for _, v in comp_conditions.items()]
+        if num_x_conds.count(num_x_conds[0]) != len(num_x_conds):
+            raise DatasetError('All compositions in conditions are not the same shape. Note that conditions cannot be broadcast. Composition conditions are {}'.format(comp_conditions))
+        conditions_shape = (num_pressure, num_temperature, num_x_conds[0])
+        if conditions_shape != values_shape:
+            raise DatasetError('Shape of conditions (P, T, compositions): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
+    elif is_single_phase:
         values_shape = np.array(values).shape
         num_configs = len(dataset['solver']['sublattice_configurations'])
         conditions_shape = (num_pressure, num_temperature, num_configs)
         if conditions_shape != values_shape:
             raise DatasetError('Shape of conditions (P, T, configs): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
-    else:
+    elif is_zpf:
         values_shape = (len(values))
         conditions_shape = (num_temperature)
         if conditions_shape != values_shape:
             raise DatasetError('Shape of conditions (T): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
 
     # check that all of the correct phases are present
-    if not is_single_phase:
+    if is_zpf:
         phases_entered = set(phases)
         phases_used = set()
         for zpf in values:
@@ -95,7 +111,11 @@ def check_dataset(dataset):
                 else:
                     components_used.add(sl)
         comp_dof = 0
-    else:
+    elif is_activity:
+        components_used.update({c.split('_')[1] for c in comp_conditions.keys()})
+        # mass balance of components
+        comp_dof = len(comp_conditions.keys())
+    elif is_zpf:
         for zpf in values:
             for tieline in zpf:
                 tieline_comps = set(tieline[1])
@@ -108,7 +128,7 @@ def check_dataset(dataset):
         raise DatasetError('Components entered {} do not match components used {}.'.format(components_entered, components_used))
 
     # check that the ZPF values are formatted properly
-    if not is_single_phase:
+    if is_zpf:
         for zpf in values:
             for tieline in zpf:
                 phase = tieline[0]
