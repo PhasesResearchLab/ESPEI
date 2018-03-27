@@ -1,5 +1,17 @@
 """
 Calculate error due to ZPF tielines.
+
+The general approach is similar to the PanOptimizer rough search method.
+
+1. With all phases active, calculate the chemical potentials of the tieline
+   endpoints via ``equilibrium`` calls. Done in ``estimate_hyperplane``.
+2. Calculate the target chemical potentials, which are the average chemical
+   potentials of all of the current chemical potentials at the tieline endpoints.
+3. Calculate the current chemical potentials of the desired single phases
+4. The error is the difference between these chemical potentials
+
+There's some special handling for tieline endpoints where we do not know the
+composition conditions to calculate chemical potentials at.
 """
 
 import textwrap, time, operator, logging
@@ -19,14 +31,52 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
     """
     Calculate the chemical potentials for a hyperplane, one vertex at a time
 
+    Parameters
+    ----------
+    dbf : pycalphad.Database
+        Database to consider
+    comps : list
+        List of active component names
+    phases : list
+        List of phases to consider
+    current_statevars : dict
+        Dictionary of state variables, e.g. v.P and v.T, no compositions.
+    comp_dicts : list
+        List of tuples of composition dictionaries and phase flags. Composition
+        dictionaries are pycalphad variable dicts and the flag is a string e.g.
+        ({v.X('CU'): 0.5}, 'disordered')
+    phase_models : dict
+        Phase models to pass to pycalphad calculations
+    parameters : dict
+        Dictionary of symbols that will be overridden in pycalphad.equilibrium
+    massfuncs : dict
+        Callables of mass derivatives to pass to pycalphad
+    massgradfuncs : dict
+        Gradient callables of mass derivatives to pass to pycalphad
+    callables : dict
+        Callables to pass to pycalphad
+    grad_callables : dict
+        Gradient callables to pass to pycalphad
+    hess_callables : dict
+        Hessian callables to pass to pycalphad
+
+    Returns
+    -------
+    numpy.ndarray
+        Array of chemical potentials.
+
     Notes
     -----
     This takes just *one* set of phase equilibria, e.g. a dataset point of
     [['FCC_A1', ['CU'], [0.1]], ['LAVES_C15', ['CU'], [0.3]]]
-    and calculates the chemical potentials given all the phases possible at the given compositions.
+    and calculates the chemical potentials given all the phases possible at the
+    given compositions. Then the average chemical potentials of each end point
+    are taken as the target hyperplane for the given equilibria.
+
     """
     region_chemical_potentials = []
     parameters = OrderedDict(sorted(parameters.items(), key=str))
+    # TODO: unclear whether we use phase_flag and how it would be used. It should be just a 'disordered' kind of flag.
     for cond_dict, phase_flag in comp_dicts:
         # We are now considering a particular tie vertex
         for key, val in cond_dict.items():
@@ -64,6 +114,65 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
                   massfuncs=None, massgradfuncs=None,
                   callables=None, grad_callables=None, hess_callables=None,
                   ):
+    """
+
+    Parameters
+    ----------
+    dbf : pycalphad.Database
+        Database to consider
+    comps : list
+        List of active component names
+    current_phase : list
+        List of phases to consider
+    current_statevars : dict
+        Dictionary of state variables, e.g. v.P and v.T, no compositions.
+    comp_dicts : list
+        List of tuples of composition dictionaries and phase flags. Composition
+        dictionaries are pycalphad variable dicts and the flag is a string e.g.
+        ({v.X('CU'): 0.5}, 'disordered')
+    phase_models : dict
+        Phase models to pass to pycalphad calculations
+    parameters : dict
+        Dictionary of symbols that will be overridden in pycalphad.equilibrium
+    massfuncs : dict
+        Callables of mass derivatives to pass to pycalphad
+    massgradfuncs : dict
+        Gradient callables of mass derivatives to pass to pycalphad
+    callables : dict
+        Callables to pass to pycalphad
+    grad_callables : dict
+        Gradient callables to pass to pycalphad
+    hess_callables : dict
+        Hessian callables to pass to pycalphad
+    cond_dict :
+    region_chemical_potentials : numpy.ndarray
+        Array of chemical potentials for target equilibrium hyperplane.
+    phase_flag : str
+        String of phase flag, e.g. 'disordered'.
+    phase_models : dict
+        Phase models to pass to pycalphad calculations
+    parameters : dict
+        Dictionary of symbols that will be overridden in pycalphad.equilibrium
+    debug_mode : bool
+        If True, will write out scripts when pycalphad fails to find a stable
+        equilibrium. These scripts can be used to debug pycalphad.
+    massfuncs : dict
+        Callables of mass derivatives to pass to pycalphad
+    massgradfuncs : dict
+        Gradient callables of mass derivatives to pass to pycalphad
+    callables : dict
+        Callables to pass to pycalphad
+    grad_callables : dict
+        Gradient callables to pass to pycalphad
+    hess_callables : dict
+        Hessian callables to pass to pycalphad
+
+    Returns
+    -------
+    float
+        Single value for the total error between the current hyperplane and target hyperplane.
+
+    """
     if np.any(np.isnan(list(cond_dict.values()))):
         # We don't actually know the phase composition here, so we estimate it
         single_eqdata = calculate(dbf, comps, [current_phase],
@@ -97,8 +206,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
                                   T=cond_dict[v.T], P=cond_dict[v.P], points=desired_sitefracs,
                                   model=phase_models, parameters=parameters, massfuncs=massfuncs,
                                   callables=callables,)
-        driving_force = np.multiply(region_chemical_potentials,
-                                    single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
+        driving_force = np.multiply(region_chemical_potentials, single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
         error = float(np.squeeze(driving_force))
     else:
         # Extract energies from single-phase calculations

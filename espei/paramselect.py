@@ -7,17 +7,13 @@ End-members
 Note: All magnetic parameters from literature for now.
 Note: No fitting below 298 K (so neglect third law issues for now).
 
-For each step, add one parameter at a time and compute AIC with max likelihood.
+For each step, add one parameter at a time and compute AICc with max likelihood.
 
 Cp - TlnT, T**2, T**-1, T**3 - 4 candidate models
 (S and H only have one required parameter each. Will fit in full MCMC procedure)
 
-Choose parameter set with best AIC score.
+Choose parameter set with best AICc score.
 
-4. G (full MCMC) - all parameters selected at least once by above procedure
-
-MCMC uses an EnsembleSampler based on Goodman and Weare, Ensemble Samplers with
-Affine Invariance. Commun. Appl. Math. Comput. Sci. 5, 65-80 (2010).
 """
 import itertools, operator, logging
 
@@ -64,6 +60,10 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
         {featured_tuple: fitted_parameter}. Maps 'feature_tuple'
         to fitted parameter value. If a coefficient is not used, it maps to zero.
 
+    Notes
+    -----
+    Scores for each candidate model (determined by the paramters in the passed
+    feature matrix) are calculated by the corrected Akaike Information Criterion (AICc).
     """
     # Now generate candidate models; add parameters one at a time
     model_scores = []
@@ -75,7 +75,7 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
         # This may not exactly be the correct form for the likelihood
         # We're missing the "ridge" contribution here which could become relevant for sparse data
         rss = np.square(np.dot(current_matrix, clf.coef_) - data_quantities.astype(np.float)).sum()
-        # Compute the corrected Aikaike Information Criterion
+        # Compute the corrected Akaike Information Criterion
         # Form valid under assumption all sample variances are random and Gaussian, model is univariate
         # Our model is univariate with T
         # The correction is (2k^2 + 2k)/(n - k - 1)
@@ -99,12 +99,28 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
 
 
 def _build_feature_matrix(prop, features, desired_data):
+    """
+    Return an MxN matrix of M data sample and N features.
+
+    Parameters
+    ----------
+    prop : str
+        String name of the property, e.g. 'HM_MIX'
+    features : tuple
+        Tuple of SymPy parameters that can be fit for this property.
+    desired_data : dict
+        Full dataset dictionary containing values, conditions, etc.
+
+    Returns
+    -------
+    numpy.ndarray
+        An MxN matrix of M samples (from desired data) and N features.
+
+    """
     transformed_features = sympy.Matrix([feature_transforms[prop](i) for i in features])
     all_samples = get_samples(desired_data)
     feature_matrix = np.empty((len(all_samples), len(transformed_features)), dtype=np.float)
-    feature_matrix[:, :] = [transformed_features.subs({v.T: temp, 'YS': compf[0],
-                                                       'Z': compf[1]}).evalf()
-                            for temp, compf in all_samples]
+    feature_matrix[:, :] = [transformed_features.subs({v.T: temp, 'YS': compf[0], 'Z': compf[1]}).evalf() for temp, compf in all_samples]
     return feature_matrix
 
 
@@ -170,6 +186,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                     ]
         features = OrderedDict(features)
     if any([isinstance(conf, (list, tuple)) for conf in configuration]):
+        # TODO: assumes binary interaction here
         fitting_steps = (["CPM_FORM", "CPM_MIX"], ["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
         # Product of all nonzero site fractions in all sublattices
         YS = sympy.Symbol('YS')
@@ -213,8 +230,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
             all_samples = get_samples(desired_data)
             data_quantities = np.concatenate(_shift_reference_state(desired_data,
                                                                     feature_transforms[desired_props[0]],
-                                                                    fixed_model),
-                                             axis=-1)
+                                                                    fixed_model), axis=-1)
             site_fractions = [build_sitefractions(phase_name, ds['solver']['sublattice_configurations'],
                                                   ds['solver'].get('sublattice_occupancies',
                                  np.ones((len(ds['solver']['sublattice_configurations']),
@@ -244,6 +260,25 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
 
 
 def _generate_symmetric_group(configuration, symmetry):
+    """
+    For a particular configuration and list of sublattices with symmetry,
+    generate all the symmetrically equivalent configurations.
+
+    Parameters
+    ----------
+    configuration : tuple
+        Tuple of a sublattice configuration.
+    symmetry : list of lists
+        List of lists containing symmetrically equivalent sublattice indices,
+        e.g. [[0, 1], [2, 3]] means that sublattices 0 and 1 are equivalent and
+        sublattices 2 and 3 are also equivalent.
+
+    Returns
+    -------
+    tuple
+        Tuple of configuration tuples that are all symmetrically equivalent.
+
+    """
     configurations = [list_to_tuple(configuration)]
     permutation = np.array(symmetry, dtype=np.object)
 
@@ -458,7 +493,8 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model):
 
     Returns
     -------
-    Database
+    pycalphad.Database
+
     """
     logging.info('Generating parameters.')
     dbf = Database()

@@ -1,4 +1,10 @@
-"""Module for running MCMC in ESPEI"""
+"""
+Module for running MCMC in ESPEI
+
+MCMC uses an EnsembleSampler based on Goodman and Weare, Ensemble Samplers with
+Affine Invariance. Commun. Appl. Math. Comput. Sci. 5, 65-80 (2010).
+
+"""
 
 import logging, time, sys
 
