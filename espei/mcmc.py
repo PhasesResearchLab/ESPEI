@@ -42,7 +42,7 @@ def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
     single_phase_error = calculate_thermochemical_error(dbf, comps, phases, datasets, parameters, phase_models=phase_models, callables=callables, massfuncs=massfuncs)
     actvity_error = calculate_activity_error(dbf, comps, phases, datasets, parameters=parameters, phase_models=phase_models, callables=callables, grad_callables=grad_callables, hess_callables=hess_callables, massfuncs=massfuncs, massgradfuncs=massgradfuncs)
     total_error = multi_phase_error + single_phase_error + actvity_error
-    logging.debug('Single phase error: {:0.2f}. Multi phase error: {:0.2f}. Total error: {:0.2f}'.format(single_phase_error, multi_phase_error, total_error))
+    logging.debug('Single phase error: {:0.2f}. Multi phase error: {:0.2f}. Activity Error: {:0.2f}. Total error: {:0.2f}'.format(single_phase_error, multi_phase_error, actvity_error, total_error))
     logging.debug('lnprob time: {}'.format(time.time() - starttime))
     return np.array(total_error, dtype=np.float64)
 
