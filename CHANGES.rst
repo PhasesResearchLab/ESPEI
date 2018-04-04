@@ -2,6 +2,21 @@
 What's New
 ==========
 
+0.5 (2018-04-03)
+================
+
+* Parameter selection now uses the corrected AIC, which further prevents overparameterization where there is sparse training data.
+* Activity and single phase thermochemical data can now be included in MCMC fitting runs. Including single phase data can help anchor metastable phases to DFT data when they are not on the stable phase diagram. See the `Gathering input data <http://espei.org/en/latest/input_data.html>`_ documentation for information on how to input activity data.
+* Dataset checking has been improved. Now there are checks to make sure sublattice interactions are properly sorted and mole fractions sum to less than 1.0 in ZPF data.
+* Support for fitting phases with arbitrary pycalphad Models in MCMC, including (charged and neutral) species and ionic liquids. There are several consequences of this:
+
+  - ESPEI requires support on ``pycalphad >=0.7``
+  - ESPEI now uses pycalphad ``Model`` objects directly. Using the JIT compiled Models has shown up to a *50% performance improvement* in MCMC runs.
+  - Using JIT compiled ``Model`` objects required the use of ``cloudpickle`` everywhere. Due to challenges in overriding ``pickle`` for upstream packages, we now rely solely on ``dask`` for scheduler tasks, including ``mpi`` via ``dask-mpi``. Note that users must turn off ``work-stealing`` in their ``~/.dask/config.yaml`` file.
+
+* [Developers] Each method for calculating error in MCMC has been moved into a module for that method in an ``error_functions`` subpackage. One top level function from each module should be imported into the ``mcmc.py`` and used in ``lnprob``. Developers should then just customize ``lnprob``.
+* [Developers] Significant internal docs improvements: all non-trival functions have complete docstrings.
+
 0.4.1 (2018-02-05)
 ==================
 
