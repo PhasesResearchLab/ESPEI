@@ -6,6 +6,7 @@ Subpackages
 
 .. toctree::
 
+    espei.error_functions
     espei.tests
 
 Submodules

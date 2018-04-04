@@ -28,6 +28,14 @@ espei\.tests\.test\_datasets module
     :undoc-members:
     :show-inheritance:
 
+espei\.tests\.test\_error\_functions module
+-------------------------------------------
+
+.. automodule:: espei.tests.test_error_functions
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 espei\.tests\.test\_mcmc module
 -------------------------------
 
@@ -56,6 +64,14 @@ espei\.tests\.test\_utils module
 --------------------------------
 
 .. automodule:: espei.tests.test_utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+espei\.tests\.testing\_data module
+----------------------------------
+
+.. automodule:: espei.tests.testing_data
     :members:
     :undoc-members:
     :show-inheritance:
