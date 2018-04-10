@@ -69,7 +69,7 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
     """
     em_plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
                 ('T', 'HM'), ('T', 'HM_FORM')]
-    mix_plots = [('Z', 'HM_FORM'), ('Z', 'HM_MIX'), ('Z', 'SM_MIX')]
+    mix_plots = [ ('Z', 'HM_MIX'), ('Z', 'SM_MIX')]
     comps = sorted(comps)
     mod = Model(dbf, comps, phase_name)
     # This is for computing properties of formation
@@ -599,10 +599,9 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         response_data = response_data.flatten()
         if not bar_chart:
             extra_kwargs = {}
-            if len(response_data) < 10:
-                extra_kwargs['markersize'] = 8
-                extra_kwargs['linestyle'] = 'none'
-                extra_kwargs['clip_on'] = False
+            extra_kwargs['markersize'] = 8
+            extra_kwargs['linestyle'] = 'none'
+            extra_kwargs['clip_on'] = False
             ref = data.get('reference', '')
             mark = symbol_map[ref]['markers']
             ax.plot(indep_var_data, response_data,
