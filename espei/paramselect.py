@@ -217,8 +217,8 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     moles_per_formula_unit = sympy.S(0)
     subl_idx = 0
     for num_sites, const in zip(dbf.phases[phase_name].sublattices, dbf.phases[phase_name].constituents):
-        if 'VA' in const:
-            moles_per_formula_unit += num_sites * (1 - v.SiteFraction(phase_name, subl_idx, 'VA'))
+        if Species('VA') in const:
+            moles_per_formula_unit += num_sites * (1 - v.SiteFraction(phase_name, subl_idx, Species('VA')))
         else:
             moles_per_formula_unit += num_sites
         subl_idx += 1
