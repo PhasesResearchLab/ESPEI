@@ -2,6 +2,13 @@
 What's New
 ==========
 
+0.5.1 (2018-04-17)
+==================
+
+This is a minor bugfix release.
+
+* Parameter generation for phases with vacancies would produce incorrect parameters because the vacancy site fractions were not being correctly removed from the contributions due to their treatement as ``Species`` objects in ``pycalphad >=0.7``.
+
 0.5 (2018-04-03)
 ================
 
