@@ -273,12 +273,195 @@ Finally, we can use the newly optimized database to plot the phase diagram
     Optimized Cu-Mg phase diagram from the multi-phase fitting in ESPEI
 
 
-ESPEI allows thermodynamic database to be easily
+Analyzing ESPEI Results
+=======================
+
+After finishing a MCMC run, you will want to analyze your results.
+
+All of the MCMC results will be maintained in two output files, which
+are serialized NumPy arrays. The file names are set in your
+``espei-in.yaml`` file. The filenames are set by ``output.tracefile``
+and ``output.probfile``
+(`documentation <http://espei.org/en/latest/writing_input.html#tracefile>`__)
+and the defaults are ``chain.npy`` and ``lnprob.npy``, respectively.
+
+The ``tracefile`` contains all of the parameters that were proposed over
+all chains and iterations (the trace). The ``probfile`` contains all of
+calculated log probabilities for all chains and iterations (as negative
+numbers, by convention).
+
+There are several aspects of your data that you may wish to analyze. The
+next sections will explore some of the options.
+
+Probability convergence
+-----------------------
+
+First we'll plot how the probability changes for all of the chains as a
+function of iterations. This gives a qualitative view of convergence.
+There are several quantitative metrics that we won't explore here, such
+as autocorrelation. Qualitatively, this run does not appear converged
+after 115 iterations.
+
+.. code:: ipython3
+
+    # remove next line if not using iPython or Juypter Notebooks
+    %matplotlib inline
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    def truncate_arrays(trace_array, prob_array=None):
+        """Return arrays with any empty remaining steps (zeros) removed."""
+        nz = np.nonzero(np.all(trace_array != 0, axis=-1))
+        s = trace_array.shape
+        # number of iterations that are non-zero
+        iterations = trace_array[nz].reshape(s[0], -1, s[2]).shape[1]
+
+        if prob_array is None:
+            return trace_array[:,:iterations,:]
+        else:
+            return trace_array[:,:iterations,:], prob_array[:, :iterations]
+
+
+    trace = np.load('chain.npy')
+    lnprob = np.load('lnprob.npy')
+
+    trace, lnprob = truncate_arrays(trace, lnprob)
+
+
+    ax = plt.gca()
+    ax.set_yscale('log')
+    ax.set_ylim(1e7, 1e10)
+    ax.set_xlabel('Iterations')
+    ax.set_ylabel('- lnprob')
+    num_chains = lnprob.shape[0]
+    for i in range(num_chains):
+        ax.plot(-lnprob[i,:])
+
+
+
+.. image:: _static/docs-analysis-example_1_0.png
+
+
+Visualizing the trace of each parameter
+---------------------------------------
+
+We would like to see how each parameter changed during the iterations.
+For brevity in the number of plots we'll plot all the chains for each
+parameter on the same plot. Here we are looking to see how the
+parameters explore the space and converge to a solution.
+
+.. code:: ipython3
+
+    # remove next line if not using iPython or Juypter Notebooks
+    %matplotlib inline
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    def truncate_arrays(trace_array, prob_array=None):
+        """Return arrays with any empty remaining steps (zeros) removed."""
+        nz = np.nonzero(np.all(trace_array != 0, axis=-1))
+        s = trace_array.shape
+        # number of iterations that are non-zero
+        iterations = trace_array[nz].reshape(s[0], -1, s[2]).shape[1]
+
+        if prob_array is None:
+            return trace_array[:,:iterations,:]
+        else:
+            return trace_array[:,:iterations,:], prob_array[:, :iterations]
+
+
+    trace = np.load('chain.npy')
+    lnprob = np.load('lnprob.npy')
+
+    trace, lnprob = truncate_arrays(trace, lnprob)
+
+    num_chains = trace.shape[0]
+    num_parameters = 3 # only plot the first three parameter, for all of them use `trace.shape[2]`
+    for parameter in range(num_parameters):
+        ax = plt.figure().gca()
+        ax.set_xlabel('Iterations')
+        ax.set_ylabel('Parameter value')
+        for chain in range(num_chains):
+            ax.plot(trace[chain, :, parameter])
+
+
+
+.. image:: _static/docs-analysis-example_3_0.png
+
+
+
+.. image:: _static/docs-analysis-example_3_1.png
+
+
+
+.. image:: _static/docs-analysis-example_3_2.png
+
+
+Corner plots
+------------
+
+Note: You must install the ``corner`` package before using it
+(``conda install corner`` or ``pip install corner``).
+
+In a corner plot, the distributions for each parameter are plotted along
+the diagonal and covariances between them under the diagonal. A more
+circular covariance means that parameters are not correlated to each
+other, while elongated shapes indicate that the two parameters are
+correlated. Strongly correlated parameters are expected for some
+parameters in CALPHAD models within phases or for phases in equilibrium,
+because increasing one parameter while decreasing another would give a
+similar error.
+
+.. code:: ipython3
+
+    # remove next line if not using iPython or Juypter Notebooks
+    %matplotlib inline
+    import numpy as np
+    import corner
+
+    def truncate_arrays(trace_array, prob_array=None):
+        """Return arrays with any empty remaining steps (zeros) removed."""
+        nz = np.nonzero(np.all(trace_array != 0, axis=-1))
+        s = trace_array.shape
+        # number of iterations that are non-zero
+        iterations = trace_array[nz].reshape(s[0], -1, s[2]).shape[1]
+
+        if prob_array is None:
+            return trace_array[:,:iterations,:]
+        else:
+            return trace_array[:,:iterations,:], prob_array[:, :iterations]
+
+
+    trace = np.load('chain.npy')
+    lnprob = np.load('lnprob.npy')
+
+    trace, lnprob = truncate_arrays(trace, lnprob)
+
+    # flatten the along the first dimension containing all the chains in parallel
+    fig = corner.corner(trace.reshape(-1, trace.shape[-1]))
+
+
+
+.. image:: _static/docs-analysis-example_5_0.png
+
+
+
+
+Ultimately, there are many features to explore and we have only covered
+a few basics. Since all of the results are stored as arrays, you are
+free to analyze using whatever methods are relevant.
+
+Summary
+=======
+
+
+ESPEI allows thermodynamic databases to be easily
 reoptimized with little user interaction, so more data can be added later and
 the database reoptimized at the cost of only computer time. In fact, the
 existing database from estimates can be used as a starting point, rather than
 one directly from first-principles, and the database can simply be modified to
 match any new data.
+
 
 References
 ==========
