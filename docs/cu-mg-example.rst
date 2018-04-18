@@ -336,6 +336,7 @@ after 115 iterations.
     num_chains = lnprob.shape[0]
     for i in range(num_chains):
         ax.plot(-lnprob[i,:])
+    plt.show()
 
 
 
@@ -383,6 +384,7 @@ parameters explore the space and converge to a solution.
         ax.set_ylabel('Parameter value')
         for chain in range(num_chains):
             ax.plot(trace[chain, :, parameter])
+    plt.show()
 
 
 
@@ -416,6 +418,7 @@ similar error.
 
     # remove next line if not using iPython or Juypter Notebooks
     %matplotlib inline
+    import matplotlib.pyplot as plt
     import numpy as np
     import corner
 
@@ -439,6 +442,7 @@ similar error.
 
     # flatten the along the first dimension containing all the chains in parallel
     fig = corner.corner(trace.reshape(-1, trace.shape[-1]))
+    plt.show()
 
 
 
