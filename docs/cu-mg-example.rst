@@ -302,7 +302,7 @@ There are several quantitative metrics that we won't explore here, such
 as autocorrelation. Qualitatively, this run does not appear converged
 after 115 iterations.
 
-.. code:: ipython3
+.. code:: python
 
     # remove next line if not using iPython or Juypter Notebooks
     %matplotlib inline
@@ -350,7 +350,7 @@ For brevity in the number of plots we'll plot all the chains for each
 parameter on the same plot. Here we are looking to see how the
 parameters explore the space and converge to a solution.
 
-.. code:: ipython3
+.. code:: python
 
     # remove next line if not using iPython or Juypter Notebooks
     %matplotlib inline
@@ -412,7 +412,7 @@ parameters in CALPHAD models within phases or for phases in equilibrium,
 because increasing one parameter while decreasing another would give a
 similar error.
 
-.. code:: ipython3
+.. code:: python
 
     # remove next line if not using iPython or Juypter Notebooks
     %matplotlib inline
