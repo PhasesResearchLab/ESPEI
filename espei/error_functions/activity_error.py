@@ -160,4 +160,7 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
         target_chempots = target_chempots_from_activity(acr_component, np.array(ds['values']).flatten(), conditions[v.T], ref_result)
         # calculate the error
         error += chempot_error(current_chempots, target_chempots)
+    # TODO: write a test for this
+    if np.any(np.isnan(np.array([error], dtype=np.float64))):  # must coerce sympy.core.numbers.Float to float64
+        return -np.inf
     return error
