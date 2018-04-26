@@ -45,15 +45,12 @@ def calculate_points_array(phase_constituents, configuration, occupancies=None):
     # construct the points array from zeros
     points = np.zeros(sum(len(subl) for subl in phase_constituents))
     current_subl_idx = 0  # index that marks the beginning of the sublattice
-    for phase_subl, config_subl, subl_occupancies in zip(phase_constituents,
-                                                         configuration,
-                                                         occupancies):
+    for phase_subl, config_subl, subl_occupancies in zip(phase_constituents, configuration, occupancies):
         phase_subl = list(phase_subl)
         if isinstance(config_subl, (tuple, list)):
             # we have mixing on the sublattice
             for comp, comp_occupancy in zip(config_subl, subl_occupancies):
-                points[
-                    current_subl_idx + phase_subl.index(comp)] = comp_occupancy
+                points[current_subl_idx + phase_subl.index(comp)] = comp_occupancy
         else:
             points[current_subl_idx + phase_subl.index(config_subl)] = 1
         current_subl_idx += len(phase_subl)
@@ -146,7 +143,9 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         # add everything to the calculate_dict
         calculate_dict['P'] = np.concatenate([calculate_dict['P'], P])
         calculate_dict['T'] = np.concatenate([calculate_dict['T'], T])
-        calculate_dict['points'] = np.concatenate([calculate_dict['points'], points], axis=0)
+        print(points.shape)
+        print(points)
+        calculate_dict['points'] = np.concatenate([calculate_dict['points'], np.repeat(points, len(T)/points.shape[0], axis=0)], axis=0)
         calculate_dict['values'] = np.concatenate([calculate_dict['values'], values.flatten()])
 
     return calculate_dict
@@ -224,6 +223,7 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
                 calculate_dict['output'] = prop
                 params = parameters
             sample_values = calculate_dict.pop('values')
+            print(calculate_dict)
             results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models, massfuncs=massfuncs,
                                 callables=callables, **calculate_dict)[calculate_dict['output']].values
             weight = (property_prefix_weight_factor[prop.split('_')[0]]*np.abs(np.mean(sample_values)))**(-1.0)

@@ -197,3 +197,31 @@ CU_MG_SM_FORM_T_X_FCC_A1 = yaml.load("""{
   "comment": "FAKE DATA"
 }
 """)
+
+
+CU_MG_CPM_FORM_X_HCP_A3 = yaml.load("""{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["HCP_A3"],
+  "solver": {
+    "sublattice_site_ratios": [1, 1],
+    "sublattice_occupancies": [
+    [[0.5, 0.5], 1],
+    [[0.1, 0.9], 1]
+    ],
+    "sublattice_configurations": [
+    [["CU", "MG"], "VA"],
+    [["CU", "MG"], "VA"]
+    ],
+    "mode": "manual"
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 300,
+  },
+
+  "output": "CPM_FORM",
+    "values":   [[[10, 15]]],
+  "reference": "FAKE DATA",
+  "comment": "FAKE DATA"
+}
+""")
