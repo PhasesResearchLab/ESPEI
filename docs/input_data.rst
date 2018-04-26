@@ -1,8 +1,8 @@
 .. _Input data:
 
-====================
-Gathering input data
-====================
+=====================
+Making ESPEI datasets
+=====================
 
 JSON Format
 ===========

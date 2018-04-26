@@ -1,8 +1,8 @@
 .. _Writing input files:
 
-===================
-Writing ESPEI input
-===================
+======================
+ESPEI YAML input files
+======================
 
 This page aims to completely describe the ESPEI input file in the YAML format.
 Possibly useful links are the `YAML refcard <http://www.yaml.org/refcard.html>`_ and the (possibly less useful) `Full YAML specification <http://www.yaml.org/spec/>`_.
