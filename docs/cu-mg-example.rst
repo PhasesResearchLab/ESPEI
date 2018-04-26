@@ -308,19 +308,7 @@ after 115 iterations.
     %matplotlib inline
     import matplotlib.pyplot as plt
     import numpy as np
-
-    def truncate_arrays(trace_array, prob_array=None):
-        """Return arrays with any empty remaining steps (zeros) removed."""
-        nz = np.nonzero(np.all(trace_array != 0, axis=-1))
-        s = trace_array.shape
-        # number of iterations that are non-zero
-        iterations = trace_array[nz].reshape(s[0], -1, s[2]).shape[1]
-
-        if prob_array is None:
-            return trace_array[:,:iterations,:]
-        else:
-            return trace_array[:,:iterations,:], prob_array[:, :iterations]
-
+    from espei.analysis import truncate_arrays
 
     trace = np.load('chain.npy')
     lnprob = np.load('lnprob.npy')
@@ -358,18 +346,7 @@ parameters explore the space and converge to a solution.
     import matplotlib.pyplot as plt
     import numpy as np
 
-    def truncate_arrays(trace_array, prob_array=None):
-        """Return arrays with any empty remaining steps (zeros) removed."""
-        nz = np.nonzero(np.all(trace_array != 0, axis=-1))
-        s = trace_array.shape
-        # number of iterations that are non-zero
-        iterations = trace_array[nz].reshape(s[0], -1, s[2]).shape[1]
-
-        if prob_array is None:
-            return trace_array[:,:iterations,:]
-        else:
-            return trace_array[:,:iterations,:], prob_array[:, :iterations]
-
+    from espei.analysis import truncate_arrays
 
     trace = np.load('chain.npy')
     lnprob = np.load('lnprob.npy')
@@ -422,18 +399,7 @@ similar error.
     import numpy as np
     import corner
 
-    def truncate_arrays(trace_array, prob_array=None):
-        """Return arrays with any empty remaining steps (zeros) removed."""
-        nz = np.nonzero(np.all(trace_array != 0, axis=-1))
-        s = trace_array.shape
-        # number of iterations that are non-zero
-        iterations = trace_array[nz].reshape(s[0], -1, s[2]).shape[1]
-
-        if prob_array is None:
-            return trace_array[:,:iterations,:]
-        else:
-            return trace_array[:,:iterations,:], prob_array[:, :iterations]
-
+    from espei.analysis import truncate_arrays
 
     trace = np.load('chain.npy')
     lnprob = np.load('lnprob.npy')
