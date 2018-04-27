@@ -57,6 +57,46 @@ def test_mixing_energies_are_fit(datasets_db):
     assert calculate_thermochemical_error(read_dbf, sorted(dbf.elements), sorted(dbf.phases.keys()), datasets_db) == 0
 
 
+def test_mixing_data_is_excess_only(datasets_db):
+    """Tests that given an entropy of mixing datapoint of 0, no excess parameters are fit (meaning datasets do not include ideal mixing)."""
+    phase_models = {
+        "components": ["AL", "B"],
+        "phases": {
+            "LIQUID" : {
+                "sublattice_model": [["AL", "B"]],
+                "sublattice_site_ratios": [1]
+            },
+            "FCC_A1" : {
+                "sublattice_model": [["AL", "B"]],
+                "sublattice_site_ratios": [1]
+            }
+        }
+    }
+
+    dataset_excess_mixing = {
+        "components": ["AL", "B"],
+        "phases": ["FCC_A1"],
+        "solver": {
+            "sublattice_site_ratios": [1],
+            "sublattice_occupancies": [[[0.5, 0.5]]],
+            "sublattice_configurations": [[["AL", "B"]]],
+            "mode": "manual"
+        },
+        "conditions": {
+            "P": 101325,
+            "T": 298.15
+        },
+        "output": "SM_MIX",
+        "values": [[[0]]]
+    }
+    datasets_db.insert(dataset_excess_mixing)
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    assert dbf.elements == {'AL', 'B'}
+    assert set(dbf.phases.keys()) == {'LIQUID', 'FCC_A1'}
+    assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 0
+
+
 def test_multi_sublattice_mixing_energies_are_fit(datasets_db):
     """Tests the correct excess parameter is fit for phases with multiple sublattices with vacancies."""
     phase_models = {
