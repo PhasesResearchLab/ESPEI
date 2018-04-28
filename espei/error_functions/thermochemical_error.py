@@ -149,7 +149,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
     return calculate_dict
 
 
-def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, massfuncs=None):
+def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None):
     """
     Calculate the weighted single phase error in the Database
 
@@ -169,9 +169,9 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
         Phase models to pass to pycalphad calculations. Ideal mixing
         contributions must be removed.
     callables : dict
-        Callables to pass to pycalphad
-    massfuncs : dict
-        Callables to pass to pycalphad
+        Dictionary of {output_property: callables_dict} where callables_dict is
+        a dictionary of {'callables': {phase_name: callables}, 'massfuncs': {phase_name: callables}
+        to pass to pycalphad. These must have ideal mixing portions removed.
 
     Returns
     -------
@@ -214,6 +214,10 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
     # we could also include the bare property ('' => 'HM'), but these are rarely used in ESPEI
     properties = [''.join(prop) for prop in itertools.product(property_prefix_weight_factor.keys(), property_suffixes)]
 
+    whitelist_properties = ['HM', 'SM', 'CPM', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
+    # if callables is None, construct empty callables dicts, which will be JIT compiled by pycalphad later
+    callables = callables if callables is not None else {prop: {'callables': None, 'massfuncs': None} for prop in whitelist_properties}
+
     sum_square_error = 0
     for phase_name in phases:
         for prop in properties:
@@ -230,8 +234,10 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
                 calculate_dict['output'] = prop
                 params = parameters
             sample_values = calculate_dict.pop('values')
-            results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models, massfuncs=massfuncs,
-                                callables=callables, **calculate_dict)[calculate_dict['output']].values
+            results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models,
+                                massfuncs=callables[calculate_dict['output']]['massfuncs'],
+                                callables=callables[calculate_dict['output']]['callables'],
+                                **calculate_dict)[calculate_dict['output']].values
             weight = (property_prefix_weight_factor[prop.split('_')[0]]*np.abs(np.mean(sample_values)))**(-1.0)
             error = np.sum((results-sample_values)**2) * weight
             # logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))

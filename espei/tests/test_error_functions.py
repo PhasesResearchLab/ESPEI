@@ -26,29 +26,29 @@ def test_activity_error(datasets_db):
 
 def test_thermochemical_error_with_multiple_X_points(datasets_db):
     """Multiple composition datapoints in a dataset for a mixing phase should be successful."""
-    datasets_db.insert(CU_MG_CPM_FORM_X_HCP_A3)
+    datasets_db.insert(CU_MG_CPM_MIX_X_HCP_A3)
 
     dbf = Database(CU_MG_TDB)
-    error = calculate_thermochemical_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {}, {})
+    error = calculate_thermochemical_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db)
     assert np.isclose(float(error), -520.0, atol=0.01)
 
 
 def test_thermochemical_error_with_multiple_T_points(datasets_db):
     """Multiple temperature datapoints in a dataset for a stoichiometric comnpound should be successful."""
-    datasets_db.insert(CU_MG_HM_FORM_T_CUMG2)
+    datasets_db.insert(CU_MG_HM_MIX_T_CUMG2)
 
     dbf = Database(CU_MG_TDB)
-    error = calculate_thermochemical_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {}, {})
-    assert np.isclose(float(error), -85852620.13414142, atol=0.01)
+    error = calculate_thermochemical_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db)
+    assert np.isclose(float(error), -3672.727272727273, atol=0.01)
 
 
 def test_thermochemical_error_with_multiple_T_X_points(datasets_db):
     """Multiple temperature and composition datapoints in a dataset for a mixing phase should be successful."""
-    datasets_db.insert(CU_MG_SM_FORM_T_X_FCC_A1)
+    datasets_db.insert(CU_MG_SM_MIX_T_X_FCC_A1)
 
     dbf = Database(CU_MG_TDB)
-    error = calculate_thermochemical_error(dbf, ['CU', 'MG', 'VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {}, {})
-    assert np.isclose(float(error), -31241.312055519393, atol=0.01)
+    error = calculate_thermochemical_error(dbf, ['CU', 'MG', 'VA'], list(dbf.phases.keys()), datasets_db)
+    assert np.isclose(float(error), -31830.303030303032, atol=0.01)
 
 def test_thermochemical_error_for_mixing_entropy_error_is_excess_only(datasets_db):
     """Tests that error in mixing entropy data is excess only (the ideal part is removed)."""
