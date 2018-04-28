@@ -158,7 +158,7 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
     # now construct callables for each possible property that can be calculated
     thermochemical_callables = {}  # will be dict of {output_property: eq_callables_dict}
     whitelist_properties = ['HM', 'SM', 'CPM']
-    whitelist_properties = [whitelist_properties] + [prop+'_MIX' for prop in whitelist_properties]
+    whitelist_properties = whitelist_properties + [prop+'_MIX' for prop in whitelist_properties]
     for prop in whitelist_properties:
         thermochemical_callables[prop] = eq_callables_dict(dbf, comps, phases, model=mods_no_idmix, output=prop, param_symbols=sorted([sympy.Symbol(sym) for sym in symbols_to_fit], key=str), build_gradients=False)
         # pop off the callables not used in properties because we don't want them around (they should be None, anyways)
