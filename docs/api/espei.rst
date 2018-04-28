@@ -12,6 +12,14 @@ Subpackages
 Submodules
 ----------
 
+espei\.analysis module
+----------------------
+
+.. automodule:: espei.analysis
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 espei\.core\_utils module
 -------------------------
 
