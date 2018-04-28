@@ -114,6 +114,7 @@ In ``solver`` the sublattice configuration and site ratios are described for the
 Non-mixing sublattices are represented as a string, while mixing sublattices are represented as a lists.
 Thus an endmember for ``BCC_B2`` (as in this example) is ``["AL", "NI", VA"]`` and if there were mixing (as in the next example) it might be ``["AL", ["AL", "NI"], "VA"]``.
 Mixing also means that the ``sublattice_occupancies`` key must be specified, but that is not the case in this example.
+It is important to note that any mixing configurations must have any ideal mixing contributions removed.
 Regardless of whether there is mixing or not, the length of this list should always equal the number of sublattices in the phase, though the sub-lists can have mixing up to the number of components in that sublattice.
 Note that the ``sublattice_configurations`` is a *list* of these lists.
 That is, there can be multiple sublattice configurations in a single dataset.
@@ -129,7 +130,6 @@ The ``values`` key is the most complicated and care must be taken to avoid mista
 ``values`` is a 3-dimensional array where each value is the ``output`` for a specific condition of pressure, temperature, and sublattice configurations from outside to inside.
 Alternatively, the size of the array must be ``(len(P), len(T), len(subl_config))``.
 In the example below, the shape of the ``values`` array is (1, 12, 1) as there is one pressure scalar, one sublattice configuration, and 12 temperatures.
-The formatting of this can be tricky, and it is suggested to use a NumPy array and reshape or add axes using ``np.newaxis`` indexing.
 
 .. code-block:: JSON
 
@@ -284,3 +284,11 @@ An example for Cu-Mg activties follows, with data digitized from S.P. Garg, Y.J.
       "reference": "garg1973thermodynamic",
       "comment": "Digitized Figure 3 and converted from activity coefficients."
     }
+
+Common Mistakes
+===============
+
+1. A single element sublattice is different in a phase model (``[["A", "B"], ["A"]]]``) than a sublattice configuration (``[["A", "B"], "A"]``).
+#. Make sure you use the right units (``J/mole-atom``, mole fractions, Kelvin, Pascal)
+#. Mixing configurations should not have ideal mixing contributions.
+
