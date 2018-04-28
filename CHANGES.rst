@@ -2,6 +2,16 @@
 What's New
 ==========
 
+0.5.2 (2018-04-28)
+==================
+
+This is a major bugfix release for MCMC multi-phase fitting runs for single phase data.
+
+* Fixed a major issue where single phase thermochemical data was always compared to Gibbs energy, giving incorrect errors in MCMC runs.
+* Single phase errors in ESPEI incorrectly compared values with ideal mixing contributions to data, which is excess only.
+* Fixed a bug where single phase thermochemical data with that are dependent on composition and pressure and/or temperature were not fit correctly.
+* Added utilities for analyzing ESPEI results and add them to the Cu-Mg example docs.
+
 0.5.1 (2018-04-17)
 ==================
 
