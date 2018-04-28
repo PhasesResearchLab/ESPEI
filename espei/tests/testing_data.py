@@ -150,7 +150,7 @@ CU_MG_EXP_ACTIVITY = yaml.load("""{
 """)
 
 
-CU_MG_HM_FORM_T_CUMG2 = yaml.load("""{
+CU_MG_HM_MIX_T_CUMG2 = yaml.load("""{
   "components": ["CU", "MG", "VA"],
   "phases": ["CUMG2"],
   "solver": {
@@ -163,7 +163,7 @@ CU_MG_HM_FORM_T_CUMG2 = yaml.load("""{
     "T": [300, 400],
   },
 
-  "output": "HM_FORM",
+  "output": "HM_MIX",
     "values":   [[[10], [100]]],
   "reference": "FAKE DATA",
   "comment": "FAKE DATA"
@@ -171,7 +171,7 @@ CU_MG_HM_FORM_T_CUMG2 = yaml.load("""{
 """)
 
 
-CU_MG_SM_FORM_T_X_FCC_A1 = yaml.load("""{
+CU_MG_SM_MIX_T_X_FCC_A1 = yaml.load("""{
   "components": ["CU", "MG", "VA"],
   "phases": ["FCC_A1"],
   "solver": {
@@ -191,7 +191,7 @@ CU_MG_SM_FORM_T_X_FCC_A1 = yaml.load("""{
     "T": [300, 400],
   },
 
-  "output": "SM_FORM",
+  "output": "SM_MIX",
     "values":   [[[10, 50], [100, 500]]],
   "reference": "FAKE DATA",
   "comment": "FAKE DATA"
@@ -199,7 +199,7 @@ CU_MG_SM_FORM_T_X_FCC_A1 = yaml.load("""{
 """)
 
 
-CU_MG_CPM_FORM_X_HCP_A3 = yaml.load("""{
+CU_MG_CPM_MIX_X_HCP_A3 = yaml.load("""{
   "components": ["CU", "MG", "VA"],
   "phases": ["HCP_A3"],
   "solver": {
@@ -219,7 +219,7 @@ CU_MG_CPM_FORM_X_HCP_A3 = yaml.load("""{
     "T": 300,
   },
 
-  "output": "CPM_FORM",
+  "output": "CPM_MIX",
     "values":   [[[10, 15]]],
   "reference": "FAKE DATA",
   "comment": "FAKE DATA"

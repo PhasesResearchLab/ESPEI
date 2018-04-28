@@ -253,7 +253,7 @@ def get_pure_elements(dbf, comps):
     return pure_elements
 
 
-def eq_callables_dict(dbf, comps, phases, model=None, param_symbols=None):
+def eq_callables_dict(dbf, comps, phases, model=None, param_symbols=None, output='GM', build_gradients=True):
     """
     Create a dictionary of callable dictionaries for phases in equilibrium
 
@@ -270,6 +270,10 @@ def eq_callables_dict(dbf, comps, phases, model=None, param_symbols=None):
         Model subclass. Defaults to ``Model``.
     param_symbols : list
         SymPy Symbol objects that will be preserved in the callable functions.
+    output : str
+        Output property of the particular Model to sample
+    build_gradients : bool
+        Whether or not to build gradient functions. Defaults to True.
 
     Returns
     -------
@@ -315,15 +319,23 @@ def eq_callables_dict(dbf, comps, phases, model=None, param_symbols=None):
             models[name] = mod = mod(dbf, comps, name)
         site_fracs = mod.site_fractions
         variables = sorted(site_fracs, key=str)
-        out = models[name].energy
+        try:
+            out = getattr(mod, output)
+        except AttributeError:
+            raise AttributeError('Missing Model attribute {0} specified for {1}'
+                                 .format(output, mod.__class__))
 
         # Build the callables of the output
         # Only force undefineds to zero if we're not overriding them
         undefs = list(out.atoms(Symbol) - out.atoms(v.StateVariable) - set(param_symbols))
         for undef in undefs:
             out = out.xreplace({undef: float(0)})
-        cf, gf = build_functions(out, tuple([v.P, v.T] + site_fracs),
-                                 parameters=param_symbols)
+        build_output = build_functions(out, tuple([v.P, v.T] + site_fracs), parameters=param_symbols, include_grad=build_gradients)
+        if build_gradients:
+            cf, gf = build_output
+        else:
+            cf = build_output
+            gf = None
         hf = None
         eq_callables['callables'][name] = cf
         eq_callables['grad_callables'][name] = gf
@@ -331,12 +343,22 @@ def eq_callables_dict(dbf, comps, phases, model=None, param_symbols=None):
 
         # Build the callables for mass
         # TODO: In principle, we should also check for undefs in mod.moles()
-        tup1, tup2 = zip(*[build_functions(mod.moles(el), [v.P, v.T] + variables,
-                                           include_obj=True, include_grad=True,
+
+        if build_gradients:
+            mcf, mgf = zip(*[build_functions(mod.moles(el), [v.P, v.T] + variables,
+                                           include_obj=True,
+                                           include_grad=build_gradients,
                                            parameters=param_symbols)
                            for el in pure_elements])
-        eq_callables['massfuncs'][name] = tup1
-        eq_callables['massgradfuncs'][name] = tup2
+        else:
+            mcf = tuple([build_functions(mod.moles(el), [v.P, v.T] + variables,
+                                           include_obj=True,
+                                           include_grad=build_gradients,
+                                           parameters=param_symbols)
+                           for el in pure_elements])
+            mgf = None
+        eq_callables['massfuncs'][name] = mcf
+        eq_callables['massgradfuncs'][name] = mgf
 
         # creating the phase records triggers the compile
         phase_records[name.upper()] = PhaseRecord_from_cython(comps, variables,
