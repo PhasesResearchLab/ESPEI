@@ -7,7 +7,7 @@ import itertools
 import numpy as np
 import tinydb
 
-from pycalphad import calculate
+from pycalphad import calculate, Model
 from pycalphad.core.utils import unpack_components
 
 from espei.core_utils import ravel_conditions
@@ -166,7 +166,8 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
     parameters : dict
         Dictionary of symbols that will be overridden in pycalphad.calculate
     phase_models : dict
-        Phase models to pass to pycalphad calculations
+        Phase models to pass to pycalphad calculations. Ideal mixing
+        contributions must be removed.
     callables : dict
         Callables to pass to pycalphad
     massfuncs : dict
@@ -192,6 +193,14 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
     """
     if parameters is None:
         parameters = {}
+
+    if phase_models is None:
+        # create phase models with ideal mixing removed
+        phase_models = {}
+        for phase_name in phases:
+            phase_models[phase_name] = Model(dbf, comps, phase_name)
+            phase_models[phase_name].models['idmix'] = 0
+
 
     # property weights factors as fractions of the parameters
     # for now they are all set to 5%
