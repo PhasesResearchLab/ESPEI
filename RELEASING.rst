@@ -6,6 +6,7 @@ When releasing a new version of ESPEI:
 1. ``git pull`` to make sure you haven't missed any last-minute commits. **After this point, nothing else is making it into this version.**
 #. Ensure that all tests pass locally on develop.
 #. Regenerate the API documentation with ``sphinx-apidoc -f -o docs/api/ espei/ -H 'API Documentation'``.
+#. Update the ``version`` and ``release`` variables of ``docs/conf.py`` to the new version
 #. Resolve differences and commit the updated API documentation. 
 #. ``git push`` and verify all tests pass on all CI services.
 #. Generate a list of commits since the last version with ``git --no-pager log --oneline --no-decorate 0.1^..origin/master``
