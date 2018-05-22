@@ -11,7 +11,7 @@ ESPEI
 .. toctree::
    :maxdepth: 1
 
-   CHANGES
+   self
 
 
 ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for automated thermodynamic database development within the CALPHAD method.
