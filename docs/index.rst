@@ -33,6 +33,17 @@ The name and idea of ESPEI are originally based off of Shang, Wang, and Liu, ESP
     See the :ref:`Cu-Mg Example`.
 
 
+Changes
+=======
+
+
+.. toctree::
+   :maxdepth: 2
+
+   self
+   CHANGES
+
+
 Installation
 ============
 
@@ -210,32 +221,9 @@ Q: Can I run ESPEI on a supercomputer supporting MPI?
 
 A: Yes! ESPEI has MPI support. See the :ref:`MPI` page for more details.
 
-Getting Help
-============
+Tutorials
+=========
 
-For help on installing and using ESPEI, please join the `PhasesResearchLab/ESPEI Gitter room <https://gitter.im/PhasesResearchLab/ESPEI>`_.
-
-Bugs and software issues should be reported on `GitHub <https://github.com/PhasesResearchLab/ESPEI/issues>`_.
-
-Module Hierarchy
-================
-
-* ``fit.py`` is the main entry point
-* ``paramselect.py`` is where all of the fitting happens. This is the core.
-* ``core_utils.py`` contains specialized utilities for ESPEI.
-* ``utils.py`` are utilities with reuse potential outside of ESPEI.
-* ``plot.py`` holds plotting functions
-
-License
-=======
-
-ESPEI is MIT licensed. See LICENSE.
-
-.. toctree::
-   :maxdepth: 2
-
-   self
-   CHANGES
 
 .. toctree::
    :maxdepth: 4
@@ -243,7 +231,28 @@ ESPEI is MIT licensed. See LICENSE.
 
    cu-mg-example
    input_data
- 
+
+
+Getting Help
+============
+
+For help on installing and using ESPEI, please join the `PhasesResearchLab/ESPEI Gitter room <https://gitter.im/PhasesResearchLab/ESPEI>`_.
+
+Bugs and software issues should be reported on `GitHub <https://github.com/PhasesResearchLab/ESPEI/issues>`_.
+
+Reference
+=========
+
+Module Hierarchy
+----------------
+
+* ``fit.py`` is the main entry point
+* ``paramselect.py`` is where all of the fitting happens. This is the core.
+* ``core_utils.py`` contains specialized utilities for ESPEI.
+* ``utils.py`` are utilities with reuse potential outside of ESPEI.
+* ``plot.py`` holds plotting functions
+
+
 .. toctree::
    :maxdepth: 4
    :caption: Reference
@@ -253,11 +262,26 @@ ESPEI is MIT licensed. See LICENSE.
    mpi
    api/modules
 
+
+Contributing
+============
+
 .. toctree::
    :maxdepth: 4
    :caption: Developer
 
    contributing
+
+
+License
+=======
+
+ESPEI is MIT licensed.
+
+.. toctree::
+   :maxdepth: 2
+
+   LICENSE
 
 
 Indices and tables
