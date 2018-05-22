@@ -7,6 +7,13 @@
 ESPEI
 =====
 
+
+.. toctree::
+   :maxdepth: 1
+
+   CHANGES
+
+
 ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for automated thermodynamic database development within the CALPHAD method.
 
 The ESPEI package is based on a fork of `pycalphad-fitting`_ and uses `pycalphad`_ for calculating Gibbs free energies of thermodynamic models.
@@ -38,9 +45,8 @@ Changes
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   self
    CHANGES
 
 
@@ -227,7 +233,6 @@ Tutorials
 
 .. toctree::
    :maxdepth: 4
-   :caption: Tutorials
 
    cu-mg-example
    input_data
@@ -255,7 +260,6 @@ Module Hierarchy
 
 .. toctree::
    :maxdepth: 4
-   :caption: Reference
 
    writing_input
    theory
@@ -268,7 +272,6 @@ Contributing
 
 .. toctree::
    :maxdepth: 4
-   :caption: Developer
 
    contributing
 
@@ -278,10 +281,31 @@ License
 
 ESPEI is MIT licensed.
 
-.. toctree::
-   :maxdepth: 2
+.. code-block::
 
-   LICENSE
+    The MIT License (MIT)
+
+    Copyright (c) 2015-2018 Richard Otis
+    Copyright (c) 2017-2018 Brandon Bocklund
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
 
 
 Indices and tables
