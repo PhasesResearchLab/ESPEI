@@ -5,10 +5,12 @@ Classes and functions defined here should have some reuse potential.
 """
 
 import re, itertools
+from collections import namedtuple
 import numpy as np
+import sympy
 from sympy import Symbol
 from distributed import Client
-from tinydb import TinyDB
+from tinydb import TinyDB, where
 from tinydb.storages import MemoryStorage
 from six import string_types
 import bibtexparser
@@ -370,3 +372,119 @@ def eq_callables_dict(dbf, comps, phases, model=None, param_symbols=None, output
     # finally, add the models to the eq_callables
     eq_callables['model'] = dict(models)
     return eq_callables
+
+
+def parameter_term(expression, symbol):
+    """
+    Determine the term, e.g. T*log(T) that belongs to the symbol in expression
+
+    Parameters
+    ----------
+    expression :
+    symbol :
+
+    Returns
+    -------
+
+    """
+    if expression == symbol:
+        # the parameter is the symbol, so the multiplicative term is 1.
+        term = 1
+    else:
+        if not isinstance(expression, sympy.Add):
+            raise ValueError('Parameter {} is a {} not a sympy.Add'.format(expression, type(expression)))
+
+        expression_terms = expression.args
+        term = None
+        for term_coeff in expression_terms:
+            coeff, root = term_coeff.as_coeff_mul(symbol)
+            if root == (symbol,):
+                term = coeff
+                break
+    if term is None:
+        raise ValueError('No multiplicative terms found for Symbol {} in parameter {}'.format(symbol, expression))
+    return term
+
+
+def formatted_constituent_array(constituent_array):
+    """
+    Given a constituent array of Species, return the classic CALPHAD-style interaction.
+
+    Parameters
+    ----------
+    constituent_array : list
+        List of sublattices, which are lists of Species in that sublattice
+
+    Returns
+    -------
+    str
+        String of the constituent array formatted in the classic CALPHAD style
+
+    Examples
+    --------
+    >>> from pycalphad import variables as v
+    >>> const_array = [[v.Species('CU'), v.Species('MG')], [v.Species('MG')]]
+    >>> formatted_constituent_array(const_array)
+    'CU,MG:MG'
+
+    """
+    return ':'.join([','.join([sp.name for sp in subl]) for subl in constituent_array])
+
+
+def formatted_parameter(dbf, symbol, unique=True):
+    """
+    Get the deconstructed pretty parts of the parameter/term a symbol belongs to in a Database.
+
+    Parameters
+    ----------
+    dbf : pycalphad.Database
+    symbol : string or sympy.Symbol
+        Symbol in the Database to get the parameter for.
+    unique : bool
+        If True, will raise if more than one parameter containing the symbol is found.
+
+
+    Returns
+    -------
+    FormattedParameter
+        A named tuple with the following attributes:
+        ``phase_name``, ``interaction``, ``symbol``, ``term``, ``parameter_type``
+        or ``term_symbol`` (which is just the Symbol * temperature term)
+    """
+    FormattedParameter = namedtuple('FormattedParameter', ['phase_name', 'interaction', 'symbol', 'term', 'parameter_type', 'term_symbol'])
+
+    if not isinstance(symbol, Symbol):
+        symbol = Symbol(symbol)
+    search_res = dbf._parameters.search(
+        where('parameter').test(lambda x: symbol in x.free_symbols))
+
+    if len(search_res) == 0:
+        raise ValueError('Symbol {} not found in any parameters.'.format(symbol))
+    elif (len(search_res) > 1) and unique:
+        raise ValueError('Parameters found containing Symbol {} are not unique. Found {}.'.format(symbol, search_res))
+
+    formatted_parameters = []
+    for result in search_res:
+        const_array = formatted_constituent_array(result['constituent_array'])
+        # format the paramter type to G or L0, L1, ...
+        parameter_type = '{}{}'.format(result['parameter_type'], result['parameter_order'])
+        # override non-interacting to G if there's no interaction
+        has_interaction = ',' in const_array
+        if not has_interaction:
+            if (result['parameter_type'] == 'G') or (result['parameter_type'] == 'L'):
+                parameter_type = 'G'
+
+        term = parameter_term(result['parameter'], symbol)
+        formatted_param = FormattedParameter(result['phase_name'],
+                                             const_array,
+                                             symbol,
+                                             term,
+                                             parameter_type,
+                                             term*symbol
+                                             )
+        formatted_parameters.append(formatted_param)
+
+    if unique:
+        return formatted_parameters[0]
+    else:
+        return formatted_parameters
