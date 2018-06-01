@@ -1,3 +1,7 @@
+.. raw:: latex
+
+   \chapter{Contributing to ESPEI}
+
 =====================
 Contributing to ESPEI
 =====================

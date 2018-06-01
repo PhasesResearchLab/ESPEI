@@ -1,4 +1,9 @@
+.. raw:: latex
+
+   \chapter{Making ESPEI datasets}
+
 .. _Input data:
+
 
 =====================
 Making ESPEI datasets

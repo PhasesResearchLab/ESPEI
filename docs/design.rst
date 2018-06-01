@@ -1,3 +1,7 @@
+.. raw:: latex
+
+   \chapter{Software design}
+
 Software design
 ===============
 

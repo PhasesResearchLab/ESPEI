@@ -1,3 +1,7 @@
+.. raw:: latex
+
+   \chapter{Cu-Mg example}
+
 .. _Cu-Mg Example:
 
 =============

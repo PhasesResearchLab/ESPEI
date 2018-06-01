@@ -7,9 +7,12 @@
 ESPEI
 =====
 
+.. raw:: latex
+
+   \part{Introduction}
+
 .. toctree::
    :maxdepth: 1
-   :caption: Introduction
 
    self
    installation
@@ -66,6 +69,10 @@ Change log
 See `what's new <CHANGES.html>`_!
 
 
+.. raw:: latex
+
+   \part{Tutorials}
+
 .. toctree::
    :maxdepth: 1
    :caption: Tutorials
@@ -74,6 +81,10 @@ See `what's new <CHANGES.html>`_!
    cu-mg-example
    input_data
 
+
+.. raw:: latex
+
+   \part{Reference}
 
 .. toctree::
    :maxdepth: 1
@@ -85,13 +96,25 @@ See `what's new <CHANGES.html>`_!
    api/modules
 
 
+.. raw:: latex
+
+   \part{Developer}
+
 .. toctree::
    :maxdepth: 1
-   :caption: Contributing
+   :caption: Developer
 
    design
    contributing
 
+
+.. raw:: latex
+
+   \part{Appendix}
+
+.. raw:: latex
+
+   \chapter{Appendices}
 
 Getting Help
 ============
@@ -138,14 +161,14 @@ Citing ESPEI
 A publication is in preparation. For now, ESPEI can be cited via the following publication:
 
 
-.. code-block:: none
-
-   R.A. Otis, Z.-K. Liu, High-Throughput Thermodynamic Modeling and Uncertainty Quantification for ICME, JOM. 69 (2017) 886–892. doi:10.1007/s11837-017-2318-6.
+R.A. Otis, Z.-K. Liu, High-Throughput Thermodynamic Modeling and Uncertainty Quantification for ICME, JOM. 69 (2017) 886–892. doi:10.1007/s11837-017-2318-6.
 
 
-Indices and tables
-==================
+.. only:: html
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   Indices and tables
+   ==================
+
+   * :ref:`genindex`
+   * :ref:`modindex`
+   * :ref:`search`

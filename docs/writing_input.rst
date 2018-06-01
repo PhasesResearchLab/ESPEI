@@ -1,3 +1,7 @@
+.. raw:: latex
+
+   \chapter{YAML input files}
+
 .. _Writing input files:
 
 ======================
