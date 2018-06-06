@@ -391,8 +391,13 @@ def parameter_term(expression, symbol):
         # the parameter is the symbol, so the multiplicative term is 1.
         term = 1
     else:
+        if isinstance(expression, sympy.Piecewise):
+            expression = expression.args[0][0]
+        if isinstance(expression, sympy.Symbol):
+            # this is not mathematically correct, but we just need to be able to split it into args
+            expression = sympy.Add(expression, 1)
         if not isinstance(expression, sympy.Add):
-            raise ValueError('Parameter {} is a {} not a sympy.Add'.format(expression, type(expression)))
+            raise ValueError('Parameter {} is a {} not a sympy.Add or a Piecewise Add'.format(expression, type(expression)))
 
         expression_terms = expression.args
         term = None
