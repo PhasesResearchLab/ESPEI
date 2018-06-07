@@ -25,7 +25,7 @@ output:
       default: out.tdb
     tracefile: # name of the file containing the mcmc chain array
       type: string
-      default: chain.npy
+      default: trace.npy
       regex: '.*\.npy$'
     probfile: # name of the file containing the mcmc ln probability array
       type: string
@@ -63,7 +63,7 @@ mcmc:
       required: True
     mcmc_save_interval:
       type: integer
-      default: 20
+      default: 1
       min: 1
       required: True
     scheduler: # scheduler to use for parallelization

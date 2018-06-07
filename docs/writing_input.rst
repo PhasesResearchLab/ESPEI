@@ -114,7 +114,7 @@ tracefile
 ---------
 
 :type: string
-:default: chain.npy
+:default: trace.npy
 
 Name of the file that the MCMC trace is written to.
 The array has shape ``(number of chains, iterations, number of parameters)``.
@@ -197,9 +197,11 @@ mcmc_save_interval
 ------------------
 
 :type: int
-:default: 20
+:default: 1
 
-Controls the interval for saving the MCMC chain and probability files.
+Controls the interval (in number of steps) for saving the MCMC chain and probability files.
+By default, new files will be written out every step. For large files (many mcmc steps and chains per parameter),
+these might become expensive to write out to disk.
 
 cores
 -----
