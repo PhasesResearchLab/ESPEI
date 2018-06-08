@@ -132,7 +132,7 @@ def test_correct_defaults_are_applied_from_minimal_specification():
     assert d.get('output') is not None
     assert d['output']['verbosity'] == 0
     assert d['output']['output_db'] == 'out.tdb'
-    assert d['output']['tracefile'] == 'chain.npy'
+    assert d['output']['tracefile'] == 'trace.npy'
     assert d['output']['probfile'] == 'lnprob.npy'
     assert d['mcmc']['mcmc_save_interval'] == 1
     assert d['mcmc']['scheduler'] == 'dask'
