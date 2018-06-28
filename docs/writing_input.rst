@@ -43,8 +43,8 @@ All of the possible keys are
      ref_state
 
    mcmc:
-     mcmc_steps
-     mcmc_save_interval
+     iterations
+     save_interval
      cores
      scheduler
      input_db
@@ -119,7 +119,7 @@ tracefile
 Name of the file that the MCMC trace is written to.
 The array has shape ``(number of chains, iterations, number of parameters)``.
 
-The array is preallocated and padded with zeros, so if you selected to take 2000 MCMC steps, but only got through 1500, the last 500 values would be all 0.
+The array is preallocated and padded with zeros, so if you selected to take 2000 MCMC iterations, but only got through 1500, the last 500 values would be all 0.
 
 You must choose a unique file name.
 An error will be raised if file specified by ``tracefile`` already exists.
@@ -133,7 +133,7 @@ probfile
 Name of the file that the MCMC ln probabilities are written to.
 The array has shape ``(number of chains, iterations)``.
 
-The array is preallocated and padded with zeros, so if you selected to take 2000 MCMC steps, but only got through 1500, the last 500 values would be all 0.
+The array is preallocated and padded with zeros, so if you selected to take 2000 MCMC iterations, but only got through 1500, the last 500 values would be all 0.
 
 You must choose a unique file name.
 An error will be raised if file specified by ``probfile`` already exists.
@@ -183,7 +183,7 @@ The parameters can come from including a ``generate_parameters`` step, or by spe
 
 If you choose to use the parameters from a database, you can then further control settings based on whether it is the first MCMC run for a system (you are starting fresh) or whether you are continuing from a previous run (a 'restart').
 
-mcmc_steps
+iterations
 ----------
 
 :type: int
@@ -193,14 +193,14 @@ Number of iterations to perform in emcee.
 Each iteration consists of accepting one step for each chain in the ensemble.
 
 
-mcmc_save_interval
-------------------
+save_interval
+-------------
 
 :type: int
 :default: 1
 
-Controls the interval (in number of steps) for saving the MCMC chain and probability files.
-By default, new files will be written out every step. For large files (many mcmc steps and chains per parameter),
+Controls the interval (in number of iterations) for saving the MCMC chain and probability files.
+By default, new files will be written out every iteration. For large files (many mcmc iterations and chains per parameter),
 these might become expensive to write out to disk.
 
 cores
@@ -305,13 +305,13 @@ ESPEI with the same Database and initial settings (either the same
 
 Starting two runs with the same TDB or with parameter generation
 (which is deterministic) will result in the chains being at exactly
-the same position after 100 steps. If these are both restarted after
-100 steps for another 50 steps, then the final chain after 150 steps
+the same position after 100 iterations. If these are both restarted after
+100 iterations for another 50 iterations, then the final chain after 150 iterations
 will be the same.
 
 It is important to note that this is only explictly True when
 *starting* at the same point. If Run 1 and Run 2 are started with the
-same initial parameters and Run 1 proceeds 50 steps while Run 2
-proceeds 100 steps, restarting Run 1 for 100 steps and Run 2 for 50
-steps (so they are both at 150 total steps) will **NOT** give the same
+same initial parameters and Run 1 proceeds 50 iterations while Run 2
+proceeds 100 iterations, restarting Run 1 for 100 iterations and Run 2 for 50
+iterations (so they are both at 150 total iterations) will **NOT** give the same
 result.

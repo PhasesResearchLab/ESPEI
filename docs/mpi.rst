@@ -32,7 +32,7 @@ Here is an example for multiphase fitting starting from a generated TDB with a s
       phase_models: my-phases.json
       datasets: my-input-data
     mcmc:
-      mcmc_steps: 1000
+      iterations: 1000
       input_db: my-tdb.tdb
       scheduler: my-scheduler.json
 

@@ -74,9 +74,9 @@ def get_run_settings(input_dict):
     ValueError
     """
     run_settings = schema.normalized(input_dict)
-    # can't have chain_std_deviation and chains_per_parameters defaults with restart_chain
+    # can't have chain_std_deviation and chains_per_parameter defaults with restart_trace
     if run_settings.get('mcmc') is not None:
-            if run_settings['mcmc'].get('restart_chain') is None:
+            if run_settings['mcmc'].get('restart_trace') is None:
                 run_settings['mcmc']['chains_per_parameter'] = run_settings['mcmc'].get('chains_per_parameter', 2)
                 run_settings['mcmc']['chain_std_deviation'] = run_settings['mcmc'].get('chain_std_deviation', 0.1)
     if not schema.validate(run_settings):
@@ -168,25 +168,25 @@ def run_espei(run_settings):
         if mcmc_settings.get('input_db'):
             dbf = Database(mcmc_settings.get('input_db'))
 
-        # load the restart chain if needed
-        if mcmc_settings.get('restart_chain'):
-            restart_chain = np.load(mcmc_settings.get('restart_chain'))
+        # load the restart trace if needed
+        if mcmc_settings.get('restart_trace'):
+            restart_trace = np.load(mcmc_settings.get('restart_trace'))
         else:
-            restart_chain = None
+            restart_trace = None
 
         # load the remaning mcmc fitting parameters
-        mcmc_steps = mcmc_settings.get('mcmc_steps')
-        save_interval = mcmc_settings.get('mcmc_save_interval')
+        iterations = mcmc_settings.get('iterations')
+        save_interval = mcmc_settings.get('save_interval')
         chains_per_parameter = mcmc_settings.get('chains_per_parameter')
         chain_std_deviation = mcmc_settings.get('chain_std_deviation')
         deterministic = mcmc_settings.get('deterministic')
 
-        dbf, sampler = mcmc_fit(dbf, datasets, scheduler=client, mcmc_steps=mcmc_steps,
+        dbf, sampler = mcmc_fit(dbf, datasets, scheduler=client, iterations=iterations,
                                 chains_per_parameter=chains_per_parameter,
                                 chain_std_deviation=chain_std_deviation,
                                 save_interval=save_interval,
                                 tracefile=tracefile, probfile=probfile,
-                                restart_chain=restart_chain,
+                                restart_trace=restart_trace,
                                 deterministic=deterministic,
                                 )
 

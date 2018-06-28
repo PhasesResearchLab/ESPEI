@@ -115,5 +115,5 @@ Info (``logging.info``)
 Debug (``logging.debug``)
   Debugging is the lowest level of logging we provide in ESPEI.
   Debug messages should consist of possibly useful information that is beyond the user's direct control.
-  Examples are the values of initial parameters, progress of checking datasets and building phase models, and the acceptance ratios of MCMC steps.
+  Examples are the values of initial parameters, progress of checking datasets and building phase models, and the acceptance ratios of MCMC iterations.
 

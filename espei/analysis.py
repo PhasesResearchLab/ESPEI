@@ -6,7 +6,7 @@ import numpy as np
 
 def truncate_arrays(trace_array, prob_array=None):
     """
-    Return slides of ESPEI output arrays with any empty remaining steps (zeros) removed.
+    Return slides of ESPEI output arrays with any empty remaining iterations (zeros) removed.
 
     Parameters
     ----------
