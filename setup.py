@@ -23,7 +23,7 @@ setup(
         'numpy',
         'scipy',
         'six',
-        'dask[complete]>=0.15',
+        'dask[complete]>=0.18',
         'distributed',
         'tinydb>=3',
         'scikit-learn',

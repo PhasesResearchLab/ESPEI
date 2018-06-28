@@ -46,9 +46,9 @@ def _raise_dask_work_stealing():
 
     """
     import distributed
-    has_work_stealing = distributed.config.get('work-stealing', True)
+    has_work_stealing = distributed.config['distributed']['scheduler']['work-stealing']
     if has_work_stealing:
-        raise ValueError("The parameter 'work-stealing' is on in dask. Enabling this parameter causes some instability. Set 'work-stealing: False' in your '~/.dask/config.yaml' file. See http://distributed.readthedocs.io/en/latest/configuration.html for more.")
+        raise ValueError("The parameter 'work-stealing' is on in dask. Enabling this parameter causes some instability. Set 'distributed.scheduler.work-stealing: False' in your '~/.config/distributed.yaml' file. See the example at http://espei.org/en/latest/installation.html#configuration for more.")
 
 
 def get_run_settings(input_dict):
