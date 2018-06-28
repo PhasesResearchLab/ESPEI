@@ -226,7 +226,7 @@ the following structure
       phase_models: Cu-Mg-input.json
       datasets: input-data
     mcmc:
-      mcmc_steps: 1000
+      iterations: 1000
       input_db: cu-mg_dft.tdb
     output:
       output_db: cu-mg_mcmc.tdb
@@ -243,7 +243,7 @@ Note that you may also see messages about convergence failures or about
 droppping conditions. These refer to failures to calculate the log-probability
 or in the pycalphad solver's equilibrium calculation. They are not detrimental
 to the optimization accuracy, but overall optimization may be slower because
-those parameter steps will never be accepted (they return a log-probability of
+those parameter proposals will never be accepted (they return a log-probability of
 :math:`-\infty`).
 
 Finally, we can use the newly optimized database to plot the phase diagram
@@ -287,7 +287,7 @@ are serialized NumPy arrays. The file names are set in your
 ``espei-in.yaml`` file. The filenames are set by ``output.tracefile``
 and ``output.probfile``
 (`documentation <http://espei.org/en/latest/writing_input.html#tracefile>`__)
-and the defaults are ``chain.npy`` and ``lnprob.npy``, respectively.
+and the defaults are ``trace.npy`` and ``lnprob.npy``, respectively.
 
 The ``tracefile`` contains all of the parameters that were proposed over
 all chains and iterations (the trace). The ``probfile`` contains all of
@@ -314,7 +314,7 @@ after 115 iterations.
     import numpy as np
     from espei.analysis import truncate_arrays
 
-    trace = np.load('chain.npy')
+    trace = np.load('trace.npy')
     lnprob = np.load('lnprob.npy')
 
     trace, lnprob = truncate_arrays(trace, lnprob)
@@ -352,7 +352,7 @@ parameters explore the space and converge to a solution.
 
     from espei.analysis import truncate_arrays
 
-    trace = np.load('chain.npy')
+    trace = np.load('trace.npy')
     lnprob = np.load('lnprob.npy')
 
     trace, lnprob = truncate_arrays(trace, lnprob)
@@ -405,7 +405,7 @@ similar error.
 
     from espei.analysis import truncate_arrays
 
-    trace = np.load('chain.npy')
+    trace = np.load('trace.npy')
     lnprob = np.load('lnprob.npy')
 
     trace, lnprob = truncate_arrays(trace, lnprob)

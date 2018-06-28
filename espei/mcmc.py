@@ -76,9 +76,9 @@ def generate_parameter_distribution(parameters, num_samples, std_deviation, dete
     return rng.normal(tiled_parameters, np.abs(tiled_parameters * std_deviation))
 
 
-def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_parameter=2,
+def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_parameter=2,
              chain_std_deviation=0.1, scheduler=None, tracefile=None, probfile=None,
-             restart_chain=None, deterministic=True,):
+             restart_trace=None, deterministic=True, ):
     """
     Run Markov Chain Monte Carlo on the Database given datasets
 
@@ -89,11 +89,10 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         followed by a number, e.g. `VV0001`
     datasets : PickleableTinyDB
         A database of single- and multi-phase to fit
-    mcmc_steps : int
-        Number of chain steps to calculate in MCMC. Note the flattened chain will
-        have (mcmc_steps*DOF) values. Default is 1000 steps.
+    iterations : int
+        Number of trace iterations to calculate in MCMC. Default is 1000 iterations.
     save_interval :int
-        interval of steps to save the chain to the tracefile and probfile
+        interval of iterations to save the tracefile and probfile
     chains_per_parameter : int
         number of chains for each parameter. Must be an even integer greater or
         equal to 2. Defaults to 2.
@@ -103,16 +102,16 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
     scheduler : callable
         Scheduler to use with emcee. Must implement a map method.
     tracefile : str
-        filename to store the flattened chain with NumPy.save. Array has shape
-        (nwalkers, iterations, nparams)
+        filename to store the trace with NumPy.save. Array has shape
+        (chains, iterations, parameters)
     probfile : str
-        filename to store the flattened ln probability with NumPy.save
-    restart_chain : np.ndarray
-        ndarray of the previous chain. Should have shape (nwalkers, iterations, nparams)
+        filename to store the log probability with NumPy.save. Has shape (chains, iterations)
+    restart_trace : np.ndarray
+        ndarray of the previous trace. Should have shape (chains, iterations, parameters)
     deterministic : bool
         If True, the emcee sampler will be seeded to give deterministic sampling
         draws. This will ensure that the runs with the exact same database,
-        chains_per_parameter, and chain_std_deviation (or restart_chain) will
+        chains_per_parameter, and chain_std_deviation (or restart_trace) will
         produce exactly the same results.
 
     Returns
@@ -178,7 +177,7 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
 
     def save_sampler_state(sampler):
         if tracefile:
-            logging.debug('Writing chain to {}'.format(tracefile))
+            logging.debug('Writing trace to {}'.format(tracefile))
             np.save(tracefile, sampler.chain)
         if probfile:
             logging.debug('Writing lnprob to {}'.format(probfile))
@@ -186,9 +185,9 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
 
 
     # initialize the walkers either fresh or from the restart
-    if restart_chain is not None:
-        walkers = restart_chain[np.nonzero(restart_chain)].reshape(
-            (restart_chain.shape[0], -1, restart_chain.shape[2]))[:, -1, :]
+    if restart_trace is not None:
+        walkers = restart_trace[np.nonzero(restart_trace)].reshape(
+            (restart_trace.shape[0], -1, restart_trace.shape[2]))[:, -1, :]
         nwalkers = walkers.shape[0]
         ndim = walkers.shape[1]
         initial_parameters = walkers.mean(axis=0)
@@ -209,17 +208,17 @@ def mcmc_fit(dbf, datasets, mcmc_steps=1000, save_interval=100, chains_per_param
         sampler.random_state = numpy_rstate
         logging.info('Using a deterministic ensemble sampler.')
     progbar_width = 30
-    logging.info('Running MCMC with {} steps.'.format(mcmc_steps))
+    logging.info('Running MCMC for {} iterations.'.format(iterations))
     try:
-        for i, result in enumerate(sampler.sample(walkers, iterations=mcmc_steps)):
+        for i, result in enumerate(sampler.sample(walkers, iterations=iterations)):
             # progress bar
             if (i + 1) % save_interval == 0:
                 save_sampler_state(sampler)
                 logging.debug('Acceptance ratios for parameters: {}'.format(sampler.acceptance_fraction))
-            n = int((progbar_width + 1) * float(i) / mcmc_steps)
-            sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#'*n, ' '*(progbar_width - n), i + 1, mcmc_steps))
-        n = int((progbar_width + 1) * float(i + 1) / mcmc_steps)
-        sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#'*n, ' '*(progbar_width - n), i + 1, mcmc_steps))
+            n = int((progbar_width + 1) * float(i) / iterations)
+            sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, iterations))
+        n = int((progbar_width + 1) * float(i + 1) / iterations)
+        sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, iterations))
     except KeyboardInterrupt:
         pass
     # final processing

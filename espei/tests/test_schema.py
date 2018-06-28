@@ -12,7 +12,7 @@ FULL_RUN_DICT = {
         },
     'mcmc':
         {
-            'mcmc_steps': 1000
+            'iterations': 1000
         },
     'system':
         {
@@ -37,7 +37,7 @@ GEN_PARAMS_DICT = {
 MCMC_RUN_DICT = {
     'mcmc':
         {
-            'mcmc_steps': 1000,
+            'iterations': 1000,
             'input_db': 'input.tdb',
         },
     'system':
@@ -50,9 +50,9 @@ MCMC_RUN_DICT = {
 MCMC_RESTART_DICT = {
     'mcmc':
         {
-            'mcmc_steps': 1000,
+            'iterations': 1000,
             'input_db': 'input.tdb',
-            'restart_chain': 'restart_chain.npy'
+            'restart_trace': 'restart_trace.npy'
         },
     'system':
         {
@@ -64,7 +64,7 @@ MCMC_RESTART_DICT = {
 MCMC_NO_INPUT_DICT = {
     'mcmc':
         {
-            'mcmc_steps': 1000
+            'iterations': 1000
         },
     'system':
         {
@@ -80,7 +80,7 @@ MCMC_OVERSPECIFIED_INPUT_DICT = {
         },
     'mcmc':
         {
-            'mcmc_steps': 1000,
+            'iterations': 1000,
             'input_db': 'my_input.db'
         },
     'system':
@@ -134,7 +134,7 @@ def test_correct_defaults_are_applied_from_minimal_specification():
     assert d['output']['output_db'] == 'out.tdb'
     assert d['output']['tracefile'] == 'trace.npy'
     assert d['output']['probfile'] == 'lnprob.npy'
-    assert d['mcmc']['mcmc_save_interval'] == 1
+    assert d['mcmc']['save_interval'] == 1
     assert d['mcmc']['scheduler'] == 'dask'
     assert d['mcmc']['chains_per_parameter'] == 2
     assert d['mcmc']['chain_std_deviation'] == 0.1

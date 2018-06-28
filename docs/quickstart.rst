@@ -10,7 +10,7 @@ You will need single-phase and multi-phase data for a full run.
 Fit settings and all datasets are stored as JSON files and described in detail at the :ref:`Input data` page.
 All of your input datasets should be validated by running ``espei --check-datasets my-input-datasets``, where ``my-input-datasets`` is a folder of all your JSON files.
 
-The main output result is going to be a database (defaults to ``out.tdb``), an array of the steps in the MCMC chain (defaults to ``chain.npy``), and the an array of the log-probabilities for each iteration and chain (defaults to ``lnprob.npy``).
+The main output result is going to be a database (defaults to ``out.tdb``), an array of the steps in the MCMC trace (defaults to ``trace.npy``), and the an array of the log-probabilities for each iteration and chain (defaults to ``lnprob.npy``).
 
 Single-phase only
 -----------------
@@ -47,7 +47,7 @@ If you have a database already and just want to do a multi-phase fitting, you ca
       phase_models: my-phases.json
       datasets: my-input-data
     mcmc:
-      mcmc_steps: 1000
+      iterations: 1000
       input_db: my-tdb.tdb
 
 The TDB file you input must have all of the degrees of freedom you want as FUNCTIONs with names beginning with ``VV``.
@@ -55,7 +55,7 @@ The TDB file you input must have all of the degrees of freedom you want as FUNCT
 Restart from previous run-phase only
 ------------------------------------
 
-If you've run an MCMC fitting already in ESPEI and have a chain file called ``my-previous-chain.npy`` , then you can resume the calculation with the following input file
+If you've run an MCMC fitting already in ESPEI and have a trace file called ``my-previous-trace.npy`` , then you can resume the calculation with the following input file
 
 .. code-block:: yaml
 
@@ -63,9 +63,9 @@ If you've run an MCMC fitting already in ESPEI and have a chain file called ``my
       phase_models: my-phases.json
       datasets: my-input-data
     mcmc:
-      mcmc_steps: 1000
+      iterations: 1000
       input_db: my-tdb.tdb
-      restart_chain: my-previous-chain.npy
+      restart_trace: my-previous-trace.npy
 
 
 Full run
@@ -107,7 +107,7 @@ Run ``espei check-datasets my-input-datasets`` on your directory ``my-input-data
 Q: How do I analyze my results?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A: By default, ESPEI will create ``chain.npy`` and ``lnprob.npy`` for the MCMC chain at the end of your run and according to the save interval (defaults to every 20 iterations).
+A: By default, ESPEI will create ``trace.npy`` and ``lnprob.npy`` for the MCMC chain at the specified save interval and according to the save interval (defaults to ever iteration).
 These are created from arrays via ``numpy.save()`` and can thus be loaded with ``numpy.load()``.
 Note that the arrays are preallocated with zeros.
 These filenames and settings can be changed using in the input file.
