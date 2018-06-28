@@ -8,7 +8,7 @@ from tinydb import where
 from pycalphad import Database
 
 from espei.paramselect import generate_parameters
-from espei.error_functions import calculate_activity_error, calculate_thermochemical_error
+from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error
 
 from .fixtures import datasets_db
 from .testing_data import *
@@ -140,3 +140,14 @@ def test_thermochemical_error_for_of_enthalpy_mixing(datasets_db):
     # the dataset is excess only
     from espei.error_functions import calculate_thermochemical_error
     assert calculate_thermochemical_error(dbf, sorted(dbf.elements), sorted(dbf.phases.keys()), datasets_db) == 0
+
+
+def test_zpf_error_zero(datasets_db):
+    """Test that sum of square ZPF errors returns 0 for an exactly correct result"""
+
+    datasets_db.insert(CU_MG_DATASET_ZPF_ZERO_ERROR)
+
+    dbf = Database(CU_MG_TDB)
+
+    errors = calculate_zpf_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {}, {}, {}, {}, {}, {},)
+    assert np.isclose(np.sum(np.square(errors)), 0)
