@@ -225,3 +225,20 @@ CU_MG_CPM_MIX_X_HCP_A3 = yaml.load("""{
   "comment": "FAKE DATA"
 }
 """)
+
+
+CU_MG_DATASET_ZPF_ZERO_ERROR = yaml.load("""{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["FCC_A1", "LAVES_C15"],
+  "conditions": {
+    "P": 101325,
+    "T": 600
+  },
+  "output": "ZPF",
+    "values":   [
+    [["FCC_A1", ["CU"], [0.99980142076590905]], ["LAVES_C15", ["CU"], [0.66713918519314885]]]
+    ],
+  "reference": "testing",
+  "comment": "From a calculation of: `equilibrium(Database(CU_MG_TDB), ['CU','MG','VA'], ['FCC_A1', 'LAVES_C15'], {v.P: 101325, v.X('MG'): 0.1, v.T: 600})`"
+}
+""")
