@@ -13,8 +13,8 @@ Therefore it is suggested to install ESPEI from conda-forge.
     conda install -c pycalphad -c msys2 -c conda-forge --yes espei
 
 After installation, you must turn off dask's work stealing.
-Change the work stealing setting to ``work-stealing: False`` in ``~/.dask/config.yaml``.
-See the `dask-distributed documentation <https://distributed.readthedocs.io/en/latest/configuration.html>`_ for more.
+Change the work stealing setting to ``distributed.scheduler.work-stealing: False`` in ``~/.config/dask/distributed.yaml``.
+See configuration_ below for more details.
 
 PyPI
 ----
@@ -28,8 +28,8 @@ dependency of `Ipopt <https://projects.coin-or.org/Ipopt>`_.
     pip install espei
 
 After installation, you must turn off dask's work stealing.
-Change the work stealing setting to ``work-stealing: False`` in ``~/.dask/config.yaml``.
-See the `dask-distributed documentation <https://distributed.readthedocs.io/en/latest/configuration.html>`_ for more.
+Change the work stealing setting to ``distributed.scheduler.work-stealing: False`` in ``~/.config/dask/distributed.yaml``.
+See configuration_ below for more details.
 
 Development versions
 --------------------
@@ -50,5 +50,26 @@ ESPEI package, and replaces it with the package from GitHub.
 Upgrading ESPEI later requires you to run ``git pull`` in this directory.
 
 After installation, you must turn off dask's work stealing.
-Change the work stealing setting to ``work-stealing: False`` in ``~/.dask/config.yaml``.
+Change the work stealing setting to ``distributed.scheduler.work-stealing: False`` in ``~/.config/dask/distributed.yaml``.
+See configuration_ below for more details.
+
+.. _configuration:
+
+Configuration
+-------------
+
+ESPEI uses dask-distributed to parallelize ESPEI.
+
+After installation, you must turn off dask's work stealing!
+Change the file at ``~/.config/dask/distributed.yaml`` to look something like:
+
+
+.. code-block:: YAML
+
+   distributed:
+     version: 2
+     scheduler:
+       work-stealing: False
+
+
 See the `dask-distributed documentation <https://distributed.readthedocs.io/en/latest/configuration.html>`_ for more.
