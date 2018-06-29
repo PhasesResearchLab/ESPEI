@@ -242,3 +242,41 @@ CU_MG_DATASET_ZPF_ZERO_ERROR = yaml.load("""{
   "comment": "From a calculation of: `equilibrium(Database(CU_MG_TDB), ['CU','MG','VA'], ['FCC_A1', 'LAVES_C15'], {v.P: 101325, v.X('MG'): 0.1, v.T: 600})`"
 }
 """)
+
+
+A_B_DATASET_BINARY_PHASE_EQUILIBRIA = yaml.load("""{
+  "components": ["A", "B"],
+  "phases": ["PHASE_1", "PHASE_2", "PHASE_3"],
+  "conditions": {
+    "P": 101325,
+    "T": [100, 200, 300]
+  },
+  "output": "ZPF",
+    "values":   [
+    [["PHASE_1", ["B"], [0.25]], ["PHASE_2", ["B"], [null]]],
+    [["PHASE_1", ["B"], [0.25]], ["PHASE_2", ["B"], [0.5]]],
+    [["PHASE_1", ["B"], [0.25]], ["PHASE_2", ["B"], [0.5]], ["PHASE_3", ["B"], [0.75]]]
+   ],
+  "reference": "testing",
+  "comment": "Examples for 1. one side of tieline, 2. a full tieline, 3. a 3 phase equilibria. For MPL visual checking that plot is correct"
+}
+""")
+
+
+A_B_C_DATASET_TERNARY_PHASE_EQUILIBRIA = yaml.load("""{
+  "components": ["A", "B", "C"],
+  "phases": ["PHASE_1", "PHASE_2", "PHASE_3"],
+  "conditions": {
+    "P": 101325,
+    "T": [300, 300, 300]
+  },
+  "output": "ZPF",
+    "values":   [
+    [["PHASE_1", ["B", "C"], [0.1, 0.1]], ["PHASE_2", ["B", "C"], [null, null]]],
+    [["PHASE_1", ["B", "C"], [0.2, 0.5]], ["PHASE_2", ["B", "C"], [0.3, 0.6]]],
+    [["PHASE_1", ["B", "C"], [0.2, 0.2]], ["PHASE_1", ["B", "C"], [0.3, 0.3]], ["PHASE_2", ["B", "C"], [0.5, 0.1]]],
+   ],
+  "reference": "testing",
+  "comment": "Examples for 1. one side of tieline, 2. a full tieline, 3. a 3 phase equilibria. For MPL visual checking that plot is correct"
+}
+""")

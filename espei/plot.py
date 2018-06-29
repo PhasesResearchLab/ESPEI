@@ -247,7 +247,9 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
         updated_tieline_plot_kwargs = {'linewidth':1, 'color':'k'}
         if tieline_plot_kwargs is not None:
             updated_tieline_plot_kwargs.update(tieline_plot_kwargs)
-        for eq in eq_dict.get(2,[]): # list of things in equilibrium
+        equilibria_to_plot = eq_dict.get(2, [])
+        equilibria_to_plot.extend(eq_dict.get(3, []))
+        for eq in equilibria_to_plot:
             # plot the scatter points for the right phases
             x_points, y_points = [], []
             for phase_name, comp_dict, ref_key in eq:
