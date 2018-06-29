@@ -37,6 +37,7 @@ setup(
             'sphinx',
             'sphinx_rtd_theme',
             'pytest',
+            'nose', # required only until matplotlib switches to pytest
             'mock',
             'twine',
         ],
