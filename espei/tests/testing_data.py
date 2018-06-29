@@ -253,10 +253,10 @@ A_B_DATASET_PHASE_EQUILIBRIA = yaml.load("""{
   },
   "output": "ZPF",
     "values":   [
-    [["PHASE_1", ["B"], [0.25]], ["PHASE_2", ["B"], [null]]]
-    [["PHASE_1", ["B"], [0.25]], ["PHASE_2", ["B"], [0.5]]]
+    [["PHASE_1", ["B"], [0.25]], ["PHASE_2", ["B"], [null]]],
+    [["PHASE_1", ["B"], [0.25]], ["PHASE_2", ["B"], [0.5]]],
     [["PHASE_1", ["B"], [0.25]], ["PHASE_2", ["B"], [0.5]], ["PHASE_3", ["B"], [0.75]]]
-    ],
+   ],
   "reference": "testing",
   "comment": "Examples for 1. one side of tieline, 2. a full tieline, 3. a 3 phase equilibria. For visual checking that plot is correct"
 }
