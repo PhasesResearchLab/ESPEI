@@ -1,6 +1,6 @@
 import numpy as np
 
-from espei.core_utils import get_data
+from espei.core_utils import get_data, recursive_map
 from espei.utils import PickleableTinyDB, MemoryStorage
 
 
@@ -43,3 +43,16 @@ def test_get_data_for_a_minimal_example():
     assert desired_data['conditions']['T'] == 298.15
     assert desired_data['output'] == 'HM_FORM'
     assert desired_data['values'] == np.array([[[34720.0]]])
+
+def test_recursive_map():
+    """Test that recursive map function works"""
+
+    strings = [[["1.0"], ["5.5", "8.8"], ["10.7"]]]
+    floats = [[[1.0], [5.5, 8.8], [10.7]]]
+
+    assert recursive_map(float, strings) == floats
+    assert recursive_map(str, floats) == strings
+    assert recursive_map(float, "1.234") == 1.234
+    assert recursive_map(int, ["1", "2", "5"]) == [1, 2, 5]
+
+
