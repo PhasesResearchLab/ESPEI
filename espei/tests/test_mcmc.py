@@ -6,27 +6,10 @@ from pycalphad import Database
 
 from espei.mcmc import lnprob, generate_parameter_distribution
 from espei.tests.fixtures import datasets_db
-from espei.tests.testing_data import CU_MG_TDB
+from espei.tests.testing_data import CU_MG_TDB, CU_MG_DATASET_ZPF_WORKING
 
 dbf = Database.from_string(CU_MG_TDB, fmt='tdb')
 
-zpf_data = """{
-    "components": ["CU", "MG", "VA"],
-    "phases": ["LIQUID", "FCC_A1"],
-    "conditions": {
-      "P": 101325,
-      "T": [1337.97, 1262.238]
-    },
-    "broadcast_conditions": false,
-    "output": "ZPF",
-    "values":   [
-        [["LIQUID", ["MG"], [0.0246992]], ["FCC_A1", ["MG"],  [null]]],
-        [["LIQUID", ["MG"], [0.0712664]], ["FCC_A1", ["MG"],  [null]]]
-    ],
-    "reference": "Sahmen1908"
-}
-"""
-zpf_json = yaml.load(zpf_data)
 
 single_phase_data = """
 {
@@ -51,7 +34,7 @@ single_phase_json = yaml.load(single_phase_data)
 
 def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
     """lnprob() successfully calculates the probability for equilibrium """
-    datasets_db.insert(zpf_json)
+    datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
     from espei.utils import eq_callables_dict
     from pycalphad import Model
     import sympy
@@ -97,7 +80,7 @@ def _eq_ValueError(*args, **kwargs):
 @mock.patch('espei.error_functions.zpf_error.equilibrium', _eq_LinAlgError)
 def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
     """lnprob() should catch LinAlgError raised by equilibrium and return -np.inf"""
-    datasets_db.insert(zpf_json)
+    datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
     res = lnprob([10], comps=['CU', 'MG', 'VA'], dbf=dbf,
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
                  datasets=datasets_db, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)
@@ -107,7 +90,7 @@ def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
 @mock.patch('espei.error_functions.zpf_error.equilibrium', _eq_ValueError)
 def test_lnprob_does_not_raise_on_ValueError(datasets_db):
     """lnprob() should catch ValueError raised by equilibrium and return -np.inf"""
-    datasets_db.insert(zpf_json)
+    datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
     res = lnprob([10], comps=['CU', 'MG', 'VA'], dbf=dbf,
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
                  datasets=datasets_db, symbols_to_fit=['VV0001'], phase_models=None, scheduler=None)

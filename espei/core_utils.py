@@ -1,5 +1,5 @@
 """
-Module for handling data
+Internal utilities for developer use. May not be useful to users.
 """
 import itertools
 import operator
@@ -416,3 +416,30 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
             list_of_n_phase_equilibria.append(this_equilibrium)
             equilibria_dict[n_phases_in_equilibrium] = list_of_n_phase_equilibria
     return equilibria_dict
+
+
+def recursive_map(f, x):
+    """
+    map, but over nested lists
+
+    Parameters
+    ----------
+    f : callable
+        Function to apply to x
+    x : list or value
+        Value passed to v
+
+    Returns
+    -------
+    list or value
+    """
+    if isinstance(x, list):
+        if [isinstance(xx, list) for xx in x]:
+            # we got a nested list
+            return [recursive_map(f, xx) for xx in x]
+        else:
+            # it's a list with some values inside
+            return list(map(f, x))
+    else:
+        # not a list, probably just a singular value
+        return f(x)

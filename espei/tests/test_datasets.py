@@ -1,8 +1,11 @@
 import pytest
-from espei.datasets import DatasetError, check_dataset
+import numpy as np
+from espei.datasets import DatasetError, check_dataset, clean_dataset
+from espei.error_functions import calculate_thermochemical_error, calculate_zpf_error
+from pycalphad import Database
 
-from espei.tests.testing_data import CU_MG_EXP_ACTIVITY
-
+from espei.tests.testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, CU_MG_TDB
+from espei.tests.fixtures import datasets_db
 
 dataset_single_valid = {
     "components": ["AL", "NI", "VA"],
@@ -403,3 +406,20 @@ def test_check_datasets_raises_with_unsorted_interactions():
     with pytest.raises(DatasetError):
         check_dataset(dataset_single_unsorted_interaction)
 
+
+def test_datasets_convert_thermochemical_string_values_producing_correct_value(datasets_db):
+    """Strings where floats are expected should give correct answers for thermochemical datasets"""
+    datasets_db.insert(clean_dataset(CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES))
+
+    dbf = Database(CU_MG_TDB)
+    error = calculate_thermochemical_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db)
+    assert np.isclose(float(error), -3672.727272727273, atol=0.01)
+
+
+def test_datasets_convert_zpf_string_values_producing_correct_value(datasets_db):
+    """Strings where floats are expected should give correct answers for ZPF datasets"""
+    datasets_db.insert(clean_dataset(CU_MG_DATASET_ZPF_STRING_VALUES))
+
+    dbf = Database(CU_MG_TDB)
+    errors = calculate_zpf_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {}, {}, {}, {}, {}, {},)
+    assert np.isclose(-np.sum(np.square(errors)), -5741.61962949)
