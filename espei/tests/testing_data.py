@@ -244,6 +244,24 @@ CU_MG_DATASET_ZPF_ZERO_ERROR = yaml.load("""{
 """)
 
 
+CU_MG_DATASET_ZPF_WORKING = yaml.load("""{
+    "components": ["CU", "MG", "VA"],
+    "phases": ["LIQUID", "FCC_A1"],
+    "conditions": {
+      "P": 101325,
+      "T": [1337.97, 1262.238]
+    },
+    "broadcast_conditions": false,
+    "output": "ZPF",
+    "values":   [
+        [["LIQUID", ["MG"], [0.0246992]], ["FCC_A1", ["MG"],  [null]]],
+        [["LIQUID", ["MG"], [0.0712664]], ["FCC_A1", ["MG"],  [null]]]
+    ],
+    "reference": "Sahmen1908"
+}
+""")
+
+
 A_B_DATASET_BINARY_PHASE_EQUILIBRIA = yaml.load("""{
   "components": ["A", "B"],
   "phases": ["PHASE_1", "PHASE_2", "PHASE_3"],
@@ -278,5 +296,44 @@ A_B_C_DATASET_TERNARY_PHASE_EQUILIBRIA = yaml.load("""{
    ],
   "reference": "testing",
   "comment": "Examples for 1. one side of tieline, 2. a full tieline, 3. a 3 phase equilibria. For MPL visual checking that plot is correct"
+}
+""")
+
+
+CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES = yaml.load("""{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["CUMG2"],
+  "solver": {
+    "sublattice_site_ratios": [1, 2],
+    "sublattice_configurations": [["CU", "MG"]],
+    "mode": "manual"
+  },
+  "conditions": {
+    "P": 101325,
+    "T": [300, 400],
+  },
+
+  "output": "HM_MIX",
+    "values":   [[[10], [100]]],
+  "reference": "FAKE DATA",
+  "comment": "FAKE DATA"
+}
+""")
+
+
+CU_MG_DATASET_ZPF_STRING_VALUES = yaml.load("""{
+    "components": ["CU", "MG", "VA"],
+    "phases": ["LIQUID", "FCC_A1"],
+    "conditions": {
+      "P": 101325,
+      "T": [1337.97, 1262.238]
+    },
+    "broadcast_conditions": false,
+    "output": "ZPF",
+    "values":   [
+        [["LIQUID", ["MG"], [0.0246992]], ["FCC_A1", ["MG"],  [null]]],
+        [["LIQUID", ["MG"], [0.0712664]], ["FCC_A1", ["MG"],  [null]]]
+    ],
+    "reference": "Sahmen1908"
 }
 """)
