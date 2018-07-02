@@ -5,7 +5,7 @@ from six import string_types
 from tinydb.storages import MemoryStorage
 
 from espei.utils import PickleableTinyDB
-
+from espei.core_utils import recursive_map
 
 class DatasetError(Exception):
     """Exception raised when datasets are invalid."""
@@ -18,10 +18,10 @@ def check_dataset(dataset):
     Currently supports the following validation checks:
     * data shape is valid
     * phases and components used match phases and components entered
+    * individual shapes of keys, such as ZPF, sublattice configs and site ratios
 
     Planned validation checks:
     * all required keys are present
-    * individual shapes of keys, such as ZPF, sublattice configs and site ratios
 
     Note that this follows some of the implicit assumptions in ESPEI at the time
     of writing, such that conditions are only P, T, configs for single phase and
@@ -166,6 +166,55 @@ def check_dataset(dataset):
                         raise DatasetError('Sublattice {} in configuration {} is must be sorted in alphabetic order ({})'.format(subl, configuration, sorted(subl)))
 
 
+def clean_dataset(dataset):
+    """
+    Clean an ESPEI dataset dictionary.
+
+    Parameters
+    ----------
+    dataset : dict
+        Dictionary of the standard ESPEI dataset.   dataset : dic
+
+    Returns
+    -------
+    dict
+        Modified dataset that has been cleaned
+
+    Notes
+    -----
+    Assumes a valid, checked dataset. Currently handles
+    * Converting expected numeric values to floats
+
+    """
+    dataset["conditions"] = {k: recursive_map(float, v) for k, v in dataset["conditions"].items()}
+
+    solver = dataset.get("solver")
+    if solver is not None:
+        solver["sublattice_site_ratios"] = recursive_map(float, solver["sublattice_site_ratios"])
+        occupancies = solver.get("sublattice_occupancies")
+        if occupancies is not None:
+            solver["sublattice_occupancies"] = recursive_map(float, occupancies)
+
+    if dataset["output"] == "ZPF":
+        values = dataset["values"]
+        new_values = []
+        for tieline in values:
+            new_tieline = []
+            for tieline_point in tieline:
+                if all([comp is None for comp in tieline_point[2]]):
+                    # this is a null tieline point
+                    new_tieline.append(tieline_point)
+                else:
+                    new_tieline.append([tieline_point[0], tieline_point[1], recursive_map(float, tieline_point[2])])
+            new_values.append(new_tieline)
+        dataset["values"] = new_values
+    else:
+        # values should be all numerical
+        dataset["values"] = recursive_map(float, dataset["values"])
+
+    return dataset
+
+
 def load_datasets(dataset_filenames):
     """
     Create a PickelableTinyDB with the data from a list of filenames.
@@ -185,7 +234,7 @@ def load_datasets(dataset_filenames):
             try:
                 d = json.load(file_)
                 check_dataset(d)
-                ds_database.insert(d)
+                ds_database.insert(clean_dataset(d))
             except ValueError as e:
                 raise ValueError('JSON Error in {}: {}'.format(fname, e))
             except DatasetError as e:

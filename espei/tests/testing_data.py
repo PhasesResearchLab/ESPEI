@@ -304,17 +304,17 @@ CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES = yaml.load("""{
   "components": ["CU", "MG", "VA"],
   "phases": ["CUMG2"],
   "solver": {
-    "sublattice_site_ratios": [1, 2],
+    "sublattice_site_ratios": ["1", "2"],
     "sublattice_configurations": [["CU", "MG"]],
     "mode": "manual"
   },
   "conditions": {
-    "P": 101325,
-    "T": [300, 400],
+    "P": "101325",
+    "T": ["300", "400"],
   },
 
   "output": "HM_MIX",
-    "values":   [[[10], [100]]],
+    "values":   [[["10"], ["100"]]],
   "reference": "FAKE DATA",
   "comment": "FAKE DATA"
 }
@@ -325,14 +325,14 @@ CU_MG_DATASET_ZPF_STRING_VALUES = yaml.load("""{
     "components": ["CU", "MG", "VA"],
     "phases": ["LIQUID", "FCC_A1"],
     "conditions": {
-      "P": 101325,
-      "T": [1337.97, 1262.238]
+      "P": "101325",
+      "T": ["1337.97", "1262.238"]
     },
     "broadcast_conditions": false,
     "output": "ZPF",
     "values":   [
-        [["LIQUID", ["MG"], [0.0246992]], ["FCC_A1", ["MG"],  [null]]],
-        [["LIQUID", ["MG"], [0.0712664]], ["FCC_A1", ["MG"],  [null]]]
+        [["LIQUID", ["MG"], ["0.0246992"]], ["FCC_A1", ["MG"],  [null]]],
+        [["LIQUID", ["MG"], ["0.0712664"]], ["FCC_A1", ["MG"],  [null]]]
     ],
     "reference": "Sahmen1908"
 }
