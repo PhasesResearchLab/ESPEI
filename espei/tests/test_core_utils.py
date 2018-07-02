@@ -54,5 +54,6 @@ def test_recursive_map():
     assert recursive_map(str, floats) == strings
     assert recursive_map(float, "1.234") == 1.234
     assert recursive_map(int, ["1", "2", "5"]) == [1, 2, 5]
+    assert recursive_map(float, ["1.0", ["0.5", "0.5"]]) == [1.0, [0.5, 0.5]]
 
 

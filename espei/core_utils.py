@@ -434,7 +434,7 @@ def recursive_map(f, x):
     list or value
     """
     if isinstance(x, list):
-        if isinstance(x[0], list):
+        if [isinstance(xx, list) for xx in x]:
             # we got a nested list
             return [recursive_map(f, xx) for xx in x]
         else:
