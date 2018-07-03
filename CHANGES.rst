@@ -2,6 +2,18 @@
 What's New
 ==========
 
+
+0.6 (2018-07-02)
+================
+
+This is a update including *breaking changes to the input files* and several minor improvements.
+
+* Update input file schema and Python API to be more consistent so that the ``trace`` always refers to the collection of chains and ``chain`` refers to individual chains. Additionally removed some redundancy in the parameters nested under the ``mcmc`` heading, e.g. ``mcmc_steps`` is now ``iterations`` and ``mcmc_save_interval`` is now ``save_interval`` in the input file and Python API. See `Writing Input <http://espei.org/en/latest/writing_input.html>`_ documentation for all of the updates.
+* The default save interval is now 1, which is more reasonable for most MCMC systems with significant numbers of phase equilibria.
+* Bug fixes for plotting and some better plotting defaults for plotting input data
+* Dataset parsing and cleaning improvements.
+* Documentation improvements (see the `PDF <http://readthedocs.org/projects/espei/downloads/pdf/latest/>`_!)
+
 0.5.2 (2018-04-28)
 ==================
 
