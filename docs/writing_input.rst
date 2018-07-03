@@ -48,7 +48,7 @@ All of the possible keys are
      cores
      scheduler
      input_db
-     restart_chain
+     restart_trace
      chains_per_parameter
      chain_std_deviation
      deterministic
@@ -248,7 +248,7 @@ For example, the following is a valid symbol to fit:
 
    FUNCTION VV0000  298.15  10000; 6000 N !
 
-restart_chain
+restart_trace
 -------------
 
 :type: string
@@ -301,7 +301,7 @@ deterministic
 Toggles whether ESPEI runs are deterministic. If this is True, running
 ESPEI with the same Database and initial settings (either the same
 ``chains_per_parameter`` and ``chain_std_deviation`` or the same
-``restart_chain``) will result in exactly the same results.
+``restart_trace``) will result in exactly the same results.
 
 Starting two runs with the same TDB or with parameter generation
 (which is deterministic) will result in the chains being at exactly
