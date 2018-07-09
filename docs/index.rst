@@ -92,7 +92,7 @@ See `what's new <CHANGES.html>`_!
 
    writing_input
    theory
-   mpi
+   advanced_schedulers
    api/modules
 
 

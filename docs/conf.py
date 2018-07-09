@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 MOCK_MODULES = ['dask', 'distributed', 'emcee', 'emcee.utils',
                 'matplotlib',
+                'matplotlib.testing.decorators',
                 'matplotlib.pyplot', 'numpy', 'pycalphad',
                 'pycalphad.core.sympydiff_utils', 'pycalphad.core.phase_rec',
                 'pycalphad.core.utils',

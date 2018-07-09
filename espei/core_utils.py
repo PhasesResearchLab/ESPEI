@@ -348,9 +348,7 @@ def ravel_conditions(values, *conditions, **kwargs):
 
 def ravel_zpf_values(desired_data, independent_comps, conditions=None):
     """
-    Unpack the phases and compositions from ZPF data
-
-    Depdendent components are converted to independent components.
+    Unpack the phases and compositions from ZPF data. Dependent components are converted to independent components.
 
     Parameters
     ----------
@@ -366,10 +364,9 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
     dict
         A dictonary of list of lists of tuples. Each dictionary key is the
         number of phases in equilibrium, e.g. a key "2" might have values
-        [
-          [(PHASE_NAME_1, {'C1': X1, 'C2': X2}, refkey), (PHASE_NAME_2, {'C1': X1, 'C2': X2}, refkey)],
-        ...]
+        [[(PHASE_NAME_1, {'C1': X1, 'C2': X2}, refkey), (PHASE_NAME_2, {'C1': X1, 'C2': X2}, refkey)], ...]
         Three would have three inner tuples and so on.
+
     """
 
     # integers are the number of equilibria in the phase that are lists of the individual points
