@@ -92,6 +92,7 @@ See `what's new <CHANGES.html>`_!
 
    writing_input
    theory
+   recipes
    advanced_schedulers
    api/modules
 
