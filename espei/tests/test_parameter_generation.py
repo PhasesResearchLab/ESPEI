@@ -3,7 +3,7 @@
 from tinydb import where
 
 from espei.tests.fixtures import datasets_db
-from espei.paramselect import generate_parameters, generate_symmetric_group
+from espei.paramselect import generate_parameters, generate_symmetric_group, sorted_interactions
 
 def test_mixing_energies_are_fit(datasets_db):
     """Tests that given mixing energy data, the excess parameter is fit."""
@@ -167,3 +167,43 @@ def test_symmetric_group_can_be_generated_for_2_sl_endmembers_with_symmetry():
     """A phase with symmetric sublattices should find a symmetric endmember """
     symm_groups = generate_symmetric_group(('AL', 'CO'), [[0, 1]])
     assert symm_groups == [('AL', 'CO'), ('CO', 'AL')]
+
+
+def test_interaction_sorting_is_correct():
+    """High order (order >= 3) interactions should sorted correctly"""
+    # Correct sorting of n-order interactions should sort first by number of
+    # interactions of order n, then n-1, then n-2... to 1
+    unsorted_interactions = [
+        ('AL', ('AL', 'CO', 'CR')),
+        (('AL', 'CO'), ('AL', 'CO', 'CR')),
+        (('AL', 'CO', 'CR'), ('AL', 'CO', 'CR')),
+        (('AL', 'CO', 'CR'), 'AL'),
+        (('AL', 'CO', 'CR'), ('AL', 'CO')),
+        (('AL', 'CO', 'CR'), ('AL', 'CR')),
+        (('AL', 'CO', 'CR'), 'CO'),
+        (('AL', 'CO', 'CR'), ('CO', 'CR')),
+        (('AL', 'CO', 'CR'), 'CR'),
+        (('AL', 'CR'), ('AL', 'CO', 'CR')),
+        ('CO', ('AL', 'CO', 'CR')),
+        (('CO', 'CR'), ('AL', 'CO', 'CR')),
+        ('CR', ('AL', 'CO', 'CR')),
+    ]
+    interactions = sorted_interactions(unsorted_interactions, max_interaction_order=3, symmetry=None)
+
+    # the numbers are the different sort scores. Two of the same sort scores mean
+    # the order doesn't matter
+    assert interactions == [
+        ('AL', ('AL', 'CO', 'CR')),                # (1, 0, 1)
+        (('AL', 'CO', 'CR'), 'AL'),                # (1, 0, 1)
+        (('AL', 'CO', 'CR'), 'CO'),                # (1, 0, 1)
+        (('AL', 'CO', 'CR'), 'CR'),                # (1, 0, 1)
+        ('CO', ('AL', 'CO', 'CR')),                # (1, 0, 1)
+        ('CR', ('AL', 'CO', 'CR')),                # (1, 0, 1)
+        (('AL', 'CO'), ('AL', 'CO', 'CR')),        # (1, 1, 0)
+        (('AL', 'CO', 'CR'), ('AL', 'CO')),        # (1, 1, 0)
+        (('AL', 'CO', 'CR'), ('AL', 'CR')),        # (1, 1, 0)
+        (('AL', 'CO', 'CR'), ('CO', 'CR')),        # (1, 1, 0)
+        (('AL', 'CR'), ('AL', 'CO', 'CR')),        # (1, 1, 0)
+        (('CO', 'CR'), ('AL', 'CO', 'CR')),        # (1, 1, 0)
+        (('AL', 'CO', 'CR'), ('AL', 'CO', 'CR')),  # (2, 0, 0)
+    ]

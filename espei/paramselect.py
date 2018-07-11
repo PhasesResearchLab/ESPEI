@@ -308,6 +308,47 @@ def generate_symmetric_group(configuration, symmetry):
 
     return sorted(set(configurations), key=canonical_sort_key)
 
+def sorted_interactions(interactions, max_interaction_order, symmetry):
+    """
+    Return interactions sorted by interaction order
+
+    Parameters
+    ----------
+    interactions : list
+        List of tuples/strings of potential interactions
+    max_interaction_order : int
+        Highest expected interaction order, e.g. ternary interactions should be 3
+    symmetry : list of lists
+        List of lists containing symmetrically equivalent sublattice indices,
+        e.g. [[0, 1], [2, 3]] means that sublattices 0 and 1 are equivalent and
+        sublattices 2 and 3 are also equivalent.
+
+    Returns
+    -------
+    list
+        Sorted list of interactions
+
+    Notes
+    -----
+    Sort by number of full interactions, e.g. (A:A,B) is before (A,B:A,B)
+    The goal is to return a sort key that can sort through multiple interaction
+    orders, e.g. (A:A,B,C), which should be before (A,B:A,B,C), which should be
+    before (A,B,C:A,B,C).
+
+    """
+    def int_sort_key(x):
+        # Each interaction is given a sort score for the number of interactions
+        # it has at each level. For example, a 4 sublattice phase with
+        # interaction of (A:A:A,B:A,B,C) has 2 order-1 interactions, 1 order-2
+        # interaction and 1 order-3 interaction. It's sort score would be (1, 1, 2).
+        # thus it should sort below a (2, 1, 2), for example.
+        sort_score = []
+        for interaction_order in reversed(range(1, max_interaction_order+1)):
+            sort_score.append(sum((isinstance(n, (list, tuple)) and len(n) == interaction_order) for n in x))
+        return canonical_sort_key(list_to_tuple(sort_score) + x)
+
+    return sorted(set(canonicalize(i, symmetry) for i in interactions), key=int_sort_key)
+
 
 def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers):
     print('FITTING TERNARY INTERACTIONS')
@@ -338,18 +379,9 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers):
         if has_correct_interaction_order:
             transformed_interactions.append(interaction)
 
-    def int_sort_key(x):
-        # Sort by number of full interactions, e.g. (A:A,B) is before (A,B:A,B)
-        # TODO: support sub sorting by lower order interactions, e.g. (A:A,B,C) should be before (A:A,B,C)
-        # the current implementation only guarantees sorting by the main order
-        # maybe a recursive approach would be appropriate?
-        interacting_sublattices = sum((isinstance(n, (list, tuple)) and len(n) == interaction_order) for n in x)
-        return canonical_sort_key((interacting_sublattices,) + x)
-
-    interactions = sorted(set(canonicalize(i, symmetry) for i in transformed_interactions),
-                              key=int_sort_key)
+    interactions = sorted_interactions(transformed_interactions, interaction_order, symmetry)
     print('Final interactions: {}'.format(interactions))
-    logging.debug('{0} distinct ternary interactions'.format(len(transformed_interactions)))
+    logging.debug('{0} distinct ternary interactions'.format(len(interactions)))
     for interaction in interactions:
         ixx = []
         for i in interaction:
