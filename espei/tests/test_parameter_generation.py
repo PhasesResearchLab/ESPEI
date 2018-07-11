@@ -221,3 +221,18 @@ def test_symmetric_ternary_parameter_can_be_generated(datasets_db):
     # rounded to 6 digits by `numdigits`, this is confirmed to be a correct value.
     assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 1
     assert dbf.symbols['VV0000'] == -212221.0
+
+
+def test_symmetric_ternary_parameter_can_be_generated_in_presence_of_binary_data(datasets_db):
+    """A symmetric ternary paramer should be generated correctly when low order binary data is also fit."""
+    datasets_db.insert(AL_CO_A2_BINARY_SYMMETRIC_DATASET)
+    datasets_db.insert(AL_CO_CR_A2_TERNARY_SYMMETRIC_DATASET)
+
+    dbf = generate_parameters(AL_CO_CR_A2_PHASE_MODELS, datasets_db, 'SGTE91', 'linear')
+
+    assert dbf.elements == {'AL', 'CO', 'CR'}
+    assert set(dbf.phases.keys()) == {'BCC_A2'}
+    # rounded to 6 digits by `numdigits`, this is confirmed to be a correct value.
+    assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 2
+    assert dbf.symbols['VV0000'] == -4000.0
+    assert dbf.symbols['VV0001'] == -200245.0

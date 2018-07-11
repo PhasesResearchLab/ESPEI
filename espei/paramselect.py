@@ -72,6 +72,11 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
     Scores for each candidate model (determined by the paramters in the passed
     feature matrix) are calculated by the corrected Akaike Information Criterion (AICc).
     """
+    print('Fitting actual parameters in _fit_parameters')
+    print(feature_matrix)
+    print(data_quantities)
+    print(feature_tuple)
+
     # Now generate candidate models; add parameters one at a time
     model_scores = []
     results = np.zeros((len(feature_tuple), len(feature_tuple)))
@@ -401,7 +406,7 @@ def generate_interactions(endmembers, order, symmetry):
 
 
 def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
-    numdigits = 6
+    numdigits = 6  # number of significant figures, might cause rounding errors
     logging.debug('FITTING TERNARY INTERACTIONS')
     interactions = generate_interactions(endmembers, order=3, symmetry=symmetry)
     print('Final interactions: {}'.format(interactions))
@@ -478,7 +483,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
     all_em_count = len(list(itertools.product(*subl_model)))
     endmembers = sorted(set(
         canonicalize(i, symmetry) for i in itertools.product(*subl_model)))
-    # Number of significant figures in parameters
+    # Number of significant figures in parameters, might cause rounding errors
     numdigits = 6
     em_dict = {}
     aliases = [] if aliases is None else aliases

@@ -368,3 +368,23 @@ AL_CO_CR_A2_TERNARY_SYMMETRIC_DATASET = {
     "reference": "liu2015first",
     "comment": "Ternary disordered BCC from Table 4"
 }
+
+
+AL_CO_A2_BINARY_SYMMETRIC_DATASET = {
+    "components": ["AL", "CO"],
+    "phases": ["BCC_A2"],
+    "solver": {
+        "mode": "manual",
+        "sublattice_site_ratios": [1],
+        "sublattice_occupancies": [[[0.5, 0.5]]],
+        "sublattice_configurations": [[["AL", "CO"]]]
+    },
+    "conditions": {
+        "P": 101325,
+        "T": 298.15
+    },
+    "output": "HM_MIX",
+    "values":   [[[-1000.0]]],
+    "reference": "liu2015first",
+    "comment": "Ternary disordered BCC from Table 4"
+}
