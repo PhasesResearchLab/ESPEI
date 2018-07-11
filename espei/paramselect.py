@@ -542,13 +542,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 interaction.append(tuple(sorted([first_occupant, second_occupant])))
         transformed_bin_interactions.append(interaction)
 
-    def bin_int_sort_key(x):
-        interacting_sublattices = sum((isinstance(n, (list, tuple)) and len(n) == 2) for n in x)
-        return canonical_sort_key((interacting_sublattices,) + x)
-
-    bin_interactions = sorted(set(
-        canonicalize(i, symmetry) for i in transformed_bin_interactions),
-                              key=bin_int_sort_key)
+    bin_interactions = sorted_interactions(transformed_bin_interactions, 2, symmetry)
     logging.debug('{0} distinct binary interactions'.format(len(bin_interactions)))
     for interaction in bin_interactions:
         ixx = []
