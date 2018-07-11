@@ -308,6 +308,7 @@ def generate_symmetric_group(configuration, symmetry):
 
     return sorted(set(configurations), key=canonical_sort_key)
 
+
 def sorted_interactions(interactions, max_interaction_order, symmetry):
     """
     Return interactions sorted by interaction order
@@ -350,16 +351,27 @@ def sorted_interactions(interactions, max_interaction_order, symmetry):
     return sorted(set(canonicalize(i, symmetry) for i in interactions), key=int_sort_key)
 
 
-def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers):
-    print('FITTING TERNARY INTERACTIONS')
-    # endmembers is: A list of all endmembers (including symmetrically equivalent) that interactions will be derived from
-    # Now fit all binary interactions
-    # Need to use 'all_endmembers' instead of 'endmembers' because you need to generate combinations
-    # of ALL endmembers, not just symmetry equivalent ones
-    interaction_order = 3  # ternary interactions
-    print(endmembers)
-    interactions = list(itertools.combinations(endmembers, interaction_order))
-    print(interactions)
+def generate_interactions(endmembers, order, symmetry):
+    """
+    Returns a list of sorted interactions of a certain order
+
+    Parameters
+    ----------
+    endmembers : list
+        List of tuples/strings of all endmembers (including symmetrically equivalent)
+    order : int
+        Highest expected interaction order, e.g. ternary interactions should be 3
+    symmetry : list of lists
+        List of lists containing symmetrically equivalent sublattice indices,
+        e.g. [[0, 1], [2, 3]] means that sublattices 0 and 1 are equivalent and
+        sublattices 2 and 3 are also equivalent.
+
+    Returns
+    -------
+    list
+
+    """
+    interactions = list(itertools.combinations(endmembers, order))
     transformed_interactions = []
     for endmembers in interactions:
         interaction = []
@@ -371,15 +383,19 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers):
                 interaction.append(occupants[0])
             else:  # there is an interaction
                 interacting_species = tuple(sorted(set(occupants)))
-                if len(interacting_species) == interaction_order:
+                if len(interacting_species) == order:
                     has_correct_interaction_order = True
                 interaction.append(interacting_species)
         # only add this interaction if it has an interaction of the desired order.
         # that is, throw away interactions that degenerate to a lower order
         if has_correct_interaction_order:
             transformed_interactions.append(interaction)
+    return sorted_interactions(transformed_interactions, order, symmetry)
 
-    interactions = sorted_interactions(transformed_interactions, interaction_order, symmetry)
+
+def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
+    logging.debug('FITTING TERNARY INTERACTIONS')
+    interactions = generate_interactions(endmembers, order=3, symmetry=symmetry)
     print('Final interactions: {}'.format(interactions))
     logging.debug('{0} distinct ternary interactions'.format(len(interactions)))
     for interaction in interactions:
@@ -417,7 +433,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers):
                 parameters.pop(key)
         logging.debug('Polynomial coefs: {}'.format(degree_polys))
         # Insert into database
-        symmetric_interactions = _generate_symmetric_group(interaction, symmetry)
+        symmetric_interactions = generate_symmetric_group(interaction, symmetry)
         for degree in np.arange(degree_polys.shape[0]):
             if degree_polys[degree] != 0:
                 for syminter in symmetric_interactions:
@@ -528,21 +544,9 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         for em in symmetric_endmembers:
             em_dict[em] = fit_eq
             dbf.add_parameter('G', phase_name, tuple(map(_to_tuple, em)), 0, fit_eq)
-    # Now fit all binary interactions
-    # Need to use 'all_endmembers' instead of 'endmembers' because you need to generate combinations
-    # of ALL endmembers, not just symmetry equivalent ones
-    bin_interactions = list(itertools.combinations(all_endmembers, 2))
-    transformed_bin_interactions = []
-    for first_endmember, second_endmember in bin_interactions:
-        interaction = []
-        for first_occupant, second_occupant in zip(first_endmember, second_endmember):
-            if first_occupant == second_occupant:
-                interaction.append(first_occupant)
-            else:
-                interaction.append(tuple(sorted([first_occupant, second_occupant])))
-        transformed_bin_interactions.append(interaction)
 
-    bin_interactions = sorted_interactions(transformed_bin_interactions, 2, symmetry)
+    logging.debug('FITTING BINARY INTERACTIONS')
+    bin_interactions = generate_interactions(all_endmembers, order=2, symmetry=symmetry)
     logging.debug('{0} distinct binary interactions'.format(len(bin_interactions)))
     for interaction in bin_interactions:
         ixx = []
@@ -585,7 +589,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 for syminter in symmetric_interactions:
                     dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
     # TODO: fit ternary interactions
-    fit_ternary_interactions(dbf, phase_name, symmetry, all_endmembers)
+    fit_ternary_interactions(dbf, phase_name, symmetry, all_endmembers, datasets)
     if hasattr(dbf, 'varcounter'):
         del dbf.varcounter
 
