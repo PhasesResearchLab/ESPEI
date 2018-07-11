@@ -4,6 +4,7 @@ from tinydb import where
 
 from espei.tests.fixtures import datasets_db
 from espei.paramselect import generate_parameters, generate_symmetric_group, sorted_interactions
+from espei.tests.testing_data import *
 
 def test_mixing_energies_are_fit(datasets_db):
     """Tests that given mixing energy data, the excess parameter is fit."""
@@ -207,3 +208,16 @@ def test_interaction_sorting_is_correct():
         (('CO', 'CR'), ('AL', 'CO', 'CR')),        # (1, 1, 0)
         (('AL', 'CO', 'CR'), ('AL', 'CO', 'CR')),  # (2, 0, 0)
     ]
+
+
+def test_symmetric_ternary_parameter_can_be_generated(datasets_db):
+    """A symmetric ternary parameter should be generated correctly."""
+    datasets_db.insert(AL_CO_CR_A2_TERNARY_SYMMETRIC_DATASET)
+
+    dbf = generate_parameters(AL_CO_CR_A2_PHASE_MODELS, datasets_db, 'SGTE91', 'linear')
+
+    assert dbf.elements == {'AL', 'CO', 'CR'}
+    assert set(dbf.phases.keys()) == {'BCC_A2'}
+    # rounded to 6 digits by `numdigits`, this is confirmed to be a correct value.
+    assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 1
+    assert dbf.symbols['VV0000'] == -212221.0

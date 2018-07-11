@@ -337,3 +337,34 @@ CU_MG_DATASET_ZPF_STRING_VALUES = yaml.load("""{
     "reference": "Sahmen1908"
 }
 """)
+
+
+AL_CO_CR_A2_PHASE_MODELS = {
+  "components": ["AL", "CO", "CR"],
+  "phases": {
+         "BCC_A2": {
+            "sublattice_model": [["AL", "CO", "CR"]],
+            "sublattice_site_ratios": [1]
+         }
+    }
+}
+
+
+AL_CO_CR_A2_TERNARY_SYMMETRIC_DATASET = {
+    "components": ["AL", "CO", "CR"],
+    "phases": ["BCC_A2"],
+    "solver": {
+        "mode": "manual",
+        "sublattice_site_ratios": [1],
+        "sublattice_occupancies": [[[0.333, 0.333, 0.334]]],
+        "sublattice_configurations": [[["AL", "CO", "CR"]]]
+    },
+    "conditions": {
+        "P": 101325,
+        "T": 298.15
+        },
+    "output": "HM_MIX",
+    "values":   [[[-7860.0]]],
+    "reference": "liu2015first",
+    "comment": "Ternary disordered BCC from Table 4"
+}
