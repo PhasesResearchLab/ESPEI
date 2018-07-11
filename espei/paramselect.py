@@ -42,6 +42,12 @@ feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
                       "HM": lambda x: x - v.T*sympy.diff(x, v.T)}
 
 
+def _to_tuple(x):
+    if isinstance(x, list) or isinstance(x, tuple):
+        return tuple(x)
+    else:
+        return tuple([x])
+
 def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
     """
     Solve Ax = b, where 'feature_matrix' is A and 'data_quantities' is b.
@@ -394,6 +400,7 @@ def generate_interactions(endmembers, order, symmetry):
 
 
 def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
+    numdigits = 6
     logging.debug('FITTING TERNARY INTERACTIONS')
     interactions = generate_interactions(endmembers, order=3, symmetry=symmetry)
     print('Final interactions: {}'.format(interactions))
@@ -483,12 +490,6 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
     aliases = sorted(set(aliases + [phase_name]))
     logging.info('FITTING: {}'.format(phase_name))
     logging.debug('{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
-
-    def _to_tuple(x):
-        if isinstance(x, list) or isinstance(x, tuple):
-            return tuple(x)
-        else:
-            return tuple([x])
 
     all_endmembers = []
     for endmember in endmembers:
