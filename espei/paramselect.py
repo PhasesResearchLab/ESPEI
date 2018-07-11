@@ -315,27 +315,41 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers):
     # Now fit all binary interactions
     # Need to use 'all_endmembers' instead of 'endmembers' because you need to generate combinations
     # of ALL endmembers, not just symmetry equivalent ones
-    interactions = list(itertools.combinations(endmembers, 3))
+    interaction_order = 3  # ternary interactions
+    print(endmembers)
+    interactions = list(itertools.combinations(endmembers, interaction_order))
     print(interactions)
     transformed_interactions = []
-    exit()
-    for first_endmember, second_endmember in interactions:
+    for endmembers in interactions:
         interaction = []
-        for first_occupant, second_occupant in zip(first_endmember, second_endmember):
-            if first_occupant == second_occupant:
-                interaction.append(first_occupant)
-            else:
-                interaction.append(tuple(sorted([first_occupant, second_occupant])))
-        transformed_interactions.append(interaction)
+        has_correct_interaction_order = False  # flag to check that we have interactions of at least interaction_order
+        # occupants is a tuple of each endmember's ith constituent, looping through i
+        for occupants in zip(*endmembers):
+            # if all occupants are the same, the ith element of the interaction is not an interacting element
+            if all([occupants[0] == x for x in occupants[1:]]):
+                interaction.append(occupants[0])
+            else:  # there is an interaction
+                interacting_species = tuple(sorted(set(occupants)))
+                if len(interacting_species) == interaction_order:
+                    has_correct_interaction_order = True
+                interaction.append(interacting_species)
+        # only add this interaction if it has an interaction of the desired order.
+        # that is, throw away interactions that degenerate to a lower order
+        if has_correct_interaction_order:
+            transformed_interactions.append(interaction)
 
-    def bin_int_sort_key(x):
-        interacting_sublattices = sum((isinstance(n, (list, tuple)) and len(n) == 2) for n in x)
+    def int_sort_key(x):
+        # Sort by number of full interactions, e.g. (A:A,B) is before (A,B:A,B)
+        # TODO: support sub sorting by lower order interactions, e.g. (A:A,B,C) should be before (A:A,B,C)
+        # the current implementation only guarantees sorting by the main order
+        # maybe a recursive approach would be appropriate?
+        interacting_sublattices = sum((isinstance(n, (list, tuple)) and len(n) == interaction_order) for n in x)
         return canonical_sort_key((interacting_sublattices,) + x)
 
-    interactions = sorted(set(
-        canonicalize(i, symmetry) for i in transformed_interactions),
-                              key=bin_int_sort_key)
-    logging.debug('{0} distinct binary interactions'.format(len(interactions)))
+    interactions = sorted(set(canonicalize(i, symmetry) for i in transformed_interactions),
+                              key=int_sort_key)
+    print('Final interactions: {}'.format(interactions))
+    logging.debug('{0} distinct ternary interactions'.format(len(transformed_interactions)))
     for interaction in interactions:
         ixx = []
         for i in interaction:
