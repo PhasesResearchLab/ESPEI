@@ -3,7 +3,7 @@
 from tinydb import where
 
 from espei.tests.fixtures import datasets_db
-from espei.paramselect import generate_parameters
+from espei.paramselect import generate_parameters, generate_symmetric_group
 
 def test_mixing_energies_are_fit(datasets_db):
     """Tests that given mixing energy data, the excess parameter is fit."""
@@ -155,3 +155,15 @@ def test_sgte_reference_state_naming_is_correct_for_character_element(datasets_d
     assert dbf.symbols['GBCCV'].args[0][0].__str__() == 'GHSERVV'
     assert 'GHSERVV' in dbf.symbols.keys()
     assert 'GHSERAL' in dbf.symbols.keys()
+
+
+def test_symmetric_group_can_be_generated_for_2_sl_mixing_with_symmetry():
+    """A phase with two sublattices that are mixing should generate a cross interaction"""
+    symm_groups = generate_symmetric_group((('AL', 'CO'), ('AL', 'CO')), [[0, 1]])
+    assert symm_groups == [(('AL', 'CO'), ('AL', 'CO'))]
+
+
+def test_symmetric_group_can_be_generated_for_2_sl_endmembers_with_symmetry():
+    """A phase with symmetric sublattices should find a symmetric endmember """
+    symm_groups = generate_symmetric_group(('AL', 'CO'), [[0, 1]])
+    assert symm_groups == [('AL', 'CO'), ('CO', 'AL')]
