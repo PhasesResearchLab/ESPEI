@@ -309,6 +309,75 @@ def generate_symmetric_group(configuration, symmetry):
     return sorted(set(configurations), key=canonical_sort_key)
 
 
+def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers):
+    print('FITTING TERNARY INTERACTIONS')
+    # endmembers is: A list of all endmembers (including symmetrically equivalent) that interactions will be derived from
+    # Now fit all binary interactions
+    # Need to use 'all_endmembers' instead of 'endmembers' because you need to generate combinations
+    # of ALL endmembers, not just symmetry equivalent ones
+    interactions = list(itertools.combinations(endmembers, 3))
+    print(interactions)
+    transformed_interactions = []
+    exit()
+    for first_endmember, second_endmember in interactions:
+        interaction = []
+        for first_occupant, second_occupant in zip(first_endmember, second_endmember):
+            if first_occupant == second_occupant:
+                interaction.append(first_occupant)
+            else:
+                interaction.append(tuple(sorted([first_occupant, second_occupant])))
+        transformed_interactions.append(interaction)
+
+    def bin_int_sort_key(x):
+        interacting_sublattices = sum((isinstance(n, (list, tuple)) and len(n) == 2) for n in x)
+        return canonical_sort_key((interacting_sublattices,) + x)
+
+    interactions = sorted(set(
+        canonicalize(i, symmetry) for i in transformed_interactions),
+                              key=bin_int_sort_key)
+    logging.debug('{0} distinct binary interactions'.format(len(interactions)))
+    for interaction in interactions:
+        ixx = []
+        for i in interaction:
+            if isinstance(i, (tuple, list)):
+                ixx.append(tuple(i))
+            else:
+                ixx.append(i)
+        ixx = tuple(ixx)
+        logging.debug('INTERACTION: {}'.format(ixx))
+        parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets)
+        # Organize parameters by polynomial degree
+        degree_polys = np.zeros(10, dtype=np.object)
+        for degree in reversed(range(10)):
+            check_symbol = sympy.Symbol('YS') * sympy.Symbol('Z')**degree
+            keys_to_remove = []
+            for key, value in sorted(parameters.items(), key=str):
+                if key.has(check_symbol):
+                    if value != 0:
+                        symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+                        while dbf.symbols.get(symbol_name, None) is not None:
+                            dbf.varcounter += 1
+                            symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+                        dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
+                        parameters[key] = sympy.Symbol(symbol_name)
+                    coef = parameters[key] * (key / check_symbol)
+                    try:
+                        coef = float(coef)
+                    except TypeError:
+                        pass
+                    degree_polys[degree] += coef
+                    keys_to_remove.append(key)
+            for key in keys_to_remove:
+                parameters.pop(key)
+        logging.debug('Polynomial coefs: {}'.format(degree_polys))
+        # Insert into database
+        symmetric_interactions = _generate_symmetric_group(interaction, symmetry)
+        for degree in np.arange(degree_polys.shape[0]):
+            if degree_polys[degree] != 0:
+                for syminter in symmetric_interactions:
+                    dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
+
+
 def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=None):
     """Generate an initial CALPHAD model for a given phase and sublattice model.
 
@@ -476,6 +545,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 for syminter in symmetric_interactions:
                     dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
     # TODO: fit ternary interactions
+    fit_ternary_interactions(dbf, phase_name, symmetry, all_endmembers)
     if hasattr(dbf, 'varcounter'):
         del dbf.varcounter
 
