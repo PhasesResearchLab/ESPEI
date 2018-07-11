@@ -261,7 +261,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     return parameters
 
 
-def _generate_symmetric_group(configuration, symmetry):
+def generate_symmetric_group(configuration, symmetry):
     """
     For a particular configuration and list of sublattices with symmetry,
     generate all the symmetrically equivalent configurations.
@@ -304,7 +304,7 @@ def _generate_symmetric_group(configuration, symmetry):
             for subl, subgroup in zip(symmetry, subgroups):
                 for subl_idx, conf_idx in enumerate(subl):
                     new_conf[conf_idx] = subgroup[subl_idx]
-            configurations.append(tuple(new_conf))
+            configurations.append(list_to_tuple(new_conf.tolist()))
 
     return sorted(set(configurations), key=canonical_sort_key)
 
@@ -407,7 +407,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 subl = (subl.upper()*2)[:2]
                 ref = ref + ratio * sympy.Symbol('GHSER'+subl)
             fit_eq += ref
-        symmetric_endmembers = _generate_symmetric_group(endmember, symmetry)
+        symmetric_endmembers = generate_symmetric_group(endmember, symmetry)
         logging.debug('SYMMETRIC_ENDMEMBERS: {}'.format(symmetric_endmembers))
         all_endmembers.extend(symmetric_endmembers)
         for em in symmetric_endmembers:
@@ -470,7 +470,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 parameters.pop(key)
         logging.debug('Polynomial coefs: {}'.format(degree_polys))
         # Insert into database
-        symmetric_interactions = _generate_symmetric_group(interaction, symmetry)
+        symmetric_interactions = generate_symmetric_group(interaction, symmetry)
         for degree in np.arange(degree_polys.shape[0]):
             if degree_polys[degree] != 0:
                 for syminter in symmetric_interactions:
