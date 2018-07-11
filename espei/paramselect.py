@@ -375,6 +375,7 @@ def generate_interactions(endmembers, order, symmetry):
     Returns
     -------
     list
+        List of interaction tuples, e.g. [('A', ('A', 'B'))]
 
     """
     interactions = list(itertools.combinations(endmembers, order))
@@ -406,13 +407,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
     print('Final interactions: {}'.format(interactions))
     logging.debug('{0} distinct ternary interactions'.format(len(interactions)))
     for interaction in interactions:
-        ixx = []
-        for i in interaction:
-            if isinstance(i, (tuple, list)):
-                ixx.append(tuple(i))
-            else:
-                ixx.append(i)
-        ixx = tuple(ixx)
+        ixx = interaction
         logging.debug('INTERACTION: {}'.format(ixx))
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets)
         # Organize parameters by polynomial degree
