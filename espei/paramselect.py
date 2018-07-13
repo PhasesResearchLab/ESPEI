@@ -25,24 +25,13 @@ from sklearn.linear_model import LinearRegression
 
 from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort_key, \
     list_to_tuple, build_sitefractions
-from espei.parameter_selection.utils import endmembers_from_interaction
+from espei.parameter_selection.utils import endmembers_from_interaction, feature_transforms, shift_reference_state
 from espei.parameter_selection.ternary_parameters import fit_ternary_formation_energy
 from espei.utils import PickleableTinyDB, sigfigs
 import espei.refdata
 
 # backwards compatibility:
 from pycalphad.io.database import Species
-
-feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
-                      "CPM_MIX": lambda x: -v.T*sympy.diff(x, v.T, 2),
-                      "CPM": lambda x: -v.T*sympy.diff(x, v.T, 2),
-                      "SM_FORM": lambda x: -sympy.diff(x, v.T),
-                      "SM_MIX": lambda x: -sympy.diff(x, v.T),
-                      "SM": lambda x: -sympy.diff(x, v.T),
-                      "HM_FORM": lambda x: x - v.T*sympy.diff(x, v.T),
-                      "HM_MIX": lambda x: x - v.T*sympy.diff(x, v.T),
-                      "HM": lambda x: x - v.T*sympy.diff(x, v.T)}
-
 
 def _to_tuple(x):
     if isinstance(x, list) or isinstance(x, tuple):
@@ -139,29 +128,6 @@ def _build_feature_matrix(prop, features, desired_data):
     return feature_matrix
 
 
-def _shift_reference_state(desired_data, feature_transform, fixed_model):
-    """
-    Shift data to a new common reference state.
-    """
-    total_response = []
-    for dataset in desired_data:
-        values = np.asarray(dataset['values'], dtype=np.object)
-        if dataset['solver'].get('sublattice_occupancies', None) is not None:
-            value_idx = 0
-            for occupancy, config in zip(dataset['solver']['sublattice_occupancies'],
-                                         dataset['solver']['sublattice_configurations']):
-                if dataset['output'].endswith('_FORM'):
-                    pass
-                elif dataset['output'].endswith('_MIX'):
-                    values[..., value_idx] += feature_transform(fixed_model.models['ref'])
-                    pass
-                else:
-                    raise ValueError('Unknown property to shift: {}'.format(dataset['output']))
-                value_idx += 1
-        total_response.append(values.flatten())
-    return total_response
-
-
 def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, features=None):
     """
     Find suitable linear model parameters for the given phase.
@@ -248,7 +214,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
             # We assume all properties in the same fitting step have the same features (but different ref states)
             feature_matrix = _build_feature_matrix(desired_props[0], features[desired_props[0]], desired_data)
             all_samples = get_samples(desired_data)
-            data_quantities = np.concatenate(_shift_reference_state(desired_data,
+            data_quantities = np.concatenate(shift_reference_state(desired_data,
                                                                     feature_transforms[desired_props[0]],
                                                                     fixed_model), axis=-1)
             site_fractions = [build_sitefractions(phase_name, ds['solver']['sublattice_configurations'],
@@ -358,7 +324,7 @@ def old_fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symm
             # We assume all properties in the same fitting step have the same features (but different ref states)
             feature_matrix = _build_ternary_feature_matrix(desired_props[0], features[desired_props[0]], desired_data)
             all_samples = get_samples(desired_data)
-            data_quantities = np.concatenate(_shift_reference_state(desired_data,
+            data_quantities = np.concatenate(shift_reference_state(desired_data,
                                                                     feature_transforms[desired_props[0]],
                                                                     fixed_model), axis=-1)
             site_fractions = [build_sitefractions(phase_name, ds['solver']['sublattice_configurations'],

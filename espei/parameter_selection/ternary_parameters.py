@@ -12,7 +12,7 @@ import numpy as np
 import sympy
 from pycalphad import Model, variables as v
 
-from espei.parameter_selection.utils import feature_transforms, endmembers_from_interaction
+from espei.parameter_selection.utils import feature_transforms, endmembers_from_interaction, shift_reference_state
 from espei.parameter_selection.model_building import build_candidate_models
 from espei.core_utils import get_data, get_samples
 
@@ -172,7 +172,7 @@ def fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symmetry
             # We assume all properties in the same fitting step have the same features (but different ref states)
             feature_matricies = [build_ternary_feature_matrix(desired_props[0], candidate_model, desired_data) for candidate_model in features[desired_props[0]]]
             all_samples = get_samples(desired_data)
-            data_quantities = np.concatenate(_shift_reference_state(desired_data,
+            data_quantities = np.concatenate(shift_reference_state(desired_data,
                                                                     feature_transforms[desired_props[0]],
                                                                     fixed_model), axis=-1)
             site_fractions = [build_sitefractions(phase_name, ds['solver']['sublattice_configurations'],

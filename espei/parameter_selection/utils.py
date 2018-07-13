@@ -3,8 +3,9 @@ Tools used across parameter selection modules
 """
 
 import itertools
-import sympy
 
+import numpy as np
+import sympy
 from pycalphad import variables as v
 
 feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
@@ -59,3 +60,25 @@ def interaction_test(configuration, order=None):
         return any([subl_occupation > 1 for subl_occupation in interacting_species])
     else:
         return any([subl_occupation == order for subl_occupation in interacting_species])
+
+
+def shift_reference_state(desired_data, feature_transform, fixed_model):
+    """
+    Shift data to a new common reference state.
+    """
+    total_response = []
+    for dataset in desired_data:
+        values = np.asarray(dataset['values'], dtype=np.object)
+        if dataset['solver'].get('sublattice_occupancies', None) is not None:
+            value_idx = 0
+            for occupancy, config in zip(dataset['solver']['sublattice_occupancies'], dataset['solver']['sublattice_configurations']):
+                if dataset['output'].endswith('_FORM'):
+                    pass
+                elif dataset['output'].endswith('_MIX'):
+                    values[..., value_idx] += feature_transform(fixed_model.models['ref'])
+                    pass
+                else:
+                    raise ValueError('Unknown property to shift: {}'.format(dataset['output']))
+                value_idx += 1
+        total_response.append(values.flatten())
+    return total_response
