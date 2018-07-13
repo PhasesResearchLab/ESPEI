@@ -256,31 +256,3 @@ def test_asymmetric_ternary_parameters_can_be_generated(datasets_db):
     assert dbf.symbols['VV0000'] == -4000.0
     assert dbf.symbols['VV0001'] == -200245.0
     assert dbf.symbols['VV0002'] == -200245.0
-
-
-def test_ternary_candidate_models_are_constructed_correctly():
-    """Candidate models should generate all combinations of possible models"""
-    features = OrderedDict([("CPM_FORM",
-                 (v.T*sympy.log(v.T), v.T**2)),
-                ("SM_FORM", (v.T,)),
-                ("HM_FORM", (sympy.S.One,))
-                ])
-    YS = sympy.Symbol('YS')
-    V_i, V_j, V_k = sympy.Symbol('V_i'), sympy.Symbol('V_j'), sympy.Symbol('V_k')
-    candidate_models = build_candidate_models((('A', 'B', 'C'), 'A'), features)
-    assert candidate_models == OrderedDict([
-        ('CPM_FORM', [
-            [v.T*YS*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS],
-            [v.T*V_i*YS*sympy.log(v.T), v.T*V_j*YS*sympy.log(v.T), v.T*V_k*YS*sympy.log(v.T)],
-            [v.T*V_i*YS*sympy.log(v.T), v.T**2*V_i*YS, v.T*V_j*YS*sympy.log(v.T), v.T**2*V_j*YS, v.T*V_k*YS*sympy.log(v.T), v.T**2*V_k*YS],
-        ]),
-        ('SM_FORM', [
-            [v.T*YS],
-            [v.T*V_i*YS, v.T*V_j*YS, v.T*V_k*YS]
-        ]),
-        ('HM_FORM', [
-            [YS],
-            [V_i*YS, V_j*YS, V_k*YS]
-        ])
-    ])

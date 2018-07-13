@@ -119,6 +119,13 @@ def build_candidate_models(configuration, features):
         parameter_interactions = [YS, YS*Z, YS*(Z**2), YS*(Z**3)]
         for feature in features.keys():
             candidate_feature_sets = build_feature_sets(features[feature], parameter_interactions)
+            # list of (for example): ((['TlogT'], 'YS'), (['TlogT', 'T**2'], 'YS*Z'))
+            candidate_models = []
+            for feat_set in candidate_feature_sets:
+                # multiply the interactions through and flatten the feature list
+                candidate_models.append(list(itertools.chain(*[[param_order[1]*temp_feat for temp_feat in param_order[0]] for param_order in feat_set])))
+            features[feature] = candidate_models
+        return features
 
 
     elif interaction_test(configuration, 3):  # has a ternary interaction
