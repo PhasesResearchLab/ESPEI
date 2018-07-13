@@ -73,9 +73,10 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
     Scores for each candidate model (determined by the paramters in the passed
     feature matrix) are calculated by the corrected Akaike Information Criterion (AICc).
     """
-    print('Fitting actual parameters in _fit_parameters')
-    print(feature_matrix)
-    print(data_quantities)
+    #print('Fitting actual parameters in _fit_parameters')
+    #print(feature_matrix)
+    #print(data_quantities)
+    print('feature tuple')
     print(feature_tuple)
 
     # Now generate candidate models; add parameters one at a time

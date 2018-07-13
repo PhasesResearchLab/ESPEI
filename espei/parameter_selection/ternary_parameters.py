@@ -109,95 +109,6 @@ def build_ternary_feature_matrix(prop, features, desired_data, parameter_order=N
     return feature_matrix
 
 
-def generate_feature_sets(features):
-    """
-    Return a set of distinct feature combinations
-
-    Parameters
-    ----------
-    features : list
-        List of features, e.g. [X, Y, Z]
-
-    Returns
-    -------
-    list
-        List of feature combinations
-
-    Examples
-    --------
-    >>> generate_feature_sets(['W', 'X', 'Y', 'Z'])
-    [['W'], ['W', 'X'], ['W', 'X', 'Y'], ['W', 'X', 'Y', 'Z']]
-    """
-    return [features[:(i+1)] for i in range(len(features))]
-
-def build_candidate_models(configuration, features):
-    """
-    Return a dictionary of features and candidate models
-
-    Parameters
-    ----------
-    configuration : tuple
-        Configuration tuple, e.g. (('A', 'B', 'C'), 'A')
-    features :
-
-    Returns
-    -------
-    dict
-        Dictionary of {feature: [candidate_models])
-
-    Notes
-    -----
-    Currently only works for ternary interactions
-    """
-    if not interaction_test(configuration):  # endmembers only
-        raise NotImplementedError('Only ternary interactions supported')
-
-    elif interaction_test(configuration, 2):  # has a binary interaction
-        YS = sympy.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
-        Z = sympy.Symbol('Z')
-        # generate increasingly complex interactions
-        parameter_interactions = [
-            (YS,),  # L0
-            (YS, YS*Z),  # L0 and L1
-            (YS, YS*Z, YS*(Z**2)),  # L0, L1, and L2
-            (YS, YS*Z, YS*(Z**2), YS*(Z**3)),  # L0, L1, L2, and L3
-        ]
-        raise NotImplementedError('Binary candidates not fully implemented. Doesn\'t give enough granularity in candidates ')
-
-    elif interaction_test(configuration, 3):  # has a ternary interaction
-        # Ternaries interactions should have exactly two candidate models:
-        # 1. a single symmetric ternary parameter (YS)
-        # 2. L0, L1, and L2 parameters corresponding to Muggianu parameters
-        # We are ignoring cases where we have L0 == L1, but L0 != L2 and all of the
-        # combinations these cases don't exist in reality (where two elements have
-        # exactly the same behavior) the symmetric case is mainly for small
-        # corrections and dimensionality reduction.
-        YS = sympy.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
-        # Muggianu ternary interaction product for components i, j, and k
-        V_i, V_j, V_k = sympy.Symbol('V_i'), sympy.Symbol('V_j'), sympy.Symbol('V_k')
-        parameter_interactions = [
-            (YS,),  # symmetric L0
-            (YS*V_i, YS*V_j, YS*V_k)  # asymmetric L0, L1, and L2
-        ]
-
-    # there was an interaction, so now we need to generate all the candidate models
-    for feature in features.keys():
-        feature_sets = generate_feature_sets(features[feature])
-        # generate tuples of (parameter_interactions, feature_values), e.g. ('YS', (T*log(T), T**2))
-        candidate_tuples = list(itertools.product(parameter_interactions, feature_sets))
-        print('candidate tuples')
-        print(candidate_tuples)
-        candidates = []
-        for interactions, feature_values in candidate_tuples:
-            # distribute the parameter interactions through the features
-            candidates.append([inter*feat for inter, feat in itertools.product(interactions, feature_values)])
-            print(candidates[-1])
-        # candidates = [[inter*feature_value for inter in interactions] for interactions, feature_value in candidate_tuples]
-        # update the features dictionary with all the possible candidates for this feature
-        features[feature] = candidates
-
-    return features
-
 def fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, features=None):
     """
     Find suitable linear model parameters for the given phase.
@@ -231,25 +142,21 @@ def fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symmetry
         {feature: estimated_value}
 
     """
+    fitting_steps = (["CPM_FORM", "CPM_MIX"], ["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
+
+
     # create the candidate models and fitting steps
     if features is None:
-        features = [("CPM_FORM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3)),
+        features = OrderedDict([("CPM_FORM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3)),
                     ("SM_FORM", (v.T,)),
                     ("HM_FORM", (sympy.S.One,))
-                    ]
-        features = OrderedDict(features)
-    fitting_steps = (["CPM_FORM", "CPM_MIX"], ["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
-    # Product of all nonzero site fractions in all sublattices
-    YS = sympy.Symbol('YS')
-    # Product of all binary interaction terms
-    Z = sympy.Symbol('Z')
-    redlich_kister_features = (YS,)  # gives the symmetric if build_feature_matrix
-    for feature in features.keys():
-        all_features = list(itertools.product(redlich_kister_features, features[feature]))
-        features[feature] = [i[0]*i[1] for i in all_features]
+                    ])
+    candidate_models = build_candidate_models  # dict of {feature, [candidate_models]}
+
+
     logging.debug('ENDMEMBERS FROM INTERACTION: {}'.format(endmembers_from_interaction(configuration)))
-    print('features')
-    print(features)
+
+
 
     parameters = {}
     for feature in features.values():
@@ -276,7 +183,7 @@ def fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symmetry
         logging.debug('{}: datasets found: {}'.format(desired_props, len(desired_data)))
         if len(desired_data) > 0:
             # We assume all properties in the same fitting step have the same features (but different ref states)
-            feature_matrix = build_ternary_feature_matrix(desired_props[0], features[desired_props[0]], desired_data)
+            feature_matricies = [build_ternary_feature_matrix(desired_props[0], features[desired_props[0]], desired_data)]
             all_samples = get_samples(desired_data)
             data_quantities = np.concatenate(_shift_reference_state(desired_data,
                                                                     feature_transforms[desired_props[0]],

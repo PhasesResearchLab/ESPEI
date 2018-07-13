@@ -26,7 +26,7 @@ def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
         List of sublattice indices with symmetry
     datasets : espei.utils.PickleableTinyDB
         Database of datasets to search for data
-    prop : str
+    prop : list
         String name of the property of interest.
 
     Returns
