@@ -66,11 +66,6 @@ def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
     Scores for each candidate model (determined by the paramters in the passed
     feature matrix) are calculated by the corrected Akaike Information Criterion (AICc).
     """
-    #print('Fitting actual parameters in _fit_parameters')
-    #print(feature_matrix)
-    #print(data_quantities)
-    print('feature tuple')
-    print(feature_tuple)
 
     # Now generate candidate models; add parameters one at a time
     model_scores = []
@@ -182,10 +177,6 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
             all_features = list(itertools.product(redlich_kister_features, features[feature]))
             features[feature] = [i[0]*i[1] for i in all_features]
         logging.debug('ENDMEMBERS FROM INTERACTION: {}'.format(endmembers_from_interaction(configuration)))
-        print('features')
-        print(features)
-        print('all features')
-        print(all_features)
     else:
         # We are only fitting an endmember; no mixing data needed
         fitting_steps = (["CPM_FORM"], ["SM_FORM"], ["HM_FORM"])
@@ -296,9 +287,6 @@ def old_fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symm
         all_features = list(itertools.product(redlich_kister_features, features[feature]))
         features[feature] = [i[0]*i[1] for i in all_features]
     logging.debug('ENDMEMBERS FROM INTERACTION: {}'.format(endmembers_from_interaction(configuration)))
-    print('features')
-    print(all_features)
-    print(features)
 
     parameters = {}
     for feature in features.values():

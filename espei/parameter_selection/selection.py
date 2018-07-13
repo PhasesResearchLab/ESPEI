@@ -102,7 +102,6 @@ def select_model(candidate_models):
     opt_model_score = np.inf
     opt_model = None  # will hold a (feature_list, model_coefficients)
     for feature_list, feature_matrix, data_quantities in candidate_models:
-        print('Model selection: feats, matrix, qtys {} {} {}'.format(feature_list, feature_matrix, data_quantities))
         model_coefficients = fit_model(feature_matrix, data_quantities)
         model_score = score_model(feature_matrix, data_quantities, model_coefficients, feature_list)
         if model_score < opt_model_score:

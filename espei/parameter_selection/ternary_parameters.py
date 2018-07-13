@@ -147,6 +147,7 @@ def fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symmetry
     # All possible parameter values that could be taken on. This is some legacy
     # code from before there were many candidate models built. For very large
     # sets of candidate models, this could be quite slow.
+    # TODO: we might be able to remove this initialization for clarity, depends on fixed poritions
     parameters = {}
     for candidate_models in candidate_models_features.values():
         for model in candidate_models:
@@ -169,7 +170,6 @@ def fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symmetry
         subl_idx += 1
 
     for desired_props in fitting_steps:
-        print('Fitting step {}'.format(desired_props))
         desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
         logging.debug('{}: datasets found: {}'.format(desired_props, len(desired_data)))
         if len(desired_data) > 0:
@@ -209,7 +209,7 @@ def fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symmetry
             # provide candidate models and get back a selected model.
             selected_model = select_model(zip(features[desired_props[0]], feature_matricies, data_quantities))
             selected_features, selected_values = selected_model
-            parameters.update(zip(*selected_model))
+            parameters.update(zip(*(selected_features, selected_values)))
             # Add these parameters to be fixed for the next fitting step
             fixed_portion = np.array(selected_features, dtype=np.object)
             fixed_portion = np.dot(fixed_portion, selected_values)
