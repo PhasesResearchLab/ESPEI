@@ -131,6 +131,24 @@ def generate_feature_sets(features):
     return [features[:(i+1)] for i in range(len(features))]
 
 def build_candidate_models(configuration, features):
+    """
+    Return a dictionary of features and candidate models
+
+    Parameters
+    ----------
+    configuration : tuple
+        Configuration tuple, e.g. (('A', 'B', 'C'), 'A')
+    features :
+
+    Returns
+    -------
+    dict
+        Dictionary of {feature: [candidate_models])
+
+    Notes
+    -----
+    Currently only works for ternary interactions
+    """
     if not interaction_test(configuration):  # endmembers only
         raise NotImplementedError('Only ternary interactions supported')
 
