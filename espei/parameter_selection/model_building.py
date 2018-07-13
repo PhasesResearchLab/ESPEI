@@ -91,7 +91,10 @@ def build_candidate_models(configuration, features):
     ----------
     configuration : tuple
         Configuration tuple, e.g. (('A', 'B', 'C'), 'A')
-    features :
+    features : dict
+        Dictionary of {str: list} of generic features for a model, not
+        considering the configuration. For example:
+        {'CPM_FORM': [sympy.S.One, v.T, v.T**2, v.T**3]}
 
     Returns
     -------
@@ -100,14 +103,17 @@ def build_candidate_models(configuration, features):
 
     Notes
     -----
-    Currently only works for ternary interactions. The reason binaries don't
-    work and ternaries are suboptimal is because we aren't generating all of the
-    possible candidates. For example, we never generate candidates that are
-    L0: A + BT
-    L1: A
-    L2: A
+    Currently only works for binary and ternary interactions.
 
-    All orders of parameters (L0, L0 and L1, ...) have the same number of temperatures
+    Candidate models match the following spec:
+    1. Candidates with multiple features specified will have
+    2. orders of parameters (L0, L0 and L1, ...) have the same number of temperatures
+
+    Note that high orders of parameters with multiple temperatures are not
+    required to contain all the temperatures of the low order parameters. For
+    example, the following parameters can be generated
+    L0: A
+    L1: A + BT
     """
     if not interaction_test(configuration):  # endmembers only
         raise NotImplementedError('Only ternary interactions supported')
