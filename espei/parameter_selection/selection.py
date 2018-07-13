@@ -59,14 +59,6 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     -----
     Solve Ax = b, where 'feature_matrix' is A and 'data_quantities' is b.
     """
-    print('Fitting actual parameters in score model')
-    print('Feature matrix')
-    print(feature_matrix)
-    print('Data quantities')
-    print(data_quantities)
-    print('Feature tuple')
-    print(feature_list)
-
     # Now generate candidate models; add parameters one at a time
     num_params = len(feature_list)
     # This may not exactly be the correct form for the likelihood
