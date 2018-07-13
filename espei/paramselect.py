@@ -24,7 +24,7 @@ from pycalphad import Database, Model, variables as v
 from sklearn.linear_model import LinearRegression
 
 from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort_key, \
-    list_to_tuple, build_sitefractions, get_muggianu_samples
+    list_to_tuple, build_sitefractions
 from espei.parameter_selection.utils import endmembers_from_interaction
 from espei.parameter_selection.ternary_parameters import fit_ternary_formation_energy
 from espei.utils import PickleableTinyDB, sigfigs
@@ -138,42 +138,6 @@ def _build_feature_matrix(prop, features, desired_data):
     feature_matrix[:, :] = [transformed_features.subs({v.T: temp, 'YS': compf[0], 'Z': compf[1]}).evalf() for temp, compf in all_samples]
     return feature_matrix
 
-
-def _build_ternary_feature_matrix(prop, features, desired_data, parameter_order=0):
-    """
-    Return an MxN matrix of M data sample and N features.
-
-    Parameters
-    ----------
-    prop : str
-        String name of the property, e.g. 'HM_MIX'
-    features : tuple
-        Tuple of SymPy parameters that can be fit for this property.
-    desired_data : dict
-        Full dataset dictionary containing values, conditions, etc.
-    parameter_order : int
-        Order of the index to build a feature matrix for. Corresponds to the Muggianu
-        parameter index, e.g. 0 is an L0 parameter.
-
-    Returns
-    -------
-    numpy.ndarray
-        An MxN matrix of M samples (from desired data) and N features.
-
-    """
-    print('prop')
-    print(prop)
-    print('features')
-    print(features)
-    print("desired_data")
-    print(desired_data)
-    transformed_features = sympy.Matrix([feature_transforms[prop](i) for i in features])
-    all_samples = get_muggianu_samples(desired_data, interaction_index=parameter_order)
-    print('all_samples')
-    print(all_samples)
-    feature_matrix = np.empty((len(all_samples), len(transformed_features)), dtype=np.float)
-    feature_matrix[:, :] = [transformed_features.subs({v.T: temp, 'YS': compf[0], 'Z': compf[1]}).evalf() for temp, compf in all_samples]
-    return feature_matrix
 
 def _shift_reference_state(desired_data, feature_transform, fixed_model):
     """

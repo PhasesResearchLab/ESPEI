@@ -111,59 +111,6 @@ def get_samples(desired_data):
     return all_samples
 
 
-def get_muggianu_samples(desired_data, interaction_index):
-    """
-    Return the data values from desired_data, transformed to interaction products.
-    Specifically works for Muggianu extrapolation.
-
-    Parameters
-    ----------
-    desired_data : list
-        List of matched desired data, e.g. for a single property
-    interaction_index : int
-        Which ternary interaction index to the parameter corresponds to,
-        e.g. a 1 corresponds to an L1 parameter, which gives a Muggianu correction for
-        v_B = y_B + (1 - y_A - y_B - y_C)
-
-    Returns
-    -------
-    list
-        List of sample values that are properly transformed.
-
-    Notes
-    -----
-    Transforms data to interaction products, e.g. YS*{}^{xs}G=YS*XS*DXS^{n} {}^{n}L
-    Each tuple in the list is a tuple of (temperature, (site_fraction_product, interaction_product)) for each data sample
-
-    """
-    # TODO does not ravel pressure conditions
-    # TODO: could possibly combine with ravel_conditions if we do the math outside.
-    all_samples = []
-    for data in desired_data:
-        temperatures = np.atleast_1d(data['conditions']['T'])
-        num_configs = np.array(data['solver'].get('sublattice_configurations'), dtype=np.object).shape[0]
-        site_fractions = data['solver'].get('sublattice_occupancies', [[1]] * num_configs)
-        print(site_fractions)
-        # product of site fractions for each dataset
-        site_fraction_product = [reduce(operator.mul, list(itertools.chain(*[np.atleast_1d(f) for f in fracs])), 1)
-                                 for fracs in site_fractions]
-        print(site_fraction_product)
-        # TODO: Subtle sorting bug here, if the interactions aren't already in sorted order...
-        interaction_product = []
-        for fracs in site_fractions:
-            # fracs is the list of site fractions for each sublattice, e.g. [[0.25, 0.25, 0.5], 1] for an [[A,B,C], A] configuration
-            # v_i, v_j, etc. for the ternary case, which v we are calculating depends on the parameter order
-            for f in fracs:
-                prod = 1
-                if isinstance(f, list) and (len(f) >= 3):
-                    prod *= f[interaction_index] + (1 - sum(f))/len(f)
-            interaction_product.append(float(prod))
-        if len(interaction_product) == 0:
-            interaction_product = [0]
-        comp_features = zip(site_fraction_product, interaction_product)
-        all_samples.extend(list(itertools.product(temperatures, comp_features)))
-    return all_samples
-
 def canonicalize(configuration, equivalent_sublattices):
     """
     Sort a sequence with symmetry. This routine gives the sequence
