@@ -343,7 +343,7 @@ AL_CO_CR_A2_PHASE_MODELS = {
   "components": ["AL", "CO", "CR"],
   "phases": {
          "BCC_A2": {
-            "sublattice_model": [["AL", "CO", "CR"],["AL"]],
+            "sublattice_model": [["AL", "CO", "CR"]],
             "sublattice_site_ratios": [1, 2]
          }
     }

@@ -26,6 +26,7 @@ from sklearn.linear_model import LinearRegression
 from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort_key, \
     list_to_tuple, build_sitefractions, get_muggianu_samples
 from espei.parameter_selection.utils import endmembers_from_interaction
+from espei.parameter_selection.ternary_parameters import fit_ternary_formation_energy
 from espei.utils import PickleableTinyDB, sigfigs
 import espei.refdata
 
@@ -313,7 +314,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
             fixed_portions.append(fixed_portion)
     return parameters
 
-def fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, features=None):
+def old_fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, features=None):
     """
     Find suitable linear model parameters for the given phase.
     We do this by successively fitting heat capacities, entropies and
