@@ -4,6 +4,8 @@ Building candidate models
 
 import itertools
 
+import sympy
+
 from espei.parameter_selection.utils import interaction_test
 
 def make_successive(xs):
@@ -72,16 +74,12 @@ def build_feature_sets(temperature_features, interaction_features):
     """
     # [[A], [A, B], [A, B, C], ...]
     temps = make_successive(temperature_features)
-
     # [ [temps for L0], [temps for L1], [temps for L2], ...]
     feats = [list(itertools.product(temps, [inter])) for inter in interaction_features]
-
     # [ [temps for L0], [temps for L0 and L1], [temps for L0, L1 and L2], ...
     model_sets = make_successive(feats)
-
     # models that are not distributed or summed
     candidate_feature_sets = list(itertools.chain(*[list(itertools.product(*model_set)) for model_set in model_sets]))
-
     return candidate_feature_sets
 
 
@@ -117,14 +115,11 @@ def build_candidate_models(configuration, features):
     elif interaction_test(configuration, 2):  # has a binary interaction
         YS = sympy.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
         Z = sympy.Symbol('Z')
-        # generate increasingly complex interactions
-        parameter_interactions = [
-            (YS,),  # L0
-            (YS, YS*Z),  # L0 and L1
-            (YS, YS*Z, YS*(Z**2)),  # L0, L1, and L2
-            (YS, YS*Z, YS*(Z**2), YS*(Z**3)),  # L0, L1, L2, and L3
-        ]
-        raise NotImplementedError('Binary candidates not fully implemented. Doesn\'t give enough granularity in candidates ')
+        # generate increasingly complex interactions, # L0, L1, L2
+        parameter_interactions = [YS, YS*Z, YS*(Z**2), YS*(Z**3)]
+        for feature in features.keys():
+            candidate_feature_sets = build_feature_sets(features[feature], parameter_interactions)
+
 
     elif interaction_test(configuration, 3):  # has a ternary interaction
         # Ternaries interactions should have exactly two candidate models:
