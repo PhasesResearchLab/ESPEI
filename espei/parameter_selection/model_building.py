@@ -127,7 +127,6 @@ def build_candidate_models(configuration, features):
             features[feature] = candidate_models
         return features
 
-
     elif interaction_test(configuration, 3):  # has a ternary interaction
         # Ternaries interactions should have exactly two candidate models:
         # 1. a single symmetric ternary parameter (YS)
@@ -138,22 +137,22 @@ def build_candidate_models(configuration, features):
         # corrections and dimensionality reduction.
         YS = sympy.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
         # Muggianu ternary interaction product for components i, j, and k
-        V_i, V_j, V_k = sympy.Symbol('V_i'), sympy.Symbol('V_j'), sympy.Symbol('V_k')
-        parameter_interactions = [
-            (YS,),  # symmetric L0
-            (YS*V_i, YS*V_j, YS*V_k)  # asymmetric L0, L1, and L2
-        ]
+        V_I, V_J, V_K = sympy.Symbol('V_I'), sympy.Symbol('V_J'), sympy.Symbol('V_K')
+        # because we don't want our parameter interactions to go sequentially, we'll construct models in two steps
+        symmetric_interactions = [(YS,)] # symmetric L0
+        asymmetric_interactions = [(YS * V_I, YS * V_J, YS * V_K)] # asymmetric L0, L1, and L2
+        for feature in features.keys():
+            sym_candidate_feature_sets = build_feature_sets(features[feature], symmetric_interactions)
+            asym_candidate_feature_sets = build_feature_sets(features[feature], asymmetric_interactions)
+            # list of (for example): ((['TlogT'], ('YS',)), (['TlogT', 'T**2'], ('YS',))
+            candidate_models = []
+            for feat_set in itertools.chain(sym_candidate_feature_sets, asym_candidate_feature_sets):
+                feat_set_params = []
+                # multiply the interactions through with distributing
+                for temp_feats, inter_feats in feat_set:
+                    # temperature features and interaction features
+                    feat_set_params.append([inter*feat for inter, feat in itertools.product(temp_feats, inter_feats)])
+                candidate_models.append(list(itertools.chain(*feat_set_params)))
+            features[feature] = candidate_models
+        return features
 
-    # there was an interaction, so now we need to generate all the candidate models
-    for feature in features.keys():
-        feature_sets = make_successive(features[feature])
-        # generate tuples of (parameter_interactions, feature_values), e.g. ('YS', (T*log(T), T**2))
-        candidate_tuples = list(itertools.product(parameter_interactions, feature_sets))
-        candidates = []
-        for interactions, feature_values in candidate_tuples:
-            # distribute the parameter interactions through the features
-            candidates.append([inter*feat for inter, feat in itertools.product(interactions, feature_values)])
-        # update the features dictionary with all the possible candidates for this feature
-        features[feature] = candidates
-
-    return features

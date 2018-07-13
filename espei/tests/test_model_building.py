@@ -53,7 +53,6 @@ def test_binary_candidate_models_are_constructed_correctly():
     YS = sympy.Symbol('YS')
     Z = sympy.Symbol('Z')
     candidate_models = build_candidate_models((('A', 'B'), 'A'), features)
-    print(repr(candidate_models))
     assert candidate_models == OrderedDict([
         ('CPM_FORM', [
             [v.T*YS*sympy.log(v.T)],
@@ -110,21 +109,22 @@ def test_ternary_candidate_models_are_constructed_correctly():
                 ("HM_FORM", (sympy.S.One,))
                 ])
     YS = sympy.Symbol('YS')
-    V_i, V_j, V_k = sympy.Symbol('V_i'), sympy.Symbol('V_j'), sympy.Symbol('V_k')
+    V_I, V_J, V_K = sympy.Symbol('V_I'), sympy.Symbol('V_J'), sympy.Symbol('V_K')
     candidate_models = build_candidate_models((('A', 'B', 'C'), 'A'), features)
+    print(repr(candidate_models))
     assert candidate_models == OrderedDict([
         ('CPM_FORM', [
             [v.T*YS*sympy.log(v.T)],
             [v.T*YS*sympy.log(v.T), v.T**2*YS],
-            [v.T*V_i*YS*sympy.log(v.T), v.T*V_j*YS*sympy.log(v.T), v.T*V_k*YS*sympy.log(v.T)],
-            [v.T*V_i*YS*sympy.log(v.T), v.T**2*V_i*YS, v.T*V_j*YS*sympy.log(v.T), v.T**2*V_j*YS, v.T*V_k*YS*sympy.log(v.T), v.T**2*V_k*YS],
+            [v.T*V_I*YS*sympy.log(v.T), v.T*V_J*YS*sympy.log(v.T), v.T*V_K*YS*sympy.log(v.T)],
+            [v.T*V_I*YS*sympy.log(v.T), v.T*V_J*YS*sympy.log(v.T), v.T*V_K*YS*sympy.log(v.T), v.T**2*V_I*YS, v.T**2*V_J*YS, v.T**2*V_K*YS],
         ]),
         ('SM_FORM', [
             [v.T*YS],
-            [v.T*V_i*YS, v.T*V_j*YS, v.T*V_k*YS]
+            [v.T*V_I*YS, v.T*V_J*YS, v.T*V_K*YS]
         ]),
         ('HM_FORM', [
             [YS],
-            [V_i*YS, V_j*YS, V_k*YS]
+            [V_I*YS, V_J*YS, V_K*YS]
         ])
     ])
