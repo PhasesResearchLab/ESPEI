@@ -17,6 +17,7 @@ from espei.parameter_selection.utils import (
     build_sitefractions,
 )
 from espei.parameter_selection.model_building import build_candidate_models
+from espei.parameter_selection.selection import select_model
 from espei.core_utils import get_data, get_samples
 
 def get_muggianu_samples(desired_data):
@@ -168,40 +169,49 @@ def fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symmetry
         subl_idx += 1
 
     for desired_props in fitting_steps:
-        print('Fitting step {}'.format(desired_props) )
+        print('Fitting step {}'.format(desired_props))
         desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
         logging.debug('{}: datasets found: {}'.format(desired_props, len(desired_data)))
         if len(desired_data) > 0:
-            # We assume all properties in the same fitting step have the same features (but different ref states)
-            feature_matricies = [build_ternary_feature_matrix(desired_props[0], candidate_model, desired_data) for candidate_model in features[desired_props[0]]]
+            # We assume all properties in the same fitting step have the same features (all CPM, all HM, etc.) (but different ref states)
             all_samples = get_samples(desired_data)
-            data_quantities = np.concatenate(shift_reference_state(desired_data,
-                                                                    feature_transforms[desired_props[0]],
-                                                                    fixed_model), axis=-1)
-            site_fractions = [build_sitefractions(phase_name, ds['solver']['sublattice_configurations'],
-                                                  ds['solver'].get('sublattice_occupancies',
-                                 np.ones((len(ds['solver']['sublattice_configurations']),
-                                          len(ds['solver']['sublattice_configurations'][0])), dtype=np.float)))
+            site_fractions = [build_sitefractions(phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies',
+                                 np.ones((len(ds['solver']['sublattice_configurations']), len(ds['solver']['sublattice_configurations'][0])), dtype=np.float)))
                               for ds in desired_data for _ in ds['conditions']['T']]
             # Flatten list
             site_fractions = list(itertools.chain(*site_fractions))
-            # Remove existing partial model contributions from the data
-            data_quantities = data_quantities - feature_transforms[desired_props[0]](fixed_model.ast)
-            # Subtract out high-order (in T) parameters we've already fit
-            data_quantities = data_quantities - \
-                feature_transforms[desired_props[0]](sum(fixed_portions)) / moles_per_formula_unit
-            for sf, i in zip(site_fractions, data_quantities):
-                missing_variables = sympy.S(i * moles_per_formula_unit).atoms(v.SiteFraction) - set(sf.keys())
-                sf.update({x: 0. for x in missing_variables})
-            # moles_per_formula_unit factor is here because our data is stored per-atom
-            # but all of our fits are per-formula-unit
-            data_quantities = [sympy.S(i * moles_per_formula_unit).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
-                               for i, sf, ixx in zip(data_quantities, site_fractions, all_samples)]
-            data_quantities = np.asarray(data_quantities, dtype=np.float)
-            # provide candidate models and get back a selected model. candidate models come from
-            parameters.update(_fit_parameters(feature_matrix, data_quantities, features[desired_props[0]]))
+
+            # build the candidate model transformation matrix and response vector (A, b in Ax=b)
+            feature_matricies = []
+            data_quantities = []
+            for candidate_model in features[desired_props[0]]:
+                feature_matricies.append(build_ternary_feature_matrix(desired_props[0], candidate_model, desired_data))
+
+                data_qtys = np.concatenate(shift_reference_state(desired_data, feature_transforms[desired_props[0]], fixed_model), axis=-1)
+
+                # Remove existing partial model contributions from the data
+                data_qtys = data_qtys - feature_transforms[desired_props[0]](fixed_model.ast)
+                # Subtract out high-order (in T) parameters we've already fit
+                data_qtys = data_qtys - feature_transforms[desired_props[0]](sum(fixed_portions)) / moles_per_formula_unit
+
+                for sf, i in zip(site_fractions, data_qtys):
+                    missing_variables = sympy.S(i * moles_per_formula_unit).atoms(v.SiteFraction) - set(sf.keys())
+                    sf.update({x: 0. for x in missing_variables})
+
+                # moles_per_formula_unit factor is here because our data is stored per-atom
+                # but all of our fits are per-formula-unit
+                data_qtys = [sympy.S(i * moles_per_formula_unit).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
+                                   for i, sf, ixx in zip(data_qtys, site_fractions, all_samples)]
+                data_qtys = np.asarray(data_qtys, dtype=np.float)
+
+                data_quantities.append(data_qtys)
+
+            # provide candidate models and get back a selected model.
+            selected_model = select_model(zip(features[desired_props[0]], feature_matricies, data_quantities))
+            selected_features, selected_values = selected_model
+            parameters.update(zip(*selected_model))
             # Add these parameters to be fixed for the next fitting step
-            fixed_portion = np.array(features[desired_props[0]], dtype=np.object)
-            fixed_portion = np.dot(fixed_portion, [parameters[feature] for feature in features[desired_props[0]]])
+            fixed_portion = np.array(selected_features, dtype=np.object)
+            fixed_portion = np.dot(fixed_portion, selected_values)
             fixed_portions.append(fixed_portion)
     return parameters
