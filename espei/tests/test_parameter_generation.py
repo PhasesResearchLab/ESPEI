@@ -1,8 +1,12 @@
 """The test_parameter_generation module tests that parameter selection is correct"""
 
 from tinydb import where
+import sympy
+from pycalphad import variables as v
+from collections import OrderedDict
 
 from espei.tests.fixtures import datasets_db
+from espei.parameter_selection.ternary_parameters import build_candidate_models
 from espei.paramselect import generate_parameters, generate_symmetric_group, sorted_interactions
 from espei.tests.testing_data import *
 
@@ -236,3 +240,47 @@ def test_symmetric_ternary_parameter_can_be_generated_in_presence_of_binary_data
     assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 2
     assert dbf.symbols['VV0000'] == -4000.0
     assert dbf.symbols['VV0001'] == -200245.0
+
+
+
+def test_asymmetric_ternary_parameters_can_be_generated(datasets_db):
+    """3 asymmetric ternary parameters should be generated correctly."""
+    datasets_db.insert(AL_CO_CR_BCC_A2_TERNARY_NON_SYMMETRIC_DATASET)
+
+    dbf = generate_parameters(AL_CO_CR_A2_PHASE_MODELS, datasets_db, 'SGTE91', 'linear')
+
+    assert dbf.elements == {'AL', 'CO', 'CR'}
+    assert set(dbf.phases.keys()) == {'BCC_A2'}
+    # rounded to 6 digits by `numdigits`, this is confirmed to be a correct value.
+    assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 3
+    assert dbf.symbols['VV0000'] == -4000.0
+    assert dbf.symbols['VV0001'] == -200245.0
+    assert dbf.symbols['VV0002'] == -200245.0
+
+
+def test_ternary_candidate_models_are_constructed_correctly():
+    """Candidate models should generate all combinations of possible models"""
+    features = OrderedDict([("CPM_FORM",
+                 (v.T*sympy.log(v.T), v.T**2)),
+                ("SM_FORM", (v.T,)),
+                ("HM_FORM", (sympy.S.One,))
+                ])
+    YS = sympy.Symbol('YS')
+    V_i, V_j, V_k = sympy.Symbol('V_i'), sympy.Symbol('V_j'), sympy.Symbol('V_k')
+    candidate_models = build_candidate_models((('A', 'B', 'C'), 'A'), features)
+    assert candidate_models == OrderedDict([
+        ('CPM_FORM', [
+            [v.T*YS*sympy.log(v.T)],
+            [v.T*YS*sympy.log(v.T), v.T**2*YS],
+            [v.T*V_i*YS*sympy.log(v.T), v.T*V_j*YS*sympy.log(v.T), v.T*V_k*YS*sympy.log(v.T)],
+            [v.T*V_i*YS*sympy.log(v.T), v.T**2*V_i*YS, v.T*V_j*YS*sympy.log(v.T), v.T**2*V_j*YS, v.T*V_k*YS*sympy.log(v.T), v.T**2*V_k*YS],
+        ]),
+        ('SM_FORM', [
+            [v.T*YS],
+            [v.T*V_i*YS, v.T*V_j*YS, v.T*V_k*YS]
+        ]),
+        ('HM_FORM', [
+            [YS],
+            [V_i*YS, V_j*YS, V_k*YS]
+        ])
+    ])

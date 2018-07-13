@@ -34,7 +34,7 @@ def fit_model(feature_matrix, data_quantities):
     return clf.coef_
 
 
-def score_model(feature_matrix, data_quantities, model_coefficients, feature_tuple):
+def score_model(feature_matrix, data_quantities, model_coefficients, feature_list):
     """
     Fit and score a model with the AICc through LinearRegression
 
@@ -46,7 +46,7 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_tup
         (M,) response vector. Target values of the output (e.g. HM_MIX) to reproduce.
     model_coefficients : list
         List of fitted model coefficients to be scored. Has shape (N,).
-    feature_tuple : list
+    feature_list : list
         Polynomial coefficients corresponding to each column of 'feature_matrix'.
         Has shape (N,). Purely a logging aid.
 
@@ -65,10 +65,10 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_tup
     print('Data quantities')
     print(data_quantities)
     print('Feature tuple')
-    print(feature_tuple)
+    print(feature_list)
 
     # Now generate candidate models; add parameters one at a time
-    num_params = len(feature_tuple)
+    num_params = len(feature_list)
     # This may not exactly be the correct form for the likelihood
     # We're missing the "ridge" contribution here which could become relevant for sparse data
     rss = np.square(np.dot(feature_matrix, model_coefficients) - data_quantities.astype(np.float)).sum()
@@ -89,6 +89,32 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_tup
     correction = (2.0*num_params**2 + 2.0*num_params)/correction_denom
     aic = 2.0*num_params + num_samples * np.log(rss/num_samples)
     aicc = aic + correction  # model score
-    logging.debug('{} rss: {}, AIC: {}, AICc: {}'.format(feature_tuple, rss, aic, aicc))
+    logging.debug('{} rss: {}, AIC: {}, AICc: {}'.format(feature_list, rss, aic, aicc))
     return aicc
+
+
+def select_model(candidate_models):
+    """
+    Select a model from a series of candidates by fitting and scoring them
+
+    Parameters
+    ----------
+    candidate_models : dict
+        Dictionary of {feature_list: (feature_matrix, data_quantities)
+
+    Returns
+    -------
+    tuple
+        Tuple of (feature_list, model_coefficients) for the highest scoring model
+    """
+    opt_model_score = np.inf
+    opt_model = None  # will hold a (feature_list, model_coefficients)
+    for feature_list in candidate_models.keys():
+        feature_matrix, data_quantities = candidate_models[feature_list]
+        model_coefficients = fit_model(feature_matrix, data_quantities)
+        model_score = score_model(feature_matrix, data_quantities, model_coefficients, feature_list)
+        if model_score < opt_model_score:
+            opt_model_score = model_score
+            opt_model = (feature_list, model_coefficients)
+    return opt_model
 
