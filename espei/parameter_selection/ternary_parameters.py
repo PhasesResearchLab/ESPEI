@@ -184,7 +184,7 @@ def fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symmetry
             # build the candidate model transformation matrix and response vector (A, b in Ax=b)
             feature_matricies = []
             data_quantities = []
-            for candidate_model in features[desired_props[0]]:
+            for candidate_model in candidate_models_features[desired_props[0]]:
                 feature_matricies.append(build_ternary_feature_matrix(desired_props[0], candidate_model, desired_data))
 
                 data_qtys = np.concatenate(shift_reference_state(desired_data, feature_transforms[desired_props[0]], fixed_model), axis=-1)
@@ -207,7 +207,7 @@ def fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symmetry
                 data_quantities.append(data_qtys)
 
             # provide candidate models and get back a selected model.
-            selected_model = select_model(zip(features[desired_props[0]], feature_matricies, data_quantities))
+            selected_model = select_model(zip(candidate_models_features[desired_props[0]], feature_matricies, data_quantities))
             selected_features, selected_values = selected_model
             parameters.update(zip(*(selected_features, selected_values)))
             # Add these parameters to be fixed for the next fitting step
