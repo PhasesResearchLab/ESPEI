@@ -387,6 +387,27 @@ def generate_interactions(endmembers, order, symmetry):
     return sorted_interactions(transformed_interactions, order, symmetry)
 
 
+def get_next_symbol(dbf):
+    """
+    Return a string name of the next free symbol to set
+
+    Parameters
+    ----------
+    dbf : Database
+        pycalphad Database. Must have the ``varcounter`` attribute set to an integer.
+
+    Returns
+    -------
+    str
+    """
+    # TODO: PEP-572 optimization
+    symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+    while dbf.symbols.get(symbol_name, None) is not None:
+        dbf.varcounter += 1
+        symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+    return symbol_name
+
+
 def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
     """
     Fit ternary interactions for a database in place
@@ -435,10 +456,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
                     if value != 0:
                         if degree > 1:
                             asymmetric_flag = True
-                        symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
-                        while dbf.symbols.get(symbol_name, None) is not None:
-                            dbf.varcounter += 1
-                            symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+                        symbol_name = get_next_symbol(dbf)
                         dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
                         parameters[key] = sympy.Symbol(symbol_name)
                     coef = parameters[key] * (key / check_symbol)
@@ -537,10 +555,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
             for key, value in sorted(parameters.items(), key=str):
                 if value == 0:
                     continue
-                symbol_name = 'VV'+str(dbf.varcounter).zfill(4)
-                while dbf.symbols.get(symbol_name, None) is not None:
-                    dbf.varcounter += 1
-                    symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+                symbol_name = get_next_symbol(dbf)
                 dbf.symbols[symbol_name] = sigfigs(value, numdigits)
                 parameters[key] = sympy.Symbol(symbol_name)
             fit_eq = sympy.Add(*[value * key for key, value in parameters.items()])
@@ -579,10 +594,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
             for key, value in sorted(parameters.items(), key=str):
                 if key.has(check_symbol):
                     if value != 0:
-                        symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
-                        while dbf.symbols.get(symbol_name, None) is not None:
-                            dbf.varcounter += 1
-                            symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+                        symbol_name = get_next_symbol(dbf)
                         dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
                         parameters[key] = sympy.Symbol(symbol_name)
                     coef = parameters[key] * (key / check_symbol)
