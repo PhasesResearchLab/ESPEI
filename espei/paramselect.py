@@ -27,7 +27,7 @@ from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort
     list_to_tuple
 from espei.parameter_selection.utils import (
     endmembers_from_interaction, feature_transforms, shift_reference_state,
-    build_sitefractions
+    build_sitefractions, interaction_test
 )
 from espei.parameter_selection.ternary_parameters import fit_ternary_formation_energy
 from espei.utils import PickleableTinyDB, sigfigs
@@ -326,7 +326,22 @@ def sorted_interactions(interactions, max_interaction_order, symmetry):
             sort_score.append(sum((isinstance(n, (list, tuple)) and len(n) == interaction_order) for n in x))
         return canonical_sort_key(list_to_tuple(sort_score) + x)
 
-    return sorted(set(canonicalize(i, symmetry) for i in interactions), key=int_sort_key)
+    interactions = sorted(set(canonicalize(i, symmetry) for i in interactions), key=int_sort_key)
+    # filter out interactions that have ternary and binary parameters (cross interactions)
+    # for now, I'm not really sure how the mathematics work out
+    # I think they are treated as a binary interaction
+    # in reality, most people would probably not want to fit these cross interactions
+    filtered_interactions = []
+    for inter in interactions:
+        if not (interaction_test(inter, 2) and interaction_test(inter, 3)):
+            # check for multiple 3 order interactions
+            order_3_interactions_count = 0
+            for subl in inter:
+                if interaction_test((subl,), 3):
+                    order_3_interactions_count += 1
+            if order_3_interactions_count <= 1:
+                filtered_interactions.append(inter)
+    return filtered_interactions
 
 
 def generate_interactions(endmembers, order, symmetry):
