@@ -256,6 +256,6 @@ def test_asymmetric_ternary_parameters_can_be_generated(datasets_db):
     assert set(dbf.phases.keys()) == {'BCC_A2'}
     # rounded to 6 digits by `numdigits`, this is confirmed to be a correct value.
     assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 3
-    assert dbf.symbols['VV0000'] == -4000.0
-    assert dbf.symbols['VV0001'] == -200245.0
-    assert dbf.symbols['VV0002'] == -200245.0
+    assert dbf.symbols['VV0000'] == -3000.0
+    assert dbf.symbols['VV0001'] == -2000.0
+    assert dbf.symbols['VV0002'] == -1000.0

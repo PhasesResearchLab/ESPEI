@@ -383,13 +383,24 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
         logging.debug('INTERACTION: {}'.format(ixx))
         parameters = fit_ternary_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets)
         # Organize parameters by polynomial degree
-        degree_polys = np.zeros(10, dtype=np.object)
-        for degree in reversed(range(10)):
+        degree_polys = np.zeros(3, dtype=np.object)
+        asymmetric_flag = False  # turn on if we find an asymmetric parameter
+        for degree in reversed(range(3)):
             check_symbol = sympy.Symbol('YS') * sympy.Symbol('Z')**degree
+            # handle special non-Z syntax for ternaries
+            if (degree == 0) and asymmetric_flag:
+                check_symbol *= sympy.Symbol('V_I')
+            elif degree == 1:
+                check_symbol = check_symbol.subs({sympy.Symbol('Z')**degree: sympy.Symbol('V_J')})
+            elif degree == 2:
+                check_symbol = check_symbol.subs({sympy.Symbol('Z')**degree: sympy.Symbol('V_K')})
+
             keys_to_remove = []
             for key, value in sorted(parameters.items(), key=str):
                 if key.has(check_symbol):
                     if value != 0:
+                        if degree > 1:
+                            asymmetric_flag = True
                         symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
                         while dbf.symbols.get(symbol_name, None) is not None:
                             dbf.varcounter += 1
