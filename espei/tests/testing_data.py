@@ -437,7 +437,7 @@ AL_CO_CR_BCC_B2_TERNARY_NON_SYMMETRIC_DATASET = {
 
             [[0.25, 0.25, 0.5], 1],
             [[0.25, 0.5, 0.25], 1],
-            [[0.333, 0.333, 0.334], 1]
+            [[0.5, 0.25, 0.25], 1]
         ],
         "sublattice_configurations": [
             [["AL", "CO", "CR"], "AL"],
@@ -450,7 +450,7 @@ AL_CO_CR_BCC_B2_TERNARY_NON_SYMMETRIC_DATASET = {
         "T": 298.15
     },
     "output": "HM_MIX",
-    "values":   [[[-70.3125, -62.5, -54.6875]]],
+    "values":   [[[-140.625, -125.0, -109.375]]],
     "reference": "",
     "comment": ""
 }

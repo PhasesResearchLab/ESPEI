@@ -493,3 +493,58 @@ def formatted_parameter(dbf, symbol, unique=True):
         return formatted_parameters[0]
     else:
         return formatted_parameters
+
+
+def endmembers_from_interaction(configuration):
+    """For a given configuration with possible interactions, return all the endmembers"""
+    config = []
+    for c in configuration:
+        if isinstance(c, (list, tuple)):
+            config.append(c)
+        else:
+            config.append([c])
+    return list(itertools.product(*[tuple(c) for c in config]))
+
+
+def build_sitefractions(phase_name, sublattice_configurations, sublattice_occupancies):
+    """Convert nested lists of sublattice configurations and occupancies to a list
+    of dictionaries. The dictionaries map SiteFraction symbols to occupancy
+    values. Note that zero occupancy site fractions will need to be added
+    separately since the total degrees of freedom aren't known in this function.
+
+    Parameters
+    ----------
+    phase_name : str
+        Name of the phase
+    sublattice_configurations : [[str]]
+        sublattice configuration
+    sublattice_occupancies : [[float]]
+        occupancy of each sublattice
+
+    Returns
+    -------
+    [[float]]
+        a list of site fractions over sublattices
+
+    """
+    result = []
+    for config, occ in zip(sublattice_configurations, sublattice_occupancies):
+        sitefracs = {}
+        config = [[c] if not isinstance(c, (list, tuple)) else c for c in config]
+        occ = [[o] if not isinstance(o, (list, tuple)) else o for o in occ]
+        if len(config) != len(occ):
+            raise ValueError('Sublattice configuration length differs from occupancies')
+        for sublattice_idx in range(len(config)):
+            if isinstance(config[sublattice_idx], (list, tuple)) != isinstance(occ[sublattice_idx], (list, tuple)):
+                raise ValueError('Sublattice configuration type differs from occupancies')
+            if not isinstance(config[sublattice_idx], (list, tuple)):
+                # This sublattice is fully occupied by one component
+                sitefracs[v.SiteFraction(phase_name, sublattice_idx, config[sublattice_idx])] = occ[sublattice_idx]
+            else:
+                # This sublattice is occupied by multiple elements
+                if len(config[sublattice_idx]) != len(occ[sublattice_idx]):
+                    raise ValueError('Length mismatch in sublattice configuration')
+                for comp, val in zip(config[sublattice_idx], occ[sublattice_idx]):
+                    sitefracs[v.SiteFraction(phase_name, sublattice_idx, comp)] = val
+        result.append(sitefracs)
+    return result

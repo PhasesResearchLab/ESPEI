@@ -26,11 +26,12 @@ from sklearn.linear_model import LinearRegression
 from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort_key, \
     list_to_tuple
 from espei.parameter_selection.utils import (
-    endmembers_from_interaction, feature_transforms, shift_reference_state,
-    build_sitefractions, interaction_test
+    feature_transforms, shift_reference_state, interaction_test
 )
+from espei.utils import endmembers_from_interaction, build_sitefractions
 from espei.parameter_selection.ternary_parameters import fit_ternary_formation_energy
-from espei.utils import PickleableTinyDB, sigfigs
+from espei.utils import PickleableTinyDB, sigfigs, endmembers_from_interaction, \
+    build_sitefractions
 import espei.refdata
 
 # backwards compatibility:

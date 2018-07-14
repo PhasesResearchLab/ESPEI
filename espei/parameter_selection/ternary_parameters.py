@@ -13,9 +13,9 @@ import sympy
 from pycalphad import Model, variables as v
 
 from espei.parameter_selection.utils import (
-    feature_transforms, endmembers_from_interaction, shift_reference_state,
-    build_sitefractions,
+    feature_transforms, shift_reference_state,
 )
+from espei.utils import endmembers_from_interaction, build_sitefractions
 from espei.parameter_selection.model_building import build_candidate_models
 from espei.parameter_selection.selection import select_model
 from espei.core_utils import get_data, get_samples

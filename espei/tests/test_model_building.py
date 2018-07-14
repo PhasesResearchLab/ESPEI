@@ -111,7 +111,6 @@ def test_ternary_candidate_models_are_constructed_correctly():
     YS = sympy.Symbol('YS')
     V_I, V_J, V_K = sympy.Symbol('V_I'), sympy.Symbol('V_J'), sympy.Symbol('V_K')
     candidate_models = build_candidate_models((('A', 'B', 'C'), 'A'), features)
-    print(repr(candidate_models))
     assert candidate_models == OrderedDict([
         ('CPM_FORM', [
             [v.T*YS*sympy.log(v.T)],

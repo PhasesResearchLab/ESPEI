@@ -12,7 +12,7 @@ from espei.tests.testing_data import *
 
 import pytest
 
-@pytest.mark.skip
+
 def test_mixing_energies_are_fit(datasets_db):
     """Tests that given mixing energy data, the excess parameter is fit."""
     phase_models = {
@@ -264,8 +264,8 @@ def test_asymmetric_ternary_parameters_can_be_generated_for_2_sublattice(dataset
     assert dbf.elements == {'AL', 'CO', 'CR'}
     assert set(dbf.phases.keys()) == {'BCC_B2'}
     # rounded to 6 digits by `numdigits`, this is confirmed to be a correct value.
-    assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 3
-    print(dbf._parameters.all())
+    interaction_parameters = dbf._parameters.search(where('parameter_type') == 'L')
+    assert len(interaction_parameters) == 3
     assert dbf.symbols['VV0000'] == -6000.0
     assert dbf.symbols['VV0001'] == -4000.0
     assert dbf.symbols['VV0002'] == -2000.0
