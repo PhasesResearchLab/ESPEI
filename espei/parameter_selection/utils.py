@@ -55,7 +55,7 @@ def interaction_test(configuration, order=None):
     False  # has no ternary interaction
 
     """
-    interacting_species = [len(subl) for subl in configuration]
+    interacting_species = [len(subl) for subl in configuration if isinstance(subl, tuple)]
     if order is None:  # checking for any interaction
         return any([subl_occupation > 1 for subl_occupation in interacting_species])
     else:
