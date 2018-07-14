@@ -388,8 +388,28 @@ def generate_interactions(endmembers, order, symmetry):
 
 
 def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
+    """
+    Fit ternary interactions for a database in place
+
+    Parameters
+    ----------
+    dbf : Database
+        pycalphad Database to add parameters to
+    phase_name : str
+        Name of the phase to fit
+    symmetry : list
+        List of symmetric sublattices, e.g. [[0, 1, 2], [3, 4]]
+    endmembers : list
+        List of endmember tuples, e.g. [('CU', 'MG')]
+    datasets : PickleableTinyDB
+        TinyDB database of datasets
+
+    Returns
+    -------
+    None
+        Modified the Database in place
+    """
     numdigits = 6  # number of significant figures, might cause rounding errors
-    logging.debug('FITTING TERNARY INTERACTIONS')
     interactions = generate_interactions(endmembers, order=3, symmetry=symmetry)
     logging.debug('{0} distinct ternary interactions'.format(len(interactions)))
     for interaction in interactions:
@@ -581,7 +601,8 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
             if degree_polys[degree] != 0:
                 for syminter in symmetric_interactions:
                     dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
-    # TODO: fit ternary interactions
+
+    logging.debug('FITTING TERNARY INTERACTIONS')
     fit_ternary_interactions(dbf, phase_name, symmetry, all_endmembers, datasets)
     if hasattr(dbf, 'varcounter'):
         del dbf.varcounter
