@@ -344,7 +344,17 @@ AL_CO_CR_A2_PHASE_MODELS = {
   "phases": {
          "BCC_A2": {
             "sublattice_model": [["AL", "CO", "CR"]],
-            "sublattice_site_ratios": [1, 2]
+            "sublattice_site_ratios": [1]
+         }
+    }
+}
+
+AL_CO_CR_B2_PHASE_MODELS = {
+  "components": ["AL", "CO", "CR"],
+  "phases": {
+         "BCC_B2": {
+            "sublattice_model": [["AL", "CO", "CR"], ["AL", "CO", "CR"]],
+            "sublattice_site_ratios": [0.5, 0.5]
          }
     }
 }
@@ -395,12 +405,8 @@ AL_CO_CR_BCC_A2_TERNARY_NON_SYMMETRIC_DATASET = {
     "phases": ["BCC_A2"],
     "solver": {
         "mode": "manual",
-        "sublattice_site_ratios": [1, 2],
+        "sublattice_site_ratios": [1, 1],
         "sublattice_occupancies": [
-
-            # [[0.25, 0.25, 0.5], 1],
-            # [[0.25, 0.5, 0.25], 1],
-            # [[0.333, 0.333, 0.334], 1]
             [[0.25, 0.25, 0.5]],
             [[0.25, 0.5, 0.25]],
             [[0.5, 0.25, 0.25]]
@@ -417,6 +423,34 @@ AL_CO_CR_BCC_A2_TERNARY_NON_SYMMETRIC_DATASET = {
     },
     "output": "HM_MIX",
     "values":   [[[-70.3125, -62.5, -54.6875]]],
-    "reference": "liu2015first",
-    "comment": "Ternary disordered BCC from Table 4"
-    }
+    "reference": "",
+    "comment": ""
+}
+
+AL_CO_CR_BCC_B2_TERNARY_NON_SYMMETRIC_DATASET = {
+    "components": ["AL", "CO", "CR"],
+    "phases": ["BCC_B2"],
+    "solver": {
+        "mode": "manual",
+        "sublattice_site_ratios": [0.5, 0.5],
+        "sublattice_occupancies": [
+
+            [[0.25, 0.25, 0.5], 1],
+            [[0.25, 0.5, 0.25], 1],
+            [[0.333, 0.333, 0.334], 1]
+        ],
+        "sublattice_configurations": [
+            [["AL", "CO", "CR"], "AL"],
+            [["AL", "CO", "CR"], "AL"],
+            [["AL", "CO", "CR"], "AL"]
+        ]
+    },
+    "conditions": {
+        "P": 101325,
+        "T": 298.15
+    },
+    "output": "HM_MIX",
+    "values":   [[[-70.3125, -62.5, -54.6875]]],
+    "reference": "",
+    "comment": ""
+}

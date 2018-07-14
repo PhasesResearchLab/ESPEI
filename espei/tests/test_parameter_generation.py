@@ -259,3 +259,20 @@ def test_asymmetric_ternary_parameters_can_be_generated(datasets_db):
     assert dbf.symbols['VV0000'] == -3000.0
     assert dbf.symbols['VV0001'] == -2000.0
     assert dbf.symbols['VV0002'] == -1000.0
+
+
+
+def test_asymmetric_ternary_parameters_can_be_generated_for_2_sublattice(datasets_db):
+    """3 asymmetric ternary parameters should be generated correctly in a 2 sublattice model."""
+    datasets_db.insert(AL_CO_CR_BCC_B2_TERNARY_NON_SYMMETRIC_DATASET)
+
+    dbf = generate_parameters(AL_CO_CR_B2_PHASE_MODELS, datasets_db, 'SGTE91', 'linear')
+
+    assert dbf.elements == {'AL', 'CO', 'CR'}
+    assert set(dbf.phases.keys()) == {'BCC_B2'}
+    # rounded to 6 digits by `numdigits`, this is confirmed to be a correct value.
+    assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 3
+    print(dbf._parameters.all())
+    assert dbf.symbols['VV0000'] == -6000.0
+    assert dbf.symbols['VV0001'] == -4000.0
+    assert dbf.symbols['VV0002'] == -2000.0
