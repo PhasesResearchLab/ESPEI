@@ -28,7 +28,6 @@ from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort
 from espei.parameter_selection.utils import (
     feature_transforms, shift_reference_state, interaction_test
 )
-from espei.utils import endmembers_from_interaction, build_sitefractions
 from espei.parameter_selection.ternary_parameters import fit_ternary_formation_energy
 from espei.utils import PickleableTinyDB, sigfigs, endmembers_from_interaction, \
     build_sitefractions
@@ -611,8 +610,7 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model):
     dbf = Database()
     dbf.elements = set(phase_models['components'])
     for el in dbf.elements:
-        if Species is not None:  # TODO: drop this on release of pycalphad 0.7
-            dbf.species.add(Species(el, {el: 1}, 0))
+        dbf.species.add(Species(el, {el: 1}, 0))
     # Write reference state to Database
     refdata = getattr(espei.refdata, ref_state)
     stabledata = getattr(espei.refdata, ref_state + 'Stable')
