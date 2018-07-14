@@ -376,7 +376,6 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
     numdigits = 6  # number of significant figures, might cause rounding errors
     logging.debug('FITTING TERNARY INTERACTIONS')
     interactions = generate_interactions(endmembers, order=3, symmetry=symmetry)
-    print('Final interactions: {}'.format(interactions))
     logging.debug('{0} distinct ternary interactions'.format(len(interactions)))
     for interaction in interactions:
         ixx = interaction
