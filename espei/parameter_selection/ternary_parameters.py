@@ -3,22 +3,15 @@ Build fittable models for ternary parameter selection
 """
 
 import itertools
-import logging
 import operator
-from collections import OrderedDict
 from functools import reduce
 
 import numpy as np
 import sympy
-from pycalphad import Model, variables as v
+from pycalphad import variables as v
 
-from espei.parameter_selection.utils import (
-    feature_transforms, shift_reference_state, interaction_test
-)
-from espei.utils import endmembers_from_interaction, build_sitefractions
-from espei.parameter_selection.model_building import build_candidate_models
-from espei.parameter_selection.selection import select_model
-from espei.core_utils import get_data, get_samples
+from espei.parameter_selection.utils import feature_transforms
+
 
 def get_muggianu_samples(desired_data):
     """

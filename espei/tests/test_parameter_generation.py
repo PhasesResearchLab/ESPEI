@@ -1,12 +1,9 @@
 """The test_parameter_generation module tests that parameter selection is correct"""
 
 from tinydb import where
-import sympy
-from pycalphad import variables as v
-from collections import OrderedDict
 
 from espei.tests.fixtures import datasets_db
-from espei.parameter_selection.ternary_parameters import build_candidate_models
+
 from espei.paramselect import generate_parameters, generate_symmetric_group, sorted_interactions
 from espei.tests.testing_data import *
 
