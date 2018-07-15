@@ -238,8 +238,11 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                 # but all of our fits are per-formula-unit
                 data_qtys = [sympy.S(i * moles_per_formula_unit).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
                                    for i, sf, ixx in zip(data_qtys, site_fractions, all_samples)]
-                data_qtys = np.asarray(data_qtys, dtype=np.float)
-
+                try:
+                    data_qtys = np.asarray(data_qtys, dtype=np.float)
+                except:
+                    print(data_qtys)
+                    raise
                 data_quantities.append(data_qtys)
 
             # provide candidate models and get back a selected model.
