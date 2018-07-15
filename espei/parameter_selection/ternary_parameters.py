@@ -13,7 +13,7 @@ import sympy
 from pycalphad import Model, variables as v
 
 from espei.parameter_selection.utils import (
-    feature_transforms, shift_reference_state,
+    feature_transforms, shift_reference_state, interaction_test
 )
 from espei.utils import endmembers_from_interaction, build_sitefractions
 from espei.parameter_selection.model_building import build_candidate_models
@@ -185,7 +185,10 @@ def fit_ternary_formation_energy(dbf, comps, phase_name, configuration, symmetry
             feature_matricies = []
             data_quantities = []
             for candidate_model in candidate_models_features[desired_props[0]]:
-                feature_matricies.append(build_ternary_feature_matrix(desired_props[0], candidate_model, desired_data))
+                if interaction_test(configuration, 3):
+                    feature_matricies.append(build_ternary_feature_matrix(desired_props[0], candidate_model, desired_data))
+                else:
+                    feature_matricies.append(build_ternary_feature_matrix(desired_props[0], candidate_model, desired_data))
 
                 data_qtys = np.concatenate(shift_reference_state(desired_data, feature_transforms[desired_props[0]], fixed_model), axis=-1)
 

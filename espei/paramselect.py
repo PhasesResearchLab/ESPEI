@@ -28,7 +28,9 @@ from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort
 from espei.parameter_selection.utils import (
     feature_transforms, shift_reference_state, interaction_test
 )
-from espei.parameter_selection.ternary_parameters import fit_ternary_formation_energy
+from espei.parameter_selection.selection import select_model
+from espei.parameter_selection.model_building import build_candidate_models
+from espei.parameter_selection.ternary_parameters import build_ternary_feature_matrix
 from espei.utils import PickleableTinyDB, sigfigs, endmembers_from_interaction, \
     build_sitefractions
 import espei.refdata
@@ -124,6 +126,131 @@ def _build_feature_matrix(prop, features, desired_data):
     feature_matrix = np.empty((len(all_samples), len(transformed_features)), dtype=np.float)
     feature_matrix[:, :] = [transformed_features.subs({v.T: temp, 'YS': compf[0], 'Z': compf[1]}).evalf() for temp, compf in all_samples]
     return feature_matrix
+
+
+def get_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, features=None):
+    """
+    Find suitable linear model parameters for the given phase.
+    We do this by successively fitting heat capacities, entropies and
+    enthalpies of formation, and selecting against criteria to prevent
+    overfitting. The "best" set of parameters minimizes the error
+    without overfitting.
+
+    Parameters
+    ----------
+    dbf : Database
+        pycalphad Database. Partially complete, so we know what degrees of freedom to fix.
+    comps : [str]
+        Names of the relevant components.
+    phase_name : str
+        Name of the desired phase for which the parameters will be found.
+    configuration : ndarray
+        Configuration of the sublattices for the fitting procedure.
+    symmetry : [[int]]
+        Symmetry of the sublattice configuration.
+    datasets : PickleableTinyDB
+        All the datasets desired to fit to.
+    features : dict
+        Maps "property" to a list of features for the linear model.
+        These will be transformed from "GM" coefficients
+        e.g., {"CPM_FORM": (v.T*sympy.log(v.T), v.T**2, v.T**-1, v.T**3)} (Default value = None)
+
+    Returns
+    -------
+    dict
+        {feature: estimated_value}
+
+    """
+    print('getting formation energy')
+    fitting_steps = (["CPM_FORM", "CPM_MIX"], ["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
+
+    # create the candidate models and fitting steps
+    if features is None:
+        features = OrderedDict([("CPM_FORM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3)),
+                    ("SM_FORM", (v.T,)),
+                    ("HM_FORM", (sympy.S.One,))
+                    ])
+    # dict of {feature, [candidate_models]}
+    candidate_models_features = build_candidate_models(configuration, features)
+
+
+    logging.debug('ENDMEMBERS FROM INTERACTION: {}'.format(endmembers_from_interaction(configuration)))
+
+
+    # All possible parameter values that could be taken on. This is some legacy
+    # code from before there were many candidate models built. For very large
+    # sets of candidate models, this could be quite slow.
+    # TODO: we might be able to remove this initialization for clarity, depends on fixed poritions
+    parameters = {}
+    for candidate_models in candidate_models_features.values():
+        for model in candidate_models:
+            for coef in model:
+                parameters[coef] = 0
+
+    # These is our previously fit partial model from previous steps
+    # Subtract out all of these contributions (zero out reference state because these are formation properties)
+    fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
+    fixed_model.models['idmix'] = 0
+    fixed_portions = [0]
+
+    moles_per_formula_unit = sympy.S(0)
+    subl_idx = 0
+    for num_sites, const in zip(dbf.phases[phase_name].sublattices, dbf.phases[phase_name].constituents):
+        if v.Species('VA') in const:
+            moles_per_formula_unit += num_sites * (1 - v.SiteFraction(phase_name, subl_idx, v.Species('VA')))
+        else:
+            moles_per_formula_unit += num_sites
+        subl_idx += 1
+
+    for desired_props in fitting_steps:
+        desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
+        logging.debug('{}: datasets found: {}'.format(desired_props, len(desired_data)))
+        if len(desired_data) > 0:
+            # We assume all properties in the same fitting step have the same features (all CPM, all HM, etc.) (but different ref states)
+            all_samples = get_samples(desired_data)
+            site_fractions = [build_sitefractions(phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies',
+                                 np.ones((len(ds['solver']['sublattice_configurations']), len(ds['solver']['sublattice_configurations'][0])), dtype=np.float)))
+                              for ds in desired_data for _ in ds['conditions']['T']]
+            # Flatten list
+            site_fractions = list(itertools.chain(*site_fractions))
+
+            # build the candidate model transformation matrix and response vector (A, b in Ax=b)
+            feature_matricies = []
+            data_quantities = []
+            for candidate_model in candidate_models_features[desired_props[0]]:
+                if interaction_test(configuration, 3):
+                    feature_matricies.append(build_ternary_feature_matrix(desired_props[0], candidate_model, desired_data))
+                else:
+                    feature_matricies.append(_build_feature_matrix(desired_props[0], candidate_model, desired_data))
+
+                data_qtys = np.concatenate(shift_reference_state(desired_data, feature_transforms[desired_props[0]], fixed_model), axis=-1)
+
+                # Remove existing partial model contributions from the data
+                data_qtys = data_qtys - feature_transforms[desired_props[0]](fixed_model.ast)
+                # Subtract out high-order (in T) parameters we've already fit
+                data_qtys = data_qtys - feature_transforms[desired_props[0]](sum(fixed_portions)) / moles_per_formula_unit
+
+                for sf, i in zip(site_fractions, data_qtys):
+                    missing_variables = sympy.S(i * moles_per_formula_unit).atoms(v.SiteFraction) - set(sf.keys())
+                    sf.update({x: 0. for x in missing_variables})
+
+                # moles_per_formula_unit factor is here because our data is stored per-atom
+                # but all of our fits are per-formula-unit
+                data_qtys = [sympy.S(i * moles_per_formula_unit).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
+                                   for i, sf, ixx in zip(data_qtys, site_fractions, all_samples)]
+                data_qtys = np.asarray(data_qtys, dtype=np.float)
+
+                data_quantities.append(data_qtys)
+
+            # provide candidate models and get back a selected model.
+            selected_model = select_model(zip(candidate_models_features[desired_props[0]], feature_matricies, data_quantities))
+            selected_features, selected_values = selected_model
+            parameters.update(zip(*(selected_features, selected_values)))
+            # Add these parameters to be fixed for the next fitting step
+            fixed_portion = np.array(selected_features, dtype=np.object)
+            fixed_portion = np.dot(fixed_portion, selected_values)
+            fixed_portions.append(fixed_portion)
+    return parameters
 
 
 def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, features=None):
@@ -436,7 +563,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
     for interaction in interactions:
         ixx = interaction
         logging.debug('INTERACTION: {}'.format(ixx))
-        parameters = fit_ternary_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets)
+        parameters = get_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(3, dtype=np.object)
         asymmetric_flag = False  # turn on if we find an asymmetric parameter
@@ -585,7 +712,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 ixx.append(i)
         ixx = tuple(ixx)
         logging.debug('INTERACTION: {}'.format(ixx))
-        parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets)
+        parameters = get_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(10, dtype=np.object)
         for degree in reversed(range(10)):
