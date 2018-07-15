@@ -13,6 +13,79 @@ from espei.tests.testing_data import *
 import pytest
 
 
+def test_formation_energies_are_fit(datasets_db):
+    """Tests that given formation energy data, the parameter is fit."""
+    phase_models = {
+        "components": ["CU", "MG"],
+        "phases": {
+            "CUMG2" : {
+                "sublattice_model": [["CU"], ["MG"]],
+                "sublattice_site_ratios": [1, 2]
+            }
+        }
+    }
+
+    dataset_cumg2_hm_form = {
+        "components": ["CU", "MG"],
+        "phases": ["CUMG2"],
+        "solver": {
+            "sublattice_site_ratios": [1, 2],
+            "sublattice_configurations": [["CU", "MG"]],
+            "mode": "manual"
+        },
+        "conditions": {
+            "P": 101325,
+            "T": 298.15
+        },
+        "output": "HM_FORM",
+        "values": [[[-5000]]]
+    }
+
+    dataset_cumg2_sm_form = {
+        "components": ["CU", "MG"],
+        "phases": ["CUMG2"],
+        "solver": {
+            "sublattice_site_ratios": [1, 2],
+            "sublattice_configurations": [["CU", "MG"]],
+            "mode": "manual"
+        },
+        "conditions": {
+            "P": 101325,
+            "T": 298.15
+        },
+        "output": "SM_FORM",
+        "values": [[[-2]]]
+    }
+
+    dataset_cumg2_cpm_form = {
+        "components": ["CU", "MG"],
+        "phases": ["CUMG2"],
+        "solver": {
+            "sublattice_site_ratios": [1, 2],
+            "sublattice_configurations": [["CU", "MG"]],
+            "mode": "manual"
+        },
+        "conditions": {
+            "P": 101325,
+            "T": 298.15
+        },
+        "output": "CPM_FORM",
+        "values": [[[0.3]]]
+    }
+    datasets_db.insert(dataset_cumg2_hm_form)
+    datasets_db.insert(dataset_cumg2_sm_form)
+    datasets_db.insert(dataset_cumg2_cpm_form)
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+
+    assert dbf.elements == {'CU', 'MG'}
+    assert set(dbf.phases.keys()) == {'CUMG2'}
+    assert len(dbf._parameters.search((where('parameter_type') == 'G') & (where('phase_name') == 'CUMG2'))) == 1
+    assert dbf.symbols['VV0000'] == -15268.3  # enthalpy
+    assert dbf.symbols['VV0001'] == -0.9  # heat capacity
+    assert dbf.symbols['VV0002'] == 12.0278  # entropy
+
+
 def test_mixing_energies_are_fit(datasets_db):
     """Tests that given mixing energy data, the excess parameter is fit."""
     phase_models = {

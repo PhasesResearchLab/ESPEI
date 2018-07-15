@@ -161,8 +161,11 @@ def get_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         {feature: estimated_value}
 
     """
-    print('getting formation energy')
-    fitting_steps = (["CPM_FORM", "CPM_MIX"], ["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
+    if interaction_test(configuration):
+        fitting_steps = (["CPM_FORM", "CPM_MIX"], ["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
+    else:
+        # We are only fitting an endmember; no mixing data needed
+        fitting_steps = (["CPM_FORM"], ["SM_FORM"], ["HM_FORM"])
 
     # create the candidate models and fitting steps
     if features is None:
