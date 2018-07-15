@@ -116,7 +116,9 @@ def build_candidate_models(configuration, features):
     L1: A + BT
     """
     if not interaction_test(configuration):  # endmembers only
-        raise NotImplementedError('Only ternary interactions supported')
+        for feature in features.keys():
+            features[feature] = make_successive(features[feature])
+        return features
 
     elif interaction_test(configuration, 2):  # has a binary interaction
         YS = sympy.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
