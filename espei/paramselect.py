@@ -162,6 +162,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
 
     """
     if interaction_test(configuration):
+        logging.debug('ENDMEMBERS FROM INTERACTION: {}'.format(endmembers_from_interaction(configuration)))
         fitting_steps = (["CPM_FORM", "CPM_MIX"], ["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
     else:
         # We are only fitting an endmember; no mixing data needed
@@ -175,10 +176,6 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                     ])
     # dict of {feature, [candidate_models]}
     candidate_models_features = build_candidate_models(configuration, features)
-
-
-    logging.debug('ENDMEMBERS FROM INTERACTION: {}'.format(endmembers_from_interaction(configuration)))
-
 
     # All possible parameter values that could be taken on. This is some legacy
     # code from before there were many candidate models built. For very large
