@@ -6,6 +6,11 @@
 Contributing to ESPEI
 =====================
 
+This is the place to start as a new ESPEI contributor.
+
+The next sections lay out the basics of getting an ESPEI development set up and the development standards.
+Then the :ref:`Software design` sections walk through the key parts of the codebase.
+
 Installing in develop mode
 ==========================
 
@@ -90,6 +95,14 @@ Documentation on ESPEI is split into user tutorials, reference and developer doc
 * Tutorials are resources for users new to ESPEI or new to certain features of ESPEI to be *guided* through typical actions.
 * Reference pages should be concise articles that explain how to complete specific goals for users who know what they want to accomplish.
 * Developer documentation should describe what should be considered when contributing source code back to ESPEI.
+
+You can check changes you make to the documentation by going to the documentation folder in the root repository ``cd docs/``.
+Running the command ``make html && cd build/html && python3 -m http.server && cd ../.. && make clean`` from that folder will build the docs and run them on a local HTTP server.
+You can see the documentation when the server is running by
+visting the URL at the end of the output, usually ``localhost port 8000 <http://0.0.0.0:8000>``_.
+When you are finished, type ``Ctrl-C`` to stop the server and the command will clean up the build for you.
+
+Make sure to fix any warnings that come up if you are adding documentation.
 
 Logging
 =======

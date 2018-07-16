@@ -105,8 +105,8 @@ See `what's new <CHANGES.html>`_!
    :maxdepth: 1
    :caption: Developer
 
-   design
    contributing
+   design
 
 
 .. raw:: latex

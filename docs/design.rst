@@ -2,10 +2,10 @@
 
    \chapter{Software design}
 
+.. _Software design:
+
 Software design
 ===============
-
-This is the place to start as a new ESPEI contributor.
 
 The following sections elaborate on the design principles on the software side.
 The goal is to make it clear how different modules in ESPEI fit together and where to find specific functionality to override or improve.
