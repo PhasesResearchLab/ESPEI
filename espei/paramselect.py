@@ -397,25 +397,18 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(3, dtype=np.object)
-        asymmetric_flag = False  # turn on if we find an asymmetric parameter
-        # TODO: the symbol checking for ternary parameters is kind of hacky.
-        # possible solution is to check for any V_I, V_J, V_K first, then do symmetric/asymmetric
-        for degree in reversed(range(3)):
-            check_symbol = sympy.Symbol('YS') * sympy.Symbol('Z')**degree
-            # handle special non-Z syntax for ternaries
-            if (degree == 0) and asymmetric_flag:
-                check_symbol *= sympy.Symbol('V_I')
-            elif degree == 1:
-                check_symbol = check_symbol.subs({sympy.Symbol('Z')**degree: sympy.Symbol('V_J')})
-            elif degree == 2:
-                check_symbol = check_symbol.subs({sympy.Symbol('Z')**degree: sympy.Symbol('V_K')})
-
+        YS = sympy.Symbol('YS')
+        # asymmetric parameters should have Mugiannu V_I/V_J/V_K, while symmetric just has YS
+        is_asymmetric = any([(k.has(sympy.Symbol('V_I'))) and (v != 0) for k, v in parameters.items()])
+        if is_asymmetric:
+            params = [(2, YS*sympy.Symbol('V_K')), (1, YS*sympy.Symbol('V_J')), (0, YS*sympy.Symbol('V_I'))]  # (excess parameter degree, symbol) tuples
+        else:
+            params = [(0, YS)]  # (excess parameter degree, symbol) tuples
+        for degree, check_symbol in params:
             keys_to_remove = []
             for key, value in sorted(parameters.items(), key=str):
                 if key.has(check_symbol):
                     if value != 0:
-                        if degree > 1:
-                            asymmetric_flag = True
                         symbol_name = get_next_symbol(dbf)
                         dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
                         parameters[key] = sympy.Symbol(symbol_name)
