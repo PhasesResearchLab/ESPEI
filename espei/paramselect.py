@@ -23,13 +23,12 @@ from collections import OrderedDict
 from pycalphad import Database, Model, variables as v
 from sklearn.linear_model import LinearRegression
 
-from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort_key, \
-    list_to_tuple
+from espei.core_utils import get_data, get_samples, canonicalize
 from espei.parameter_selection.utils import (
     feature_transforms, shift_reference_state, interaction_test
 )
 from espei.parameter_selection.selection import select_model
-from espei.parameter_selection.model_building import build_candidate_models
+from espei.parameter_selection.model_building import build_candidate_models, generate_interactions, generate_symmetric_group
 from espei.parameter_selection.ternary_parameters import build_ternary_feature_matrix
 from espei.utils import PickleableTinyDB, sigfigs, endmembers_from_interaction, \
     build_sitefractions
@@ -197,154 +196,6 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     return parameters
 
 
-def generate_symmetric_group(configuration, symmetry):
-    """
-    For a particular configuration and list of sublattices with symmetry,
-    generate all the symmetrically equivalent configurations.
-
-    Parameters
-    ----------
-    configuration : tuple
-        Tuple of a sublattice configuration.
-    symmetry : list of lists
-        List of lists containing symmetrically equivalent sublattice indices,
-        e.g. [[0, 1], [2, 3]] means that sublattices 0 and 1 are equivalent and
-        sublattices 2 and 3 are also equivalent.
-
-    Returns
-    -------
-    tuple
-        Tuple of configuration tuples that are all symmetrically equivalent.
-
-    """
-    configurations = [list_to_tuple(configuration)]
-    permutation = np.array(symmetry, dtype=np.object)
-
-    def permute(x):
-        if len(x) == 0:
-            return x
-        x[0] = np.roll(x[0], 1)
-        x[:] = np.roll(x, 1, axis=0)
-        return x
-
-    if symmetry is not None:
-        while np.any(np.array(symmetry, dtype=np.object) != permute(permutation)):
-            new_conf = np.array(configurations[0], dtype=np.object)
-            subgroups = []
-            # There is probably a more efficient way to do this
-            for subl in permutation:
-                subgroups.append([configuration[idx] for idx in subl])
-            # subgroup is ordered according to current permutation
-            # but we'll index it based on the original symmetry
-            # This should permute the configurations
-            for subl, subgroup in zip(symmetry, subgroups):
-                for subl_idx, conf_idx in enumerate(subl):
-                    new_conf[conf_idx] = subgroup[subl_idx]
-            configurations.append(list_to_tuple(new_conf.tolist()))
-
-    return sorted(set(configurations), key=canonical_sort_key)
-
-
-def sorted_interactions(interactions, max_interaction_order, symmetry):
-    """
-    Return interactions sorted by interaction order
-
-    Parameters
-    ----------
-    interactions : list
-        List of tuples/strings of potential interactions
-    max_interaction_order : int
-        Highest expected interaction order, e.g. ternary interactions should be 3
-    symmetry : list of lists
-        List of lists containing symmetrically equivalent sublattice indices,
-        e.g. [[0, 1], [2, 3]] means that sublattices 0 and 1 are equivalent and
-        sublattices 2 and 3 are also equivalent.
-
-    Returns
-    -------
-    list
-        Sorted list of interactions
-
-    Notes
-    -----
-    Sort by number of full interactions, e.g. (A:A,B) is before (A,B:A,B)
-    The goal is to return a sort key that can sort through multiple interaction
-    orders, e.g. (A:A,B,C), which should be before (A,B:A,B,C), which should be
-    before (A,B,C:A,B,C).
-
-    """
-    def int_sort_key(x):
-        # Each interaction is given a sort score for the number of interactions
-        # it has at each level. For example, a 4 sublattice phase with
-        # interaction of (A:A:A,B:A,B,C) has 2 order-1 interactions, 1 order-2
-        # interaction and 1 order-3 interaction. It's sort score would be (1, 1, 2).
-        # thus it should sort below a (2, 1, 2), for example.
-        sort_score = []
-        for interaction_order in reversed(range(1, max_interaction_order+1)):
-            sort_score.append(sum((isinstance(n, (list, tuple)) and len(n) == interaction_order) for n in x))
-        return canonical_sort_key(list_to_tuple(sort_score) + x)
-
-    interactions = sorted(set(canonicalize(i, symmetry) for i in interactions), key=int_sort_key)
-    # filter out interactions that have ternary and binary parameters (cross interactions)
-    # for now, I'm not really sure how the mathematics work out
-    # I think they are treated as a binary interaction
-    # in reality, most people would probably not want to fit these cross interactions
-    filtered_interactions = []
-    for inter in interactions:
-        if not (interaction_test(inter, 2) and interaction_test(inter, 3)):
-            # check for multiple 3 order interactions
-            order_3_interactions_count = 0
-            for subl in inter:
-                if interaction_test((subl,), 3):
-                    order_3_interactions_count += 1
-            if order_3_interactions_count <= 1:
-                filtered_interactions.append(inter)
-    return filtered_interactions
-
-
-def generate_interactions(endmembers, order, symmetry):
-    """
-    Returns a list of sorted interactions of a certain order
-
-    Parameters
-    ----------
-    endmembers : list
-        List of tuples/strings of all endmembers (including symmetrically equivalent)
-    order : int
-        Highest expected interaction order, e.g. ternary interactions should be 3
-    symmetry : list of lists
-        List of lists containing symmetrically equivalent sublattice indices,
-        e.g. [[0, 1], [2, 3]] means that sublattices 0 and 1 are equivalent and
-        sublattices 2 and 3 are also equivalent.
-
-    Returns
-    -------
-    list
-        List of interaction tuples, e.g. [('A', ('A', 'B'))]
-
-    """
-    interactions = list(itertools.combinations(endmembers, order))
-    transformed_interactions = []
-    for endmembers in interactions:
-        interaction = []
-        has_correct_interaction_order = False  # flag to check that we have interactions of at least interaction_order
-        # occupants is a tuple of each endmember's ith constituent, looping through i
-        for occupants in zip(*endmembers):
-            # if all occupants are the same, the ith element of the interaction is not an interacting element
-            if all([occupants[0] == x for x in occupants[1:]]):
-                interaction.append(occupants[0])
-            else:  # there is an interaction
-                interacting_species = tuple(sorted(set(occupants)))
-                if len(interacting_species) == order:
-                    has_correct_interaction_order = True
-                interaction.append(interacting_species)
-        # only add this interaction if it has an interaction of the desired order.
-        # that is, throw away interactions that degenerate to a lower order
-        if has_correct_interaction_order:
-            transformed_interactions.append(interaction)
-    return sorted_interactions(transformed_interactions, order, symmetry)
-
-
 def get_next_symbol(dbf):
     """
     Return a string name of the next free symbol to set
@@ -464,8 +315,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         dbf.varcounter = 0
     # First fit endmembers
     all_em_count = len(list(itertools.product(*subl_model)))
-    endmembers = sorted(set(
-        canonicalize(i, symmetry) for i in itertools.product(*subl_model)))
+    endmembers = sorted(set(canonicalize(i, symmetry) for i in itertools.product(*subl_model)))
     # Number of significant figures in parameters, might cause rounding errors
     numdigits = 6
     em_dict = {}
