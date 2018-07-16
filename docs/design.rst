@@ -30,5 +30,6 @@ complexity in both temperature and interaction order (an L0 excess parameter, L0
 
 Each model is then fit by ``espei.parameter_selection.selection.fit_model``, which currently uses a simple
 pseudo-inverse linear model from scikit-learn. Then the tradeoff between the goodness of fit and the model complexity
-is scored by the AICc (see :ref:`Theory`). The optimal scoring model is accepted as the model with the fit model
-parameters set as degrees of freedom for the MCMC step.
+is scored by the AICc (see :ref:`Theory`) in ``espei.parameter_selection.selection.score_model``.
+The optimal scoring model is accepted as the model with the fit model parameters set as degrees of freedom for the MCMC step.
+To improve on the fitting or scoring methods used in parameter selection, these two functions should be updated.
