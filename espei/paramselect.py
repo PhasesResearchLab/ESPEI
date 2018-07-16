@@ -44,63 +44,6 @@ def _to_tuple(x):
     else:
         return tuple([x])
 
-def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
-    """
-    Solve Ax = b, where 'feature_matrix' is A and 'data_quantities' is b.
-
-    Parameters
-    ----------
-    feature_matrix : ndarray
-        (M*N) regressor matrix.
-    data_quantities : ndarray
-        (M,) response vector
-    feature_tuple : (float
-        Polynomial coefficient corresponding to each column of 'feature_matrix'
-
-    Returns
-    -------
-    OrderedDict
-        {featured_tuple: fitted_parameter}. Maps 'feature_tuple'
-        to fitted parameter value. If a coefficient is not used, it maps to zero.
-
-    Notes
-    -----
-    Scores for each candidate model (determined by the paramters in the passed
-    feature matrix) are calculated by the corrected Akaike Information Criterion (AICc).
-    """
-
-    # Now generate candidate models; add parameters one at a time
-    model_scores = []
-    results = np.zeros((len(feature_tuple), len(feature_tuple)))
-    clf = LinearRegression(fit_intercept=False, normalize=True)
-    for num_params in range(1, feature_matrix.shape[-1] + 1):
-        current_matrix = feature_matrix[:, :num_params]
-        clf.fit(current_matrix, data_quantities)
-        # This may not exactly be the correct form for the likelihood
-        # We're missing the "ridge" contribution here which could become relevant for sparse data
-        rss = np.square(np.dot(current_matrix, clf.coef_) - data_quantities.astype(np.float)).sum()
-        # Compute the corrected Akaike Information Criterion
-        # Form valid under assumption all sample variances are random and Gaussian, model is univariate
-        # Our model is univariate with T
-        # The correction is (2k^2 + 2k)/(n - k - 1)
-        # Our denominator for the correction must always be an integer by this equation.
-        # Our correction can blow up if (n-k-1) = 0 and if n - 1 < k (we will actually be *lowering* the AICc)
-        # So we will prevent blowing up by taking the denominator as 1/(p-n+1) for p > n - 1
-        num_samples = data_quantities.size
-        if  (num_samples - 1.0) > num_params:
-            correction_denom = num_samples - num_params - 1.0
-        elif (num_samples - 1.0) == num_params:
-            correction_denom = 0.99
-        else:
-            correction_denom = 1.0 / (num_params - num_samples + 1.0)
-        correction = (2.0*num_params**2 + 2.0*num_params)/correction_denom
-        aic = 2.0*num_params + num_samples * np.log(rss/num_samples)
-        aicc = aic + correction
-        model_scores.append(aicc)
-        results[num_params - 1, :num_params] = clf.coef_
-        logging.debug('{} rss: {}, AIC: {}, AICc: {}'.format(feature_tuple[:num_params], rss, aic, aicc))
-    return OrderedDict(zip(feature_tuple, results[np.argmin(model_scores), :]))
-
 
 def _build_feature_matrix(prop, features, desired_data):
     """
@@ -455,6 +398,8 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(3, dtype=np.object)
         asymmetric_flag = False  # turn on if we find an asymmetric parameter
+        # TODO: the symbol checking for ternary parameters is kind of hacky.
+        # possible solution is to check for any V_I, V_J, V_K first, then do symmetric/asymmetric
         for degree in reversed(range(3)):
             check_symbol = sympy.Symbol('YS') * sympy.Symbol('Z')**degree
             # handle special non-Z syntax for ternaries
