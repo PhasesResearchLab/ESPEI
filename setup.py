@@ -22,6 +22,7 @@ setup(
     install_requires=[
         'numpy',
         'scipy',
+        'sympy<=1.1',
         'six',
         'dask[complete]>=0.18',
         'distributed',
