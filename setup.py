@@ -12,7 +12,7 @@ setup(
     author='Brandon Bocklund',
     author_email='brandonbocklund@gmail.com',
     description='Fitting thermodynamic models with pycalphad.',
-    packages=['espei', 'espei.error_functions'],
+    packages=['espei', 'espei.error_functions', 'espei.parameter_selection'],
     package_data={
         'espei': ['input-schema.yaml']
     },
