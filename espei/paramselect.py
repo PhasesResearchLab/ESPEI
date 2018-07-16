@@ -163,7 +163,9 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     """
     if interaction_test(configuration):
         logging.debug('ENDMEMBERS FROM INTERACTION: {}'.format(endmembers_from_interaction(configuration)))
-        fitting_steps = (["CPM_FORM", "CPM_MIX"], ["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
+        # fitting heat capacity in excess parameters is not usually encouraged in the CALPHAD community. We don't fit it here.
+        fitting_steps = (["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
+
     else:
         # We are only fitting an endmember; no mixing data needed
         fitting_steps = (["CPM_FORM"], ["SM_FORM"], ["HM_FORM"])
@@ -238,11 +240,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                 # but all of our fits are per-formula-unit
                 data_qtys = [sympy.S(i * moles_per_formula_unit).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
                                    for i, sf, ixx in zip(data_qtys, site_fractions, all_samples)]
-                try:
-                    data_qtys = np.asarray(data_qtys, dtype=np.float)
-                except:
-                    print(data_qtys)
-                    raise
+                data_qtys = np.asarray(data_qtys, dtype=np.float)
                 data_quantities.append(data_qtys)
 
             # provide candidate models and get back a selected model.

@@ -168,7 +168,7 @@ def test_mixing_energies_are_fit_with_higher_order_data(datasets_db):
         "values": [[[-10000]]]
     }
 
-    dataset_excess_mixing_cpm = {
+    dataset_excess_mixing_sm = {
         "components": ["AL", "B"],
         "phases": ["FCC_A1"],
         "solver": {
@@ -181,18 +181,19 @@ def test_mixing_energies_are_fit_with_higher_order_data(datasets_db):
             "P": 101325,
             "T": 298.15
         },
-        "output": "CPM_MIX",
+        "output": "SM_MIX",
         "values": [[[0.1]]]
     }
     datasets_db.insert(dataset_excess_mixing)
-    datasets_db.insert(dataset_excess_mixing_cpm)
+    datasets_db.insert(dataset_excess_mixing_sm)
 
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
 
     assert dbf.elements == {'AL', 'B'}
     assert set(dbf.phases.keys()) == {'LIQUID', 'FCC_A1'}
-    assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 2
-    assert dbf.symbols['VV0000'] == -40000
+    assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 1
+    assert dbf.symbols['VV0000'] == -0.4  # entropy
+    assert dbf.symbols['VV0001'] == -40000  # heat capacity
 
 
 def test_mixing_data_is_excess_only(datasets_db):
