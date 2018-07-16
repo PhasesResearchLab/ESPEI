@@ -23,9 +23,9 @@ A simple model with few parameters is better than a complex model that
 describes the same data marginally better. Parameter generation in
 ESPEI aims to achieve a balance of a simple parameterization and
 goodness of fit in the Redlich-Kister polynomial used in CALPHAD
-assessments. To achieve this, parameters are selected using the
+assessments. To achieve this, parameters are selected using the corrected
 `Akaike information criterion <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_
-(AIC) to choose an optimal set of parameters from canditate
+(AICc) to choose an optimal set of parameters from canditate
 parameterizations.
 
 The general Redlich Kister polynomial has the form :math:`G = a + bT +
@@ -35,7 +35,7 @@ and :math:`c`, etc. are fit to all of the input formation or mixing
 data (depending on the parameter being selected) by a least squares
 pseudo-inverse optimization.
 
-Each parameterization is compared in the AIC and the most suitable
+Each parameterization is compared in the AICc and the most suitable
 optimization balances the goodness of fit and the number of
 parameters. The key aspect of this is that ESPEI will avoid
 overfitting your data and will not add parameters you do not have data
