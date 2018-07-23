@@ -141,7 +141,7 @@ def test_symmetric_group_can_be_generated_for_2_sl_endmembers_with_symmetry():
 
 
 def test_interaction_sorting_is_correct():
-    """High order (order >= 3) interactions should sorted correctly"""
+    """High order (order >= 3) interactions should sort correctly"""
     # Correct sorting of n-order interactions should sort first by number of
     # interactions of order n, then n-1, then n-2... to 1
     unsorted_interactions = [

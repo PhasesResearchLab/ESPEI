@@ -13,7 +13,7 @@ The goal is to make it clear how different modules in ESPEI fit together and whe
 ESPEI provides tools to
 
 1. Parameterize CALPHAD models by optimizing the compromise between model accuracy and complexity. We typically call this parameter generation or model selection.
-2. Refine parameterized CALPHAD models to multi-phase or other custom data with uncertainty quantification via Markov chain Monte Carlo
+2. Fit parameterized CALPHAD models to multi-phase or other custom data with uncertainty quantification via Markov chain Monte Carlo
 
 API
 ---

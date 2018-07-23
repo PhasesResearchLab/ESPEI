@@ -36,7 +36,7 @@ def fit_model(feature_matrix, data_quantities):
 
 def score_model(feature_matrix, data_quantities, model_coefficients, feature_list):
     """
-    Fit and score a model with the AICc through LinearRegression
+    Use the AICc to score a model that has been fit.
 
     Parameters
     ----------
@@ -58,15 +58,14 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     Notes
     -----
     Solve Ax = b, where 'feature_matrix' is A and 'data_quantities' is b.
+
+    The likelihood function is a simple least squares with no regularization. The form of the AIC is valid under
+    assumption all sample variances are random and Gaussian, model is univariate. It is assumed the model here is
+    univariate with T.
     """
-    # Now generate candidate models; add parameters one at a time
     num_params = len(feature_list)
-    # This may not exactly be the correct form for the likelihood
-    # We're missing the "ridge" contribution here which could become relevant for sparse data
     rss = np.square(np.dot(feature_matrix, model_coefficients) - data_quantities.astype(np.float)).sum()
     # Compute the corrected Akaike Information Criterion
-    # Form valid under assumption all sample variances are random and Gaussian, model is univariate
-    # Our model is univariate with T
     # The correction is (2k^2 + 2k)/(n - k - 1)
     # Our denominator for the correction must always be an integer by this equation.
     # Our correction can blow up if (n-k-1) = 0 and if n - 1 < k (we will actually be *lowering* the AICc)
