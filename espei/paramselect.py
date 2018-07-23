@@ -23,80 +23,25 @@ from collections import OrderedDict
 from pycalphad import Database, Model, variables as v
 from sklearn.linear_model import LinearRegression
 
-from espei.core_utils import get_data, get_samples, canonicalize, canonical_sort_key, \
-    list_to_tuple, endmembers_from_interaction, build_sitefractions
-from espei.utils import PickleableTinyDB, sigfigs
+from espei.core_utils import get_data, get_samples, canonicalize
+from espei.parameter_selection.utils import (
+    feature_transforms, shift_reference_state, interaction_test
+)
+from espei.parameter_selection.selection import select_model
+from espei.parameter_selection.model_building import build_candidate_models, generate_interactions, generate_symmetric_group
+from espei.parameter_selection.ternary_parameters import build_ternary_feature_matrix
+from espei.utils import PickleableTinyDB, sigfigs, endmembers_from_interaction, \
+    build_sitefractions
 import espei.refdata
 
 # backwards compatibility:
 from pycalphad.io.database import Species
 
-feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
-                      "CPM_MIX": lambda x: -v.T*sympy.diff(x, v.T, 2),
-                      "CPM": lambda x: -v.T*sympy.diff(x, v.T, 2),
-                      "SM_FORM": lambda x: -sympy.diff(x, v.T),
-                      "SM_MIX": lambda x: -sympy.diff(x, v.T),
-                      "SM": lambda x: -sympy.diff(x, v.T),
-                      "HM_FORM": lambda x: x - v.T*sympy.diff(x, v.T),
-                      "HM_MIX": lambda x: x - v.T*sympy.diff(x, v.T),
-                      "HM": lambda x: x - v.T*sympy.diff(x, v.T)}
-
-
-def _fit_parameters(feature_matrix, data_quantities, feature_tuple):
-    """
-    Solve Ax = b, where 'feature_matrix' is A and 'data_quantities' is b.
-
-    Parameters
-    ----------
-    feature_matrix : ndarray
-        (M*N) regressor matrix.
-    data_quantities : ndarray
-        (M,) response vector
-    feature_tuple : (float
-        Polynomial coefficient corresponding to each column of 'feature_matrix'
-
-    Returns
-    -------
-    OrderedDict
-        {featured_tuple: fitted_parameter}. Maps 'feature_tuple'
-        to fitted parameter value. If a coefficient is not used, it maps to zero.
-
-    Notes
-    -----
-    Scores for each candidate model (determined by the paramters in the passed
-    feature matrix) are calculated by the corrected Akaike Information Criterion (AICc).
-    """
-    # Now generate candidate models; add parameters one at a time
-    model_scores = []
-    results = np.zeros((len(feature_tuple), len(feature_tuple)))
-    clf = LinearRegression(fit_intercept=False, normalize=True)
-    for num_params in range(1, feature_matrix.shape[-1] + 1):
-        current_matrix = feature_matrix[:, :num_params]
-        clf.fit(current_matrix, data_quantities)
-        # This may not exactly be the correct form for the likelihood
-        # We're missing the "ridge" contribution here which could become relevant for sparse data
-        rss = np.square(np.dot(current_matrix, clf.coef_) - data_quantities.astype(np.float)).sum()
-        # Compute the corrected Akaike Information Criterion
-        # Form valid under assumption all sample variances are random and Gaussian, model is univariate
-        # Our model is univariate with T
-        # The correction is (2k^2 + 2k)/(n - k - 1)
-        # Our denominator for the correction must always be an integer by this equation.
-        # Our correction can blow up if (n-k-1) = 0 and if n - 1 < k (we will actually be *lowering* the AICc)
-        # So we will prevent blowing up by taking the denominator as 1/(p-n+1) for p > n - 1
-        num_samples = data_quantities.size
-        if  (num_samples - 1.0) > num_params:
-            correction_denom = num_samples - num_params - 1.0
-        elif (num_samples - 1.0) == num_params:
-            correction_denom = 0.99
-        else:
-            correction_denom = 1.0 / (num_params - num_samples + 1.0)
-        correction = (2.0*num_params**2 + 2.0*num_params)/correction_denom
-        aic = 2.0*num_params + num_samples * np.log(rss/num_samples)
-        aicc = aic + correction
-        model_scores.append(aicc)
-        results[num_params - 1, :num_params] = clf.coef_
-        logging.debug('{} rss: {}, AIC: {}, AICc: {}'.format(feature_tuple[:num_params], rss, aic, aicc))
-    return OrderedDict(zip(feature_tuple, results[np.argmin(model_scores), :]))
+def _to_tuple(x):
+    if isinstance(x, list) or isinstance(x, tuple):
+        return tuple(x)
+    else:
+        return tuple([x])
 
 
 def _build_feature_matrix(prop, features, desired_data):
@@ -123,29 +68,6 @@ def _build_feature_matrix(prop, features, desired_data):
     feature_matrix = np.empty((len(all_samples), len(transformed_features)), dtype=np.float)
     feature_matrix[:, :] = [transformed_features.subs({v.T: temp, 'YS': compf[0], 'Z': compf[1]}).evalf() for temp, compf in all_samples]
     return feature_matrix
-
-
-def _shift_reference_state(desired_data, feature_transform, fixed_model):
-    """
-    Shift data to a new common reference state.
-    """
-    total_response = []
-    for dataset in desired_data:
-        values = np.asarray(dataset['values'], dtype=np.object)
-        if dataset['solver'].get('sublattice_occupancies', None) is not None:
-            value_idx = 0
-            for occupancy, config in zip(dataset['solver']['sublattice_occupancies'],
-                                         dataset['solver']['sublattice_configurations']):
-                if dataset['output'].endswith('_FORM'):
-                    pass
-                elif dataset['output'].endswith('_MIX'):
-                    values[..., value_idx] += feature_transform(fixed_model.models['ref'])
-                    pass
-                else:
-                    raise ValueError('Unknown property to shift: {}'.format(dataset['output']))
-                value_idx += 1
-        total_response.append(values.flatten())
-    return total_response
 
 
 def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, features=None):
@@ -181,34 +103,35 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         {feature: estimated_value}
 
     """
-    if features is None:
-        features = [("CPM_FORM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3)),
-                    ("SM_FORM", (v.T,)),
-                    ("HM_FORM", (sympy.S.One,))
-                    ]
-        features = OrderedDict(features)
-    if any([isinstance(conf, (list, tuple)) for conf in configuration]):
-        # TODO: assumes binary interaction here
-        fitting_steps = (["CPM_FORM", "CPM_MIX"], ["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
-        # Product of all nonzero site fractions in all sublattices
-        YS = sympy.Symbol('YS')
-        # Product of all binary interaction terms
-        Z = sympy.Symbol('Z')
-        redlich_kister_features = (YS, YS*Z, YS*(Z**2), YS*(Z**3))
-        for feature in features.keys():
-            all_features = list(itertools.product(redlich_kister_features, features[feature]))
-            features[feature] = [i[0]*i[1] for i in all_features]
+    if interaction_test(configuration):
         logging.debug('ENDMEMBERS FROM INTERACTION: {}'.format(endmembers_from_interaction(configuration)))
+        # fitting heat capacity in excess parameters is not usually encouraged in the CALPHAD community. We don't fit it here.
+        fitting_steps = (["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
+
     else:
         # We are only fitting an endmember; no mixing data needed
         fitting_steps = (["CPM_FORM"], ["SM_FORM"], ["HM_FORM"])
 
-    parameters = {}
-    for feature in features.values():
-        for coef in feature:
-            parameters[coef] = 0
+    # create the candidate models and fitting steps
+    if features is None:
+        features = OrderedDict([("CPM_FORM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3)),
+                    ("SM_FORM", (v.T,)),
+                    ("HM_FORM", (sympy.S.One,))
+                    ])
+    # dict of {feature, [candidate_models]}
+    candidate_models_features = build_candidate_models(configuration, features)
 
-    # These is our previously fit partial model
+    # All possible parameter values that could be taken on. This is some legacy
+    # code from before there were many candidate models built. For very large
+    # sets of candidate models, this could be quite slow.
+    # TODO: we might be able to remove this initialization for clarity, depends on fixed poritions
+    parameters = {}
+    for candidate_models in candidate_models_features.values():
+        for model in candidate_models:
+            for coef in model:
+                parameters[coef] = 0
+
+    # These is our previously fit partial model from previous steps
     # Subtract out all of these contributions (zero out reference state because these are formation properties)
     fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
     fixed_model.models['idmix'] = 0
@@ -217,8 +140,8 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     moles_per_formula_unit = sympy.S(0)
     subl_idx = 0
     for num_sites, const in zip(dbf.phases[phase_name].sublattices, dbf.phases[phase_name].constituents):
-        if Species('VA') in const:
-            moles_per_formula_unit += num_sites * (1 - v.SiteFraction(phase_name, subl_idx, Species('VA')))
+        if v.Species('VA') in const:
+            moles_per_formula_unit += num_sites * (1 - v.SiteFraction(phase_name, subl_idx, v.Species('VA')))
         else:
             moles_per_formula_unit += num_sites
         subl_idx += 1
@@ -227,86 +150,135 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
         logging.debug('{}: datasets found: {}'.format(desired_props, len(desired_data)))
         if len(desired_data) > 0:
-            # We assume all properties in the same fitting step have the same features (but different ref states)
-            feature_matrix = _build_feature_matrix(desired_props[0], features[desired_props[0]], desired_data)
+            # We assume all properties in the same fitting step have the same features (all CPM, all HM, etc.) (but different ref states)
             all_samples = get_samples(desired_data)
-            data_quantities = np.concatenate(_shift_reference_state(desired_data,
-                                                                    feature_transforms[desired_props[0]],
-                                                                    fixed_model), axis=-1)
-            site_fractions = [build_sitefractions(phase_name, ds['solver']['sublattice_configurations'],
-                                                  ds['solver'].get('sublattice_occupancies',
-                                 np.ones((len(ds['solver']['sublattice_configurations']),
-                                          len(ds['solver']['sublattice_configurations'][0])), dtype=np.float)))
+            site_fractions = [build_sitefractions(phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies',
+                                 np.ones((len(ds['solver']['sublattice_configurations']), len(ds['solver']['sublattice_configurations'][0])), dtype=np.float)))
                               for ds in desired_data for _ in ds['conditions']['T']]
             # Flatten list
             site_fractions = list(itertools.chain(*site_fractions))
-            # Remove existing partial model contributions from the data
-            data_quantities = data_quantities - feature_transforms[desired_props[0]](fixed_model.ast)
-            # Subtract out high-order (in T) parameters we've already fit
-            data_quantities = data_quantities - \
-                feature_transforms[desired_props[0]](sum(fixed_portions)) / moles_per_formula_unit
-            for sf, i in zip(site_fractions, data_quantities):
-                missing_variables = sympy.S(i * moles_per_formula_unit).atoms(v.SiteFraction) - set(sf.keys())
-                sf.update({x: 0. for x in missing_variables})
-            # moles_per_formula_unit factor is here because our data is stored per-atom
-            # but all of our fits are per-formula-unit
-            data_quantities = [sympy.S(i * moles_per_formula_unit).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
-                               for i, sf, ixx in zip(data_quantities, site_fractions, all_samples)]
-            data_quantities = np.asarray(data_quantities, dtype=np.float)
-            parameters.update(_fit_parameters(feature_matrix, data_quantities, features[desired_props[0]]))
+
+            # build the candidate model transformation matrix and response vector (A, b in Ax=b)
+            feature_matricies = []
+            data_quantities = []
+            for candidate_model in candidate_models_features[desired_props[0]]:
+                if interaction_test(configuration, 3):
+                    feature_matricies.append(build_ternary_feature_matrix(desired_props[0], candidate_model, desired_data))
+                else:
+                    feature_matricies.append(_build_feature_matrix(desired_props[0], candidate_model, desired_data))
+
+                data_qtys = np.concatenate(shift_reference_state(desired_data, feature_transforms[desired_props[0]], fixed_model), axis=-1)
+
+                # Remove existing partial model contributions from the data
+                data_qtys = data_qtys - feature_transforms[desired_props[0]](fixed_model.ast)
+                # Subtract out high-order (in T) parameters we've already fit
+                data_qtys = data_qtys - feature_transforms[desired_props[0]](sum(fixed_portions)) / moles_per_formula_unit
+
+                for sf, i in zip(site_fractions, data_qtys):
+                    missing_variables = sympy.S(i * moles_per_formula_unit).atoms(v.SiteFraction) - set(sf.keys())
+                    sf.update({x: 0. for x in missing_variables})
+
+                # moles_per_formula_unit factor is here because our data is stored per-atom
+                # but all of our fits are per-formula-unit
+                data_qtys = [sympy.S(i * moles_per_formula_unit).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
+                                   for i, sf, ixx in zip(data_qtys, site_fractions, all_samples)]
+                data_qtys = np.asarray(data_qtys, dtype=np.float)
+                data_quantities.append(data_qtys)
+
+            # provide candidate models and get back a selected model.
+            selected_model = select_model(zip(candidate_models_features[desired_props[0]], feature_matricies, data_quantities))
+            selected_features, selected_values = selected_model
+            parameters.update(zip(*(selected_features, selected_values)))
             # Add these parameters to be fixed for the next fitting step
-            fixed_portion = np.array(features[desired_props[0]], dtype=np.object)
-            fixed_portion = np.dot(fixed_portion, [parameters[feature] for feature in features[desired_props[0]]])
+            fixed_portion = np.array(selected_features, dtype=np.object)
+            fixed_portion = np.dot(fixed_portion, selected_values)
             fixed_portions.append(fixed_portion)
     return parameters
 
 
-def generate_symmetric_group(configuration, symmetry):
+def get_next_symbol(dbf):
     """
-    For a particular configuration and list of sublattices with symmetry,
-    generate all the symmetrically equivalent configurations.
+    Return a string name of the next free symbol to set
 
     Parameters
     ----------
-    configuration : tuple
-        Tuple of a sublattice configuration.
-    symmetry : list of lists
-        List of lists containing symmetrically equivalent sublattice indices,
-        e.g. [[0, 1], [2, 3]] means that sublattices 0 and 1 are equivalent and
-        sublattices 2 and 3 are also equivalent.
+    dbf : Database
+        pycalphad Database. Must have the ``varcounter`` attribute set to an integer.
 
     Returns
     -------
-    tuple
-        Tuple of configuration tuples that are all symmetrically equivalent.
-
+    str
     """
-    configurations = [list_to_tuple(configuration)]
-    permutation = np.array(symmetry, dtype=np.object)
+    # TODO: PEP-572 optimization
+    symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+    while dbf.symbols.get(symbol_name, None) is not None:
+        dbf.varcounter += 1
+        symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+    return symbol_name
 
-    def permute(x):
-        if len(x) == 0:
-            return x
-        x[0] = np.roll(x[0], 1)
-        x[:] = np.roll(x, 1, axis=0)
-        return x
 
-    if symmetry is not None:
-        while np.any(np.array(symmetry, dtype=np.object) != permute(permutation)):
-            new_conf = np.array(configurations[0], dtype=np.object)
-            subgroups = []
-            # There is probably a more efficient way to do this
-            for subl in permutation:
-                subgroups.append([configuration[idx] for idx in subl])
-            # subgroup is ordered according to current permutation
-            # but we'll index it based on the original symmetry
-            # This should permute the configurations
-            for subl, subgroup in zip(symmetry, subgroups):
-                for subl_idx, conf_idx in enumerate(subl):
-                    new_conf[conf_idx] = subgroup[subl_idx]
-            configurations.append(list_to_tuple(new_conf.tolist()))
+def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
+    """
+    Fit ternary interactions for a database in place
 
-    return sorted(set(configurations), key=canonical_sort_key)
+    Parameters
+    ----------
+    dbf : Database
+        pycalphad Database to add parameters to
+    phase_name : str
+        Name of the phase to fit
+    symmetry : list
+        List of symmetric sublattices, e.g. [[0, 1, 2], [3, 4]]
+    endmembers : list
+        List of endmember tuples, e.g. [('CU', 'MG')]
+    datasets : PickleableTinyDB
+        TinyDB database of datasets
+
+    Returns
+    -------
+    None
+        Modified the Database in place
+    """
+    numdigits = 6  # number of significant figures, might cause rounding errors
+    interactions = generate_interactions(endmembers, order=3, symmetry=symmetry)
+    logging.debug('{0} distinct ternary interactions'.format(len(interactions)))
+    for interaction in interactions:
+        ixx = interaction
+        logging.debug('INTERACTION: {}'.format(ixx))
+        parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets)
+        # Organize parameters by polynomial degree
+        degree_polys = np.zeros(3, dtype=np.object)
+        YS = sympy.Symbol('YS')
+        # asymmetric parameters should have Mugiannu V_I/V_J/V_K, while symmetric just has YS
+        is_asymmetric = any([(k.has(sympy.Symbol('V_I'))) and (v != 0) for k, v in parameters.items()])
+        if is_asymmetric:
+            params = [(2, YS*sympy.Symbol('V_K')), (1, YS*sympy.Symbol('V_J')), (0, YS*sympy.Symbol('V_I'))]  # (excess parameter degree, symbol) tuples
+        else:
+            params = [(0, YS)]  # (excess parameter degree, symbol) tuples
+        for degree, check_symbol in params:
+            keys_to_remove = []
+            for key, value in sorted(parameters.items(), key=str):
+                if key.has(check_symbol):
+                    if value != 0:
+                        symbol_name = get_next_symbol(dbf)
+                        dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
+                        parameters[key] = sympy.Symbol(symbol_name)
+                    coef = parameters[key] * (key / check_symbol)
+                    try:
+                        coef = float(coef)
+                    except TypeError:
+                        pass
+                    degree_polys[degree] += coef
+                    keys_to_remove.append(key)
+            for key in keys_to_remove:
+                parameters.pop(key)
+        logging.debug('Polynomial coefs: {}'.format(degree_polys))
+        # Insert into database
+        symmetric_interactions = generate_symmetric_group(interaction, symmetry)
+        for degree in np.arange(degree_polys.shape[0]):
+            if degree_polys[degree] != 0:
+                for syminter in symmetric_interactions:
+                    dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
 
 
 def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=None):
@@ -343,21 +315,14 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         dbf.varcounter = 0
     # First fit endmembers
     all_em_count = len(list(itertools.product(*subl_model)))
-    endmembers = sorted(set(
-        canonicalize(i, symmetry) for i in itertools.product(*subl_model)))
-    # Number of significant figures in parameters
+    endmembers = sorted(set(canonicalize(i, symmetry) for i in itertools.product(*subl_model)))
+    # Number of significant figures in parameters, might cause rounding errors
     numdigits = 6
     em_dict = {}
     aliases = [] if aliases is None else aliases
     aliases = sorted(set(aliases + [phase_name]))
     logging.info('FITTING: {}'.format(phase_name))
     logging.debug('{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
-
-    def _to_tuple(x):
-        if isinstance(x, list) or isinstance(x, tuple):
-            return tuple(x)
-        else:
-            return tuple([x])
 
     all_endmembers = []
     for endmember in endmembers:
@@ -393,10 +358,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
             for key, value in sorted(parameters.items(), key=str):
                 if value == 0:
                     continue
-                symbol_name = 'VV'+str(dbf.varcounter).zfill(4)
-                while dbf.symbols.get(symbol_name, None) is not None:
-                    dbf.varcounter += 1
-                    symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+                symbol_name = get_next_symbol(dbf)
                 dbf.symbols[symbol_name] = sigfigs(value, numdigits)
                 parameters[key] = sympy.Symbol(symbol_name)
             fit_eq = sympy.Add(*[value * key for key, value in parameters.items()])
@@ -413,27 +375,9 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         for em in symmetric_endmembers:
             em_dict[em] = fit_eq
             dbf.add_parameter('G', phase_name, tuple(map(_to_tuple, em)), 0, fit_eq)
-    # Now fit all binary interactions
-    # Need to use 'all_endmembers' instead of 'endmembers' because you need to generate combinations
-    # of ALL endmembers, not just symmetry equivalent ones
-    bin_interactions = list(itertools.combinations(all_endmembers, 2))
-    transformed_bin_interactions = []
-    for first_endmember, second_endmember in bin_interactions:
-        interaction = []
-        for first_occupant, second_occupant in zip(first_endmember, second_endmember):
-            if first_occupant == second_occupant:
-                interaction.append(first_occupant)
-            else:
-                interaction.append(tuple(sorted([first_occupant, second_occupant])))
-        transformed_bin_interactions.append(interaction)
 
-    def bin_int_sort_key(x):
-        interacting_sublattices = sum((isinstance(n, (list, tuple)) and len(n) == 2) for n in x)
-        return canonical_sort_key((interacting_sublattices,) + x)
-
-    bin_interactions = sorted(set(
-        canonicalize(i, symmetry) for i in transformed_bin_interactions),
-                              key=bin_int_sort_key)
+    logging.debug('FITTING BINARY INTERACTIONS')
+    bin_interactions = generate_interactions(all_endmembers, order=2, symmetry=symmetry)
     logging.debug('{0} distinct binary interactions'.format(len(bin_interactions)))
     for interaction in bin_interactions:
         ixx = []
@@ -453,10 +397,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
             for key, value in sorted(parameters.items(), key=str):
                 if key.has(check_symbol):
                     if value != 0:
-                        symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
-                        while dbf.symbols.get(symbol_name, None) is not None:
-                            dbf.varcounter += 1
-                            symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+                        symbol_name = get_next_symbol(dbf)
                         dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
                         parameters[key] = sympy.Symbol(symbol_name)
                     coef = parameters[key] * (key / check_symbol)
@@ -475,7 +416,9 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
             if degree_polys[degree] != 0:
                 for syminter in symmetric_interactions:
                     dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
-    # TODO: fit ternary interactions
+
+    logging.debug('FITTING TERNARY INTERACTIONS')
+    fit_ternary_interactions(dbf, phase_name, symmetry, all_endmembers, datasets)
     if hasattr(dbf, 'varcounter'):
         del dbf.varcounter
 
@@ -503,8 +446,7 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model):
     dbf = Database()
     dbf.elements = set(phase_models['components'])
     for el in dbf.elements:
-        if Species is not None:  # TODO: drop this on release of pycalphad 0.7
-            dbf.species.add(Species(el, {el: 1}, 0))
+        dbf.species.add(Species(el, {el: 1}, 0))
     # Write reference state to Database
     refdata = getattr(espei.refdata, ref_state)
     stabledata = getattr(espei.refdata, ref_state + 'Stable')

@@ -174,7 +174,7 @@ def run_espei(run_settings):
         else:
             restart_trace = None
 
-        # load the remaning mcmc fitting parameters
+        # load the remaining mcmc fitting parameters
         iterations = mcmc_settings.get('iterations')
         save_interval = mcmc_settings.get('save_interval')
         chains_per_parameter = mcmc_settings.get('chains_per_parameter')
@@ -196,6 +196,7 @@ def run_espei(run_settings):
                 client.close()
         return dbf, sampler
     return dbf
+
 
 def main():
     """
@@ -237,6 +238,7 @@ def main():
         raise ValueError('Unknown file type {} for input file {}. YAML and JSON are supported'.format(ext, input_file))
 
     run_espei(input_settings)
+
 
 if __name__ == '__main__':
     main()
