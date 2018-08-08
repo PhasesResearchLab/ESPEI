@@ -23,6 +23,8 @@ This is generally a two step process of
 1. Starting a scheduler with workers and writing a scheduler file
 2. Running ESPEI and connecting to the existing scheduler
 
+In order to let the system manage the memory and prevent dask from pausing or killing workers, the memory limit should be set to zero.
+
 
 Starting a scheduler
 ====================
@@ -38,7 +40,7 @@ The following command will start a scheduler on the main MPI task, then a worker
 
 .. code-block:: shell
 
-   mpirun dask-mpi --scheduler-file my_scheduler.json --nthreads 1 &
+   mpirun dask-mpi --scheduler-file my_scheduler.json --nthreads 1 --memory-limit 0 &
 
 
 Generic scheduler
@@ -56,7 +58,7 @@ For example, if you name the following file ``start_scheduler.py``, you can run 
 
    if __name__ == '__main__':
        loop = IOLoop()
-       cluster = LocalCluster(n_workers=4, threads_per_worker=1)
+       cluster = LocalCluster(n_workers=4, threads_per_worker=1, memory_limit=0)
        client = Client(cluster)
        client.write_scheduler_file('my-scheduler.json')
        loop.start()  # keeps the scheduler running
@@ -110,7 +112,7 @@ Since many MPI jobs are run through batch schedulers, an example script for a PB
     # you can replace this line with any script that starts a scheduler
     # e.g. a `start_scheduler.py` file
     # make sure it ends with `&` to run the process in the background
-    mpirun dask-mpi --scheduler-file my_scheduler.json --nthreads 1 &
+    mpirun dask-mpi --scheduler-file my_scheduler.json --nthreads 1 --memory-limit 0 &
 
     # runs ESPEI as normal
     espei --in espei-mpi-input.yaml
