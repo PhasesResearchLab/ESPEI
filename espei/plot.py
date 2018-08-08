@@ -72,6 +72,7 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
     mix_plots = [ ('Z', 'HM_MIX'), ('Z', 'SM_MIX')]
     comps = sorted(comps)
     mod = Model(dbf, comps, phase_name)
+    mod.models['idmix'] = 0
     # This is for computing properties of formation
     mod_norefstate = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
     # Is this an interaction parameter or endmember?
