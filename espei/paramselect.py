@@ -70,7 +70,7 @@ def _build_feature_matrix(prop, features, desired_data):
     return feature_matrix
 
 
-def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, features=None):
+def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, ridge_alpha=1.0e-100, features=None):
     """
     Find suitable linear model parameters for the given phase.
     We do this by successively fitting heat capacities, entropies and
@@ -92,6 +92,9 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         Symmetry of the sublattice configuration.
     datasets : PickleableTinyDB
         All the datasets desired to fit to.
+    ridge_alpha : float
+        Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
+        with ordinary least squares regression. For now, the parameter is applied to all features.
     features : dict
         Maps "property" to a list of features for the linear model.
         These will be transformed from "GM" coefficients
@@ -186,7 +189,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                 data_quantities.append(data_qtys)
 
             # provide candidate models and get back a selected model.
-            selected_model = select_model(zip(candidate_models_features[desired_props[0]], feature_matricies, data_quantities))
+            selected_model = select_model(zip(candidate_models_features[desired_props[0]], feature_matricies, data_quantities), ridge_alpha)
             selected_features, selected_values = selected_model
             parameters.update(zip(*(selected_features, selected_values)))
             # Add these parameters to be fixed for the next fitting step
@@ -217,7 +220,7 @@ def get_next_symbol(dbf):
     return symbol_name
 
 
-def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
+def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ridge_alpha=1.0e-1000000):
     """
     Fit ternary interactions for a database in place
 
@@ -233,6 +236,9 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
         List of endmember tuples, e.g. [('CU', 'MG')]
     datasets : PickleableTinyDB
         TinyDB database of datasets
+    ridge_alpha : float
+        Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
+        with ordinary least squares regression. For now, the parameter is applied to all features.
 
     Returns
     -------
@@ -245,7 +251,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
     for interaction in interactions:
         ixx = interaction
         logging.debug('INTERACTION: {}'.format(ixx))
-        parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets)
+        parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(3, dtype=np.object)
         YS = sympy.Symbol('YS')
@@ -281,7 +287,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets):
                     dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
 
 
-def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=None):
+def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aliases=None):
     """Generate an initial CALPHAD model for a given phase and sublattice model.
 
     Parameters
@@ -301,6 +307,9 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
     refdata : dict
         Maps tuple(element, phase_name) -> SymPy object defining
         energy relative to SER
+    ridge_alpha : float
+        Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
+        with ordinary least squares regression. For now, the parameter is applied to all features.
     aliases : [str]
         Alternative phase names. Useful for matching against
         reference data or other datasets. (Default value = None)
@@ -354,7 +363,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 fit_eq = num_moles * sympy.Symbol(sym_name)
         if fit_eq is None:
             # No reference lattice stability data -- we have to fit it
-            parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets)
+            parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets, ridge_alpha)
             for key, value in sorted(parameters.items(), key=str):
                 if value == 0:
                     continue
@@ -388,7 +397,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 ixx.append(i)
         ixx = tuple(ixx)
         logging.debug('INTERACTION: {}'.format(ixx))
-        parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets)
+        parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(10, dtype=np.object)
         for degree in reversed(range(10)):
@@ -423,7 +432,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         del dbf.varcounter
 
 
-def generate_parameters(phase_models, datasets, ref_state, excess_model):
+def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_alpha=1.0e-100):
     """Generate parameters from given phase models and datasets
 
     Parameters
@@ -436,6 +445,9 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model):
         String of the reference data to use, e.g. 'SGTE91' or 'SR2016'
     excess_model : str
         String of the type of excess model to fit to, e.g. 'linear'
+    ridge_alpha : float
+        Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
+        with ordinary least squares regression. For now, the parameter is applied to all features.
 
     Returns
     -------
@@ -473,6 +485,6 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model):
         dbf.add_phase(phase_name, dict(), site_ratios)
         dbf.add_phase_constituents(phase_name, subl_model)
         dbf.add_structure_entry(phase_name, phase_name)
-        phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, aliases=aliases)
+        phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aliases=aliases)
     logging.info('Finished generating parameters.')
     return dbf

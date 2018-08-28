@@ -122,7 +122,8 @@ def run_espei(run_settings):
     if generate_parameters_settings is not None:
         refdata = generate_parameters_settings['ref_state']
         excess_model = generate_parameters_settings['excess_model']
-        dbf = generate_parameters(phase_models, datasets, refdata, excess_model)
+        ridge_alpha = generate_parameters_settings['ridge_alpha']
+        dbf = generate_parameters(phase_models, datasets, refdata, excess_model, ridge_alpha=ridge_alpha)
         dbf.to_file(output_settings['output_db'], if_exists='overwrite')
 
     if mcmc_settings is not None:

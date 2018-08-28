@@ -135,6 +135,48 @@ def test_mixing_energies_are_fit(datasets_db):
     assert calculate_thermochemical_error(read_dbf, sorted(dbf.elements), sorted(dbf.phases.keys()), datasets_db) == 0
 
 
+def test_mixing_energies_are_reduced_with_ridge_alpha(datasets_db):
+    """Tests that given mixing energy data, the excess parameter is fit."""
+    phase_models = {
+        "components": ["AL", "B"],
+        "phases": {
+            "LIQUID" : {
+                "sublattice_model": [["AL", "B"]],
+                "sublattice_site_ratios": [1]
+            },
+            "FCC_A1" : {
+                "sublattice_model": [["AL", "B"]],
+                "sublattice_site_ratios": [1]
+            }
+        }
+    }
+
+    dataset_excess_mixing = {
+        "components": ["AL", "B"],
+        "phases": ["FCC_A1"],
+        "solver": {
+            "sublattice_site_ratios": [1],
+            "sublattice_occupancies": [[[0.5, 0.5]]],
+            "sublattice_configurations": [[["AL", "B"]]],
+            "mode": "manual"
+        },
+        "conditions": {
+            "P": 101325,
+            "T": 298.15
+        },
+        "output": "HM_MIX",
+        "values": [[[-10000]]]
+    }
+    datasets_db.insert(dataset_excess_mixing)
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', 1e-2)
+
+    assert dbf.elements == {'AL', 'B'}
+    assert set(dbf.phases.keys()) == {'LIQUID', 'FCC_A1'}
+    assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 1
+    assert dbf.symbols['VV0000'] == -34482.8
+
+
 def test_mixing_energies_are_fit_with_higher_order_data(datasets_db):
     """Tests that given mixing energy data with high order terms, the excess parameter is fit."""
     phase_models = {
@@ -319,6 +361,7 @@ def test_symmetric_ternary_parameter_can_be_generated_in_presence_of_binary_data
     assert dbf.elements == {'AL', 'CO', 'CR'}
     assert set(dbf.phases.keys()) == {'BCC_A2'}
     # rounded to 6 digits by `numdigits`, this is confirmed to be a correct value.
+    print(list(dbf._parameters.search(where('parameter_type') == 'L')))
     assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 2
     assert dbf.symbols['VV0000'] == -4000.0
     assert dbf.symbols['VV0001'] == -200245.0
