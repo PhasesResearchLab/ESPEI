@@ -134,6 +134,7 @@ def test_correct_defaults_are_applied_from_minimal_specification():
     assert d['output']['output_db'] == 'out.tdb'
     assert d['output']['tracefile'] == 'trace.npy'
     assert d['output']['probfile'] == 'lnprob.npy'
+    assert d['generate_parameters']['ridge_alpha'] == 1e-100
     assert d['mcmc']['save_interval'] == 1
     assert d['mcmc']['scheduler'] == 'dask'
     assert d['mcmc']['chains_per_parameter'] == 2

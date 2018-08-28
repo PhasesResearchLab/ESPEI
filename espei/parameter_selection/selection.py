@@ -5,10 +5,11 @@ Fit, score and select models
 import logging
 
 import numpy as np
+from sklearn.linear_model import Ridge
 from sklearn.linear_model import LinearRegression
 
 
-def fit_model(feature_matrix, data_quantities):
+def fit_model(feature_matrix, data_quantities, ridge_alpha):
     """
     Return model coefficients fit by scikit-learn's LinearRegression
 
@@ -18,6 +19,9 @@ def fit_model(feature_matrix, data_quantities):
         (M*N) regressor matrix. The transformed model inputs (y_i, T, P, etc.)
     data_quantities : ndarray
         (M,) response vector. Target values of the output (e.g. HM_MIX) to reproduce.
+    ridge_alpha : float
+        Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
+        with ordinary least squares regression. For now, the parameter is applied to all features.
 
     Returns
     -------
@@ -29,12 +33,12 @@ def fit_model(feature_matrix, data_quantities):
     Solve Ax = b. `x` are the desired model coefficients. `A` is the
     'feature_matrix'. `b` corrresponds to 'data_quantities'.
     """
-    clf = LinearRegression(fit_intercept=False, normalize=True)
+    clf = Ridge(fit_intercept=False, normalize=True, alpha=ridge_alpha)
     clf.fit(feature_matrix, data_quantities)
     return clf.coef_
 
 
-def score_model(feature_matrix, data_quantities, model_coefficients, feature_list):
+def score_model(feature_matrix, data_quantities, model_coefficients, feature_list, rss_numerical_limit=1.0e-16):
     """
     Use the AICc to score a model that has been fit.
 
@@ -49,6 +53,8 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     feature_list : list
         Polynomial coefficients corresponding to each column of 'feature_matrix'.
         Has shape (N,). Purely a logging aid.
+    rss_numerical_limit : float
+        Anything with an absolute value smaller than this is set to zero.
 
     Returns
     -------
@@ -65,6 +71,8 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     """
     num_params = len(feature_list)
     rss = np.square(np.dot(feature_matrix, model_coefficients) - data_quantities.astype(np.float)).sum()
+    if np.abs(rss) < rss_numerical_limit:
+        rss = 0.0
     # Compute the corrected Akaike Information Criterion
     # The correction is (2k^2 + 2k)/(n - k - 1)
     # Our denominator for the correction must always be an integer by this equation.
@@ -84,7 +92,7 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     return aicc
 
 
-def select_model(candidate_models):
+def select_model(candidate_models, ridge_alpha):
     """
     Select a model from a series of candidates by fitting and scoring them
 
@@ -92,6 +100,9 @@ def select_model(candidate_models):
     ----------
     candidate_models : list
         List of tuples of (features, feature_matrix, data_quantities)
+    ridge_alpha : float
+        Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
+        with ordinary least squares regression. For now, the parameter is applied to all features.
 
     Returns
     -------
@@ -101,7 +112,7 @@ def select_model(candidate_models):
     opt_model_score = np.inf
     opt_model = None  # will hold a (feature_list, model_coefficients)
     for feature_list, feature_matrix, data_quantities in candidate_models:
-        model_coefficients = fit_model(feature_matrix, data_quantities)
+        model_coefficients = fit_model(feature_matrix, data_quantities, ridge_alpha)
         model_score = score_model(feature_matrix, data_quantities, model_coefficients, feature_list)
         if model_score < opt_model_score:
             opt_model_score = model_score

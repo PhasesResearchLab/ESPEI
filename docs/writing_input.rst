@@ -41,6 +41,7 @@ All of the possible keys are
    generate_parameters:
      excess_model
      ref_state
+     ridge_alpha
 
    mcmc:
      iterations
@@ -172,6 +173,23 @@ Currently only `SGTE91` and `SR2016` (for certain elements) is supported.
 
 There are plans to extend to support custom reference states.
 
+ridge_alpha
+-----------
+
+:type: float
+:default: 1.0e-100
+
+Controls the ridge regression hyperparameter, $ alpha $, as given in the following equation for the ridge regression problem
+
+.. figure:: _static/ridge_equation.png
+    :alt: Ridge regression equation
+    :scale: 100%
+
+``ridge_alpha`` should be a positive floating point number which scales the relative contribution of parameter magnitudes to the residuals.
+
+If an exponential form is used, the floating point value must have a decimal place before the ``e``,
+that is ``1e-4`` is invalid while ``1.e-4`` is valid. More generally, the floating point must match the following
+regular expression per the `YAML 1.1 spec <http://yaml.org/type/float.html>`_: ``[-+]?([0-9][0-9_]*)?\.[0-9.]*([eE][-+][0-9]+)?``.
 
 mcmc
 ====

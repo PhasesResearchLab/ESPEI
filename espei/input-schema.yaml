@@ -44,6 +44,10 @@ generate_parameters:
       type: string
       required: True
       regex: 'SGTE91|SR2016'
+    ridge_alpha:  # ridge regression hyperparameter
+      type: float
+      required: True
+      default: 1.0e-100  # very small number, should be backwards compatible to ordinary least squares
 
 ## if present, will run mcmc fitting
 ## you must specifiy some kind of input for the parameters.
