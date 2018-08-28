@@ -3,6 +3,19 @@ What's New
 ==========
 
 
+0.6.1 (2018-08-28)
+==================
+
+This a major release with several important features and bug fixes
+
+* Enable use of ridge regression alpha for parameter selection via the ``parameter_generation.ridge_alpha`` input parameter.
+* Add ternary parameter selection. Works by default, just add data.
+* Set memory limit to zero to avoid dask killing workers near the dask memory limits.
+* Remove ideal mixing from plotting models so that ``plot_parameters`` gives the correct entropy values.
+* Add `recipes documentation <https://github.com/PhasesResearchLab/ESPEI/blob/master/docs/recipes.rst>` that contains some Python code for common utility operations.
+* Add documentation for running custom distributed schedulers in ESPEI
+
+
 0.6 (2018-07-02)
 ================
 
