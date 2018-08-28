@@ -44,10 +44,26 @@ espei.tests.test\_mcmc module
     :undoc-members:
     :show-inheritance:
 
+espei.tests.test\_model\_building module
+----------------------------------------
+
+.. automodule:: espei.tests.test_model_building
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 espei.tests.test\_parameter\_generation module
 ----------------------------------------------
 
 .. automodule:: espei.tests.test_parameter_generation
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+espei.tests.test\_parameter\_generation\_utils module
+-----------------------------------------------------
+
+.. automodule:: espei.tests.test_parameter_generation_utils
     :members:
     :undoc-members:
     :show-inheritance:

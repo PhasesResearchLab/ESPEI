@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
 
     espei.error_functions
+    espei.parameter_selection
     espei.tests
 
 Submodules
