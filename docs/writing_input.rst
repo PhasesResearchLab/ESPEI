@@ -174,7 +174,7 @@ Currently only `SGTE91` and `SR2016` (for certain elements) is supported.
 There are plans to extend to support custom reference states.
 
 ridge_alpha
----------
+-----------
 
 :type: float
 :default: 1.0e-100
