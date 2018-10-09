@@ -141,6 +141,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     fixed_portions = [0]
 
     moles_per_formula_unit = sympy.S(0)
+    YS = sympy.Symbol('YS')  # site fraction symbol that we will reuse
     subl_idx = 0
     for num_sites, const in zip(dbf.phases[phase_name].sublattices, dbf.phases[phase_name].constituents):
         if v.Species('VA') in const:
@@ -177,9 +178,13 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                 # Subtract out high-order (in T) parameters we've already fit
                 data_qtys = data_qtys - feature_transforms[desired_props[0]](sum(fixed_portions)) / moles_per_formula_unit
 
+                # if any site fractions show up in our data_qtys that aren't in this datasets site fractions, set them to zero.
                 for sf, i in zip(site_fractions, data_qtys):
                     missing_variables = sympy.S(i * moles_per_formula_unit).atoms(v.SiteFraction) - set(sf.keys())
                     sf.update({x: 0. for x in missing_variables})
+                    # The equations we have just have the site fractions as YS, so
+                    # take the product of all the site fractions that we see in our data qtys
+                    sf.update({YS: np.prod([v for k, v in sf.items() if k != YS])})
 
                 # moles_per_formula_unit factor is here because our data is stored per-atom
                 # but all of our fits are per-formula-unit

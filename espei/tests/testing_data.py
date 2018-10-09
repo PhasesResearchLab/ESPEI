@@ -454,3 +454,30 @@ AL_CO_CR_BCC_B2_TERNARY_NON_SYMMETRIC_DATASET = {
     "reference": "",
     "comment": ""
 }
+
+CU_ZN_LIQUID_PHASE_MODEL = {
+  "components": ["CU", "ZN"], "refdata": "SGTE91",
+  "phases": {"LIQUID" : {
+	"sublattice_model": [["CU", "ZN"]],
+	"sublattice_site_ratios": [1]}}
+}
+
+CU_ZN_CPM_MIX_EXPR_TO_FLOAT = {
+"components": ["CU", "ZN"], "phases": ["LIQUID"],
+"solver": {"mode": "manual", "sublattice_site_ratios": [1],
+           "sublattice_configurations": [[["CU", "ZN"]]],
+"sublattice_occupancies": [[[0.5, 0.5]]]},
+"conditions": {"P": 101325, "T": 300},
+"output": "CPM_MIX",
+"values": [[[11.1425]]]
+}
+
+CU_ZN_SM_MIX_EXPR_TO_FLOAT = {
+"components": ["CU", "ZN"],"phases": ["LIQUID"],
+"solver": {"mode": "manual", "sublattice_site_ratios": [1],
+           "sublattice_configurations": [[["CU", "ZN"]]],
+"sublattice_occupancies": [[[0.25, 0.75]]]},
+"conditions": {"P": 101325, "T": 600},
+"output": "SM_MIX",
+"values": [[[-9.952211364]]]
+}

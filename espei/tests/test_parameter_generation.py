@@ -398,3 +398,16 @@ def test_asymmetric_ternary_parameters_can_be_generated_for_2_sublattice(dataset
     assert dbf.symbols['VV0000'] == -6000.0
     assert dbf.symbols['VV0001'] == -4000.0
     assert dbf.symbols['VV0002'] == -2000.0
+
+
+def test_cpm_sm_data_can_be_fit_successively(datasets_db):
+    """CPM_MIX data should be able to be fit, followed by SM_MIX data, producing parameters that reproduce the original data"""
+    # An issue was brought up where having CPM_MIX data and SM_MIX data in the same fit raised an error:
+    # TypeError("can't convert expression to float") in line 188 of fit_formation_energy
+    # caused by having leftover YS symbols that were fit in the fixed portions.
+    datasets_db.insert(CU_ZN_CPM_MIX_EXPR_TO_FLOAT)
+    datasets_db.insert(CU_ZN_SM_MIX_EXPR_TO_FLOAT)
+    dbf = generate_parameters(CU_ZN_LIQUID_PHASE_MODEL, datasets_db, 'SGTE91', 'linear')
+    # beware that the calculate() results will not match up exactly with the original data due to rounding of parameters
+    assert dbf.symbols['VV0000'] == -44.57  # T*ln(T) term
+    assert dbf.symbols['VV0001'] == 382.760  # T term, found after CPM_MIX addition
