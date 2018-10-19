@@ -40,37 +40,6 @@ def canonicalize(configuration, equivalent_sublattices):
     return list_to_tuple(canonicalized)
 
 
-def symmetry_filter(x, config, symmetry):
-    """
-    Return True if the candidate sublattice configuration has any symmetry
-    which matches the phase model symmetry.
-
-    Parameters
-    ----------
-    x : the candidate dataset 'solver' dict. Must contain the "sublattice_configurations" key
-    config : the configuration of interest: e.g. ['AL', ['AL', 'NI'], 'VA']
-    symmetry : tuple of tuples where each inner tuple is a group of equivalent
-               sublattices. A value of ((0, 1), (2, 3, 4)) means that sublattices
-               at indices 0 and 1 are symmetrically equivalent to each other and
-               sublattices at indices 2, 3, and 4 are symetrically equivalent to
-               each other.
-
-    Returns
-    -------
-    bool
-
-    """
-    if x['mode'] == 'manual':
-        if len(config) != len(x['sublattice_configurations'][0]):
-            return False
-        # If even one matches, it's a match
-        # We do more filtering downstream
-        for data_config in x['sublattice_configurations']:
-            if canonicalize(config, symmetry) == canonicalize(data_config, symmetry):
-                return True
-    return False
-
-
 def canonical_sort_key(x):
     """
     Wrap strings in tuples so they'll sort.
