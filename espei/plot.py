@@ -14,7 +14,7 @@ from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_conditi
 
 from espei.utils import bib_marker_map
 from espei.core_utils import get_data, get_samples, ravel_zpf_values
-from espei.sublattice_tools import list_to_tuple, endmembers_from_interaction
+from espei.sublattice_tools import recursive_tuplify, endmembers_from_interaction
 from espei.utils import build_sitefractions
 
 plot_mapping = {
@@ -475,7 +475,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
     """
     all_samples = np.array(get_samples(desired_data), dtype=np.object)
     endpoints = endmembers_from_interaction(configuration)
-    interacting_subls = [c for c in list_to_tuple(configuration) if isinstance(c, tuple)]
+    interacting_subls = [c for c in recursive_tuplify(configuration) if isinstance(c, tuple)]
     disordered_config = False
     if (len(set(interacting_subls)) == 1) and (len(interacting_subls[0]) == 2):
         # This configuration describes all sublattices with the same two elements interacting

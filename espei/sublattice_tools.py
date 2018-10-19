@@ -7,6 +7,16 @@ import itertools
 import numpy as np
 
 
+def recursive_tuplify(x):
+    """Recursively convert a nested list to a tuple"""
+    def _tuplify(y):
+        if isinstance(y, list) or isinstance(y, tuple):
+            return tuple(_tuplify(i) if isinstance(i, (list, tuple)) else i for i in y)
+        else:
+            return y
+    return tuple(map(_tuplify, x))
+
+
 def canonicalize(configuration, equivalent_sublattices):
     """
     Sort a sequence with symmetry. This routine gives the sequence
@@ -37,7 +47,7 @@ def canonicalize(configuration, equivalent_sublattices):
                 else:
                     canonicalized[conf_idx] = subgroup[subl_idx]
 
-    return list_to_tuple(canonicalized)
+    return recursive_tuplify(canonicalized)
 
 
 def canonical_sort_key(x):
@@ -55,16 +65,6 @@ def canonical_sort_key(x):
         tuple of strings that can be sorted
     """
     return [tuple(i) if isinstance(i, (tuple, list)) else (i,) for i in x]
-
-
-def list_to_tuple(x):
-    """Convert a nested list to a tuple"""
-    def _tuplify(y):
-        if isinstance(y, list) or isinstance(y, tuple):
-            return tuple(_tuplify(i) if isinstance(i, (list, tuple)) else i for i in y)
-        else:
-            return y
-    return tuple(map(_tuplify, x))
 
 
 def generate_symmetric_group(configuration, symmetry):
@@ -87,7 +87,7 @@ def generate_symmetric_group(configuration, symmetry):
         Tuple of configuration tuples that are all symmetrically equivalent.
 
     """
-    configurations = [list_to_tuple(configuration)]
+    configurations = [recursive_tuplify(configuration)]
     permutation = np.array(symmetry, dtype=np.object)
 
     def permute(x):
@@ -110,7 +110,7 @@ def generate_symmetric_group(configuration, symmetry):
             for subl, subgroup in zip(symmetry, subgroups):
                 for subl_idx, conf_idx in enumerate(subl):
                     new_conf[conf_idx] = subgroup[subl_idx]
-            configurations.append(list_to_tuple(new_conf.tolist()))
+            configurations.append(recursive_tuplify(new_conf.tolist()))
 
     return sorted(set(configurations), key=canonical_sort_key)
 
@@ -152,7 +152,7 @@ def sorted_interactions(interactions, max_interaction_order, symmetry):
         sort_score = []
         for interaction_order in reversed(range(1, max_interaction_order+1)):
             sort_score.append(sum((isinstance(n, (list, tuple)) and len(n) == interaction_order) for n in x))
-        return canonical_sort_key(list_to_tuple(sort_score) + x)
+        return canonical_sort_key(recursive_tuplify(sort_score) + x)
 
     interactions = sorted(set(canonicalize(i, symmetry) for i in interactions), key=int_sort_key)
     # filter out interactions that have ternary and binary parameters (cross interactions)

@@ -9,7 +9,7 @@ from functools import reduce
 import numpy as np
 import tinydb
 
-from espei.sublattice_tools import canonicalize, list_to_tuple
+from espei.sublattice_tools import canonicalize, recursive_tuplify
 
 
 def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
@@ -39,7 +39,7 @@ def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
     """
     desired_data = datasets.search((tinydb.where('output').test(lambda x: x in prop)) &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
-                                   (tinydb.where('solver').test(symmetry_filter, configuration, list_to_tuple(symmetry) if symmetry else symmetry)) &
+                                   (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry)) &
                                    (tinydb.where('phases') == [phase_name]))
     # This seems to be necessary because the 'values' member does not modify 'datasets'
     # But everything else does!
@@ -58,8 +58,8 @@ def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
         matching_configs = np.arange(len(data['solver']['sublattice_configurations']))[matching_configs]
         # Rewrite output values with filtered data
         desired_data[idx]['values'] = np.array(data['values'], dtype=np.float)[..., matching_configs]
-        desired_data[idx]['solver']['sublattice_configurations'] = list_to_tuple(np.array(data['solver']['sublattice_configurations'],
-                                                                                          dtype=np.object)[matching_configs].tolist())
+        desired_data[idx]['solver']['sublattice_configurations'] = recursive_tuplify(np.array(data['solver']['sublattice_configurations'],
+                                                                                              dtype=np.object)[matching_configs].tolist())
         try:
             desired_data[idx]['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'],
                                                                              dtype=np.object)[matching_configs].tolist()
