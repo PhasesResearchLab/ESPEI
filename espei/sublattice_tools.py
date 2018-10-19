@@ -7,6 +7,14 @@ import itertools
 import numpy as np
 
 
+def tuplify(x):
+    """Convert a list to a tuple, or wrap an object in a tuple if it's not a list or tuple."""
+    if isinstance(x, list) or isinstance(x, tuple):
+        return tuple(x)
+    else:
+        return tuple([x])
+
+
 def recursive_tuplify(x):
     """Recursively convert a nested list to a tuple"""
     def _tuplify(y):
@@ -215,13 +223,6 @@ def generate_interactions(endmembers, order, symmetry):
     return sorted_interactions(transformed_interactions, order, symmetry)
 
 
-def _to_tuple(x):
-    if isinstance(x, list) or isinstance(x, tuple):
-        return tuple(x)
-    else:
-        return tuple([x])
-
-
 def interaction_test(configuration, order=None):
     """
     Returns True if the configuration has an interaction
@@ -263,3 +264,13 @@ def endmembers_from_interaction(configuration):
         else:
             config.append([c])
     return list(itertools.product(*[tuple(c) for c in config]))
+
+
+def compute_all_endmembers(sublattice_model):
+    """For a given sublattice model, return all the possible endmembers"""
+    return list(itertools.product(*sublattice_model))
+
+
+def compute_symmetrically_distinct_endmembers(sublattice_model, symmetry):
+    """For a given sublattice model, return all the unique endmembers by symmetry"""
+    return sorted(set(canonicalize(i, symmetry) for i in compute_all_endmembers(sublattice_model)))

@@ -32,7 +32,7 @@ from espei.parameter_selection.selection import select_model
 from espei.parameter_selection.ternary_parameters import build_ternary_feature_matrix
 from espei.parameter_selection.utils import feature_transforms, shift_reference_state
 from espei.sublattice_tools import canonicalize, generate_symmetric_group, \
-    generate_interactions, _to_tuple, interaction_test, \
+    generate_interactions, tuplify, interaction_test, \
     endmembers_from_interaction
 from espei.utils import PickleableTinyDB, sigfigs, build_sitefractions
 
@@ -282,7 +282,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
         for degree in np.arange(degree_polys.shape[0]):
             if degree_polys[degree] != 0:
                 for syminter in symmetric_interactions:
-                    dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
+                    dbf.add_parameter('L', phase_name, tuple(map(tuplify, syminter)), degree, degree_polys[degree])
 
 
 def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aliases=None):
@@ -381,7 +381,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         all_endmembers.extend(symmetric_endmembers)
         for em in symmetric_endmembers:
             em_dict[em] = fit_eq
-            dbf.add_parameter('G', phase_name, tuple(map(_to_tuple, em)), 0, fit_eq)
+            dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, fit_eq)
 
     logging.debug('FITTING BINARY INTERACTIONS')
     bin_interactions = generate_interactions(all_endmembers, order=2, symmetry=symmetry)
@@ -422,7 +422,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         for degree in np.arange(degree_polys.shape[0]):
             if degree_polys[degree] != 0:
                 for syminter in symmetric_interactions:
-                    dbf.add_parameter('L', phase_name, tuple(map(_to_tuple, syminter)), degree, degree_polys[degree])
+                    dbf.add_parameter('L', phase_name, tuple(map(tuplify, syminter)), degree, degree_polys[degree])
 
     logging.debug('FITTING TERNARY INTERACTIONS')
     fit_ternary_interactions(dbf, phase_name, symmetry, all_endmembers, datasets)
