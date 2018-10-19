@@ -17,6 +17,23 @@ def recursive_tuplify(x):
     return tuple(map(_tuplify, x))
 
 
+def canonical_sort_key(x):
+    """
+    Wrap strings in tuples so they'll sort.
+
+    Parameters
+    ----------
+    x : list
+        List of strings to sort
+
+    Returns
+    -------
+    tuple
+        tuple of strings that can be sorted
+    """
+    return [tuple(i) if isinstance(i, (tuple, list)) else (i,) for i in x]
+
+
 def canonicalize(configuration, equivalent_sublattices):
     """
     Sort a sequence with symmetry. This routine gives the sequence
@@ -48,23 +65,6 @@ def canonicalize(configuration, equivalent_sublattices):
                     canonicalized[conf_idx] = subgroup[subl_idx]
 
     return recursive_tuplify(canonicalized)
-
-
-def canonical_sort_key(x):
-    """
-    Wrap strings in tuples so they'll sort.
-
-    Parameters
-    ----------
-    x : list
-        List of strings to sort
-
-    Returns
-    -------
-    tuple
-        tuple of strings that can be sorted
-    """
-    return [tuple(i) if isinstance(i, (tuple, list)) else (i,) for i in x]
 
 
 def generate_symmetric_group(configuration, symmetry):
