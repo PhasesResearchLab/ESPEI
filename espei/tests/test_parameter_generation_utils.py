@@ -2,7 +2,8 @@
 Test the utilities for parameter generation
 """
 
-from espei.parameter_selection.utils import interaction_test
+from espei.sublattice_tools import interaction_test
+
 
 def test_interaction_detection():
     """interaction_test should correctly calculate interactions for different candidate configurations"""

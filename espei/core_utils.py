@@ -1,13 +1,15 @@
 """
 Internal utilities for developer use. May not be useful to users.
 """
+import copy
 import itertools
 import operator
 from functools import reduce
-import copy
+
 import numpy as np
 import tinydb
-from pycalphad import variables as v
+
+from espei.sublattice_tools import canonicalize, symmetry_filter, list_to_tuple
 
 
 def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
@@ -109,97 +111,6 @@ def get_samples(desired_data):
         comp_features = zip(site_fraction_product, interaction_product)
         all_samples.extend(list(itertools.product(temperatures, comp_features)))
     return all_samples
-
-
-def canonicalize(configuration, equivalent_sublattices):
-    """
-    Sort a sequence with symmetry. This routine gives the sequence
-    a deterministic ordering while respecting symmetry.
-
-    Parameters
-    ----------
-    configuration : [str]
-        Sublattice configuration to sort.
-    equivalent_sublattices : {{int}}
-        Indices of 'configuration' which should be equivalent by symmetry, i.e.,
-        [[0, 4], [1, 2, 3]] means permuting elements 0 and 4, or 1, 2 and 3, respectively,
-        has no effect on the equivalence of the sequence.
-
-    Returns
-    -------
-    str
-        sorted tuple that has been canonicalized.
-
-    """
-    canonicalized = list(configuration)
-    if equivalent_sublattices is not None:
-        for subl in equivalent_sublattices:
-            subgroup = sorted([configuration[idx] for idx in sorted(subl)], key=canonical_sort_key)
-            for subl_idx, conf_idx in enumerate(sorted(subl)):
-                if isinstance(subgroup[subl_idx], list):
-                    canonicalized[conf_idx] = tuple(subgroup[subl_idx])
-                else:
-                    canonicalized[conf_idx] = subgroup[subl_idx]
-
-    return list_to_tuple(canonicalized)
-
-
-def symmetry_filter(x, config, symmetry):
-    """
-    Return True if the candidate sublattice configuration has any symmetry
-    which matches the phase model symmetry.
-
-    Parameters
-    ----------
-    x : the candidate dataset 'solver' dict. Must contain the "sublattice_configurations" key
-    config : the configuration of interest: e.g. ['AL', ['AL', 'NI'], 'VA']
-    symmetry : tuple of tuples where each inner tuple is a group of equivalent
-               sublattices. A value of ((0, 1), (2, 3, 4)) means that sublattices
-               at indices 0 and 1 are symmetrically equivalent to each other and
-               sublattices at indices 2, 3, and 4 are symetrically equivalent to
-               each other.
-
-    Returns
-    -------
-    bool
-
-    """
-    if x['mode'] == 'manual':
-        if len(config) != len(x['sublattice_configurations'][0]):
-            return False
-        # If even one matches, it's a match
-        # We do more filtering downstream
-        for data_config in x['sublattice_configurations']:
-            if canonicalize(config, symmetry) == canonicalize(data_config, symmetry):
-                return True
-    return False
-
-
-def canonical_sort_key(x):
-    """
-    Wrap strings in tuples so they'll sort.
-
-    Parameters
-    ----------
-    x : list
-        List of strings to sort
-
-    Returns
-    -------
-    tuple
-        tuple of strings that can be sorted
-    """
-    return [tuple(i) if isinstance(i, (tuple, list)) else (i,) for i in x]
-
-
-def list_to_tuple(x):
-    """Convert a nested list to a tuple"""
-    def _tuplify(y):
-        if isinstance(y, list) or isinstance(y, tuple):
-            return tuple(_tuplify(i) if isinstance(i, (list, tuple)) else i for i in y)
-        else:
-            return y
-    return tuple(map(_tuplify, x))
 
 
 def _zpf_conditions_shape(zpf_values):

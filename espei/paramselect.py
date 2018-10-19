@@ -15,33 +15,26 @@ Cp - TlnT, T**2, T**-1, T**3 - 4 candidate models
 Choose parameter set with best AICc score.
 
 """
-import itertools, operator, logging
+import itertools
+import logging
+import operator
+from collections import OrderedDict
 
 import numpy as np
 import sympy
-from collections import OrderedDict
 from pycalphad import Database, Model, variables as v
-from sklearn.linear_model import LinearRegression
-
-from espei.core_utils import get_data, get_samples, canonicalize
-from espei.parameter_selection.utils import (
-    feature_transforms, shift_reference_state, interaction_test
-)
-from espei.parameter_selection.selection import select_model
-from espei.parameter_selection.model_building import build_candidate_models, generate_interactions, generate_symmetric_group
-from espei.parameter_selection.ternary_parameters import build_ternary_feature_matrix
-from espei.utils import PickleableTinyDB, sigfigs, endmembers_from_interaction, \
-    build_sitefractions
-import espei.refdata
-
-# backwards compatibility:
 from pycalphad.io.database import Species
 
-def _to_tuple(x):
-    if isinstance(x, list) or isinstance(x, tuple):
-        return tuple(x)
-    else:
-        return tuple([x])
+import espei.refdata
+from espei.core_utils import get_data, get_samples
+from espei.parameter_selection.model_building import build_candidate_models
+from espei.parameter_selection.selection import select_model
+from espei.parameter_selection.ternary_parameters import build_ternary_feature_matrix
+from espei.parameter_selection.utils import feature_transforms, shift_reference_state
+from espei.sublattice_tools import canonicalize, generate_symmetric_group, \
+    generate_interactions, _to_tuple, interaction_test, \
+    endmembers_from_interaction
+from espei.utils import PickleableTinyDB, sigfigs, build_sitefractions
 
 
 def _build_feature_matrix(prop, features, desired_data):

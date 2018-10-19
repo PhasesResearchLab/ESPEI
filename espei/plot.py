@@ -13,9 +13,9 @@ from pycalphad.plot.utils import phase_legend
 from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_condition
 
 from espei.utils import bib_marker_map
-from espei.core_utils import get_data, get_samples, list_to_tuple, \
-    ravel_zpf_values
-from espei.utils import endmembers_from_interaction, build_sitefractions
+from espei.core_utils import get_data, get_samples, ravel_zpf_values
+from espei.sublattice_tools import list_to_tuple, endmembers_from_interaction
+from espei.utils import build_sitefractions
 
 plot_mapping = {
     'T': 'Temperature (K)',
