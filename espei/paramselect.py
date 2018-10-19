@@ -31,9 +31,9 @@ from espei.parameter_selection.model_building import build_candidate_models
 from espei.parameter_selection.selection import select_model
 from espei.parameter_selection.ternary_parameters import build_ternary_feature_matrix
 from espei.parameter_selection.utils import feature_transforms, shift_reference_state
-from espei.sublattice_tools import canonicalize, generate_symmetric_group, \
-    generate_interactions, tuplify, interaction_test, \
-    endmembers_from_interaction
+from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
+    tuplify, interaction_test, endmembers_from_interaction, \
+    generate_endmembers
 from espei.utils import PickleableTinyDB, sigfigs, build_sitefractions
 
 
@@ -321,8 +321,8 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
     if not hasattr(dbf, 'varcounter'):
         dbf.varcounter = 0
     # First fit endmembers
-    all_em_count = len(list(itertools.product(*subl_model)))
-    endmembers = sorted(set(canonicalize(i, symmetry) for i in itertools.product(*subl_model)))
+    all_em_count = len(generate_endmembers(subl_model))  # number of total endmembers
+    endmembers = generate_endmembers(subl_model, symmetry)
     # Number of significant figures in parameters, might cause rounding errors
     numdigits = 6
     em_dict = {}

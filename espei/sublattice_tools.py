@@ -266,11 +266,8 @@ def endmembers_from_interaction(configuration):
     return list(itertools.product(*[tuple(c) for c in config]))
 
 
-def generate_all_endmembers(sublattice_model):
-    """For a given sublattice model, return all the possible endmembers"""
-    return list(itertools.product(*sublattice_model))
-
-
-def generate_symmetrically_distinct_endmembers(sublattice_model, symmetry):
-    """For a given sublattice model, return all the unique endmembers by symmetry"""
-    return sorted(set(canonicalize(i, symmetry) for i in generate_all_endmembers(sublattice_model)))
+def generate_endmembers(sublattice_model, symmetry=None):
+    """
+    For a given sublattice model, return all the unique endmembers by symmetry.
+    If symmetry is None, all endmembers will be returned"""
+    return sorted(set(canonicalize(i, symmetry) for i in list(itertools.product(*sublattice_model))))
