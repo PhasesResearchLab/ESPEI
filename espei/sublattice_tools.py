@@ -267,7 +267,28 @@ def endmembers_from_interaction(configuration):
 
 
 def generate_endmembers(sublattice_model, symmetry=None):
+    """Return all the unique endmembers by symmetry for a given sublattice model.
+
+    Parameters
+    ----------
+    sublattice_model : list of lists
+        General sublattice model, with each sublattice as a sublist.
+    symmetry : list of lists, optional
+        List of lists containing symmetrically equivalent sublattice indices.
+        If None (default), all endmembers will be returned.
+
+    Returns
+    -------
+    list
+        List of endmember tuples
+
+    Examples
+    --------
+    >>> subl_model = [['A', 'B'], ['A','B']]
+    >>> generate_endmembers(subl_model)
+    [('A', 'A'), ('A', 'B'), ('B', 'A'), ('B', 'B')]  # four endmembers
+    >>> generate_endmembers(subl_model, [0, 1])  # the first and second sublattices are symmetrically equivalent.
+    [('A', 'A'), ('A', 'B'), ('B', 'B')]  # three endmembers, ('A', 'B') is equivalent to ('B', 'A') by symmetry.
+
     """
-    For a given sublattice model, return all the unique endmembers by symmetry.
-    If symmetry is None, all endmembers will be returned"""
     return sorted(set(canonicalize(i, symmetry) for i in list(itertools.product(*sublattice_model))))
