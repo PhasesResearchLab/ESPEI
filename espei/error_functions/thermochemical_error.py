@@ -186,8 +186,8 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
     Equation 2.59 and 2.60 in Lukas, Fries, and Sundman "Computational Thermodynamics" shows how this can be considered.
     Each type of error will be weighted by the reciprocal of the estimated uncertainty in the measured value and conditions.
     The weighting factor is calculated by
-    $p_i = (\Delta L_i)^{-1}$
-    where $\Delta L_i$ is the uncertainty in the measurement.
+    $ p_i = (\Delta L_i)^{-1} $
+    where $ \Delta L_i $ is the uncertainty in the measurement.
     We will neglect the uncertainty for quantities such as temperature, assuming they are small.
 
     """
