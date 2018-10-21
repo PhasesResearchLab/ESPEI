@@ -17,38 +17,6 @@ feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
                       "HM": lambda x: x - v.T*sympy.diff(x, v.T)}
 
 
-def interaction_test(configuration, order=None):
-    """
-    Returns True if the configuration has an interaction
-
-    Parameters
-    ----------
-    order : int, optional
-        Specific order to check for. E.g. a value of 3 checks for ternary interactions
-
-    Returns
-    -------
-    bool
-        True if there is an interaction.
-
-    Examples
-    --------
-    >>> configuration = [['A'], ['A','B']]
-    >>> interaction_test(configuration)
-    True  # has an interaction
-    >>> interaction_test(configuration, order=2)
-    True  # has a binary interaction
-    >>> interaction_test(configuration, order=3)
-    False  # has no ternary interaction
-
-    """
-    interacting_species = [len(subl) for subl in configuration if isinstance(subl, tuple)]
-    if order is None:  # checking for any interaction
-        return any([subl_occupation > 1 for subl_occupation in interacting_species])
-    else:
-        return any([subl_occupation == order for subl_occupation in interacting_species])
-
-
 def shift_reference_state(desired_data, feature_transform, fixed_model):
     """
     Shift data to a new common reference state.

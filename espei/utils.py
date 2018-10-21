@@ -4,23 +4,24 @@ Utilities for ESPEI
 Classes and functions defined here should have some reuse potential.
 """
 
-import re, itertools
+import itertools
+import re
 from collections import namedtuple
+
+import bibtexparser
 import numpy as np
 import sympy
-from sympy import Symbol
-from distributed import Client
-from tinydb import TinyDB, where
-from tinydb.storages import MemoryStorage
-from six import string_types
-import bibtexparser
 from bibtexparser.bparser import BibTexParser
 from bibtexparser.customization import convert_to_unicode
-
+from distributed import Client
 from pycalphad import Model, variables as v
+from pycalphad.core.phase_rec import PhaseRecord_from_cython
 from pycalphad.core.sympydiff_utils import build_functions
 from pycalphad.core.utils import unpack_kwarg, unpack_components
-from pycalphad.core.phase_rec import PhaseRecord_from_cython
+from six import string_types
+from sympy import Symbol
+from tinydb import TinyDB, where
+from tinydb.storages import MemoryStorage
 
 
 class PickleableTinyDB(TinyDB):
@@ -493,17 +494,6 @@ def formatted_parameter(dbf, symbol, unique=True):
         return formatted_parameters[0]
     else:
         return formatted_parameters
-
-
-def endmembers_from_interaction(configuration):
-    """For a given configuration with possible interactions, return all the endmembers"""
-    config = []
-    for c in configuration:
-        if isinstance(c, (list, tuple)):
-            config.append(c)
-        else:
-            config.append([c])
-    return list(itertools.product(*[tuple(c) for c in config]))
 
 
 def build_sitefractions(phase_name, sublattice_configurations, sublattice_occupancies):

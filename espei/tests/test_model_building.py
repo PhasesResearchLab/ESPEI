@@ -7,7 +7,9 @@ from collections import OrderedDict
 import sympy
 from pycalphad import variables as v
 
-from espei.parameter_selection.model_building import build_feature_sets, build_candidate_models, generate_symmetric_group, sorted_interactions
+from espei.parameter_selection.model_building import build_feature_sets, build_candidate_models
+from espei.sublattice_tools import generate_symmetric_group, sorted_interactions
+
 
 def test_build_feature_sets_generates_desired_binary_features_for_cp_like():
     """Binary feature sets can be correctly generated for heat capacity-like features"""
