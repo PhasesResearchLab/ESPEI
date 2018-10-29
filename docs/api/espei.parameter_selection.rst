@@ -1,35 +1,35 @@
-espei.parameter\_selection package
-==================================
+espei\.parameter\_selection package
+===================================
 
 Submodules
 ----------
 
-espei.parameter\_selection.model\_building module
--------------------------------------------------
+espei\.parameter\_selection\.model\_building module
+---------------------------------------------------
 
 .. automodule:: espei.parameter_selection.model_building
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei.parameter\_selection.selection module
--------------------------------------------
+espei\.parameter\_selection\.selection module
+---------------------------------------------
 
 .. automodule:: espei.parameter_selection.selection
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei.parameter\_selection.ternary\_parameters module
------------------------------------------------------
+espei\.parameter\_selection\.ternary\_parameters module
+-------------------------------------------------------
 
 .. automodule:: espei.parameter_selection.ternary_parameters
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei.parameter\_selection.utils module
----------------------------------------
+espei\.parameter\_selection\.utils module
+-----------------------------------------
 
 .. automodule:: espei.parameter_selection.utils
     :members:

@@ -3,9 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-=====
-ESPEI
-=====
+.. |logo| image:: _static/ESPEI-logo.png
+          :height: 30pt
+          :width: 30pt
+          :alt: Logo
+
+============
+|logo| ESPEI
+============
 
 .. raw:: latex
 

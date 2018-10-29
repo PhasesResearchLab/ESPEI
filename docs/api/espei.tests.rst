@@ -1,99 +1,107 @@
-espei.tests package
-===================
+espei\.tests package
+====================
 
 Submodules
 ----------
 
-espei.tests.fixtures module
----------------------------
+espei\.tests\.fixtures module
+-----------------------------
 
 .. automodule:: espei.tests.fixtures
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei.tests.test\_core\_utils module
-------------------------------------
+espei\.tests\.new\_test\_parameter\_generation module
+-----------------------------------------------------
+
+.. automodule:: espei.tests.new_test_parameter_generation
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+espei\.tests\.new\_testing\_data module
+---------------------------------------
+
+.. automodule:: espei.tests.new_testing_data
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+espei\.tests\.test\_core\_utils module
+--------------------------------------
 
 .. automodule:: espei.tests.test_core_utils
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei.tests.test\_datasets module
----------------------------------
+espei\.tests\.test\_datasets module
+-----------------------------------
 
 .. automodule:: espei.tests.test_datasets
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei.tests.test\_error\_functions module
------------------------------------------
+espei\.tests\.test\_error\_functions module
+-------------------------------------------
 
 .. automodule:: espei.tests.test_error_functions
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei.tests.test\_mcmc module
------------------------------
+espei\.tests\.test\_mcmc module
+-------------------------------
 
 .. automodule:: espei.tests.test_mcmc
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei.tests.test\_model\_building module
-----------------------------------------
+espei\.tests\.test\_model\_building module
+------------------------------------------
 
 .. automodule:: espei.tests.test_model_building
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei.tests.test\_parameter\_generation module
-----------------------------------------------
+espei\.tests\.test\_parameter\_generation module
+------------------------------------------------
 
 .. automodule:: espei.tests.test_parameter_generation
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei.tests.test\_parameter\_generation\_utils module
------------------------------------------------------
+espei\.tests\.test\_parameter\_generation\_utils module
+-------------------------------------------------------
 
 .. automodule:: espei.tests.test_parameter_generation_utils
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei.tests.test\_plotting module
+espei\.tests\.test\_schema module
 ---------------------------------
-
-.. automodule:: espei.tests.test_plotting
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-espei.tests.test\_schema module
--------------------------------
 
 .. automodule:: espei.tests.test_schema
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei.tests.test\_utils module
-------------------------------
+espei\.tests\.test\_utils module
+--------------------------------
 
 .. automodule:: espei.tests.test_utils
     :members:
     :undoc-members:
     :show-inheritance:
 
-espei.tests.testing\_data module
---------------------------------
+espei\.tests\.testing\_data module
+----------------------------------
 
 .. automodule:: espei.tests.testing_data
     :members:
