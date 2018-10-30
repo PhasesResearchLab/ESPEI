@@ -10,6 +10,7 @@ import numpy as np
 import tinydb
 
 from espei.sublattice_tools import canonicalize, recursive_tuplify
+from espei.parameter_selection.redlich_kister import calc_site_fraction_product, calc_interaction_product
 
 
 def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
@@ -92,7 +93,7 @@ def get_samples(desired_data):
     Transforms data to interaction products, e.g. YS*{}^{xs}G=YS*XS*DXS^{n} {}^{n}L
 
     """
-    # TODO: binary assumption
+    # TODO: binary and ternaries only, possibly non-working ternary cross interactions
     # TODO does not ravel pressure conditions
     # TODO: could possibly combine with ravel_conditions if we do the math outside.
     all_samples = []
@@ -100,14 +101,9 @@ def get_samples(desired_data):
         temperatures = np.atleast_1d(data['conditions']['T'])
         num_configs = np.array(data['solver'].get('sublattice_configurations'), dtype=np.object).shape[0]
         site_fractions = data['solver'].get('sublattice_occupancies', [[1]] * num_configs)
-        site_fraction_product = [reduce(operator.mul, list(itertools.chain(*[np.atleast_1d(f) for f in fracs])), 1)
-                                 for fracs in site_fractions]
+        site_fraction_product = calc_site_fraction_product(site_fractions)
         # TODO: Subtle sorting bug here, if the interactions aren't already in sorted order...
-        interaction_product = []
-        for fracs in site_fractions:
-            interaction_product.append(float(reduce(operator.mul, [f[0] - f[1] for f in fracs if isinstance(f, list) and len(f) == 2], 1)))
-        if len(interaction_product) == 0:
-            interaction_product = [0]
+        interaction_product = calc_interaction_product(site_fractions)
         comp_features = zip(site_fraction_product, interaction_product)
         all_samples.extend(list(itertools.product(temperatures, comp_features)))
     return all_samples

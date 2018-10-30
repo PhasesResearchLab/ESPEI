@@ -70,10 +70,10 @@ def calc_interaction_product(site_fractions):
     [0.12]
     >>> # ternary case, (A,B,C) interaction
     >>> calc_interaction_product([[[0.333, 0.333, 0.334]]])
-    [1.0]
+    [[0.333, 0.333, 0.334]]
     >>> # ternary 2SL case, (A,B,C)(A) interaction
     >>> calc_interaction_product([[[0.333, 0.333, 0.334], 1.0]])
-    [1.0]
+    [[0.333, 0.333, 0.334]]
 
     """
     interaction_product = []
