@@ -173,16 +173,13 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                 # Subtract out high-order (in T) parameters we've already fit
                 data_qtys = data_qtys - feature_transforms[desired_props[0]](sum(fixed_portions)) / moles_per_formula_unit
 
-                site_fraction_arrays = list(itertools.chain(*[data['solver'].get('sublattice_occupancies', [[1]] * len(data['solver']['sublattice_site_ratios'])) for data in desired_data]))
                 # if any site fractions show up in our data_qtys that aren't in this datasets site fractions, set them to zero.
-                for sf, i, sf_arr in zip(site_fractions, data_qtys, site_fraction_arrays):
+                for sf, i, (_, (sf_product, inter_product)) in zip(site_fractions, data_qtys, all_samples):
                     missing_variables = sympy.S(i * moles_per_formula_unit).atoms(v.SiteFraction) - set(sf.keys())
                     sf.update({x: 0. for x in missing_variables})
                     # The equations we have just have the site fractions as YS
                     # and interaction products as Z, so take the product of all
                     # the site fractions that we see in our data qtys
-                    sf_product = calc_site_fraction_product([sf_arr])[0]
-                    inter_product = calc_interaction_product([sf_arr])[0]
                     sf.update({YS: sf_product, Z: inter_product})
 
                 # moles_per_formula_unit factor is here because our data is stored per-atom
