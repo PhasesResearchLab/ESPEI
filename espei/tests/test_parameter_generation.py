@@ -409,5 +409,7 @@ def test_cpm_sm_data_can_be_fit_successively(datasets_db):
     datasets_db.insert(CU_ZN_SM_MIX_EXPR_TO_FLOAT)
     dbf = generate_parameters(CU_ZN_LIQUID_PHASE_MODEL, datasets_db, 'SGTE91', 'linear')
     # beware that the calculate() results will not match up exactly with the original data due to rounding of parameters
-    assert dbf.symbols['VV0000'] == -44.57  # T*ln(T) term
-    assert dbf.symbols['VV0001'] == 382.760  # T term, found after CPM_MIX addition
+    assert dbf.symbols['VV0000'] == 105.255  # T*ln(T) L2 term
+    assert dbf.symbols['VV0001'] == -40.953  # T*ln(T) L1 term
+    assert dbf.symbols['VV0002'] == -44.57 # T*ln(T) L0 term
+    assert dbf.symbols['VV0003'] == 36.6556 # L0 T term, found after CPM_MIX addition

@@ -465,11 +465,11 @@ CU_ZN_LIQUID_PHASE_MODEL = {
 CU_ZN_CPM_MIX_EXPR_TO_FLOAT = {
 "components": ["CU", "ZN"], "phases": ["LIQUID"],
 "solver": {"mode": "manual", "sublattice_site_ratios": [1],
-           "sublattice_configurations": [[["CU", "ZN"]]],
-"sublattice_occupancies": [[[0.5, 0.5]]]},
+           "sublattice_configurations": [[["CU", "ZN"]],[["CU", "ZN"]],[["CU", "ZN"]]],
+"sublattice_occupancies": [[[0.5, 0.5]], [[0.1, 0.9]], [[0.8, 0.2]]]},
 "conditions": {"P": 101325, "T": 300},
 "output": "CPM_MIX",
-"values": [[[11.1425]]]
+"values": [[[11.1425, -5.0, 5.0]]]
 }
 
 CU_ZN_SM_MIX_EXPR_TO_FLOAT = {
