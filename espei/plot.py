@@ -61,10 +61,10 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
 
     Examples
     --------
-    # plot the LAVES_C15 (Cu)(Mg) endmember
-    >>> plot_parameters(dbf, ['CU', 'MG'], 'LAVES_C15', ('CU', 'MG'), symmetry=None, datasets=datasets)
-    # plot the mixing interaction in the first sublattice
-    >>> plot_parameters(dbf, ['CU', 'MG'], 'LAVES_C15', (('CU', 'MG'), 'MG'), symmetry=None, datasets=datasets)
+    >>> # plot the LAVES_C15 (Cu)(Mg) endmember
+    >>> plot_parameters(dbf, ['CU', 'MG'], 'LAVES_C15', ('CU', 'MG'), symmetry=None, datasets=datasets)  # doctest: +SKIP
+    >>> # plot the mixing interaction in the first sublattice
+    >>> plot_parameters(dbf, ['CU', 'MG'], 'LAVES_C15', (('CU', 'MG'), 'MG'), symmetry=None, datasets=datasets)  # doctest: +SKIP
 
     """
     em_plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
@@ -148,13 +148,13 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
     Examples
     --------
 
-    >>> from espei.datasets import load_datasets, recursive_glob
-    >>> from espei.plot import dataplot
-    >>> datasets = load_datasets(recursive_glob('.', '*.json'))
-    >>> my_phases = ['BCC_A2', 'CUMG2', 'FCC_A1', 'LAVES_C15', 'LIQUID']
-    >>> my_components = ['CU', 'MG' 'VA']
-    >>> conditions = {v.P: 101325, v.T: (500, 1000, 10), v.X('MG'): (0, 1, 0.01)}
-    >>> dataplot(my_components, my_phases, conditions, datasets)
+    >>> from espei.datasets import load_datasets, recursive_glob  # doctest: +SKIP
+    >>> from espei.plot import dataplot  # doctest: +SKIP
+    >>> datasets = load_datasets(recursive_glob('.', '*.json'))  # doctest: +SKIP
+    >>> my_phases = ['BCC_A2', 'CUMG2', 'FCC_A1', 'LAVES_C15', 'LIQUID']  # doctest: +SKIP
+    >>> my_components = ['CU', 'MG' 'VA']  # doctest: +SKIP
+    >>> conditions = {v.P: 101325, v.T: (500, 1000, 10), v.X('MG'): (0, 1, 0.01)}  # doctest: +SKIP
+    >>> dataplot(my_components, my_phases, conditions, datasets)  # doctest: +SKIP
 
     """
     indep_comps = [key for key, value in conds.items() if isinstance(key, v.Composition) and len(np.atleast_1d(value)) > 1]
@@ -371,15 +371,15 @@ def eqdataplot(eq, datasets, ax=None, plot_kwargs=None):
     Examples
     --------
 
-    >>> from pycalphad import equilibrium, Database, variables as v
-    >>> from pycalphad.plot.eqplot import eqplot
-    >>> from espei.datasets import load_datasets, recursive_glob
-    >>> datasets = load_datasets(recursive_glob('.', '*.json'))
-    >>> dbf = Database('my_databases.tdb')
-    >>> my_phases = list(dbf.phases.keys())
-    >>> eq = equilibrium(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: (500, 1000, 10), v.X('MG'): (0, 1, 0.01)})
-    >>> ax = eqplot(eq)
-    >>> ax = eqdataplot(eq, datasets, ax=ax)
+    >>> from pycalphad import equilibrium, Database, variables as v  # doctest: +SKIP
+    >>> from pycalphad.plot.eqplot import eqplot  # doctest: +SKIP
+    >>> from espei.datasets import load_datasets, recursive_glob  # doctest: +SKIP
+    >>> datasets = load_datasets(recursive_glob('.', '*.json'))  # doctest: +SKIP
+    >>> dbf = Database('my_databases.tdb')  # doctest: +SKIP
+    >>> my_phases = list(dbf.phases.keys())  # doctest: +SKIP
+    >>> eq = equilibrium(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: (500, 1000, 10), v.X('MG'): (0, 1, 0.01)})  # doctest: +SKIP
+    >>> ax = eqplot(eq)  # doctest: +SKIP
+    >>> ax = eqdataplot(eq, datasets, ax=ax)  # doctest: +SKIP
 
     """
     # TODO: support reference legend
@@ -426,13 +426,13 @@ def multiplot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=N
     Examples
     --------
 
-    >>> from pycalphad import Database, variables as v
-    >>> from pycalphad.plot.eqplot import eqplot
-    >>> from espei.datasets import load_datasets, recursive_glob
-    >>> datasets = load_datasets(recursive_glob('.', '*.json'))
-    >>> dbf = Database('my_databases.tdb')
-    >>> my_phases = list(dbf.phases.keys())
-    >>> multiplot(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)}, datasets)
+    >>> from pycalphad import Database, variables as v  # doctest: +SKIP
+    >>> from pycalphad.plot.eqplot import eqplot  # doctest: +SKIP
+    >>> from espei.datasets import load_datasets, recursive_glob  # doctest: +SKIP
+    >>> datasets = load_datasets(recursive_glob('.', '*.json'))  # doctest: +SKIP
+    >>> dbf = Database('my_databases.tdb')  # doctest: +SKIP
+    >>> my_phases = list(dbf.phases.keys())  # doctest: +SKIP
+    >>> multiplot(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)}, datasets)  # doctest: +SKIP
 
     """
     eq_kwargs = eq_kwargs or dict()

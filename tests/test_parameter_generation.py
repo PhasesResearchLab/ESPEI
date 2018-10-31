@@ -2,10 +2,9 @@
 
 from tinydb import where
 
-from espei.tests.fixtures import datasets_db
-
 from espei.paramselect import generate_parameters
-from espei.tests.testing_data import *
+from .testing_data import *
+from .fixtures import datasets_db
 
 import pytest
 

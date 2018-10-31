@@ -241,11 +241,11 @@ def interaction_test(configuration, order=None):
     --------
     >>> configuration = [['A'], ['A','B']]
     >>> interaction_test(configuration)
-    True  # has an interaction
+    True
     >>> interaction_test(configuration, order=2)
-    True  # has a binary interaction
+    True
     >>> interaction_test(configuration, order=3)
-    False  # has no ternary interaction
+    False
 
     """
     interacting_species = [len(subl) for subl in configuration if isinstance(subl, (tuple,list))]
@@ -285,10 +285,11 @@ def generate_endmembers(sublattice_model, symmetry=None):
     Examples
     --------
     >>> subl_model = [['A', 'B'], ['A','B']]
-    >>> generate_endmembers(subl_model)
-    [('A', 'A'), ('A', 'B'), ('B', 'A'), ('B', 'B')]  # four endmembers
-    >>> generate_endmembers(subl_model, [0, 1])  # the first and second sublattices are symmetrically equivalent.
-    [('A', 'A'), ('A', 'B'), ('B', 'B')]  # three endmembers, ('A', 'B') is equivalent to ('B', 'A') by symmetry.
+    >>> generate_endmembers(subl_model)  # four endmembers
+    [('A', 'A'), ('A', 'B'), ('B', 'A'), ('B', 'B')]
+    >>> # three endmembers, ('A', 'B') is equivalent to ('B', 'A') by symmetry.
+    >>> generate_endmembers(subl_model, [[0, 1]])  # the first and second sublattices are symmetrically equivalent.
+    [('A', 'A'), ('A', 'B'), ('B', 'B')]
 
     """
     return sorted(set(canonicalize(i, symmetry) for i in list(itertools.product(*sublattice_model))))

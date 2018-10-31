@@ -9,9 +9,8 @@ from espei.utils import ImmediateClient, PickleableTinyDB, MemoryStorage, \
     flexible_open_string, add_bibtex_to_bib_database, bib_marker_map, \
     eq_callables_dict
 
-import pytest
-from espei.tests.fixtures import datasets_db, tmp_file
-from espei.tests.testing_data import CU_MG_TDB
+from .fixtures import datasets_db, tmp_file
+from .testing_data import CU_MG_TDB
 
 MULTILINE_HIPSTER_IPSUM = """Lorem ipsum dolor amet wayfarers kale chips chillwave
 adaptogen schlitz lo-fi jianbing ennui occupy pabst health goth chicharrones.

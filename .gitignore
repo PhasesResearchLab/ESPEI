@@ -1,2 +1,6 @@
 .ipynb_checkpoints/
 .smt/
+__pycache__
+build
+.cache
+dask-worker-space
