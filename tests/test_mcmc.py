@@ -5,8 +5,8 @@ from numpy.linalg import LinAlgError
 from pycalphad import Database
 
 from espei.mcmc import lnprob, generate_parameter_distribution
-from espei.tests.fixtures import datasets_db
-from espei.tests.testing_data import CU_MG_TDB, CU_MG_DATASET_ZPF_WORKING
+from .fixtures import datasets_db
+from .testing_data import CU_MG_TDB, CU_MG_DATASET_ZPF_WORKING
 
 dbf = Database.from_string(CU_MG_TDB, fmt='tdb')
 

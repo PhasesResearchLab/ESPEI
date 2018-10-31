@@ -203,16 +203,7 @@ def bib_marker_map(bib_keys, markers=None):
     Examples
     --------
     >>> bib_marker_map(['otis2016', 'bocklund2018'])
-    {
-    'bocklund2018': {
-                    'formatted': 'bocklund2018',
-                    'markers': {'fillstyle': 'full', 'marker': 'o'}
-                },
-    'otis2016': {
-                    'formatted': 'otis2016',
-                    'markers': {'fillstyle': 'full', 'marker': 'v'}
-                }
-    }
+    {'bocklund2018': {'formatted': 'bocklund2018', 'markers': {'fillstyle': 'none', 'marker': 'o'}}, 'otis2016': {'formatted': 'otis2016', 'markers': {'fillstyle': 'none', 'marker': 'v'}}}
     """
     # TODO: support custom formatting from looking up keys in a bib_db
     if not markers:
@@ -289,11 +280,8 @@ def eq_callables_dict(dbf, comps, phases, model=None, param_symbols=None, output
 
     Examples
     --------
-    >>> dbf = Database('AL-NI.tdb')
-    >>> comps = ['AL', 'NI', 'VA']
-    >>> phases = ['FCC_L12', 'BCC_B2', 'LIQUID', 'AL3NI5', 'AL3NI2', 'AL3NI']
-    >>> eq_callables = eq_callables_dict(dbf, comps, phases)
-    >>> equilibrium(dbf, comps, phases, conditions, **eq_callables)
+    >>> eq_callables = eq_callables_dict(dbf, comps, phases)  # doctest: +SKIP
+
     """
     comps = sorted(unpack_components(dbf, comps))
     pure_elements = get_pure_elements(dbf, comps)

@@ -4,8 +4,8 @@ from espei.datasets import DatasetError, check_dataset, clean_dataset
 from espei.error_functions import calculate_thermochemical_error, calculate_zpf_error
 from pycalphad import Database
 
-from espei.tests.testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, CU_MG_TDB
-from espei.tests.fixtures import datasets_db
+from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, CU_MG_TDB
+from .fixtures import datasets_db
 
 dataset_single_valid = {
     "components": ["AL", "NI", "VA"],
