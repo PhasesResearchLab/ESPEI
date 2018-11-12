@@ -4,6 +4,7 @@ Calculate error due to thermochemical quantities: heat capacity, entropy, enthal
 
 import itertools
 
+import sympy
 import numpy as np
 import tinydb
 
@@ -170,7 +171,7 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
         contributions must be removed.
     callables : dict
         Dictionary of {output_property: callables_dict} where callables_dict is
-        a dictionary of {'callables': {phase_name: callables}, 'massfuncs': {phase_name: callables}
+        a dictionary of {phase_name: callables}
         to pass to pycalphad. These must have ideal mixing portions removed.
 
     Returns
@@ -216,7 +217,7 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
 
     whitelist_properties = ['HM', 'SM', 'CPM', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
     # if callables is None, construct empty callables dicts, which will be JIT compiled by pycalphad later
-    callables = callables if callables is not None else {prop: {'callables': None, 'massfuncs': None} for prop in whitelist_properties}
+    callables = callables if callables is not None else {prop: None for prop in whitelist_properties}
 
     sum_square_error = 0
     for phase_name in phases:
@@ -235,8 +236,7 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
                 params = parameters
             sample_values = calculate_dict.pop('values')
             results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models,
-                                massfuncs=callables[calculate_dict['output']]['massfuncs'],
-                                callables=callables[calculate_dict['output']]['callables'],
+                                callables=callables[calculate_dict['output']],
                                 **calculate_dict)[calculate_dict['output']].values
             weight = (property_prefix_weight_factor[prop.split('_')[0]]*np.abs(np.mean(sample_values)))**(-1.0)
             error = np.sum((results-sample_values)**2) * weight

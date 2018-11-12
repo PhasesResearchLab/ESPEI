@@ -421,5 +421,5 @@ def test_datasets_convert_zpf_string_values_producing_correct_value(datasets_db)
     datasets_db.insert(clean_dataset(CU_MG_DATASET_ZPF_STRING_VALUES))
 
     dbf = Database(CU_MG_TDB)
-    errors = calculate_zpf_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {}, {}, {}, {}, {}, {},)
+    errors = calculate_zpf_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {})
     assert np.isclose(-np.sum(np.square(errors)), -5741.61962949)

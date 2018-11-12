@@ -121,6 +121,43 @@ PARAMETER L(LIQUID,CU,MG;3) 1 VV0014#; 10000 N !
 
 """
 
+CU_MG_TDB_FCC_ONLY = """$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+$ Cu-Mg, FCC only
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+ELEMENT CU BLANK 0 0 0 !
+ELEMENT MG BLANK 0 0 0 !
+ELEMENT VA BLANK 0 0 0 !
+
+FUNCTION GFCCCU 298.15 GHSERCU#; 3200.0 N !
+FUNCTION GFCCMG 298.15 -0.9*T + GHSERMG# + 2600; 3000.0 N !
+FUNCTION GHSERCU 298.15 1.29223E-7*T**3 - 0.00265684*T**2 - 24.112392*T*LN(T)
+   + 130.485235*T - 7770.458 + 52478*T**(-1); 1357.77 Y -31.38*T*LN(T) +
+   183.803828*T - 13542.026 + 3.64167E+29*T**(-9); 3200.0 N !
+FUNCTION GHSERMG 298.15 -1.393669E-6*T**3 + 0.0004858*T**2 -
+   26.1849782*T*LN(T) + 143.675547*T - 8367.34 + 78950*T**(-1); 923.0 Y
+   -34.3088*T*LN(T) + 204.716215*T - 14130.185 + 1.038192E+28*T**(-9); 3000.0
+   N !
+FUNCTION GHSERVA 1 0; 10000 N !
+FUNCTION VV0001 1 -4.12896; 10000 N !
+FUNCTION VV0002 1 8.2363; 10000 N !
+FUNCTION VV0003 1 -14.0865; 10000 N !
+
+TYPE_DEFINITION % SEQ * !
+DEFINE_SYSTEM_DEFAULT ELEMENT 2 !
+DEFAULT_COMMAND DEFINE_SYSTEM_ELEMENT VA !
+
+PHASE FCC_A1 %  2 1 1 !
+CONSTITUENT FCC_A1 :CU,MG:VA: !
+
+PARAMETER G(FCC_A1,CU:VA;0) 1 GFCCCU#; 10000 N !
+PARAMETER G(FCC_A1,MG:VA;0) 1 GFCCMG#; 10000 N !
+PARAMETER L(FCC_A1,CU,MG:VA;0) 1 VV0003#; 10000 N !
+PARAMETER L(FCC_A1,CU,MG:VA;1) 1 VV0002#; 10000 N !
+PARAMETER L(FCC_A1,CU,MG:VA;2) 1 VV0001#; 10000 N !
+
+"""
+
 
 CU_MG_EXP_ACTIVITY = yaml.load("""{
   "components": ["CU", "MG", "VA"],
@@ -223,6 +260,26 @@ CU_MG_CPM_MIX_X_HCP_A3 = yaml.load("""{
     "values":   [[[10, 15]]],
   "reference": "FAKE DATA",
   "comment": "FAKE DATA"
+}
+""")
+
+
+CU_MG_HM_MIX_SINGLE_FCC_A1 = yaml.load("""
+{
+    "components": ["CU", "MG"],
+    "phases": ["FCC_A1"],
+    "solver": {
+        "sublattice_site_ratios": [1],
+        "sublattice_occupancies": [[[0.5, 0.5], 1]],
+        "sublattice_configurations": [[["CU", "MG"], "VA"]],
+        "mode": "manual"
+    },
+    "conditions": {
+        "P": 101325,
+        "T": 300.0
+    },
+    "output": "HM_MIX",
+    "values": [[[-1000]]]
 }
 """)
 
