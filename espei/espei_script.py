@@ -18,9 +18,11 @@ import yaml
 import dask
 import distributed
 import sympy
+import pycalphad
 from pycalphad import Database
 
-from espei import generate_parameters, mcmc_fit, schema, __version__
+import espei
+from espei import generate_parameters, mcmc_fit, schema
 from espei.utils import ImmediateClient
 from espei.datasets import DatasetError, load_datasets, recursive_glob
 
@@ -39,7 +41,16 @@ parser.add_argument(
     help="Check input datasets at the path. Does not run ESPEI.")
 
 parser.add_argument("--version", "-v", action='version',
-                    version='%(prog)s version '+str(__version__))
+                    version='%(prog)s version '+str(espei.__version__))
+
+
+def log_version_info():
+    """Print version info to the log"""
+    logging.debug('espei version       ' + str(espei.__version__))
+    logging.debug('pycalphad version   ' + str(pycalphad.__version__))
+    logging.debug('dask version        ' + str(dask.__version__))
+    logging.debug('distributed version ' + str(distributed.__version__))
+    logging.debug('sympy version       ' + str(sympy.__version__))
 
 
 def _raise_dask_work_stealing():
@@ -113,6 +124,8 @@ def run_espei(run_settings):
                  1: logging.INFO,
                  2: logging.DEBUG}
     logging.basicConfig(level=verbosity[output_settings['verbosity']])
+
+    log_version_info()
 
     # load datasets and handle i/o
     logging.debug('Loading and checking datasets.')
