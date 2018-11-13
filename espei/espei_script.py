@@ -15,9 +15,12 @@ import json
 
 import numpy as np
 import yaml
+import dask
+import distributed
+import sympy
 from pycalphad import Database
 
-from espei import generate_parameters, mcmc_fit, schema
+from espei import generate_parameters, mcmc_fit, schema, __version__
 from espei.utils import ImmediateClient
 from espei.datasets import DatasetError, load_datasets, recursive_glob
 
@@ -34,6 +37,9 @@ parser.add_argument(
     metavar="PATH",
     default=None,
     help="Check input datasets at the path. Does not run ESPEI.")
+
+parser.add_argument("--version", "-v", action='version',
+                    version='%(prog)s version '+str(__version__))
 
 
 def _raise_dask_work_stealing():
