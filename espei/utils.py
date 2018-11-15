@@ -199,8 +199,10 @@ def bib_marker_map(bib_keys, markers=None):
 
     Examples
     --------
-    >>> bib_marker_map(['otis2016', 'bocklund2018'])
-    {'bocklund2018': {'formatted': 'bocklund2018', 'markers': {'fillstyle': 'none', 'marker': 'o'}}, 'otis2016': {'formatted': 'otis2016', 'markers': {'fillstyle': 'none', 'marker': 'v'}}}
+    >>> mm = bib_marker_map(['otis2016', 'bocklund2018'])
+    >>> mm == {'bocklund2018': {'formatted': 'bocklund2018', 'markers': {'fillstyle': 'none', 'marker': 'o'}}, 'otis2016': {'formatted': 'otis2016', 'markers': {'fillstyle': 'none', 'marker': 'v'}}}
+    True
+    
     """
     # TODO: support custom formatting from looking up keys in a bib_db
     if not markers:
