@@ -54,7 +54,7 @@ def chempot_error(sample_chempots, target_chempots):
     return -np.sum(np.square(target_chempots - sample_chempots))
 
 
-def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, grad_callables=None, hess_callables=None, massfuncs=None, massgradfuncs=None):
+def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None):
     """
     Return the sum of square error from activity data
 
@@ -74,14 +74,6 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
         Phase models to pass to pycalphad calculations
     callables : dict
         Callables to pass to pycalphad
-    grad_callables : dict
-        Gradient callables to pass to pycalphad
-    hess_callables : dict
-        Hessian callables to pass to pycalphad
-    massfuncs : dict
-        Callables of mass derivatives to pass to pycalphad
-    massgradfuncs : dict
-        Gradient callables of mass derivatives to pass to pycalphad
 
     Returns
     -------
@@ -118,12 +110,7 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
         ref_conditions = {_map_coord_to_variable(coord): val for coord, val in ref['conditions'].items()}
         ref_result = equilibrium(dbf, ds['components'], ref['phases'], ref_conditions,
                                  model=phase_models, parameters=parameters,
-                                 massfuncs=massfuncs,
-                                 massgradfuncs=massgradfuncs,
-                                 callables=callables,
-                                 grad_callables=grad_callables,
-                                 hess_callables=hess_callables,
-                                 )
+                                 callables=callables)
 
         # calculate current chemical potentials
         # get the conditions
@@ -147,12 +134,7 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
         for conds in conditions_list:
             sample_eq_res = equilibrium(dbf, ds['components'], phases, conds,
                                         model=phase_models, parameters=parameters,
-                                        massfuncs=massfuncs,
-                                        massgradfuncs=massgradfuncs,
-                                        callables=callables,
-                                        grad_callables=grad_callables,
-                                        hess_callables=hess_callables,
-                                        )
+                                        callables=callables)
             current_chempots.append(sample_eq_res.MU.sel(component=acr_component).values.flatten()[0])
         current_chempots = np.array(current_chempots)
 

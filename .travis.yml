@@ -21,7 +21,7 @@ install:
   - conda info -a
   - conda create -q -n espei-env python=$TRAVIS_PYTHON_VERSION
   - source activate espei-env
-  - conda install -c conda-forge 'pycalphad>=0.5' 'sympy<=1.1' 'dask<0.20'
+  - conda install -c conda-forge 'pycalphad>=0.7.1'
 before_script:
   - source activate espei-env
   - pip install -e '.[dev]'

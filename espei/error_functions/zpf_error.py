@@ -24,10 +24,7 @@ import tinydb
 from pycalphad import calculate, equilibrium, variables as v
 
 def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters,
-                        massfuncs=None, massgradfuncs=None,
-                        callables=None, grad_callables=None,
-                        hess_callables=None,
-                        ):
+                        callables=None):
     """
     Calculate the chemical potentials for a hyperplane, one vertex at a time
 
@@ -49,16 +46,8 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
         Phase models to pass to pycalphad calculations
     parameters : dict
         Dictionary of symbols that will be overridden in pycalphad.equilibrium
-    massfuncs : dict
-        Callables of mass derivatives to pass to pycalphad
-    massgradfuncs : dict
-        Gradient callables of mass derivatives to pass to pycalphad
     callables : dict
         Callables to pass to pycalphad
-    grad_callables : dict
-        Gradient callables to pass to pycalphad
-    hess_callables : dict
-        Hessian callables to pass to pycalphad
 
     Returns
     -------
@@ -90,13 +79,8 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
             multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, verbose=False,
-                                       model=phase_models, scheduler=dask.local.get_sync, parameters=parameters,
-                                       massfuncs=massfuncs,
-                                       massgradfuncs=massgradfuncs,
-                                       callables=callables,
-                                       grad_callables=grad_callables,
-                                       hess_callables=hess_callables,
-                                       )
+                                       model=phase_models, scheduler='sync', parameters=parameters,
+                                       callables=callables)
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
             num_phases = len(np.squeeze(multi_eqdata['Phase'].values != ''))
@@ -111,9 +95,7 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
 
 def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
                   phase_models, parameters, debug_mode=False,
-                  massfuncs=None, massgradfuncs=None,
-                  callables=None, grad_callables=None, hess_callables=None,
-                  ):
+                  callables=None):
     """
 
     Parameters
@@ -134,16 +116,8 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
         Phase models to pass to pycalphad calculations
     parameters : dict
         Dictionary of symbols that will be overridden in pycalphad.equilibrium
-    massfuncs : dict
-        Callables of mass derivatives to pass to pycalphad
-    massgradfuncs : dict
-        Gradient callables of mass derivatives to pass to pycalphad
     callables : dict
         Callables to pass to pycalphad
-    grad_callables : dict
-        Gradient callables to pass to pycalphad
-    hess_callables : dict
-        Hessian callables to pass to pycalphad
     cond_dict :
     region_chemical_potentials : numpy.ndarray
         Array of chemical potentials for target equilibrium hyperplane.
@@ -156,16 +130,6 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
     debug_mode : bool
         If True, will write out scripts when pycalphad fails to find a stable
         equilibrium. These scripts can be used to debug pycalphad.
-    massfuncs : dict
-        Callables of mass derivatives to pass to pycalphad
-    massgradfuncs : dict
-        Gradient callables of mass derivatives to pass to pycalphad
-    callables : dict
-        Callables to pass to pycalphad
-    grad_callables : dict
-        Gradient callables to pass to pycalphad
-    hess_callables : dict
-        Hessian callables to pass to pycalphad
 
     Returns
     -------
@@ -178,8 +142,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
         single_eqdata = calculate(dbf, comps, [current_phase],
                                   T=cond_dict[v.T], P=cond_dict[v.P],
                                   model=phase_models, parameters=parameters, pdens=100,
-                                  massfuncs=massfuncs, callables=callables,
-                                  )
+                                  callables=callables)
         driving_force = np.multiply(region_chemical_potentials,
                                     single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
         error = float(driving_force.max())
@@ -204,21 +167,15 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
             dof_idx += len(dof)
         single_eqdata = calculate(dbf, comps, [current_phase],
                                   T=cond_dict[v.T], P=cond_dict[v.P], points=desired_sitefracs,
-                                  model=phase_models, parameters=parameters, massfuncs=massfuncs,
-                                  callables=callables,)
+                                  model=phase_models, parameters=parameters, callables=callables,)
         driving_force = np.multiply(region_chemical_potentials, single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
         error = float(np.squeeze(driving_force))
     else:
         # Extract energies from single-phase calculations
         single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, verbose=False,
                                     model=phase_models,
-                                    scheduler=dask.local.get_sync, parameters=parameters,
-                                    massfuncs=massfuncs,
-                                    massgradfuncs=massgradfuncs,
-                                    callables=callables,
-                                    grad_callables=grad_callables,
-                                    hess_callables=hess_callables,
-                                    )
+                                    scheduler='sync', parameters=parameters,
+                                    callables=callables)
         if np.all(np.isnan(single_eqdata['NP'].values)):
             error_time = time.time()
             template_error = """
@@ -233,7 +190,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
             phases = {2}
             cond_dict = {3}
             parameters = {4}
-            equilibrium(dbf, comps, phases, cond_dict, scheduler=dask.local.get_sync, parameters=parameters)
+            equilibrium(dbf, comps, phases, cond_dict, scheduler='sync', parameters=parameters)
             """
             template_error = textwrap.dedent(template_error)
             if debug_mode:
@@ -254,10 +211,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
     return error
 
 
-def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=None, scheduler=None,
-                    massfuncs=None, massgradfuncs=None,
-                    callables=None, grad_callables=None, hess_callables=None,
-                    ):
+def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=None, callables=None):
     """
     Calculate error due to phase equilibria data
 
@@ -275,18 +229,8 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
         Phase models to pass to pycalphad calculations
     parameters : dict
         Dictionary of symbols that will be overridden in pycalphad.equilibrium
-    scheduler : class
-        Scheduler implementing a get_sync method
-    massfuncs : dict
-        Callables of mass derivatives to pass to pycalphad
-    massgradfuncs : dict
-        Gradient callables of mass derivatives to pass to pycalphad
     callables : dict
         Callables to pass to pycalphad
-    grad_callables : dict
-        Gradient callables to pass to pycalphad
-    hess_callables : dict
-        Hessian callables to pass to pycalphad
 
     Returns
     -------
@@ -335,8 +279,7 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
             for current_statevars, comp_dicts in region_eq:
                 # a "region" is a set of phase equilibria
                 region_chemical_potentials = estimate_hyperplane(dbf, data_comps, phases, current_statevars, comp_dicts,
-                                                      phase_models, parameters, massfuncs=massfuncs, massgradfuncs=massgradfuncs,
-                                                      callables=callables, grad_callables=grad_callables, hess_callables=hess_callables,)
+                                                      phase_models, parameters, callables=callables)
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
                 for current_phase, cond_dict in zip(region, comp_dicts):
                     # TODO: Messy unpacking
@@ -347,7 +290,6 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                             cond_dict[key] = np.nan
                     cond_dict.update(current_statevars)
                     errors.append(tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
-                                                        phase_models, parameters, massfuncs=massfuncs, massgradfuncs=massgradfuncs,
-                                                        callables=callables, grad_callables=grad_callables, hess_callables=hess_callables,))
+                                                        phase_models, parameters, callables=callables))
     return errors
 

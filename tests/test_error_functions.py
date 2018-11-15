@@ -20,7 +20,7 @@ def test_activity_error(datasets_db):
     datasets_db.insert(CU_MG_EXP_ACTIVITY)
 
     dbf = Database(CU_MG_TDB)
-    error = calculate_activity_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {}, {}, {}, {}, {})
+    error = calculate_activity_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {})
     assert np.isclose(float(error), -93037371.27, atol=0.01)
 
 
@@ -149,5 +149,5 @@ def test_zpf_error_zero(datasets_db):
 
     dbf = Database(CU_MG_TDB)
 
-    errors = calculate_zpf_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {}, {}, {}, {}, {}, {},)
+    errors = calculate_zpf_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {})
     assert np.isclose(np.sum(np.square(errors)), 0)

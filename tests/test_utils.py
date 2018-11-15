@@ -4,10 +4,8 @@ Test espei.utils classes and functions.
 import pickle
 
 from tinydb import where
-from pycalphad import Database
 from espei.utils import ImmediateClient, PickleableTinyDB, MemoryStorage, \
-    flexible_open_string, add_bibtex_to_bib_database, bib_marker_map, \
-    eq_callables_dict
+    flexible_open_string, add_bibtex_to_bib_database, bib_marker_map
 
 from .fixtures import datasets_db, tmp_file
 from .testing_data import CU_MG_TDB
@@ -26,7 +24,9 @@ def test_immediate_client_returns_map_results_directly():
     from distributed import LocalCluster
     cli = ImmediateClient(LocalCluster(n_workers=1))
     num_list = range(0, 11)
-    square = lambda x: x**2
+#    square = lambda x: x**2
+    def square(x):
+      return x**2
     map_result = cli.map(square, num_list)
     assert map_result == [square(x) for x in num_list]
 
@@ -101,10 +101,3 @@ def test_bib_marker_map():
     }
     assert EXEMPLAR_DICT == marker_dict
 
-
-def test_sympy_build_functions_can_be_cloudpickled():
-    """Wrapped, compiled code from build_functions should be pickleable by cloudpickle"""
-    dbf = Database(CU_MG_TDB)
-    callables = eq_callables_dict(dbf, ['CU', 'MG', 'VA'], ['LAVES_C15'], param_symbols=list(dbf.symbols.keys()))
-    import cloudpickle
-    cloudpickle.dumps(callables)
