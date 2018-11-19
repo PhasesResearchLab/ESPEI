@@ -12,11 +12,12 @@ import sympy
 import numpy as np
 from numpy.linalg import LinAlgError
 import emcee
+from scipy.stats import uniform, norm
 
 from pycalphad import Model
 from pycalphad.codegen.callables import build_callables
 
-from espei.utils import database_symbols_to_fit, optimal_parameters
+from espei.utils import database_symbols_to_fit, optimal_parameters, rv_zero
 from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error
 
 
@@ -42,22 +43,63 @@ def lnlikelihood(params, comps=None, dbf=None, phases=None, datasets=None,
     return np.array(total_error, dtype=np.float64)
 
 
-def lnprob(params, lnprior=0.0, comps=None, dbf=None, phases=None, datasets=None,
+def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=None,
            symbols_to_fit=None, phase_models=None, scheduler=None,
            callables=None, thermochemical_callables=None
            ):
     """
-    Returns the log probability of a set of parameters,
+    Returns the log probability of a set of parameters
 
     $$ \ln p(y|\theta) \propto \ln p(\theta) + \ln p(\theta|y) $$
-    """
 
+    Parameters
+    ----------
+    params : array_like
+        Array of parameters to fit.
+    prior_rvs : list of scipy.stats.rv_continuous-like
+        List of priors for each parameter in that obey the rv_contnuous type
+        interface. Specifically, each element in the list must have a ``logpdf``
+        method. Must correspond (same shape and order) to ``params``.
+    dbf : pycalphad.Database
+        Database to consider
+    comps : list
+        List of active component names
+    phases : list
+        List of phases to consider
+    datasets : espei.utils.PickleableTinyDB
+        Datasets that contain single phase data
+    phase_models : dict
+        Phase models to pass to pycalphad calculations
+    callables : dict
+        Callables to pass to pycalphad
+    symbols_to_fit : list
+        List of names of parameter symbols to replace. Must correspond (same
+        shape and order) to ``params``.
+    phase_models : dict
+        Dictionary of {phase name: Model instance}
+    scheduler : None
+        Deprecated.
+    callables : dict
+        Dictionary of {phase name: {phase callables dict}}
+    thermochemical_callables :
+        Dictionary of {output property: {phase name: {phase callables dict}}}.
+        These callables must have ideal mixing portions removed.
+
+    Returns
+    -------
+    float
+
+    """
     lnlike = lnlikelihood(params, comps=comps, dbf=dbf, phases=phases, datasets=datasets,
            symbols_to_fit=symbols_to_fit, phase_models=phase_models,
            callables=callables, thermochemical_callables=thermochemical_callables)
 
+    # multivariate prior is the sum of log univariate priors
+    lnprior_multivariate = [rv.logpdf(theta) for rv, theta in zip(prior_rvs, params)]
+    logging.debug('Multivariate lnprior: {}'.format(lnprior_multivariate))
+    lnprior = np.sum(lnprior_multivariate)
     lnprobability = lnprior + lnlike
-    logging.debug('lnprob: {}'.format(lnprobability))
+    logging.debug('lnprior: {}, lnlike: {}, lnprob: {}'.format(lnprior, lnlike, lnprobability))
     return lnprobability
 
 
@@ -91,7 +133,7 @@ def generate_parameter_distribution(parameters, num_samples, std_deviation, dete
 
 def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_parameter=2,
              chain_std_deviation=0.1, scheduler=None, tracefile=None, probfile=None,
-             restart_trace=None, deterministic=True, ):
+             restart_trace=None, deterministic=True, prior='zero'):
     """
     Run Markov Chain Monte Carlo on the Database given datasets
 
@@ -126,6 +168,10 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
         draws. This will ensure that the runs with the exact same database,
         chains_per_parameter, and chain_std_deviation (or restart_trace) will
         produce exactly the same results.
+    prior : str
+        Prior to use to generate priors. Defaults to 'zero', which keeps
+        backwards compatibility. Can currently choose 'normal', 'uniform',
+        or 'zero'.
 
     Returns
     -------
@@ -150,6 +196,24 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
     # get initial parameters and remove these from the database
     # we'll replace them with SymPy symbols initialized to 0 in the phase models
     initial_parameters = np.array([np.array(float(dbf.symbols[x])) for x in symbols_to_fit])
+
+    # initialize the priors
+    rv_priors = []
+    for p in initial_parameters:
+        if prior == 'normal':
+            rv_instance = norm(loc=p, scale=chain_std_deviation*p)
+        elif prior == 'uniform':
+            # TODO: control scale hyperparameter manually here, later we can update
+            distance_frac = 1.0
+            # hyperparameter is the distance to low, e.g.
+            # hyperparameter=3.0 :  low:=p-(3.0*p), high:=p+(3.0*p)
+            diff = abs(distance_frac*p)
+            rv_instance = uniform(loc=p-diff, scale=2*diff)
+        elif prior == 'zero':
+            rv_instance = rv_zero()
+        else:
+            raise ValueError('Invalid prior ({}) specified. Specify one of "normal", "uniform", "zero"'.format(prior))
+        rv_priors.append(rv_instance)
 
     # construct the models for each phase, substituting in the SymPy symbol to fit.
     logging.debug('Building phase models (this may take some time)')
@@ -185,7 +249,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
                      'phases': phases, 'phase_models': eq_callables['phase_models'],
                      'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
                      'thermochemical_callables': thermochemical_callables,
-                     'callables': eq_callables,
+                     'callables': eq_callables, 'prior_rvs': rv_priors,
                      }
 
     def save_sampler_state(sampler):
