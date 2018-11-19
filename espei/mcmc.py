@@ -61,7 +61,6 @@ def lnprior(params, priors):
     """
     # multivariate prior is the sum of log univariate priors
     lnprior_multivariate = [rv.logpdf(theta) for rv, theta in zip(priors, params)]
-    logging.debug('Multivariate lnprior: {}'.format(lnprior_multivariate))
     return np.sum(lnprior_multivariate)
 
 
@@ -246,7 +245,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
         elif prior == 'zero':
             rv_instance = rv_zero()
         else:
-            raise ValueError('Invalid prior ({}) specified. Specify one of "normal", "uniform", "zero"'.format(prior))
+            raise ValueError('Invalid prior ({}) specified. Specify one of "normal", "uniform", "triangular", "zero"'.format(prior))
         rv_priors.append(rv_instance)
 
     # construct the models for each phase, substituting in the SymPy symbol to fit.
