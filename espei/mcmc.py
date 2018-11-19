@@ -12,7 +12,7 @@ import sympy
 import numpy as np
 from numpy.linalg import LinAlgError
 import emcee
-from scipy.stats import uniform, norm
+from scipy.stats import uniform, norm, triang
 
 from pycalphad import Model
 from pycalphad.codegen.callables import build_callables
@@ -235,6 +235,13 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
             # hyperparameter=3.0 :  low:=p-(3.0*p), high:=p+(3.0*p)
             diff = abs(distance_frac*p)
             rv_instance = uniform(loc=p-diff, scale=2*diff)
+        elif prior == 'triangular':
+            distance_frac = 1.0
+            # hyperparameter is the distance to low, e.g.
+            # hyperparameter=3.0 :  low:=p-(3.0*p), high:=p+(3.0*p)
+            diff = abs(distance_frac*p)
+            # the maximum (controlled by c) is always in the center here
+            rv_instance = triang(loc=p-diff, scale=2*diff)
         elif prior == 'zero':
             rv_instance = rv_zero()
         else:
