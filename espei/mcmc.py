@@ -217,10 +217,11 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
     initial_parameters = np.array([np.array(float(dbf.symbols[x])) for x in symbols_to_fit])
 
     # initialize the priors
+    logging.info('Initializing a {} prior for the parameters.'.format(prior))
     rv_priors = []
     for p in initial_parameters:
         if prior == 'normal':
-            rv_instance = norm(loc=p, scale=chain_std_deviation*p)
+            rv_instance = norm(loc=p, scale=np.abs(chain_std_deviation*p))
         elif prior == 'uniform':
             # TODO: control scale hyperparameter manually here, later we can update
             distance_frac = 1.0
