@@ -239,7 +239,7 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
             results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models,
                                 callables=callables[calculate_dict['output']],
                                 **calculate_dict)[calculate_dict['output']].values
-            weight = (property_prefix_weight_factor[prop.split('_')[0]]*np.abs(np.mean(sample_values)))**(-1.0)
-            prob_error += norm(loc=0, scale=weight).logpdf(results-sample_values)
+            std_dev = (property_prefix_weight_factor[prop.split('_')[0]]*np.abs(np.mean(sample_values)))
+            prob_error += norm(loc=0, scale=std_dev).logpdf(results-sample_values)
             # logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
     return prob_error
