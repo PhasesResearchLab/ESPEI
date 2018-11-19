@@ -195,7 +195,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
     prior : str
         Prior to use to generate priors. Defaults to 'zero', which keeps
         backwards compatibility. Can currently choose 'normal', 'uniform',
-        or 'zero'.
+        'triangular', or 'zero'.
 
     Returns
     -------
@@ -222,6 +222,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
     initial_parameters = np.array([np.array(float(dbf.symbols[x])) for x in symbols_to_fit])
 
     # initialize the priors
+    # TODO: pass these settings as a dict
     logging.info('Initializing a {} prior for the parameters.'.format(prior))
     rv_priors = []
     for p in initial_parameters:
@@ -241,7 +242,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
             # hyperparameter=3.0 :  low:=p-(3.0*p), high:=p+(3.0*p)
             diff = abs(distance_frac*p)
             # the maximum (controlled by c) is always in the center here
-            rv_instance = triang(loc=p-diff, scale=2*diff)
+            rv_instance = triang(loc=p-diff, scale=2*diff, c=0.5)
         elif prior == 'zero':
             rv_instance = rv_zero()
         else:
