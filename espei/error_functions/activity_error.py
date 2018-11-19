@@ -7,6 +7,7 @@ import tinydb
 
 from pycalphad import equilibrium, variables as v
 from pycalphad.plot.eqplot import _map_coord_to_variable
+from scipy.stats import norm
 
 from espei.core_utils import ravel_conditions
 
@@ -37,7 +38,7 @@ def target_chempots_from_activity(component, target_activity, temperatures, refe
     return v.R * temperatures * np.log(target_activity) + ref_chempot
 
 
-def chempot_error(sample_chempots, target_chempots):
+def chempot_error(sample_chempots, target_chempots, std_dev=10.0):
     """
     Return the sum of square error from chemical potentials
 
@@ -45,16 +46,20 @@ def chempot_error(sample_chempots, target_chempots):
         Calculated chemical potentials
     target_activity : numpy.ndarray
         Chemical potentials to target
+    std_dev : float
+        Standard deviation of activity measurements in J/mol. Corresponds to the
+        standard deviation of differences in chemical potential in typical
+        measurements of activity.
 
     Returns
     -------
     float
         Error due to chemical potentials
     """
-    return -np.sum(np.square(target_chempots - sample_chempots))
+    return norm(loc=0, scale=std_dev).logpdf(target_chempots - sample_chempots)
 
 
-def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None):
+def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, std_dev=10.0):
     """
     Return the sum of square error from activity data
 
@@ -74,6 +79,10 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
         Phase models to pass to pycalphad calculations
     callables : dict
         Callables to pass to pycalphad
+    std_dev : float
+        Standard deviation of activity measurements in J/mol. Corresponds to the
+        standard deviation of differences in chemical potential in typical
+        measurements of activity.
 
     Returns
     -------
@@ -141,7 +150,7 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
         # calculate target chempots
         target_chempots = target_chempots_from_activity(acr_component, np.array(ds['values']).flatten(), conditions[v.T], ref_result)
         # calculate the error
-        error += chempot_error(current_chempots, target_chempots)
+        error += chempot_error(current_chempots, target_chempots, std_dev=std_dev)
     # TODO: write a test for this
     if np.any(np.isnan(np.array([error], dtype=np.float64))):  # must coerce sympy.core.numbers.Float to float64
         return -np.inf

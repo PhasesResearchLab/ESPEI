@@ -32,9 +32,7 @@ def lnlikelihood(params, comps=None, dbf=None, phases=None, datasets=None,
         multi_phase_error = calculate_zpf_error(dbf, comps, phases, datasets, phase_models,
                                      parameters=parameters, callables=callables)
     except (ValueError, LinAlgError) as e:
-        multi_phase_error = [np.inf]
-    multi_phase_error = [np.inf if np.isnan(x) else x ** 2 for x in multi_phase_error]
-    multi_phase_error = -np.sum(multi_phase_error)
+        multi_phase_error = -np.inf
     single_phase_error = calculate_thermochemical_error(dbf, comps, phases, datasets, parameters, phase_models=phase_models, callables=thermochemical_callables)
     actvity_error = calculate_activity_error(dbf, comps, phases, datasets, parameters=parameters, phase_models=phase_models, callables=callables)
     total_error = multi_phase_error + single_phase_error + actvity_error
@@ -119,7 +117,7 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
            callables=callables, thermochemical_callables=thermochemical_callables)
 
     lnpri = lnprior(params, prior_rvs)
-    lnprobability = lnprior + lnlike
+    lnprobability = lnpri + lnlike
     logging.debug('lnprior: {}, lnlike: {}, lnprob: {}'.format(lnpri, lnlike, lnprobability))
     return lnprobability
 

@@ -18,7 +18,7 @@ import textwrap, time, operator, logging
 from collections import defaultdict, OrderedDict
 
 import numpy as np
-import dask
+from scipy.stats import norm
 import tinydb
 
 from pycalphad import calculate, equilibrium, variables as v
@@ -96,7 +96,7 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
 def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
                   phase_models, parameters, debug_mode=False,
                   callables=None):
-    """
+    """Calculate the integrated driving force between the current hyperlane and target hyperplane.
 
     Parameters
     ----------
@@ -211,7 +211,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
     return error
 
 
-def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=None, callables=None):
+def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=None, callables=None, std_dev=1000):
     """
     Calculate error due to phase equilibria data
 
@@ -231,11 +231,19 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
         Dictionary of symbols that will be overridden in pycalphad.equilibrium
     callables : dict
         Callables to pass to pycalphad
+    std_dev : float
+        Standard deviation of the measurement of a tieline, units J/mol.
 
     Returns
     -------
     list
         List of errors from phase equilibria data
+
+    Notes
+    -----
+    The physical picture of std_dev is that we've measured a ZPF line. That line
+    corresponds to some equilibrium chemical potentials. The std_deviation is
+    the standard deviation of those 'measured' chemical potentials.
 
     """
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
@@ -248,7 +256,7 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
         except IndexError:
             return None
 
-    errors = []
+    errors = []  # difference between target and current hyperplane (in J/mol)
     for data in desired_data:
         payload = data['values']
         conditions = data['conditions']
@@ -291,5 +299,6 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                     cond_dict.update(current_statevars)
                     errors.append(tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
                                                         phase_models, parameters, callables=callables))
-    return errors
+    prob_error = np.sum(norm(loc=0, scale=std_dev).logpdf(errors))
+    return prob_error
 

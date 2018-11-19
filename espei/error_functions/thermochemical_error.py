@@ -5,6 +5,7 @@ Calculate error due to thermochemical quantities: heat capacity, entropy, enthal
 import itertools
 
 import sympy
+from scipy.stats import norm
 import numpy as np
 import tinydb
 
@@ -219,7 +220,7 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
     # if callables is None, construct empty callables dicts, which will be JIT compiled by pycalphad later
     callables = callables if callables is not None else {prop: None for prop in whitelist_properties}
 
-    sum_square_error = 0
+    prob_error = 0.0
     for phase_name in phases:
         for prop in properties:
             desired_data = get_prop_data(comps, phase_name, prop, datasets)
@@ -239,7 +240,6 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
                                 callables=callables[calculate_dict['output']],
                                 **calculate_dict)[calculate_dict['output']].values
             weight = (property_prefix_weight_factor[prop.split('_')[0]]*np.abs(np.mean(sample_values)))**(-1.0)
-            error = np.sum((results-sample_values)**2) * weight
+            prob_error += norm(loc=0, scale=weight).logpdf(results-sample_values)
             # logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
-            sum_square_error += error
-    return -sum_square_error
+    return prob_error
