@@ -43,6 +43,30 @@ def lnlikelihood(params, comps=None, dbf=None, phases=None, datasets=None,
     return np.array(total_error, dtype=np.float64)
 
 
+def lnprior(params, priors):
+    """
+    Calculate the log prior given the parameters and prior distributions
+
+    Parameters
+    ----------
+    params : array_like
+        Array of parameters to fit.
+    priors : list of scipy.stats.rv_continuous-like
+        List of priors for each parameter in that obey the rv_contnuous type
+        interface. Specifically, each element in the list must have a ``logpdf``
+        method. Must correspond (same shape and order) to ``params``.
+
+    Returns
+    -------
+    float
+
+    """
+    # multivariate prior is the sum of log univariate priors
+    lnprior_multivariate = [rv.logpdf(theta) for rv, theta in zip(priors, params)]
+    logging.debug('Multivariate lnprior: {}'.format(lnprior_multivariate))
+    return np.sum(lnprior_multivariate)
+
+
 def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=None,
            symbols_to_fit=None, phase_models=None, scheduler=None,
            callables=None, thermochemical_callables=None
@@ -94,12 +118,9 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
            symbols_to_fit=symbols_to_fit, phase_models=phase_models,
            callables=callables, thermochemical_callables=thermochemical_callables)
 
-    # multivariate prior is the sum of log univariate priors
-    lnprior_multivariate = [rv.logpdf(theta) for rv, theta in zip(prior_rvs, params)]
-    logging.debug('Multivariate lnprior: {}'.format(lnprior_multivariate))
-    lnprior = np.sum(lnprior_multivariate)
+    lnpri = lnprior(params, prior_rvs)
     lnprobability = lnprior + lnlike
-    logging.debug('lnprior: {}, lnlike: {}, lnprob: {}'.format(lnprior, lnlike, lnprobability))
+    logging.debug('lnprior: {}, lnlike: {}, lnprob: {}'.format(lnpri, lnlike, lnprobability))
     return lnprobability
 
 
