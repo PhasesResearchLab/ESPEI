@@ -112,11 +112,16 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
     float
 
     """
+    lnpri = lnprior(params, prior_rvs)
+    if np.isneginf(lnpri):
+        # It doesn't matter what the likelihood is. We can skip calculating it to save time.
+        logging.debug('lnprior: {}, lnlike: {}, lnprob: {}'.format(lnpri, np.nan, lnpri))
+        return lnpri
+
     lnlike = lnlikelihood(params, comps=comps, dbf=dbf, phases=phases, datasets=datasets,
            symbols_to_fit=symbols_to_fit, phase_models=phase_models,
            callables=callables, thermochemical_callables=thermochemical_callables)
 
-    lnpri = lnprior(params, prior_rvs)
     lnprobability = lnpri + lnlike
     logging.debug('lnprior: {}, lnlike: {}, lnprob: {}'.format(lnpri, lnlike, lnprobability))
     return lnprobability
