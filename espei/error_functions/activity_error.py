@@ -56,7 +56,8 @@ def chempot_error(sample_chempots, target_chempots, std_dev=10.0):
     float
         Error due to chemical potentials
     """
-    return norm(loc=0, scale=std_dev).logpdf(target_chempots - sample_chempots)
+    # coerce the chemical potentials to float64s, fixes an issue where SymPy NaNs don't work
+    return norm(loc=0, scale=std_dev).logpdf(np.array(target_chempots - sample_chempots, dtype=np.float64))
 
 
 def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, std_dev=10.0):
@@ -150,7 +151,7 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
         # calculate target chempots
         target_chempots = target_chempots_from_activity(acr_component, np.array(ds['values']).flatten(), conditions[v.T], ref_result)
         # calculate the error
-        error += chempot_error(current_chempots, target_chempots, std_dev=std_dev)
+        error += np.sum(chempot_error(current_chempots, target_chempots, std_dev=std_dev))
     # TODO: write a test for this
     if np.any(np.isnan(np.array([error], dtype=np.float64))):  # must coerce sympy.core.numbers.Float to float64
         return -np.inf
