@@ -112,19 +112,19 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
     float
 
     """
-    lnpri = lnprior(params, prior_rvs)
-    if np.isneginf(lnpri):
+    logprior = lnprior(params, prior_rvs)
+    if np.isneginf(logprior):
         # It doesn't matter what the likelihood is. We can skip calculating it to save time.
-        logging.debug('lnprior: {}, lnlike: {}, lnprob: {}'.format(lnpri, np.nan, lnpri))
-        return lnpri
+        logging.debug('lnprior: {}, lnlike: {}, lnprob: {}'.format(logprior, np.nan, logprior))
+        return logprior
 
-    lnlike = lnlikelihood(params, comps=comps, dbf=dbf, phases=phases, datasets=datasets,
+    loglike = lnlikelihood(params, comps=comps, dbf=dbf, phases=phases, datasets=datasets,
            symbols_to_fit=symbols_to_fit, phase_models=phase_models,
            callables=callables, thermochemical_callables=thermochemical_callables)
 
-    lnprobability = lnpri + lnlike
-    logging.debug('lnprior: {}, lnlike: {}, lnprob: {}'.format(lnpri, lnlike, lnprobability))
-    return lnprobability
+    logprob = logprior + loglike
+    logging.debug('lnprior: {}, lnlike: {}, lnprob: {}'.format(logprior, loglike, logprob))
+    return logprob
 
 
 def generate_parameter_distribution(parameters, num_samples, std_deviation, deterministic=True):
