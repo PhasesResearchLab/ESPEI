@@ -20,13 +20,11 @@ from espei.utils import database_symbols_to_fit, optimal_parameters
 from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error
 
 
-def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
-           symbols_to_fit=None, phase_models=None, scheduler=None,
+def lnlikelihood(params, comps=None, dbf=None, phases=None, datasets=None,
+           symbols_to_fit=None, phase_models=None,
            callables=None, thermochemical_callables=None,
            ):
-    """
-    Returns the error from multiphase fitting as a log probability.
-    """
+    """Calculate the likelihood, $$ \ln p(\theta|y) $$ """
     starttime = time.time()
     parameters = {param_name: param for param_name, param in zip(symbols_to_fit, params)}
     try:
@@ -40,8 +38,27 @@ def lnprob(params, comps=None, dbf=None, phases=None, datasets=None,
     actvity_error = calculate_activity_error(dbf, comps, phases, datasets, parameters=parameters, phase_models=phase_models, callables=callables)
     total_error = multi_phase_error + single_phase_error + actvity_error
     logging.debug('Single phase error: {:0.2f}. Multi phase error: {:0.2f}. Activity Error: {:0.2f}. Total error: {:0.2f}'.format(single_phase_error, multi_phase_error, actvity_error, total_error))
-    logging.debug('lnprob time: {}'.format(time.time() - starttime))
+    logging.debug('lnlike time: {}'.format(time.time() - starttime))
     return np.array(total_error, dtype=np.float64)
+
+
+def lnprob(params, lnprior=0.0, comps=None, dbf=None, phases=None, datasets=None,
+           symbols_to_fit=None, phase_models=None, scheduler=None,
+           callables=None, thermochemical_callables=None
+           ):
+    """
+    Returns the log probability of a set of parameters,
+
+    $$ \ln p(y|\theta) \propto \ln p(\theta) + \ln p(\theta|y) $$
+    """
+
+    lnlike = lnlikelihood(params, comps=comps, dbf=dbf, phases=phases, datasets=datasets,
+           symbols_to_fit=symbols_to_fit, phase_models=phase_models,
+           callables=callables, thermochemical_callables=thermochemical_callables)
+
+    lnprobability = lnprior + lnlike
+    logging.debug('lnprob: {}'.format(lnprobability))
+    return lnprobability
 
 
 def generate_parameter_distribution(parameters, num_samples, std_deviation, deterministic=True):
