@@ -226,7 +226,8 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
     rv_priors = []
     for p in initial_parameters:
         if prior == 'normal':
-            rv_instance = norm(loc=p, scale=np.abs(chain_std_deviation*p))
+            # TODO: control scale hyperparameter better. Here we take the chain_std_deviation*5 as the prior std_deviation
+            rv_instance = norm(loc=p, scale=np.abs(chain_std_deviation*p*5))
         elif prior == 'uniform':
             # TODO: control scale hyperparameter manually here, later we can update
             distance_frac = 1.0
