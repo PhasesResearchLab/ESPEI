@@ -204,17 +204,16 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
             phase_models[phase_name].models['idmix'] = 0
 
 
-    # property weights factors as fractions of the parameters
-    # for now they are all set to 5%
-    property_prefix_weight_factor = {
-        'HM': 0.05,
-        'SM': 0.05,
-        'CPM': 0.05,
+    # estimated from NIST TRC uncertainties
+    property_std_deviation = {
+        'HM': 200.0,  # J/mol
+        'SM':   0.2,  # J/K-mol
+        'CPM':  0.2,  # J/K-mol
     }
     property_suffixes = ('_FORM', '_MIX')
     # the kinds of properties, e.g. 'HM'+suffix =>, 'HM_FORM', 'HM_MIX'
     # we could also include the bare property ('' => 'HM'), but these are rarely used in ESPEI
-    properties = [''.join(prop) for prop in itertools.product(property_prefix_weight_factor.keys(), property_suffixes)]
+    properties = [''.join(prop) for prop in itertools.product(property_std_deviation.keys(), property_suffixes)]
 
     whitelist_properties = ['HM', 'SM', 'CPM', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
     # if callables is None, construct empty callables dicts, which will be JIT compiled by pycalphad later
@@ -239,7 +238,7 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
             results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models,
                                 callables=callables[calculate_dict['output']],
                                 **calculate_dict)[calculate_dict['output']].values
-            std_dev = (property_prefix_weight_factor[prop.split('_')[0]]*np.abs(np.mean(sample_values)))
+            std_dev = property_std_deviation[prop.split('_')[0]]
             prob_error += np.sum(norm(loc=0, scale=std_dev).logpdf(results-sample_values))
             # logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
     return prob_error
