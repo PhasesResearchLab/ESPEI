@@ -3,6 +3,7 @@ Calculate error due to thermochemical quantities: heat capacity, entropy, enthal
 """
 
 import itertools
+import logging
 
 from scipy.stats import norm
 import numpy as np
@@ -93,6 +94,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         'points': np.atleast_2d([[]]).reshape(-1, sum([len(subl) for subl in phase_constituents])),
         'values': np.array([]),
         'weights': [],
+        'references': [],
     }
 
     for datum in desired_data:
@@ -117,6 +119,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         calculate_dict['points'] = np.concatenate([calculate_dict['points'], np.repeat(points, len(T)/points.shape[0], axis=0)], axis=0)
         calculate_dict['values'] = np.concatenate([calculate_dict['values'], values.flatten()])
         calculate_dict['weights'].extend([datum.get('weight', 1.0) for _ in range(values.flatten().size)])
+        calculate_dict['references'].extend([datum.get('reference', "") for _ in range(values.flatten().size)])
 
     return calculate_dict
 
@@ -194,7 +197,6 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
         for prop in properties:
             desired_data = get_prop_data(comps, phase_name, prop, datasets)
             if len(desired_data) == 0:
-                # logging.debug('Skipping {} in phase {} because no data was found.'.format(prop, phase_name))
                 continue
             calculate_dict = get_prop_samples(dbf, comps, phase_name, desired_data)
             if prop.endswith('_FORM'):
@@ -206,11 +208,14 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
                 params = parameters
             sample_values = calculate_dict.pop('values')
             weights = calculate_dict.pop('weights')
+            dataset_refs = calculate_dict.pop('references')
             results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models,
                                 callables=callables[calculate_dict['output']],
                                 **calculate_dict)[calculate_dict['output']].values
             std_dev = property_std_deviation[prop.split('_')[0]]
-            for result, sample_value, weight in zip(results, sample_values, weights):
-                prob_error += norm(loc=0, scale=std_dev/weight).logpdf(result-sample_value)
-            # logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
+            probabilities = []
+            for result, sample_value, weight, ref in zip(results, sample_values, weights, dataset_refs):
+                probabilities.append(norm(loc=0, scale=std_dev/weight).logpdf(result-sample_value))
+            logging.debug('Thermochemical error - samples: {}, probabilities: {}, references: {}'.format(sample_values, probabilities, dataset_refs))
+            prob_error = np.sum(probabilities)
     return prob_error

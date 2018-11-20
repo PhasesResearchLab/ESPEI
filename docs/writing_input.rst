@@ -34,6 +34,7 @@ All of the possible keys are
 
    output:
      verbosity
+     logfile
      output_db
      tracefile
      probfile
@@ -92,15 +93,30 @@ verbosity
 :type: int
 :default: 0
 
-Controls the logging level.
+Controls the logging level. Most users will probably want to use ``Info`` or ``Trace``.
+
+``Warning`` logs should almost never occur and this log level will be
+relatively quiet. ``Debug`` is a fire hose of information, but may be useful in
+fixing calculation errors or adjusting weights.
 
 =====  =========
 Value  Log Level
 =====  =========
 0      Warning
 1      Info
-2      Debug
+2      Trace
+3      Debug
 =====  =========
+
+logfile
+-------
+
+:type: string
+:default: null
+
+Name of the file that the logs (controlled by ``verbosity``) will be output to.
+The default is ``None`` (in Python, ``null`` in JSON), meaning the logging will
+be output to stdout and stderr.
 
 output_db
 ---------

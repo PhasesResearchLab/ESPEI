@@ -38,6 +38,9 @@ from espei.sublattice_tools import generate_symmetric_group, generate_interactio
 from espei.utils import PickleableTinyDB, sigfigs, build_sitefractions
 
 
+TRACE = 15  # TRACE logging level
+
+
 def _build_feature_matrix(prop, features, desired_data):
     """
     Return an MxN matrix of M data sample and N features.
@@ -147,7 +150,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
 
     for desired_props in fitting_steps:
         desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
-        logging.debug('{}: datasets found: {}'.format(desired_props, len(desired_data)))
+        logging.log(TRACE, '{}: datasets found: {}'.format(desired_props, len(desired_data)))
         if len(desired_data) > 0:
             # We assume all properties in the same fitting step have the same features (all CPM, all HM, etc.) (but different ref states)
             all_samples = get_samples(desired_data)
@@ -248,10 +251,10 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
     """
     numdigits = 6  # number of significant figures, might cause rounding errors
     interactions = generate_interactions(endmembers, order=3, symmetry=symmetry)
-    logging.debug('{0} distinct ternary interactions'.format(len(interactions)))
+    logging.log(TRACE, '{0} distinct ternary interactions'.format(len(interactions)))
     for interaction in interactions:
         ixx = interaction
-        logging.debug('INTERACTION: {}'.format(ixx))
+        logging.log(TRACE, 'INTERACTION: {}'.format(ixx))
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(3, dtype=np.object)
@@ -279,7 +282,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
                     keys_to_remove.append(key)
             for key in keys_to_remove:
                 parameters.pop(key)
-        logging.debug('Polynomial coefs: {}'.format(degree_polys))
+        logging.log(TRACE, 'Polynomial coefs: {}'.format(degree_polys))
         # Insert into database
         symmetric_interactions = generate_symmetric_group(interaction, symmetry)
         for degree in np.arange(degree_polys.shape[0]):
@@ -332,11 +335,11 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
     aliases = [] if aliases is None else aliases
     aliases = sorted(set(aliases + [phase_name]))
     logging.info('FITTING: {}'.format(phase_name))
-    logging.debug('{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
+    logging.log(TRACE, '{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
 
     all_endmembers = []
     for endmember in endmembers:
-        logging.debug('ENDMEMBER: {}'.format(endmember))
+        logging.log(TRACE, 'ENDMEMBER: {}'.format(endmember))
         # Some endmembers are fixed by our choice of standard lattice stabilities, e.g., SGTE91
         # If a (phase, pure component endmember) tuple is fixed, we should use that value instead of fitting
         endmember_comps = list(set(endmember))
@@ -380,15 +383,15 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 ref = ref + ratio * sympy.Symbol('GHSER'+subl)
             fit_eq += ref
         symmetric_endmembers = generate_symmetric_group(endmember, symmetry)
-        logging.debug('SYMMETRIC_ENDMEMBERS: {}'.format(symmetric_endmembers))
+        logging.log(TRACE, 'SYMMETRIC_ENDMEMBERS: {}'.format(symmetric_endmembers))
         all_endmembers.extend(symmetric_endmembers)
         for em in symmetric_endmembers:
             em_dict[em] = fit_eq
             dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, fit_eq)
 
-    logging.debug('FITTING BINARY INTERACTIONS')
+    logging.log(TRACE, 'FITTING BINARY INTERACTIONS')
     bin_interactions = generate_interactions(all_endmembers, order=2, symmetry=symmetry)
-    logging.debug('{0} distinct binary interactions'.format(len(bin_interactions)))
+    logging.log(TRACE, '{0} distinct binary interactions'.format(len(bin_interactions)))
     for interaction in bin_interactions:
         ixx = []
         for i in interaction:
@@ -397,7 +400,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
             else:
                 ixx.append(i)
         ixx = tuple(ixx)
-        logging.debug('INTERACTION: {}'.format(ixx))
+        logging.log(TRACE, 'INTERACTION: {}'.format(ixx))
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(10, dtype=np.object)
@@ -419,7 +422,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                     keys_to_remove.append(key)
             for key in keys_to_remove:
                 parameters.pop(key)
-        logging.debug('Polynomial coefs: {}'.format(degree_polys))
+        logging.log(TRACE, 'Polynomial coefs: {}'.format(degree_polys))
         # Insert into database
         symmetric_interactions = generate_symmetric_group(interaction, symmetry)
         for degree in np.arange(degree_polys.shape[0]):
@@ -427,7 +430,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 for syminter in symmetric_interactions:
                     dbf.add_parameter('L', phase_name, tuple(map(tuplify, syminter)), degree, degree_polys[degree])
 
-    logging.debug('FITTING TERNARY INTERACTIONS')
+    logging.log(TRACE, 'FITTING TERNARY INTERACTIONS')
     fit_ternary_interactions(dbf, phase_name, symmetry, all_endmembers, datasets)
     if hasattr(dbf, 'varcounter'):
         del dbf.varcounter

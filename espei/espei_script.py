@@ -26,6 +26,9 @@ from espei import generate_parameters, mcmc_fit, schema
 from espei.utils import ImmediateClient
 from espei.datasets import DatasetError, load_datasets, recursive_glob
 
+TRACE = 15  # TRACE logging level
+
+
 parser = argparse.ArgumentParser(description=__doc__)
 
 parser.add_argument(
@@ -120,20 +123,23 @@ def run_espei(run_settings):
     mcmc_settings = run_settings.get('mcmc')
 
     # handle verbosity
-    verbosity = {0: logging.WARNING,
-                 1: logging.INFO,
-                 2: logging.DEBUG}
+    verbosity = {
+        0: logging.WARNING,
+        1: logging.INFO,
+        2: TRACE,
+        3: logging.DEBUG
+    }
     logging.basicConfig(level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
 
     log_version_info()
 
     # load datasets and handle i/o
-    logging.debug('Loading and checking datasets.')
+    logging.log(TRACE, 'Loading and checking datasets.')
     dataset_path = system_settings['datasets']
     datasets = load_datasets(sorted(recursive_glob(dataset_path, '*.json')))
     if len(datasets.all()) == 0:
         logging.warning('No datasets were found in the path {}. This should be a directory containing dataset files ending in `.json`.'.format(dataset_path))
-    logging.debug('Finished checking datasets')
+    logging.log(TRACE, 'Finished checking datasets')
 
     with open(system_settings['phase_models']) as fp:
         phase_models = json.load(fp)

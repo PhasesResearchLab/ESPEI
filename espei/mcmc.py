@@ -22,6 +22,9 @@ from espei.utils import database_symbols_to_fit, optimal_parameters, rv_zero
 from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error
 
 
+TRACE = 15  # TRACE logging level
+
+
 def lnlikelihood(params, comps=None, dbf=None, phases=None, datasets=None,
            symbols_to_fit=None, phase_models=None,
            callables=None, thermochemical_callables=None,
@@ -37,7 +40,7 @@ def lnlikelihood(params, comps=None, dbf=None, phases=None, datasets=None,
     single_phase_error = calculate_thermochemical_error(dbf, comps, phases, datasets, parameters, phase_models=phase_models, callables=thermochemical_callables)
     actvity_error = calculate_activity_error(dbf, comps, phases, datasets, parameters=parameters, phase_models=phase_models, callables=callables)
     total_error = multi_phase_error + single_phase_error + actvity_error
-    logging.debug('Likelihood - {:0.2f}s - Thermochemical: {:0.3f}. ZPF: {:0.3f}. Activity: {:0.3f}. Total: {:0.3f}.'.format(time.time() - starttime, single_phase_error, multi_phase_error, actvity_error, total_error))
+    logging.log(TRACE, 'Likelihood - {:0.2f}s - Thermochemical: {:0.3f}. ZPF: {:0.3f}. Activity: {:0.3f}. Total: {:0.3f}.'.format(time.time() - starttime, single_phase_error, multi_phase_error, actvity_error, total_error))
     return np.array(total_error, dtype=np.float64)
 
 
@@ -114,7 +117,7 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
     logprior = lnprior(params, prior_rvs)
     if np.isneginf(logprior):
         # It doesn't matter what the likelihood is. We can skip calculating it to save time.
-        logging.debug('Proposal - lnprior: {:0.4f}, lnlike: {}, lnprob: {:0.4f}'.format(logprior, np.nan, logprior))
+        logging.log(TRACE, 'Proposal - lnprior: {:0.4f}, lnlike: {}, lnprob: {:0.4f}'.format(logprior, np.nan, logprior))
         return logprior
 
     loglike = lnlikelihood(params, comps=comps, dbf=dbf, phases=phases, datasets=datasets,
@@ -122,7 +125,7 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
            callables=callables, thermochemical_callables=thermochemical_callables)
 
     logprob = logprior + loglike
-    logging.debug('Proposal - lnprior: {:0.4f}, lnlike: {:0.4f}, lnprob: {:0.4f}'.format(logprior, loglike, logprob))
+    logging.log(TRACE, 'Proposal - lnprior: {:0.4f}, lnlike: {:0.4f}, lnprob: {:0.4f}'.format(logprior, loglike, logprob))
     return logprob
 
 
@@ -249,7 +252,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
         rv_priors.append(rv_instance)
 
     # construct the models for each phase, substituting in the SymPy symbol to fit.
-    logging.debug('Building phase models (this may take some time)')
+    logging.log(TRACE, 'Building phase models (this may take some time)')
     logging.debug('Building GM callables.')
     # 0 is placeholder value
     phases = sorted(dbf.phases.keys())
@@ -286,7 +289,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
         # pop off the callables not used in properties because we don't want them around (they should be None, anyways)
         thermochemical_callables[prop].pop('phase_records')
         thermochemical_callables[prop].pop('model')
-    logging.debug('Finished building phase models')
+    logging.log(TRACE, 'Finished building phase models')
 
     # context for the log probability function
     error_context = {'comps': comps, 'dbf': dbf,
@@ -298,10 +301,10 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
 
     def save_sampler_state(sampler):
         if tracefile:
-            logging.debug('Writing trace to {}'.format(tracefile))
+            logging.log(TRACE, 'Writing trace to {}'.format(tracefile))
             np.save(tracefile, sampler.chain)
         if probfile:
-            logging.debug('Writing lnprob to {}'.format(probfile))
+            logging.log(TRACE, 'Writing lnprob to {}'.format(probfile))
             np.save(probfile, sampler.lnprobability)
 
 
@@ -313,10 +316,10 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
         ndim = walkers.shape[1]
         initial_parameters = walkers.mean(axis=0)
         logging.info('Restarting from previous calculation with {} chains ({} per parameter).'.format(nwalkers, nwalkers / ndim))
-        logging.debug('Means of restarting parameters are {}'.format(initial_parameters))
-        logging.debug('Standard deviations of restarting parameters are {}'.format(walkers.std(axis=0)))
+        logging.log(TRACE, 'Means of restarting parameters are {}'.format(initial_parameters))
+        logging.log(TRACE, 'Standard deviations of restarting parameters are {}'.format(walkers.std(axis=0)))
     else:
-        logging.debug('Initial parameters: {}'.format(initial_parameters))
+        logging.log(TRACE, 'Initial parameters: {}'.format(initial_parameters))
         ndim = initial_parameters.size
         nwalkers = ndim * chains_per_parameter
         logging.info('Initializing {} chains with {} chains per parameter.'.format(nwalkers, chains_per_parameter))
@@ -335,7 +338,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
             # progress bar
             if (i + 1) % save_interval == 0:
                 save_sampler_state(sampler)
-                logging.debug('Acceptance ratios for parameters: {}'.format(sampler.acceptance_fraction))
+                logging.log(TRACE, 'Acceptance ratios for parameters: {}'.format(sampler.acceptance_fraction))
             n = int((progbar_width + 1) * float(i) / iterations)
             logging.info("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, iterations))
         n = int((progbar_width + 1) * float(i + 1) / iterations)
@@ -345,9 +348,9 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
     # final processing
     save_sampler_state(sampler)
     optimal_params = optimal_parameters(sampler.chain, sampler.lnprobability)
-    logging.debug('Intial parameters: {}'.format(initial_parameters))
-    logging.debug('Optimal parameters: {}'.format(optimal_params))
-    logging.debug('Change in parameters: {}'.format(np.abs(initial_parameters - optimal_params) / initial_parameters))
+    logging.log(TRACE, 'Intial parameters: {}'.format(initial_parameters))
+    logging.log(TRACE, 'Optimal parameters: {}'.format(optimal_params))
+    logging.log(TRACE, 'Change in parameters: {}'.format(np.abs(initial_parameters - optimal_params) / initial_parameters))
     for param_name, value in zip(symbols_to_fit, optimal_params):
         dbf.symbols[param_name] = value
     logging.info('MCMC complete.')

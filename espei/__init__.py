@@ -14,6 +14,11 @@ del get_versions
 # # we want to be able to get back the old pickle for dask/distributed
 # sys.modules['pickle'] = sys.modules['espei.pickle_override']
 
+import logging
+# setup logger with a TRACE setting, which is between INFO and DEBUG
+TRACE = 15  # TRACE logging level
+logging.addLevelName(TRACE, 'TRACE')
+
 import os
 import yaml
 from cerberus import Validator

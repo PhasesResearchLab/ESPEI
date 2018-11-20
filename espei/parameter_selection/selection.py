@@ -6,7 +6,9 @@ import logging
 
 import numpy as np
 from sklearn.linear_model import Ridge
-from sklearn.linear_model import LinearRegression
+
+
+TRACE = 15  # TRACE logging level
 
 
 def fit_model(feature_matrix, data_quantities, ridge_alpha):
@@ -88,7 +90,7 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     correction = (2.0*num_params**2 + 2.0*num_params)/correction_denom
     aic = 2.0*num_params + num_samples * np.log(rss/num_samples)
     aicc = aic + correction  # model score
-    logging.debug('{} rss: {}, AIC: {}, AICc: {}'.format(feature_list, rss, aic, aicc))
+    logging.log(TRACE, '{} rss: {}, AIC: {}, AICc: {}'.format(feature_list, rss, aic, aicc))
     return aicc
 
 
