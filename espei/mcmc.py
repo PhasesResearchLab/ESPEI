@@ -17,6 +17,7 @@ from scipy.stats import uniform, norm, triang
 from pycalphad import Model
 from pycalphad.codegen.callables import build_callables
 
+from espei.core_utils import get_prop_data
 from espei.utils import database_symbols_to_fit, optimal_parameters, rv_zero
 from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error
 
@@ -249,6 +250,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
 
     # construct the models for each phase, substituting in the SymPy symbol to fit.
     logging.debug('Building phase models (this may take some time)')
+    logging.debug('Building GM callables.')
     # 0 is placeholder value
     phases = sorted(dbf.phases.keys())
     sympy_symbols_to_fit = [sympy.Symbol(sym) for sym in symbols_to_fit]
@@ -270,6 +272,16 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
     whitelist_properties = ['HM', 'SM', 'CPM']
     whitelist_properties = whitelist_properties + [prop+'_MIX' for prop in whitelist_properties]
     for prop in whitelist_properties:
+        # try to find them in datasets, skipping the build if they aren't there
+        search_prop = prop + '_FORM' if '_' not in prop else prop
+        total_props = 0
+        for phase_name in phases:
+            total_props += len(get_prop_data(comps, phase_name, search_prop, datasets))
+        if total_props == 0:
+            logging.debug('Skipping build of {} callables because no {} datasets were found.'.format(prop, search_prop))
+            continue
+        else:
+            logging.debug('Building {} callables.'.format(prop))
         thermochemical_callables[prop] = build_callables(dbf, comps, phases, model=mods_no_idmix, output=prop, parameters=orig_parameters, build_gradients=False)
         # pop off the callables not used in properties because we don't want them around (they should be None, anyways)
         thermochemical_callables[prop].pop('phase_records')
@@ -325,7 +337,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
                 save_sampler_state(sampler)
                 logging.debug('Acceptance ratios for parameters: {}'.format(sampler.acceptance_fraction))
             n = int((progbar_width + 1) * float(i) / iterations)
-            sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, iterations))
+            logging.info("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, iterations))
         n = int((progbar_width + 1) * float(i + 1) / iterations)
         sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, iterations))
     except KeyboardInterrupt:

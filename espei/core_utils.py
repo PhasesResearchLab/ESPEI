@@ -326,3 +326,33 @@ def symmetry_filter(x, config, symmetry):
             if canonicalize(config, symmetry) == canonicalize(data_config, symmetry):
                 return True
     return False
+
+
+def get_prop_data(comps, phase_name, prop, datasets):
+    """
+    Return datasets that match the components, phase and property
+
+    Parameters
+    ----------
+    comps : list
+        List of components to get data for
+    phase_name : str
+        Name of the phase to get data for
+    prop : str
+        Property to get data for
+    datasets : espei.utils.PickleableTinyDB
+        Datasets to search for data
+
+    Returns
+    -------
+    list
+        List of dictionary datasets that match the criteria
+
+    """
+    # TODO: we should only search and get phases that have the same sublattice_site_ratios as the phase in the database
+    desired_data = datasets.search(
+        (tinydb.where('output').test(lambda x: x in prop)) &
+        (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
+        (tinydb.where('phases') == [phase_name])
+    )
+    return desired_data
