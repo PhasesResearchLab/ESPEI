@@ -300,5 +300,7 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                     errors.append(tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
                                                         phase_models, parameters, callables=callables))
     prob_error = np.sum(norm(loc=0, scale=std_dev).logpdf(errors))
+    if np.isnan(prob_error):
+        return -np.inf
     return prob_error
 
