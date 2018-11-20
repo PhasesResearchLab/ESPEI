@@ -256,10 +256,11 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
         except IndexError:
             return None
 
-    errors = []  # difference between target and current hyperplane (in J/mol)
+    prob_error = 0.0
     for data in desired_data:
         payload = data['values']
         conditions = data['conditions']
+        weight = data.get('weight', 1.0)
         data_comps = list(set(data['components']).union({'VA'}))
         # create a dictionary of each set of phases containing a list of individual points on the tieline
         # individual tieline points are tuples of (conditions, {composition dictionaries})
@@ -297,9 +298,9 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                         if val is None:
                             cond_dict[key] = np.nan
                     cond_dict.update(current_statevars)
-                    errors.append(tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
-                                                        phase_models, parameters, callables=callables))
-    prob_error = np.sum(norm(loc=0, scale=std_dev).logpdf(errors))
+                    error = tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
+                                                        phase_models, parameters, callables=callables)
+                    prob_error += norm(loc=0, scale=std_dev/weight).logpdf(error)
     if np.isnan(prob_error):
         return -np.inf
     return prob_error

@@ -4,15 +4,13 @@ Calculate error due to thermochemical quantities: heat capacity, entropy, enthal
 
 import itertools
 
-import sympy
 from scipy.stats import norm
 import numpy as np
-import tinydb
 
 from pycalphad import calculate, Model
 from pycalphad.core.utils import unpack_components
 
-from espei.core_utils import ravel_conditions
+from espei.core_utils import ravel_conditions, get_prop_data
 
 
 def calculate_points_array(phase_constituents, configuration, occupancies=None):
@@ -59,36 +57,6 @@ def calculate_points_array(phase_constituents, configuration, occupancies=None):
     return points
 
 
-def get_prop_data(comps, phase_name, prop, datasets):
-    """
-    Return datasets that match the components, phase and property
-
-    Parameters
-    ----------
-    comps : list
-        List of components to get data for
-    phase_name : str
-        Name of the phase to get data for
-    prop : str
-        Property to get data for
-    datasets : espei.utils.PickleableTinyDB
-        Datasets to search for data
-
-    Returns
-    -------
-    list
-        List of dictionary datasets that match the criteria
-
-    """
-    # TODO: we should only search and get phases that have the same sublattice_site_ratios as the phase in the database
-    desired_data = datasets.search(
-        (tinydb.where('output').test(lambda x: x in prop)) &
-        (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
-        (tinydb.where('phases') == [phase_name])
-    )
-    return desired_data
-
-
 def get_prop_samples(dbf, comps, phase_name, desired_data):
     """
     Return data values and the conditions to calculate them by pycalphad
@@ -124,6 +92,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         'T': np.array([]),
         'points': np.atleast_2d([[]]).reshape(-1, sum([len(subl) for subl in phase_constituents])),
         'values': np.array([]),
+        'weights': [],
     }
 
     for datum in desired_data:
@@ -147,6 +116,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         calculate_dict['T'] = np.concatenate([calculate_dict['T'], T])
         calculate_dict['points'] = np.concatenate([calculate_dict['points'], np.repeat(points, len(T)/points.shape[0], axis=0)], axis=0)
         calculate_dict['values'] = np.concatenate([calculate_dict['values'], values.flatten()])
+        calculate_dict['weights'].extend([datum.get('weight', 1.0) for _ in range(values.flatten().size)])
 
     return calculate_dict
 
@@ -235,10 +205,12 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
                 calculate_dict['output'] = prop
                 params = parameters
             sample_values = calculate_dict.pop('values')
+            weights = calculate_dict.pop('weights')
             results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models,
                                 callables=callables[calculate_dict['output']],
                                 **calculate_dict)[calculate_dict['output']].values
             std_dev = property_std_deviation[prop.split('_')[0]]
-            prob_error += np.sum(norm(loc=0, scale=std_dev).logpdf(results-sample_values))
+            for result, sample_value, weight in zip(results, sample_values, weights):
+                prob_error += norm(loc=0, scale=std_dev/weight).logpdf(result-sample_value)
             # logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
     return prob_error
