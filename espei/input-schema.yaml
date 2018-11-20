@@ -14,12 +14,16 @@ output:
   type: dict
   default: {}
   schema:
-    verbosity: # integer verbosity level 0 | 1 | 2, where 2 is most verbose.
+    verbosity: # integer verbosity level for logging, 0 | 1 | 2, where 2 is most verbose.
       type: integer
       min: 0
       max: 2
       default: 0
       required: True
+    logfile:  # name of file to output the logging information to
+      type: string
+      default: null
+      nullable: True
     output_db:
       type: string
       default: out.tdb

@@ -123,7 +123,7 @@ def run_espei(run_settings):
     verbosity = {0: logging.WARNING,
                  1: logging.INFO,
                  2: logging.DEBUG}
-    logging.basicConfig(level=verbosity[output_settings['verbosity']])
+    logging.basicConfig(level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
 
     log_version_info()
 
