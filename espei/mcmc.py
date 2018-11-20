@@ -36,8 +36,7 @@ def lnlikelihood(params, comps=None, dbf=None, phases=None, datasets=None,
     single_phase_error = calculate_thermochemical_error(dbf, comps, phases, datasets, parameters, phase_models=phase_models, callables=thermochemical_callables)
     actvity_error = calculate_activity_error(dbf, comps, phases, datasets, parameters=parameters, phase_models=phase_models, callables=callables)
     total_error = multi_phase_error + single_phase_error + actvity_error
-    logging.debug('Single phase error: {:0.2f}. Multi phase error: {:0.2f}. Activity Error: {:0.2f}. Total error: {:0.2f}'.format(single_phase_error, multi_phase_error, actvity_error, total_error))
-    logging.debug('lnlike time: {}'.format(time.time() - starttime))
+    logging.debug('Likelihood - {:0.2f}s - Thermochemical: {:0.3f}. ZPF: {:0.3f}. Activity: {:0.3f}. Total: {:0.3f}.'.format(time.time() - starttime, single_phase_error, multi_phase_error, actvity_error, total_error))
     return np.array(total_error, dtype=np.float64)
 
 
@@ -114,7 +113,7 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
     logprior = lnprior(params, prior_rvs)
     if np.isneginf(logprior):
         # It doesn't matter what the likelihood is. We can skip calculating it to save time.
-        logging.debug('lnprior: {}, lnlike: {}, lnprob: {}'.format(logprior, np.nan, logprior))
+        logging.debug('Proposal - lnprior: {:0.4f}, lnlike: {}, lnprob: {:0.4f}'.format(logprior, np.nan, logprior))
         return logprior
 
     loglike = lnlikelihood(params, comps=comps, dbf=dbf, phases=phases, datasets=datasets,
@@ -122,7 +121,7 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
            callables=callables, thermochemical_callables=thermochemical_callables)
 
     logprob = logprior + loglike
-    logging.debug('lnprior: {}, lnlike: {}, lnprob: {}'.format(logprior, loglike, logprob))
+    logging.debug('Proposal - lnprior: {:0.4f}, lnlike: {:0.4f}, lnprob: {:0.4f}'.format(logprior, loglike, logprob))
     return logprob
 
 
