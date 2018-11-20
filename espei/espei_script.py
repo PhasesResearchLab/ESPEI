@@ -167,7 +167,7 @@ def run_espei(run_settings):
             # TODO: make dask-scheduler-verbosity a YAML input so that users can debug. Should have the same log levels as verbosity
             scheduler = LocalCluster(n_workers=cores, threads_per_worker=1, processes=True, memory_limit=0)
             client = ImmediateClient(scheduler)
-            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']])
+            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
             logging.info("Running with dask scheduler: %s [%s cores]" % (scheduler, sum(client.ncores().values())))
             try:
                 logging.info(
@@ -181,7 +181,7 @@ def run_espei(run_settings):
         else: # we were passed a scheduler file name
             _raise_dask_work_stealing()  # check for work-stealing
             client = ImmediateClient(scheduler_file=mcmc_settings['scheduler'])
-            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']])
+            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
             logging.info("Running with dask scheduler: %s [%s cores]" % (client.scheduler, sum(client.ncores().values())))
 
         # get a Database
