@@ -60,7 +60,7 @@ def chempot_error(sample_chempots, target_chempots, std_dev=10.0):
     return norm(loc=0, scale=std_dev).logpdf(np.array(target_chempots - sample_chempots, dtype=np.float64))
 
 
-def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, std_dev=10.0):
+def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, std_dev=500.0):
     """
     Return the sum of square error from activity data
 
