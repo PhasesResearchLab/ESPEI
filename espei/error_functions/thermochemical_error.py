@@ -206,7 +206,7 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
 
     # estimated from NIST TRC uncertainties
     property_std_deviation = {
-        'HM': 200.0,  # J/mol
+        'HM': 500.0,  # J/mol
         'SM':   0.2,  # J/K-mol
         'CPM':  0.2,  # J/K-mol
     }
