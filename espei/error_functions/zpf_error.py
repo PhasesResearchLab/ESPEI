@@ -291,7 +291,6 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                 region_chemical_potentials = estimate_hyperplane(dbf, data_comps, phases, current_statevars, comp_dicts,
                                                       phase_models, parameters, callables=callables)
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
-                region_prob = []
                 for current_phase, cond_dict in zip(region, comp_dicts):
                     # TODO: Messy unpacking
                     cond_dict, phase_flag = cond_dict
