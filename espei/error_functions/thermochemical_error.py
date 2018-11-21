@@ -217,5 +217,5 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
             for result, sample_value, weight, ref in zip(results, sample_values, weights, dataset_refs):
                 probabilities.append(norm(loc=0, scale=std_dev/weight).logpdf(result-sample_value))
             logging.debug('Thermochemical error - data: {}, probabilities: {}, references: {}'.format(sample_values, probabilities, dataset_refs))
-            prob_error = np.sum(probabilities)
+            prob_error += np.sum(probabilities)
     return prob_error
