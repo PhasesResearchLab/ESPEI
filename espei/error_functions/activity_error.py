@@ -2,6 +2,8 @@
 Calculate error due to measured activities.
 """
 
+import logging
+
 import numpy as np
 import tinydb
 
@@ -149,10 +151,14 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
         current_chempots = np.array(current_chempots)
 
         # calculate target chempots
-        target_chempots = target_chempots_from_activity(acr_component, np.array(ds['values']).flatten(), conditions[v.T], ref_result)
+        samples = np.array(ds['values']).flatten()
+        target_chempots = target_chempots_from_activity(acr_component, samples, conditions[v.T], ref_result)
         # calculate the error
         weight = ds.get('weight', 1.0)
-        error += np.sum(chempot_error(current_chempots, target_chempots, std_dev=std_dev/weight))
+        pe = chempot_error(current_chempots, target_chempots, std_dev=std_dev/weight)
+        error += np.sum(pe)
+        logging.debug('Activity error - data: {}, probability: {}, reference: {}'.format(samples, pe, ds["reference"]))
+
     # TODO: write a test for this
     if np.any(np.isnan(np.array([error], dtype=np.float64))):  # must coerce sympy.core.numbers.Float to float64
         return -np.inf

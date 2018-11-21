@@ -287,9 +287,11 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
             # for each tieline region conditions and compositions
             for current_statevars, comp_dicts in region_eq:
                 # a "region" is a set of phase equilibria
+                eq_str = "conds: ({}), comps: ({})".format(current_statevars, ', '.join(['{}: {}'.format(ph,c[0]) for ph, c in zip(region, comp_dicts)]))
                 region_chemical_potentials = estimate_hyperplane(dbf, data_comps, phases, current_statevars, comp_dicts,
                                                       phase_models, parameters, callables=callables)
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
+                region_prob = []
                 for current_phase, cond_dict in zip(region, comp_dicts):
                     # TODO: Messy unpacking
                     cond_dict, phase_flag = cond_dict
@@ -300,7 +302,9 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                     cond_dict.update(current_statevars)
                     error = tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
                                                         phase_models, parameters, callables=callables)
-                    prob_error += norm(loc=0, scale=std_dev/weight).logpdf(error)
+                    vertex_prob = norm(loc=0, scale=std_dev/weight).logpdf(error)
+                    prob_error += vertex_prob
+                    logging.debug('ZPF error - Equilibria: ({}), current phase: {}, probability: {}, reference: {}'.format(eq_str, current_phase, vertex_prob, data["reference"]))
     if np.isnan(prob_error):
         return -np.inf
     return prob_error
