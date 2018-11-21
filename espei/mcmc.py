@@ -125,6 +125,7 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
            callables=callables, thermochemical_callables=thermochemical_callables)
 
     logprob = logprior + loglike
+    logging.debug('Parameters - {}'.format(params))
     logging.log(TRACE, 'Proposal - lnprior: {:0.4f}, lnlike: {:0.4f}, lnprob: {:0.4f}'.format(logprior, loglike, logprob))
     return logprob
 
