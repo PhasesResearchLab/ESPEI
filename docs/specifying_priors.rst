@@ -9,10 +9,10 @@ Specifying Priors
 =================
 
 In Bayesian statistics, data are used to update prior distributions for all parameters to calculate posterior distributions.
-A basic introduction to priors and Bayesian statistics can be found in ``Kruschke, J. (2014). Doing Bayesian data analysis: A tutorial with R, JAGS, and Stan. Academic Press.``.
-A more advanced treatment is given in ``Gelman, A., Stern, H. S., Carlin, J. B., Dunson, D. B., Vehtari, A., & Rubin, D. B. (2013). Bayesian data analysis. Chapman and Hall/CRC.``.
+A basic introduction to priors and Bayesian statistics can be found in "Kruschke, J. (2014). Doing Bayesian data analysis: A tutorial with R, JAGS, and Stan. Academic Press.".
+A more advanced treatment is given in "Gelman, A., Stern, H. S., Carlin, J. B., Dunson, D. B., Vehtari, A., & Rubin, D. B. (2013). Bayesian data analysis. Chapman and Hall/CRC.".
 
-ESPEI provies a flexible interface to specify priors your want to use for a variety of parameters of different sign and magnitude through the :py:class:``~espei.priors.PriorSpec`` class.
+ESPEI provies a flexible interface to specify priors your want to use for a variety of parameters of different sign and magnitude through the ``espei.priors.PriorSpec`` class.
 This section will cover how to
 
 1. Define flexible, built-in priors using the YAML input and ESPEI script
@@ -81,7 +81,7 @@ Graphically, these are shown below:
 
 .. figure:: _static/prior-example.png
     :alt: Prior example
-    :scale: 100%
+    :scale: 50%
 
     Example priors compared to initialized parameters.
 
@@ -98,7 +98,9 @@ For example, a two parameter system could use a normal and a triangular prior si
 
 .. code-block:: YAML
 
-   # normal prior, centered on parameter, standard deviation of 0.25*parameter
+   # two priors:
+   # first a normal prior, centered on parameter, standard deviation of 0.25*parameter
+   # second a triangular prior, centered on parameter, from -0.5*parameter to 0.5*parameter
    prior: [{'name': 'normal', 'loc_relative': 1.0, 'scale_relative': 0.5}, {'name': 'triangular', 'loc_shift_relative': -0.5, 'scale_relative': 1.0}]
 
 

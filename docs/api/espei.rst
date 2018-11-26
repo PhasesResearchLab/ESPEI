@@ -8,7 +8,6 @@ Subpackages
 
     espei.error_functions
     espei.parameter_selection
-    espei.tests
 
 Submodules
 ----------
@@ -65,6 +64,14 @@ espei\.plot module
 ------------------
 
 .. automodule:: espei.plot
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+espei\.priors module
+--------------------
+
+.. automodule:: espei.priors
     :members:
     :undoc-members:
     :show-inheritance:
