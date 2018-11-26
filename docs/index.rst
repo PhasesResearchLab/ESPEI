@@ -96,6 +96,7 @@ See `what's new <CHANGES.html>`_!
    :caption: Reference
 
    writing_input
+   specifying_priors
    theory
    recipes
    advanced_schedulers

@@ -386,29 +386,3 @@ def build_sitefractions(phase_name, sublattice_configurations, sublattice_occupa
                     sitefracs[v.SiteFraction(phase_name, sublattice_idx, comp)] = val
         result.append(sitefracs)
     return result
-
-
-class rv_zero(object):
-    """
-    A simple class that mimics the scipy.stats.rv_continuous object's logpdf method, always returning zero.
-
-    This class mainly exists for backwards compatibility where no prior is specified.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> rv = rv_zero()
-    >>> np.isclose(rv.logpdf(-np.inf), 0.0)
-    True
-    >>> np.isclose(rv.logpdf(1.0), 0.0)
-    True
-    >>> np.isclose(rv.logpdf(0.0), 0.0)
-    True
-
-    """
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def logpdf(self, *args, **kwargs):
-        return 0.0

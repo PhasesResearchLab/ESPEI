@@ -12,13 +12,13 @@ import sympy
 import numpy as np
 from numpy.linalg import LinAlgError
 import emcee
-from scipy.stats import uniform, norm, triang
 
 from pycalphad import Model
 from pycalphad.codegen.callables import build_callables
 
 from espei.core_utils import get_prop_data
-from espei.utils import database_symbols_to_fit, optimal_parameters, rv_zero
+from espei.utils import database_symbols_to_fit, optimal_parameters
+from espei.priors import build_prior_specs, PriorSpec
 from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error
 
 
@@ -64,6 +64,7 @@ def lnprior(params, priors):
     """
     # multivariate prior is the sum of log univariate priors
     lnprior_multivariate = [rv.logpdf(theta) for rv, theta in zip(priors, params)]
+    logging.debug('Priors: {}'.format(lnprior_multivariate))
     return np.sum(lnprior_multivariate)
 
 
@@ -114,6 +115,7 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
     float
 
     """
+    logging.debug('Parameters - {}'.format(params))
     logprior = lnprior(params, prior_rvs)
     if np.isneginf(logprior):
         # It doesn't matter what the likelihood is. We can skip calculating it to save time.
@@ -125,7 +127,6 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
            callables=callables, thermochemical_callables=thermochemical_callables)
 
     logprob = logprior + loglike
-    logging.debug('Parameters - {}'.format(params))
     logging.log(TRACE, 'Proposal - lnprior: {:0.4f}, lnlike: {:0.4f}, lnprob: {:0.4f}'.format(logprior, loglike, logprob))
     return logprob
 
@@ -160,7 +161,7 @@ def generate_parameter_distribution(parameters, num_samples, std_deviation, dete
 
 def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_parameter=2,
              chain_std_deviation=0.1, scheduler=None, tracefile=None, probfile=None,
-             restart_trace=None, deterministic=True, prior='zero'):
+             restart_trace=None, deterministic=True, prior=None):
     """
     Run Markov Chain Monte Carlo on the Database given datasets
 
@@ -225,32 +226,21 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
     initial_parameters = np.array([np.array(float(dbf.symbols[x])) for x in symbols_to_fit])
 
     # initialize the priors
-    # TODO: pass these settings as a dict
-    logging.info('Initializing a {} prior for the parameters.'.format(prior))
+    if isinstance(prior, dict):
+        logging.info('Initializing a {} prior for the parameters.'.format(prior['name']))
+    elif isinstance(prior, PriorSpec):
+        logging.info('Initializing a {} prior for the parameters.'.format(prior.name))
+    elif prior is None:
+        prior = {'name': 'zero'}
+    prior_specs = build_prior_specs(prior, initial_parameters)
     rv_priors = []
-    for p in initial_parameters:
-        if prior == 'normal':
-            # TODO: control scale hyperparameter better. Here we take the chain_std_deviation*5 as the prior std_deviation
-            rv_instance = norm(loc=p, scale=np.abs(chain_std_deviation*p*5))
-        elif prior == 'uniform':
-            # TODO: control scale hyperparameter manually here, later we can update
-            distance_frac = 1.0
-            # hyperparameter is the distance to low, e.g.
-            # hyperparameter=3.0 :  low:=p-(3.0*p), high:=p+(3.0*p)
-            diff = abs(distance_frac*p)
-            rv_instance = uniform(loc=p-diff, scale=2*diff)
-        elif prior == 'triangular':
-            distance_frac = 1.0
-            # hyperparameter is the distance to low, e.g.
-            # hyperparameter=3.0 :  low:=p-(3.0*p), high:=p+(3.0*p)
-            diff = abs(distance_frac*p)
-            # the maximum (controlled by c) is always in the center here
-            rv_instance = triang(loc=p-diff, scale=2*diff, c=0.5)
-        elif prior == 'zero':
-            rv_instance = rv_zero()
-        else:
-            raise ValueError('Invalid prior ({}) specified. Specify one of "normal", "uniform", "triangular", "zero"'.format(prior))
-        rv_priors.append(rv_instance)
+    for spec, param, fit_symbol in zip(prior_specs, initial_parameters, symbols_to_fit):
+        if isinstance(spec, PriorSpec):
+            logging.debug('Initializing a {} prior for {} with parameters: {}.'.format(spec.name, fit_symbol, spec.parameters))
+            rv_priors.append(spec.get_prior(param))
+        elif hasattr(spec, "logpdf"):
+            logging.debug('Using a user-specified prior for {}.'.format(fit_symbol))
+            rv_priors.append(spec)
 
     # construct the models for each phase, substituting in the SymPy symbol to fit.
     logging.log(TRACE, 'Building phase models (this may take some time)')

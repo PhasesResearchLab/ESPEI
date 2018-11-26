@@ -69,6 +69,9 @@ mcmc:
       type: integer
       min: 1
       required: True
+    prior:
+      type: [dict, list]
+      default: {'name': 'zero'}
     save_interval:
       type: integer
       default: 1
