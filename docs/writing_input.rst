@@ -46,6 +46,7 @@ All of the possible keys are
 
    mcmc:
      iterations
+     prior
      save_interval
      cores
      scheduler
@@ -225,6 +226,16 @@ iterations
 
 Number of iterations to perform in emcee.
 Each iteration consists of accepting one step for each chain in the ensemble.
+
+prior
+-----
+
+:type: list or dict
+:default: {'name': 'zero'}
+
+Either a single prior dictionary or a list of prior dictionaries corresponding to
+the number of parameters. See :ref:`Specifying Priors` for examples and details
+on writing priors.
 
 
 save_interval
