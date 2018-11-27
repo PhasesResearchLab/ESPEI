@@ -2,11 +2,24 @@
 What's New
 ==========
 
+0.6.2 (2018-11-27)
+==================
+
+This backwards-compatible release includes several bug fixes and improvements.
+
+* Updated branding to include the new ESPEI logo. See the logo in the ``docs/_static`` directory.
+* Add support for fitting excess heat capacity.
+* Bug fix for broken potassium unary.
+* Documentation improvements for recipes
+* pycalphad 0.7.1 fixes for dask, sympy, and gmpy2 should mean that ESPEI should not require package upgrade or downgrades. Please report any installations issues in `ESPEI's Gitter Channel <https://gitter.im/PhasesResearchLab/ESPEI>`.
+* [Developers] ESPEI's ``eq_callables_dict`` is now ``pycalphad.codegen.callables.build_callables``.
+* [Developers] matplotlib plotting tests are removed because nose is no longer supported.
+
 
 0.6.1 (2018-08-28)
 ==================
 
-This a major release with several important features and bug fixes
+This a major release with several important features and bug fixes.
 
 * Enable use of ridge regression alpha for parameter selection via the ``parameter_generation.ridge_alpha`` input parameter.
 * Add ternary parameter selection. Works by default, just add data.
