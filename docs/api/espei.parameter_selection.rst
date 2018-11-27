@@ -12,6 +12,14 @@ espei\.parameter\_selection\.model\_building module
     :undoc-members:
     :show-inheritance:
 
+espei\.parameter\_selection\.redlich\_kister module
+---------------------------------------------------
+
+.. automodule:: espei.parameter_selection.redlich_kister
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 espei\.parameter\_selection\.selection module
 ---------------------------------------------
 
