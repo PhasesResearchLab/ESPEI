@@ -12,7 +12,7 @@ In Bayesian statistics, data are used to update prior distributions for all para
 A basic introduction to priors and Bayesian statistics can be found in "Kruschke, J. (2014). Doing Bayesian data analysis: A tutorial with R, JAGS, and Stan. Academic Press.".
 A more advanced treatment is given in "Gelman, A., Stern, H. S., Carlin, J. B., Dunson, D. B., Vehtari, A., & Rubin, D. B. (2013). Bayesian data analysis. Chapman and Hall/CRC.".
 
-ESPEI provies a flexible interface to specify priors your want to use for a variety of parameters of different sign and magnitude through the ``espei.priors.PriorSpec`` class.
+ESPEI provides a flexible interface to specify priors your want to use for a variety of parameters of different sign and magnitude through the ``espei.priors.PriorSpec`` class.
 This section will cover how to
 
 1. Define flexible, built-in priors using the YAML input and ESPEI script
@@ -53,7 +53,7 @@ YAML
 
 Prior can be specified in the YAML input as a list of dictionaries for different parameters.
 Since Python objects cannot be instantiated in the YAML files, the ``PriorSpec`` can be described a dictionary of
-``{'name': <<NAME>>, 'loc_relative': <<VALUE>>, 'scale_realtive': <<VALUE>>, ...}``.
+``{'name': <<NAME>>, 'loc_relative': <<VALUE>>, 'scale_relative': <<VALUE>>, ...}``.
 
 Some common examples in YAML format are as follows:
 
@@ -69,7 +69,7 @@ Some common examples in YAML format are as follows:
    prior:
      name: uniform
      loc_shift_relative: -1.0
-     scale_realtive: 2.0
+     scale_relative: 2.0
 
    # triangular prior, centered on parameter, from -0.5*parameter to 0.5*parameter
    prior:

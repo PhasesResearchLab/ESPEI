@@ -42,7 +42,7 @@ This is a major bugfix release for MCMC multi-phase fitting runs for single phas
 
 This is a minor bugfix release.
 
-* Parameter generation for phases with vacancies would produce incorrect parameters because the vacancy site fractions were not being correctly removed from the contributions due to their treatement as ``Species`` objects in ``pycalphad >=0.7``.
+* Parameter generation for phases with vacancies would produce incorrect parameters because the vacancy site fractions were not being correctly removed from the contributions due to their treatment as ``Species`` objects in ``pycalphad >=0.7``.
 
 0.5 (2018-04-03)
 ================
@@ -57,7 +57,7 @@ This is a minor bugfix release.
   - Using JIT compiled ``Model`` objects required the use of ``cloudpickle`` everywhere. Due to challenges in overriding ``pickle`` for upstream packages, we now rely solely on ``dask`` for scheduler tasks, including ``mpi`` via ``dask-mpi``. Note that users must turn off ``work-stealing`` in their ``~/.dask/config.yaml`` file.
 
 * [Developers] Each method for calculating error in MCMC has been moved into a module for that method in an ``error_functions`` subpackage. One top level function from each module should be imported into the ``mcmc.py`` and used in ``lnprob``. Developers should then just customize ``lnprob``.
-* [Developers] Significant internal docs improvements: all non-trival functions have complete docstrings.
+* [Developers] Significant internal docs improvements: all non-trivial functions have complete docstrings.
 
 0.4.1 (2018-02-05)
 ==================
@@ -92,7 +92,7 @@ This is a minor bugfix release.
 0.3.1.post2 (2017-10-31)
 ========================
 
-* Propogate the new entry point to setup.py
+* Propagate the new entry point to setup.py
 
 0.3.1.post1 (2017-10-31)
 ========================
@@ -139,15 +139,15 @@ Fixes to the 0.2 release plotting interface
 0.2 (2017-08-15)
 ==================
 
-* New ``multiplot`` interface for convienent plotting of phase diagrams + data. ``dataplot`` function underlies key data plotting features and can be used with ``eqplot``. See their API docs for examples. Will break existing code using multiplot.
-* MPI support for local/HPC runs. Only single node runs are explictly supported currently. Use ``--scheduler='MPIPool'`` command line option. Requires ``mpi4py``.
+* New ``multiplot`` interface for convenient plotting of phase diagrams + data. ``dataplot`` function underlies key data plotting features and can be used with ``eqplot``. See their API docs for examples. Will break existing code using multiplot.
+* MPI support for local/HPC runs. Only single node runs are explicitly supported currently. Use ``--scheduler='MPIPool'`` command line option. Requires ``mpi4py``.
 * Default debug reporting of acceptance ratios
 * Option (and default) to output the log probability array matching the trace. Use ``--probfile`` option to control.
 * Optimal parameters are now chosen based on lowest error in chain.
 * Bug fixes including
    
-   - py2/3 compatibiltiy
-   - unicode datasets
+   - py2/3 compatibility
+   - Unicode datasets
    - handling of singular matrix errors from pycalphad's ``equilibrium``
    - reporting of failed conditions
 
@@ -175,7 +175,7 @@ Fixes to the 0.2 release plotting interface
 0.1.2 (2017-06-23)
 ==================
 
-* Fix dask incompatibilty due to new API usage
+* Fix dask incompatibility due to new API usage
 
 0.1.1 (2017-06-23)
 ==================
