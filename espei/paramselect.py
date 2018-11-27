@@ -102,7 +102,6 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     """
     if interaction_test(configuration):
         logging.debug('ENDMEMBERS FROM INTERACTION: {}'.format(endmembers_from_interaction(configuration)))
-        # fitting heat capacity in excess parameters is not usually encouraged in the CALPHAD community. We don't fit it here.
         fitting_steps = (["CPM_FORM", "CPM_MIX"], ["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
 
     else:
