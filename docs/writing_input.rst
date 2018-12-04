@@ -374,4 +374,4 @@ used to modify the initial standard deviation of each data type by
 
 .. figure:: _static/weight_equation.png
     :alt: Data weight equation
-    :scale: 30%
+    :scale: 100%
