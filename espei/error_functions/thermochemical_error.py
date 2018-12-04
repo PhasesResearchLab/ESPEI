@@ -124,7 +124,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
     return calculate_dict
 
 
-def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None):
+def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, weight_dict=None):
     """
     Calculate the weighted single phase error in the Database
 
@@ -147,6 +147,8 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
         Dictionary of {output_property: callables_dict} where callables_dict is
         a dictionary of {phase_name: callables}
         to pass to pycalphad. These must have ideal mixing portions removed.
+    weight_dict : dict
+        Dictionary of {output_property: weight (float)}, e.g. {'HM': 1.0}.
 
     Returns
     -------
@@ -169,6 +171,9 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
     if parameters is None:
         parameters = {}
 
+    if weight_dict is None:
+        weight_dict = {}
+
     if phase_models is None:
         # create phase models with ideal mixing removed
         phase_models = {}
@@ -179,9 +184,9 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
 
     # estimated from NIST TRC uncertainties
     property_std_deviation = {
-        'HM': 500.0,  # J/mol
-        'SM':   0.2,  # J/K-mol
-        'CPM':  0.2,  # J/K-mol
+        'HM': 500.0/weight_dict.get('HM', 1.0),  # J/mol
+        'SM':   0.2/weight_dict.get('SM', 1.0),  # J/K-mol
+        'CPM':  0.2/weight_dict.get('CPM', 1.0),  # J/K-mol
     }
     property_suffixes = ('_FORM', '_MIX')
     # the kinds of properties, e.g. 'HM'+suffix =>, 'HM_FORM', 'HM_MIX'

@@ -107,3 +107,6 @@ mcmc:
       type: boolean
       default: True
       required: True
+    data_weights:
+      type: dict
+      default: {'ZPF': 1.0, 'ACR': 1.0, 'HM': 1.0, 'SM': 1.0, 'CPM': 1.0}

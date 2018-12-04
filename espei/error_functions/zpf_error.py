@@ -211,7 +211,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
     return error
 
 
-def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=None, callables=None, std_dev=1000):
+def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=None, callables=None, data_weight=1.0):
     """
     Calculate error due to phase equilibria data
 
@@ -231,8 +231,10 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
         Dictionary of symbols that will be overridden in pycalphad.equilibrium
     callables : dict
         Callables to pass to pycalphad
-    std_dev : float
-        Standard deviation of the measurement of a tieline, units J/mol.
+    data_weight : float
+        Scaling factor for the standard deviation of the measurement of a
+        tieline which has units J/mol. The standard deviation is 1000 J/mol
+        and the scaling factor defaults to 1.0.
 
     Returns
     -------
@@ -241,9 +243,10 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
 
     Notes
     -----
-    The physical picture of std_dev is that we've measured a ZPF line. That line
-    corresponds to some equilibrium chemical potentials. The std_deviation is
-    the standard deviation of those 'measured' chemical potentials.
+    The physical picture of the standard deviation is that we've measured a ZPF
+    line. That line corresponds to some equilibrium chemical potentials. The
+    standard deviation is the standard deviation of those 'measured' chemical
+    potentials.
 
     """
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
@@ -301,7 +304,7 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                     cond_dict.update(current_statevars)
                     error = tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
                                                         phase_models, parameters, callables=callables)
-                    vertex_prob = norm(loc=0, scale=std_dev/weight).logpdf(error)
+                    vertex_prob = norm(loc=0, scale=1000/data_weight/weight).logpdf(error)
                     prob_error += vertex_prob
                     logging.debug('ZPF error - Equilibria: ({}), current phase: {}, probability: {}, reference: {}'.format(eq_str, current_phase, vertex_prob, data["reference"]))
     if np.isnan(prob_error):

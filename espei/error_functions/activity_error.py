@@ -62,7 +62,7 @@ def chempot_error(sample_chempots, target_chempots, std_dev=10.0):
     return norm(loc=0, scale=std_dev).logpdf(np.array(target_chempots - sample_chempots, dtype=np.float64))
 
 
-def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, std_dev=500.0):
+def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, data_weight=1.0):
     """
     Return the sum of square error from activity data
 
@@ -82,10 +82,10 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
         Phase models to pass to pycalphad calculations
     callables : dict
         Callables to pass to pycalphad
-    std_dev : float
-        Standard deviation of activity measurements in J/mol. Corresponds to the
-        standard deviation of differences in chemical potential in typical
-        measurements of activity.
+    data_weight : float
+        Weight for standard deviation of activity measurements, dimensionless.
+        Corresponds to the standard deviation of differences in chemical
+        potential in typical measurements of activity, in J/mol.
 
     Returns
     -------
@@ -104,6 +104,8 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
         d. Calculate error due to chemical potentials
 
     """
+    std_dev = 500  # J/mol
+
     if parameters is None:
         parameters = {}
 
@@ -155,7 +157,7 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
         target_chempots = target_chempots_from_activity(acr_component, samples, conditions[v.T], ref_result)
         # calculate the error
         weight = ds.get('weight', 1.0)
-        pe = chempot_error(current_chempots, target_chempots, std_dev=std_dev/weight)
+        pe = chempot_error(current_chempots, target_chempots, std_dev=std_dev/data_weight/weight)
         error += np.sum(pe)
         logging.debug('Activity error - data: {}, probability: {}, reference: {}'.format(samples, pe, ds["reference"]))
 

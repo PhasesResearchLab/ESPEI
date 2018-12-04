@@ -26,19 +26,22 @@ TRACE = 15  # TRACE logging level
 
 
 def lnlikelihood(params, comps=None, dbf=None, phases=None, datasets=None,
-           symbols_to_fit=None, phase_models=None,
+           symbols_to_fit=None, phase_models=None, weight_dict=None,
            callables=None, thermochemical_callables=None,
            ):
     """Calculate the likelihood, $$ \ln p(\theta|y) $$ """
     starttime = time.time()
+    weight_dict = weight_dict if weight_dict is not None else {}
     parameters = {param_name: param for param_name, param in zip(symbols_to_fit, params)}
     try:
         multi_phase_error = calculate_zpf_error(dbf, comps, phases, datasets, phase_models,
-                                     parameters=parameters, callables=callables)
+                                                parameters=parameters, callables=callables,
+                                                data_weight=weight_dict.get('ZPF', 1.0),
+                                                )
     except (ValueError, LinAlgError) as e:
         multi_phase_error = -np.inf
-    single_phase_error = calculate_thermochemical_error(dbf, comps, phases, datasets, parameters, phase_models=phase_models, callables=thermochemical_callables)
-    actvity_error = calculate_activity_error(dbf, comps, phases, datasets, parameters=parameters, phase_models=phase_models, callables=callables)
+    actvity_error = calculate_activity_error(dbf, comps, phases, datasets, parameters=parameters, phase_models=phase_models, callables=callables, data_weight=weight_dict.get('ACR', 1.0))
+    single_phase_error = calculate_thermochemical_error(dbf, comps, phases, datasets, parameters, phase_models=phase_models, callables=thermochemical_callables, weight_dict=weight_dict)
     total_error = multi_phase_error + single_phase_error + actvity_error
     logging.log(TRACE, 'Likelihood - {:0.2f}s - Thermochemical: {:0.3f}. ZPF: {:0.3f}. Activity: {:0.3f}. Total: {:0.3f}.'.format(time.time() - starttime, single_phase_error, multi_phase_error, actvity_error, total_error))
     return np.array(total_error, dtype=np.float64)
@@ -69,7 +72,7 @@ def lnprior(params, priors):
 
 
 def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=None,
-           symbols_to_fit=None, phase_models=None, scheduler=None,
+           symbols_to_fit=None, phase_models=None, scheduler=None, weight_dict=None,
            callables=None, thermochemical_callables=None
            ):
     """
@@ -109,6 +112,8 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
     thermochemical_callables :
         Dictionary of {output property: {phase name: {phase callables dict}}}.
         These callables must have ideal mixing portions removed.
+    weight_dict : dict
+        Dictionary of weights for each data type, e.g. {'ZPF': 20, 'HM': 2}
 
     Returns
     -------
@@ -124,7 +129,9 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
 
     loglike = lnlikelihood(params, comps=comps, dbf=dbf, phases=phases, datasets=datasets,
            symbols_to_fit=symbols_to_fit, phase_models=phase_models,
-           callables=callables, thermochemical_callables=thermochemical_callables)
+           callables=callables, thermochemical_callables=thermochemical_callables,
+                           weight_dict=weight_dict,
+                           )
 
     logprob = logprior + loglike
     logging.log(TRACE, 'Proposal - lnprior: {:0.4f}, lnlike: {:0.4f}, lnprob: {:0.4f}'.format(logprior, loglike, logprob))
@@ -161,7 +168,7 @@ def generate_parameter_distribution(parameters, num_samples, std_deviation, dete
 
 def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_parameter=2,
              chain_std_deviation=0.1, scheduler=None, tracefile=None, probfile=None,
-             restart_trace=None, deterministic=True, prior=None):
+             restart_trace=None, deterministic=True, prior=None, mcmc_data_weights=None):
     """
     Run Markov Chain Monte Carlo on the Database given datasets
 
@@ -200,6 +207,8 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
         Prior to use to generate priors. Defaults to 'zero', which keeps
         backwards compatibility. Can currently choose 'normal', 'uniform',
         'triangular', or 'zero'.
+    mcmc_data_weights : dict
+        Dictionary of weights for each data type, e.g. {'ZPF': 20, 'HM': 2}
 
     Returns
     -------
@@ -288,6 +297,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
                      'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
                      'thermochemical_callables': thermochemical_callables,
                      'callables': eq_callables, 'prior_rvs': rv_priors,
+                     'weight_dict': mcmc_data_weights,
                      }
 
     def save_sampler_state(sampler):

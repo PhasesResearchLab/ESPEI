@@ -55,6 +55,7 @@ All of the possible keys are
      chains_per_parameter
      chain_std_deviation
      deterministic
+     data_weights
 
 
 The next sections describe each of the keys individually.
@@ -360,3 +361,17 @@ same initial parameters and Run 1 proceeds 50 iterations while Run 2
 proceeds 100 iterations, restarting Run 1 for 100 iterations and Run 2 for 50
 iterations (so they are both at 150 total iterations) will **NOT** give the same
 result.
+
+data_weights
+------------
+
+:type: dict
+:default: {'ZPF': 1.0, 'ACR': 1.0, 'HM': 1.0, 'SM': 1.0, 'CPM': 1.0}
+
+Each type of data can be weighted: zero phase fraction (``ZPF``), activity
+(``ACR``) and the different types of thermochemical error. These weights are
+used to modify the initial standard deviation of each data type by
+
+.. figure:: _static/weight_equation.png
+    :alt: Data weight equation
+    :scale: 30%

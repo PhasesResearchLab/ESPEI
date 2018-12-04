@@ -207,6 +207,7 @@ def run_espei(run_settings):
         chain_std_deviation = mcmc_settings.get('chain_std_deviation')
         deterministic = mcmc_settings.get('deterministic')
         prior = mcmc_settings.get('prior')
+        data_weights = mcmc_settings.get('data_weights')
 
         dbf, sampler = mcmc_fit(dbf, datasets, scheduler=client, iterations=iterations,
                                 chains_per_parameter=chains_per_parameter,
@@ -215,7 +216,7 @@ def run_espei(run_settings):
                                 tracefile=tracefile, probfile=probfile,
                                 restart_trace=restart_trace,
                                 deterministic=deterministic,
-                                prior=prior,
+                                prior=prior, mcmc_data_weights=data_weights,
                                 )
 
         dbf.to_file(output_settings['output_db'], if_exists='overwrite')
