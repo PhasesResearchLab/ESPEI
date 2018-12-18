@@ -41,7 +41,7 @@ Creating TDBs of optimal parameters from a tracefile and probfile:
    dbf.to_file(OUTPUT_TDB_FILENAME)
 
 
-Plotting phaes equilibria data
+Plotting phase equilibria data
 ==============================
 
 When compiling ESPEI datasets of phase equilibria data, it can be useful to plot the data to check that it matches visually with what you are expecting.
@@ -90,6 +90,55 @@ The script gives the following output:
     :alt: Cu-Mg dataplot recipe
     :scale: 100%
 
+Plotting thermochemical properties parameters with data
+=======================================================
+
+Parameter selection in ESPEI fits Calphad parameters to thermochemical data.
+MCMC can adjust these parameters.
+In both cases, it may be useful to compare the energies of specific endmembers and interactions to the model.
+The code below compares the energies for an endmember or interaction (a configuration).
+The ``plot_parameters`` code will automatically plot all of the energies that data exists for, but no more.
+
+.. code-block:: python
+
+   """
+   This script plots a single interaction in a database compared to data.
+   """
+
+   # Settings
+   INPUT_TDB_FILENAME = 'CU-MG_param_gen.tdb'
+   DATASET_DIRECTORY = 'input-data'
+   PHASE_NAME = 'LIQUID'
+   # CONFIGURATION must be a tuple of the configuration to be plotted.
+   # This can only plot one endmember or interaction at a time.
+   # Note that the outside tuples are the whole configuration
+   # and the insides are for each individual sublattice.
+   # Single sublattices *MUST* have the comma after the
+   # object in order to be a tuple, not just parantheses.
+   # some examples:
+   # ('CU', 'MG')  # endmember
+   # (('CU', 'MG'),)  # (('CU', 'MG')) is invalid because it will be come ('CU', 'MG')
+   # ('MG', ('CU', 'MG'))
+   CONFIGURATION = (('CU', 'MG'),)
+
+   # Plot the parameter
+   import matplotlib.pyplot as plt
+   from pycalphad import Database
+   from espei.datasets import load_datasets, recursive_glob
+   from espei.plot import plot_parameters
+
+   dbf = Database(INPUT_TDB_FILENAME)
+   comps = sorted(dbf.elements)
+   ds = load_datasets(recursive_glob(DATASET_DIRECTORY, '*.json'))
+   plot_parameters(dbf, comps, PHASE_NAME, CONFIGURATION, datasets=ds, symmetry=None)
+   plt.show()
+
+
+Running for the single sublattice LIQUID phase in Cu-Mg gives the following output after parameter selection:
+
+.. figure:: _static/cu-mg-plot_parameters-liquid.png
+    :alt: Cu-Mg LIQUID HM_MIX
+    :scale: 75%
 
 
 
