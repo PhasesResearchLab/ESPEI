@@ -7,6 +7,7 @@ Classes and functions defined here should have some reuse potential.
 import itertools
 import re
 from collections import namedtuple
+import importlib
 
 import bibtexparser
 import numpy as np
@@ -385,3 +386,35 @@ def build_sitefractions(phase_name, sublattice_configurations, sublattice_occupa
                     sitefracs[v.SiteFraction(phase_name, sublattice_idx, comp)] = val
         result.append(sitefracs)
     return result
+
+
+def popget(d, key, default=None):
+    """
+    Get the key from the dict, returning the default if not found.
+
+    Parameters
+    ----------
+    d : dict
+        Dictionary to get key from.
+    key : object
+        Key to get from the dictionary.
+    default : object
+        Default to return if key is not found in dictionary.
+
+    Returns
+    -------
+    object
+
+    Examples
+    ---------
+    >>> d = {'ABC': 5.0}
+    >>> popget(d, 'ZPF', 1.0) == 1.0
+    True
+    >>> popget(d, 'ABC', 1.0) == 5.0
+    True
+
+    """
+    try:
+        return d.pop(key)
+    except KeyError:
+        return default

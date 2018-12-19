@@ -1,6 +1,7 @@
 """The test_parameter_generation module tests that parameter selection is correct"""
 
 from tinydb import where
+import numpy as np
 
 from espei.paramselect import generate_parameters
 from .testing_data import *
@@ -131,7 +132,7 @@ def test_mixing_energies_are_fit(datasets_db):
 
     # the error should be exactly 0 because we are only fitting to one point
     from espei.error_functions import calculate_thermochemical_error
-    assert calculate_thermochemical_error(read_dbf, sorted(dbf.elements), sorted(dbf.phases.keys()), datasets_db) == 0
+    assert np.isclose(calculate_thermochemical_error(read_dbf, sorted(dbf.elements), sorted(dbf.phases.keys()), datasets_db), -7.133546631626864, rtol=1e-6)
 
 
 def test_mixing_energies_are_reduced_with_ridge_alpha(datasets_db):

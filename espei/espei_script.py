@@ -26,6 +26,9 @@ from espei import generate_parameters, mcmc_fit, schema
 from espei.utils import ImmediateClient
 from espei.datasets import DatasetError, load_datasets, recursive_glob
 
+TRACE = 15  # TRACE logging level
+
+
 parser = argparse.ArgumentParser(description=__doc__)
 
 parser.add_argument(
@@ -120,20 +123,23 @@ def run_espei(run_settings):
     mcmc_settings = run_settings.get('mcmc')
 
     # handle verbosity
-    verbosity = {0: logging.WARNING,
-                 1: logging.INFO,
-                 2: logging.DEBUG}
-    logging.basicConfig(level=verbosity[output_settings['verbosity']])
+    verbosity = {
+        0: logging.WARNING,
+        1: logging.INFO,
+        2: TRACE,
+        3: logging.DEBUG
+    }
+    logging.basicConfig(level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
 
     log_version_info()
 
     # load datasets and handle i/o
-    logging.debug('Loading and checking datasets.')
+    logging.log(TRACE, 'Loading and checking datasets.')
     dataset_path = system_settings['datasets']
     datasets = load_datasets(sorted(recursive_glob(dataset_path, '*.json')))
     if len(datasets.all()) == 0:
         logging.warning('No datasets were found in the path {}. This should be a directory containing dataset files ending in `.json`.'.format(dataset_path))
-    logging.debug('Finished checking datasets')
+    logging.log(TRACE, 'Finished checking datasets')
 
     with open(system_settings['phase_models']) as fp:
         phase_models = json.load(fp)
@@ -167,7 +173,7 @@ def run_espei(run_settings):
             # TODO: make dask-scheduler-verbosity a YAML input so that users can debug. Should have the same log levels as verbosity
             scheduler = LocalCluster(n_workers=cores, threads_per_worker=1, processes=True, memory_limit=0)
             client = ImmediateClient(scheduler)
-            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']])
+            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
             logging.info("Running with dask scheduler: %s [%s cores]" % (scheduler, sum(client.ncores().values())))
             try:
                 logging.info(
@@ -181,7 +187,7 @@ def run_espei(run_settings):
         else: # we were passed a scheduler file name
             _raise_dask_work_stealing()  # check for work-stealing
             client = ImmediateClient(scheduler_file=mcmc_settings['scheduler'])
-            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']])
+            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
             logging.info("Running with dask scheduler: %s [%s cores]" % (client.scheduler, sum(client.ncores().values())))
 
         # get a Database
@@ -200,6 +206,8 @@ def run_espei(run_settings):
         chains_per_parameter = mcmc_settings.get('chains_per_parameter')
         chain_std_deviation = mcmc_settings.get('chain_std_deviation')
         deterministic = mcmc_settings.get('deterministic')
+        prior = mcmc_settings.get('prior')
+        data_weights = mcmc_settings.get('data_weights')
 
         dbf, sampler = mcmc_fit(dbf, datasets, scheduler=client, iterations=iterations,
                                 chains_per_parameter=chains_per_parameter,
@@ -208,6 +216,7 @@ def run_espei(run_settings):
                                 tracefile=tracefile, probfile=probfile,
                                 restart_trace=restart_trace,
                                 deterministic=deterministic,
+                                prior=prior, mcmc_data_weights=data_weights,
                                 )
 
         dbf.to_file(output_settings['output_db'], if_exists='overwrite')

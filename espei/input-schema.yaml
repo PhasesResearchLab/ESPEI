@@ -14,12 +14,16 @@ output:
   type: dict
   default: {}
   schema:
-    verbosity: # integer verbosity level 0 | 1 | 2, where 2 is most verbose.
+    verbosity: # integer verbosity level for logging, 0 | 1 | 2 | 3, where 3 is most verbose.
       type: integer
       min: 0
-      max: 2
+      max: 3
       default: 0
       required: True
+    logfile:  # name of file to output the logging information to
+      type: string
+      default: null
+      nullable: True
     output_db:
       type: string
       default: out.tdb
@@ -65,6 +69,9 @@ mcmc:
       type: integer
       min: 1
       required: True
+    prior:
+      type: [dict, list]
+      default: {'name': 'zero'}
     save_interval:
       type: integer
       default: 1
@@ -100,3 +107,6 @@ mcmc:
       type: boolean
       default: True
       required: True
+    data_weights:
+      type: dict
+      default: {'ZPF': 1.0, 'ACR': 1.0, 'HM': 1.0, 'SM': 1.0, 'CPM': 1.0}

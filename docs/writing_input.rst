@@ -34,6 +34,7 @@ All of the possible keys are
 
    output:
      verbosity
+     logfile
      output_db
      tracefile
      probfile
@@ -45,6 +46,7 @@ All of the possible keys are
 
    mcmc:
      iterations
+     prior
      save_interval
      cores
      scheduler
@@ -53,6 +55,7 @@ All of the possible keys are
      chains_per_parameter
      chain_std_deviation
      deterministic
+     data_weights
 
 
 The next sections describe each of the keys individually.
@@ -92,15 +95,30 @@ verbosity
 :type: int
 :default: 0
 
-Controls the logging level.
+Controls the logging level. Most users will probably want to use ``Info`` or ``Trace``.
+
+``Warning`` logs should almost never occur and this log level will be
+relatively quiet. ``Debug`` is a fire hose of information, but may be useful in
+fixing calculation errors or adjusting weights.
 
 =====  =========
 Value  Log Level
 =====  =========
 0      Warning
 1      Info
-2      Debug
+2      Trace
+3      Debug
 =====  =========
+
+logfile
+-------
+
+:type: string
+:default: null
+
+Name of the file that the logs (controlled by ``verbosity``) will be output to.
+The default is ``None`` (in Python, ``null`` in JSON), meaning the logging will
+be output to stdout and stderr.
 
 output_db
 ---------
@@ -209,6 +227,16 @@ iterations
 
 Number of iterations to perform in emcee.
 Each iteration consists of accepting one step for each chain in the ensemble.
+
+prior
+-----
+
+:type: list or dict
+:default: {'name': 'zero'}
+
+Either a single prior dictionary or a list of prior dictionaries corresponding to
+the number of parameters. See :ref:`Specifying Priors` for examples and details
+on writing priors.
 
 
 save_interval
@@ -333,3 +361,17 @@ same initial parameters and Run 1 proceeds 50 iterations while Run 2
 proceeds 100 iterations, restarting Run 1 for 100 iterations and Run 2 for 50
 iterations (so they are both at 150 total iterations) will **NOT** give the same
 result.
+
+data_weights
+------------
+
+:type: dict
+:default: {'ZPF': 1.0, 'ACR': 1.0, 'HM': 1.0, 'SM': 1.0, 'CPM': 1.0}
+
+Each type of data can be weighted: zero phase fraction (``ZPF``), activity
+(``ACR``) and the different types of thermochemical error. These weights are
+used to modify the initial standard deviation of each data type by
+
+.. figure:: _static/weight_equation.png
+    :alt: Data weight equation
+    :scale: 100%

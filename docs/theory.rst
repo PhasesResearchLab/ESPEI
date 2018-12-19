@@ -25,7 +25,7 @@ ESPEI aims to achieve a balance of a simple parameterization and
 goodness of fit in the Redlich-Kister polynomial used in CALPHAD
 assessments. To achieve this, parameters are selected using the corrected
 `Akaike information criterion <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_
-(AICc) to choose an optimal set of parameters from canditate
+(AICc) to choose an optimal set of parameters from candidate
 parameterizations.
 
 The general Redlich Kister polynomial has the form :math:`G = a + bT +
@@ -38,7 +38,7 @@ pseudo-inverse optimization.
 Each parameterization is compared in the AICc and the most suitable
 optimization balances the goodness of fit and the number of
 parameters. The key aspect of this is that ESPEI will avoid
-overfitting your data and will not add parameters you do not have data
+over-fitting your data and will not add parameters you do not have data
 for.
 
 This is important for phases that would have a temperature dependent

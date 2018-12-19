@@ -413,7 +413,7 @@ def test_datasets_convert_thermochemical_string_values_producing_correct_value(d
 
     dbf = Database(CU_MG_TDB)
     error = calculate_thermochemical_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db)
-    assert np.isclose(float(error), -3672.727272727273, atol=0.01)
+    assert np.isclose(float(error), -14.287293263253728, rtol=1e-6)
 
 
 def test_datasets_convert_zpf_string_values_producing_correct_value(datasets_db):
@@ -421,5 +421,5 @@ def test_datasets_convert_zpf_string_values_producing_correct_value(datasets_db)
     datasets_db.insert(clean_dataset(CU_MG_DATASET_ZPF_STRING_VALUES))
 
     dbf = Database(CU_MG_TDB)
-    errors = calculate_zpf_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {})
-    assert np.isclose(-np.sum(np.square(errors)), -5741.61962949)
+    error = calculate_zpf_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {})
+    assert np.isclose(error, -31.309646059218153, rtol=1e-6)

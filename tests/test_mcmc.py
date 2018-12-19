@@ -8,6 +8,7 @@ from pycalphad.codegen.callables import build_callables
 from pycalphad import Model
 
 from espei.mcmc import lnprob, generate_parameter_distribution
+from espei.priors import rv_zero
 from .fixtures import datasets_db
 from .testing_data import CU_MG_TDB, CU_MG_DATASET_ZPF_WORKING, CU_MG_TDB_FCC_ONLY, CU_MG_HM_MIX_SINGLE_FCC_A1
 
@@ -24,16 +25,16 @@ def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
     eq_callables['phase_models'] = eq_callables.pop('model')
     eq_callables.pop('phase_records')
 
-    res = lnprob([10], comps=comps, dbf=dbf, phases=phases,
+    res = lnprob([10], prior_rvs=[rv_zero()], comps=comps, dbf=dbf, phases=phases,
                  datasets=datasets_db, symbols_to_fit=[param], callables=eq_callables)
 
     assert np.isreal(res)
-    assert np.isclose(res, -5740.54416621)
+    assert np.isclose(res, -31.309645520830344, rtol=1e-6)
 
-    res_2 = lnprob([10000000], comps=comps, dbf=dbf, phases=phases,
+    res_2 = lnprob([10000000], prior_rvs=[rv_zero()], comps=comps, dbf=dbf, phases=phases,
                  datasets=datasets_db, symbols_to_fit=[param], callables=eq_callables)
 
-    assert not np.isclose(res_2, -5740.54416621)
+    assert not np.isclose(res_2, -31.309645520830344, rtol=1e-6)
 
 
 def test_lnprob_calculates_single_phase_probability_for_success(datasets_db):
@@ -62,26 +63,26 @@ def test_lnprob_calculates_single_phase_probability_for_success(datasets_db):
     thermochemical_callables[prop].pop('phase_records')
     # thermochemical_callables[prop].pop('model')
 
-    res_orig = lnprob([orig_val], comps=comps, dbf=dbf, phases=phases, phase_models=pm,
+    res_orig = lnprob([orig_val], prior_rvs=[rv_zero()], comps=comps, dbf=dbf, phases=phases, phase_models=pm,
                  datasets=datasets_db, symbols_to_fit=[Symbol(param)], callables=eq_callables,
                  thermochemical_callables=thermochemical_callables)
 
     assert np.isreal(res_orig)
-    assert np.isclose(res_orig, -19859.38)
+    assert np.isclose(res_orig, -9.119484935312146, rtol=1e-6)
 
 
-    res_10 = lnprob([10], comps=comps, dbf=dbf, phases=phases, phase_models=pm,
+    res_10 = lnprob([10], prior_rvs=[rv_zero()], comps=comps, dbf=dbf, phases=phases, phase_models=pm,
                  datasets=datasets_db, symbols_to_fit=[Symbol(param)], callables=eq_callables,
                  thermochemical_callables=thermochemical_callables)
 
     assert np.isreal(res_10)
-    assert np.isclose(res_10, -20100.125)
+    assert np.isclose(res_10, -9.143559131626864, rtol=1e-6)
 
-    res_1e5 = lnprob([1e5], comps=comps, dbf=dbf, phases=phases, phase_models=pm,
+    res_1e5 = lnprob([1e5], prior_rvs=[rv_zero()], comps=comps, dbf=dbf, phases=phases, phase_models=pm,
                  datasets=datasets_db, symbols_to_fit=[param], callables=eq_callables,
                  thermochemical_callables=thermochemical_callables)
     assert np.isreal(res_1e5)
-    assert np.isclose(res_1e5, -13520000.0)
+    assert np.isclose(res_1e5, -1359.1335466316268, rtol=1e-6)
 
 
 def _eq_LinAlgError(*args, **kwargs):
@@ -97,7 +98,7 @@ def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
     """lnprob() should catch LinAlgError raised by equilibrium and return -np.inf"""
     dbf = Database.from_string(CU_MG_TDB, fmt='tdb')
     datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
-    res = lnprob([10], comps=['CU', 'MG', 'VA'], dbf=dbf,
+    res = lnprob([10], prior_rvs=[rv_zero()], comps=['CU', 'MG', 'VA'], dbf=dbf,
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
                  datasets=datasets_db, symbols_to_fit=['VV0001'], phase_models=None)
     assert np.isneginf(res)
@@ -108,7 +109,7 @@ def test_lnprob_does_not_raise_on_ValueError(datasets_db):
     """lnprob() should catch ValueError raised by equilibrium and return -np.inf"""
     dbf = Database.from_string(CU_MG_TDB, fmt='tdb')
     datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
-    res = lnprob([10], comps=['CU', 'MG', 'VA'], dbf=dbf,
+    res = lnprob([10], prior_rvs=[rv_zero()], comps=['CU', 'MG', 'VA'], dbf=dbf,
                  phases=['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2'],
                  datasets=datasets_db, symbols_to_fit=['VV0001'], phase_models=None)
     assert np.isneginf(res)

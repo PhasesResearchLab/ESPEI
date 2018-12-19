@@ -290,10 +290,11 @@ An example for Cu-Mg activties follows, with data digitized from S.P. Garg, Y.J.
       "comment": "Digitized Figure 3 and converted from activity coefficients."
     }
 
-Common Mistakes
-===============
+Common Mistakes and Notes
+=========================
 
 1. A single element sublattice is different in a phase model (``[["A", "B"], ["A"]]]``) than a sublattice configuration (``[["A", "B"], "A"]``).
 #. Make sure you use the right units (``J/mole-atom``, mole fractions, Kelvin, Pascal)
 #. Mixing configurations should not have ideal mixing contributions.
+#. All types of data can have a ``weight`` key at the top level that will weight the standard deviation parameter in MCMC runs for that dataset. If a single dataset should have different weights applied, multiple datasets should be created.
 

@@ -1,5 +1,5 @@
 """
-Calculate error due to ZPF tielines.
+Calculate driving_force due to ZPF tielines.
 
 The general approach is similar to the PanOptimizer rough search method.
 
@@ -18,7 +18,7 @@ import textwrap, time, operator, logging
 from collections import defaultdict, OrderedDict
 
 import numpy as np
-import dask
+from scipy.stats import norm
 import tinydb
 
 from pycalphad import calculate, equilibrium, variables as v
@@ -96,7 +96,7 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
 def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
                   phase_models, parameters, debug_mode=False,
                   callables=None):
-    """
+    """Calculate the integrated driving force between the current hyperlane and target hyperplane.
 
     Parameters
     ----------
@@ -211,7 +211,7 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
     return error
 
 
-def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=None, callables=None):
+def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=None, callables=None, data_weight=1.0):
     """
     Calculate error due to phase equilibria data
 
@@ -231,11 +231,22 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
         Dictionary of symbols that will be overridden in pycalphad.equilibrium
     callables : dict
         Callables to pass to pycalphad
+    data_weight : float
+        Scaling factor for the standard deviation of the measurement of a
+        tieline which has units J/mol. The standard deviation is 1000 J/mol
+        and the scaling factor defaults to 1.0.
 
     Returns
     -------
     list
         List of errors from phase equilibria data
+
+    Notes
+    -----
+    The physical picture of the standard deviation is that we've measured a ZPF
+    line. That line corresponds to some equilibrium chemical potentials. The
+    standard deviation is the standard deviation of those 'measured' chemical
+    potentials.
 
     """
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
@@ -248,10 +259,11 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
         except IndexError:
             return None
 
-    errors = []
+    prob_error = 0.0
     for data in desired_data:
         payload = data['values']
         conditions = data['conditions']
+        weight = data.get('weight', 1.0)
         data_comps = list(set(data['components']).union({'VA'}))
         # create a dictionary of each set of phases containing a list of individual points on the tieline
         # individual tieline points are tuples of (conditions, {composition dictionaries})
@@ -278,6 +290,7 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
             # for each tieline region conditions and compositions
             for current_statevars, comp_dicts in region_eq:
                 # a "region" is a set of phase equilibria
+                eq_str = "conds: ({}), comps: ({})".format(current_statevars, ', '.join(['{}: {}'.format(ph,c[0]) for ph, c in zip(region, comp_dicts)]))
                 region_chemical_potentials = estimate_hyperplane(dbf, data_comps, phases, current_statevars, comp_dicts,
                                                       phase_models, parameters, callables=callables)
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
@@ -289,7 +302,12 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                         if val is None:
                             cond_dict[key] = np.nan
                     cond_dict.update(current_statevars)
-                    errors.append(tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
-                                                        phase_models, parameters, callables=callables))
-    return errors
+                    driving_force = tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
+                                                        phase_models, parameters, callables=callables)
+                    vertex_prob = norm(loc=0, scale=1000/data_weight/weight).logpdf(driving_force)
+                    prob_error += vertex_prob
+                    logging.debug('ZPF error - Equilibria: ({}), current phase: {}, driving force: {}, probability: {}, reference: {}'.format(eq_str, current_phase, driving_force, vertex_prob, data["reference"]))
+    if np.isnan(prob_error):
+        return -np.inf
+    return prob_error
 

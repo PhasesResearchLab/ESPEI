@@ -3,15 +3,15 @@ Calculate error due to thermochemical quantities: heat capacity, entropy, enthal
 """
 
 import itertools
+import logging
 
-import sympy
+from scipy.stats import norm
 import numpy as np
-import tinydb
 
 from pycalphad import calculate, Model
 from pycalphad.core.utils import unpack_components
 
-from espei.core_utils import ravel_conditions
+from espei.core_utils import ravel_conditions, get_prop_data
 
 
 def calculate_points_array(phase_constituents, configuration, occupancies=None):
@@ -58,36 +58,6 @@ def calculate_points_array(phase_constituents, configuration, occupancies=None):
     return points
 
 
-def get_prop_data(comps, phase_name, prop, datasets):
-    """
-    Return datasets that match the components, phase and property
-
-    Parameters
-    ----------
-    comps : list
-        List of components to get data for
-    phase_name : str
-        Name of the phase to get data for
-    prop : str
-        Property to get data for
-    datasets : espei.utils.PickleableTinyDB
-        Datasets to search for data
-
-    Returns
-    -------
-    list
-        List of dictionary datasets that match the criteria
-
-    """
-    # TODO: we should only search and get phases that have the same sublattice_site_ratios as the phase in the database
-    desired_data = datasets.search(
-        (tinydb.where('output').test(lambda x: x in prop)) &
-        (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
-        (tinydb.where('phases') == [phase_name])
-    )
-    return desired_data
-
-
 def get_prop_samples(dbf, comps, phase_name, desired_data):
     """
     Return data values and the conditions to calculate them by pycalphad
@@ -123,6 +93,8 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         'T': np.array([]),
         'points': np.atleast_2d([[]]).reshape(-1, sum([len(subl) for subl in phase_constituents])),
         'values': np.array([]),
+        'weights': [],
+        'references': [],
     }
 
     for datum in desired_data:
@@ -146,11 +118,13 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         calculate_dict['T'] = np.concatenate([calculate_dict['T'], T])
         calculate_dict['points'] = np.concatenate([calculate_dict['points'], np.repeat(points, len(T)/points.shape[0], axis=0)], axis=0)
         calculate_dict['values'] = np.concatenate([calculate_dict['values'], values.flatten()])
+        calculate_dict['weights'].extend([datum.get('weight', 1.0) for _ in range(values.flatten().size)])
+        calculate_dict['references'].extend([datum.get('reference', "") for _ in range(values.flatten().size)])
 
     return calculate_dict
 
 
-def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None):
+def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, weight_dict=None):
     """
     Calculate the weighted single phase error in the Database
 
@@ -173,6 +147,8 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
         Dictionary of {output_property: callables_dict} where callables_dict is
         a dictionary of {phase_name: callables}
         to pass to pycalphad. These must have ideal mixing portions removed.
+    weight_dict : dict
+        Dictionary of {output_property: weight (float)}, e.g. {'HM': 1.0}.
 
     Returns
     -------
@@ -195,6 +171,9 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
     if parameters is None:
         parameters = {}
 
+    if weight_dict is None:
+        weight_dict = {}
+
     if phase_models is None:
         # create phase models with ideal mixing removed
         phase_models = {}
@@ -203,28 +182,26 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
             phase_models[phase_name].models['idmix'] = 0
 
 
-    # property weights factors as fractions of the parameters
-    # for now they are all set to 5%
-    property_prefix_weight_factor = {
-        'HM': 0.05,
-        'SM': 0.05,
-        'CPM': 0.05,
+    # estimated from NIST TRC uncertainties
+    property_std_deviation = {
+        'HM': 500.0/weight_dict.get('HM', 1.0),  # J/mol
+        'SM':   0.2/weight_dict.get('SM', 1.0),  # J/K-mol
+        'CPM':  0.2/weight_dict.get('CPM', 1.0),  # J/K-mol
     }
     property_suffixes = ('_FORM', '_MIX')
     # the kinds of properties, e.g. 'HM'+suffix =>, 'HM_FORM', 'HM_MIX'
     # we could also include the bare property ('' => 'HM'), but these are rarely used in ESPEI
-    properties = [''.join(prop) for prop in itertools.product(property_prefix_weight_factor.keys(), property_suffixes)]
+    properties = [''.join(prop) for prop in itertools.product(property_std_deviation.keys(), property_suffixes)]
 
     whitelist_properties = ['HM', 'SM', 'CPM', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
     # if callables is None, construct empty callables dicts, which will be JIT compiled by pycalphad later
     callables = callables if callables is not None else {prop: None for prop in whitelist_properties}
 
-    sum_square_error = 0
+    prob_error = 0.0
     for phase_name in phases:
         for prop in properties:
             desired_data = get_prop_data(comps, phase_name, prop, datasets)
             if len(desired_data) == 0:
-                # logging.debug('Skipping {} in phase {} because no data was found.'.format(prop, phase_name))
                 continue
             calculate_dict = get_prop_samples(dbf, comps, phase_name, desired_data)
             if prop.endswith('_FORM'):
@@ -235,11 +212,17 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
                 calculate_dict['output'] = prop
                 params = parameters
             sample_values = calculate_dict.pop('values')
+            weights = calculate_dict.pop('weights')
+            dataset_refs = calculate_dict.pop('references')
             results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models,
                                 callables=callables[calculate_dict['output']],
                                 **calculate_dict)[calculate_dict['output']].values
-            weight = (property_prefix_weight_factor[prop.split('_')[0]]*np.abs(np.mean(sample_values)))**(-1.0)
-            error = np.sum((results-sample_values)**2) * weight
-            # logging.debug('Weighted sum of square error for property {} of phase {}: {}'.format(prop, phase_name, error))
-            sum_square_error += error
-    return -sum_square_error
+            std_dev = property_std_deviation[prop.split('_')[0]]
+            probabilities = []
+            differences = []
+            for result, sample_value, weight, ref in zip(results, sample_values, weights, dataset_refs):
+                differences.append(result-sample_value)
+                probabilities.append(norm(loc=0, scale=std_dev/weight).logpdf(result-sample_value))
+            logging.debug('Thermochemical error - data: {}, differences: {}, probabilities: {}, references: {}'.format(sample_values, differences, probabilities, dataset_refs))
+            prob_error += np.sum(probabilities)
+    return prob_error

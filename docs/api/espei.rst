@@ -68,6 +68,14 @@ espei\.plot module
     :undoc-members:
     :show-inheritance:
 
+espei\.priors module
+--------------------
+
+.. automodule:: espei.priors
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 espei\.refdata module
 ---------------------
 
