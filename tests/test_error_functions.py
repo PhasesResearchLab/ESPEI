@@ -21,7 +21,7 @@ def test_activity_error(datasets_db):
 
     dbf = Database(CU_MG_TDB)
     error = calculate_activity_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {})
-    assert np.isclose(float(error), -93037371.27, atol=0.01)
+    assert np.isclose(error, -257.41020886970756, rtol=1e-6)
 
 
 def test_thermochemical_error_with_multiple_X_points(datasets_db):
@@ -30,7 +30,7 @@ def test_thermochemical_error_with_multiple_X_points(datasets_db):
 
     dbf = Database(CU_MG_TDB)
     error = calculate_thermochemical_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db)
-    assert np.isclose(float(error), -520.0, atol=0.01)
+    assert np.isclose(error, -4061.119001241541, rtol=1e-6)
 
 
 def test_thermochemical_error_with_multiple_T_points(datasets_db):
@@ -39,7 +39,7 @@ def test_thermochemical_error_with_multiple_T_points(datasets_db):
 
     dbf = Database(CU_MG_TDB)
     error = calculate_thermochemical_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db)
-    assert np.isclose(float(error), -3672.727272727273, atol=0.01)
+    assert np.isclose(error,-14.287293263253728, rtol=1e-6)
 
 
 def test_thermochemical_error_with_multiple_T_X_points(datasets_db):
@@ -48,7 +48,7 @@ def test_thermochemical_error_with_multiple_T_X_points(datasets_db):
 
     dbf = Database(CU_MG_TDB)
     error = calculate_thermochemical_error(dbf, ['CU', 'MG', 'VA'], list(dbf.phases.keys()), datasets_db)
-    assert np.isclose(float(error), -31830.303030303032, atol=0.01)
+    assert np.isclose(float(error), -3282497.2380024833, rtol=1e-6)
 
 def test_thermochemical_error_for_mixing_entropy_error_is_excess_only(datasets_db):
     """Tests that error in mixing entropy data is excess only (the ideal part is removed)."""
@@ -93,7 +93,7 @@ def test_thermochemical_error_for_mixing_entropy_error_is_excess_only(datasets_d
     # the error should be exactly 0 because we are only fitting to one point
     # the dataset is excess only
     from espei.error_functions import calculate_thermochemical_error
-    assert calculate_thermochemical_error(dbf, sorted(dbf.elements), sorted(dbf.phases.keys()), datasets_db) == 0
+    assert np.isclose(calculate_thermochemical_error(dbf, sorted(dbf.elements), sorted(dbf.phases.keys()), datasets_db), 0.6904993792294276, atol=1e-6)
 
 
 def test_thermochemical_error_for_of_enthalpy_mixing(datasets_db):
@@ -139,7 +139,7 @@ def test_thermochemical_error_for_of_enthalpy_mixing(datasets_db):
     # the error should be exactly 0 because we are only fitting to one point
     # the dataset is excess only
     from espei.error_functions import calculate_thermochemical_error
-    assert calculate_thermochemical_error(dbf, sorted(dbf.elements), sorted(dbf.phases.keys()), datasets_db) == 0
+    assert np.isclose(calculate_thermochemical_error(dbf, sorted(dbf.elements), sorted(dbf.phases.keys()), datasets_db), -7.133546631626864, rtol=1e-6)
 
 
 def test_zpf_error_zero(datasets_db):
@@ -149,5 +149,5 @@ def test_zpf_error_zero(datasets_db):
 
     dbf = Database(CU_MG_TDB)
 
-    errors = calculate_zpf_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {})
-    assert np.isclose(np.sum(np.square(errors)), 0)
+    error = calculate_zpf_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {})
+    assert np.isclose(error, -15.653387624373618, rtol=1e-6)
