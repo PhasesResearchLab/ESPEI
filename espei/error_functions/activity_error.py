@@ -159,7 +159,7 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
         weight = ds.get('weight', 1.0)
         pe = chempot_error(current_chempots, target_chempots, std_dev=std_dev/data_weight/weight)
         error += np.sum(pe)
-        logging.debug('Activity error - data: {}, probability: {}, reference: {}'.format(samples, pe, ds["reference"]))
+        logging.debug('Activity error - data: {}, chemical potential difference: {}, probability: {}, reference: {}'.format(samples, current_chempots-target_chempots, pe, ds["reference"]))
 
     # TODO: write a test for this
     if np.any(np.isnan(np.array([error], dtype=np.float64))):  # must coerce sympy.core.numbers.Float to float64

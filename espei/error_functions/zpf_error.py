@@ -1,5 +1,5 @@
 """
-Calculate error due to ZPF tielines.
+Calculate driving_force due to ZPF tielines.
 
 The general approach is similar to the PanOptimizer rough search method.
 
@@ -302,11 +302,11 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                         if val is None:
                             cond_dict[key] = np.nan
                     cond_dict.update(current_statevars)
-                    error = tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
+                    driving_force = tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
                                                         phase_models, parameters, callables=callables)
-                    vertex_prob = norm(loc=0, scale=1000/data_weight/weight).logpdf(error)
+                    vertex_prob = norm(loc=0, scale=1000/data_weight/weight).logpdf(driving_force)
                     prob_error += vertex_prob
-                    logging.debug('ZPF error - Equilibria: ({}), current phase: {}, probability: {}, reference: {}'.format(eq_str, current_phase, vertex_prob, data["reference"]))
+                    logging.debug('ZPF error - Equilibria: ({}), current phase: {}, driving force: {}, probability: {}, reference: {}'.format(eq_str, current_phase, driving_force, vertex_prob, data["reference"]))
     if np.isnan(prob_error):
         return -np.inf
     return prob_error
