@@ -136,6 +136,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     moles_per_formula_unit = sympy.S(0)
     YS = sympy.Symbol('YS')  # site fraction symbol that we will reuse
     Z = sympy.Symbol('Z')  # site fraction symbol that we will reuse
+    V_I, V_J, V_K = sympy.Symbol('V_I'), sympy.Symbol('V_J'), sympy.Symbol('V_K')
     subl_idx = 0
     for num_sites, const in zip(dbf.phases[phase_name].sublattices, dbf.phases[phase_name].constituents):
         if v.Species('VA') in const:
@@ -179,7 +180,10 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                     # The equations we have just have the site fractions as YS
                     # and interaction products as Z, so take the product of all
                     # the site fractions that we see in our data qtys
-                    sf.update({YS: sf_product, Z: inter_product})
+                    if hasattr(inter_product, '__len__'):  # Z is an array of [V_I, V_J, V_K]
+                        sf.update({YS: sf_product, V_I: inter_product[0], V_J: inter_product[1], V_K: inter_product[2]})
+                    else:  # Z is probably a number
+                        sf.update({YS: sf_product, Z: inter_product})
 
                 # moles_per_formula_unit factor is here because our data is stored per-atom
                 # but all of our fits are per-formula-unit
