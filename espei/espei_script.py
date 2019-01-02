@@ -55,6 +55,20 @@ def log_version_info():
     logging.debug('distributed version ' + str(distributed.__version__))
     logging.debug('sympy version       ' + str(sympy.__version__))
 
+def get_dask_config_paths():
+    candidates = dask.config.paths
+    file_paths = []
+    for path in candidates:
+        if os.path.exists(path):
+            if os.path.isdir(path):
+                file_paths.extend(sorted([
+                    os.path.join(path, p)
+                    for p in os.listdir(path)
+                    if os.path.splitext(p)[1].lower() in ('.json', '.yaml', '.yml')
+                ]))
+            else:
+                file_paths.append(path)
+    return file_paths
 
 def _raise_dask_work_stealing():
     """
@@ -68,7 +82,10 @@ def _raise_dask_work_stealing():
     import distributed
     has_work_stealing = distributed.config['distributed']['scheduler']['work-stealing']
     if has_work_stealing:
-        raise ValueError("The parameter 'work-stealing' is on in dask. Enabling this parameter causes some instability. Set 'distributed.scheduler.work-stealing: False' in your '~/.config/dask/distributed.yaml' file. See the example at http://espei.org/en/latest/installation.html#configuration for more.")
+        raise ValueError("The parameter 'work-stealing' is on in dask. Enabling this parameter causes some instability. "
+            "Set 'distributed.scheduler.work-stealing: False' in your dask configuration. "
+            "Configuration files on this machine are:\n{} (latter files have priority). "
+            "See the example at http://espei.org/en/latest/installation.html#configuration for more.".format(get_dask_config_paths()))
 
 
 def get_run_settings(input_dict):
