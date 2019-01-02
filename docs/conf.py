@@ -80,8 +80,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'ESPEI'
-copyright = '2017-2018, Brandon Bocklund, Richard Otis, Zi-Kui Liu'
-author = 'Brandon Bocklund, Richard Otis, Zi-Kui Liu'
+copyright = '2018-2019 Materials Genome Foundation'
+author = 'Materials Genome Foundation'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
