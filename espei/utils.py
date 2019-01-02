@@ -6,12 +6,14 @@ Classes and functions defined here should have some reuse potential.
 
 import itertools
 import re
+import os
 from collections import namedtuple
 import importlib
 
 import bibtexparser
 import numpy as np
 import sympy
+import dask
 from bibtexparser.bparser import BibTexParser
 from bibtexparser.customization import convert_to_unicode
 from distributed import Client
@@ -203,7 +205,7 @@ def bib_marker_map(bib_keys, markers=None):
     >>> mm = bib_marker_map(['otis2016', 'bocklund2018'])
     >>> mm == {'bocklund2018': {'formatted': 'bocklund2018', 'markers': {'fillstyle': 'none', 'marker': 'o'}}, 'otis2016': {'formatted': 'otis2016', 'markers': {'fillstyle': 'none', 'marker': 'v'}}}
     True
-    
+
     """
     # TODO: support custom formatting from looking up keys in a bib_db
     if not markers:
@@ -418,3 +420,19 @@ def popget(d, key, default=None):
         return d.pop(key)
     except KeyError:
         return default
+
+
+def get_dask_config_paths():
+    candidates = dask.config.paths
+    file_paths = []
+    for path in candidates:
+        if os.path.exists(path):
+            if os.path.isdir(path):
+                file_paths.extend(sorted([
+                    os.path.join(path, p)
+                    for p in os.listdir(path)
+                    if os.path.splitext(p)[1].lower() in ('.json', '.yaml', '.yml')
+                ]))
+            else:
+                file_paths.append(path)
+    return file_paths

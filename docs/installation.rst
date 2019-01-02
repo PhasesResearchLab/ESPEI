@@ -13,7 +13,7 @@ Therefore it is suggested to install ESPEI from conda-forge.
     conda install -c pycalphad -c msys2 -c conda-forge --yes espei
 
 After installation, you must turn off dask's work stealing.
-Change the work stealing setting to ``distributed.scheduler.work-stealing: False`` in ``~/.config/dask/distributed.yaml``.
+Change the work stealing setting to ``distributed.scheduler.work-stealing: False`` in dask's configuration.
 See configuration_ below for more details.
 
 PyPI
@@ -28,7 +28,7 @@ dependency of `Ipopt <https://projects.coin-or.org/Ipopt>`_.
     pip install espei
 
 After installation, you must turn off dask's work stealing.
-Change the work stealing setting to ``distributed.scheduler.work-stealing: False`` in ``~/.config/dask/distributed.yaml``.
+Change the work stealing setting to ``distributed.scheduler.work-stealing: False`` in dask's configuration.
 See configuration_ below for more details.
 
 Development versions
@@ -50,7 +50,7 @@ ESPEI package, and replaces it with the package from GitHub.
 Upgrading ESPEI later requires you to run ``git pull`` in this directory.
 
 After installation, you must turn off dask's work stealing.
-Change the work stealing setting to ``distributed.scheduler.work-stealing: False`` in ``~/.config/dask/distributed.yaml``.
+Change the work stealing setting to ``distributed.scheduler.work-stealing: False`` in dask's configuration.
 See configuration_ below for more details.
 
 .. _configuration:
@@ -61,7 +61,7 @@ Configuration
 ESPEI uses dask-distributed to parallelize ESPEI.
 
 After installation, you must turn off dask's work stealing!
-Change the file at ``~/.config/dask/distributed.yaml`` to look something like:
+Change the your dask configuration file to look something like:
 
 
 .. code-block:: YAML
@@ -72,4 +72,6 @@ Change the file at ``~/.config/dask/distributed.yaml`` to look something like:
        work-stealing: False
 
 
+The configuration file paths can be found by running ``from espei.utils import get_dask_config_paths; get_dask_config_paths()`` in a Python interpreter.
+If multiple configurations are found, the latter configurations take precendence over the former, so check them from last to first.
 See the `dask-distributed documentation <https://distributed.readthedocs.io/en/latest/configuration.html>`_ for more.

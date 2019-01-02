@@ -23,7 +23,7 @@ from pycalphad import Database
 
 import espei
 from espei import generate_parameters, mcmc_fit, schema
-from espei.utils import ImmediateClient
+from espei.utils import ImmediateClient, get_dask_config_paths
 from espei.datasets import DatasetError, load_datasets, recursive_glob
 
 TRACE = 15  # TRACE logging level
@@ -72,7 +72,7 @@ def get_dask_config_paths():
 
 def _raise_dask_work_stealing():
     """
-    Raise is work stealing is turn on in dask
+    Raise if work stealing is turn on in dask
 
     Raises
     -------
@@ -84,7 +84,7 @@ def _raise_dask_work_stealing():
     if has_work_stealing:
         raise ValueError("The parameter 'work-stealing' is on in dask. Enabling this parameter causes some instability. "
             "Set 'distributed.scheduler.work-stealing: False' in your dask configuration. "
-            "Configuration files on this machine are:\n{} (latter files have priority). "
+            "Configuration files on this machine are:\n{} (latter files have priority).\n"
             "See the example at http://espei.org/en/latest/installation.html#configuration for more.".format(get_dask_config_paths()))
 
 
