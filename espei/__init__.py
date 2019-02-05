@@ -6,6 +6,11 @@ from ._version import get_versions
 __version__ = get_versions()['version']
 del get_versions
 
+from .citing import ESPEI_BIBTEX, ESPEI_CITATION
+
+__citation__ = ESPEI_CITATION
+__bibtex__ = ESPEI_BIBTEX
+
 # the hackiest hack such that importing pickle will import our model that overrides the dump function
 # subclasses made later will probably be maintained.
 # we are overrideing a builtin, which is HORRIBLE

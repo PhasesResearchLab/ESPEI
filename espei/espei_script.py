@@ -49,11 +49,12 @@ parser.add_argument("--version", "-v", action='version',
 
 def log_version_info():
     """Print version info to the log"""
-    logging.debug('espei version       ' + str(espei.__version__))
+    logging.info('espei version       ' + str(espei.__version__))
     logging.debug('pycalphad version   ' + str(pycalphad.__version__))
     logging.debug('dask version        ' + str(dask.__version__))
     logging.debug('distributed version ' + str(distributed.__version__))
     logging.debug('sympy version       ' + str(sympy.__version__))
+    logging.info("If you use ESPEI for work presented in a publication, we ask that you cite the following paper:\n    {}".format(espei.__citation__))
 
 def get_dask_config_paths():
     candidates = dask.config.paths

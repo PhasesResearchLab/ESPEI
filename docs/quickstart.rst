@@ -118,3 +118,25 @@ Q: Can I run ESPEI on a supercomputer supporting MPI?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A: Yes! ESPEI has MPI support. See the :ref:`MPI` page for more details.
+
+Q: How is the log probability reported by ESPEI calculated?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+MCMC simulation requires determining the probability of the data given a set of parameters, :math:`p(D|\theta)`.
+In MCMC, the log probability is often used to avoid floating point errors that arise from multiplying many small floating point numbers.
+For each type of data the *error*, often interpreted as the absolute difference between the expected and calculated value, is determined.
+For the types of data and how the error is calculated, refer to the ESPEI paper [1]_.
+
+The error is assumed to be normally distributed around the experimental data point that the prediction of a set of parameters is being compared against.
+The log probability of each data type is calculated by the log probability density function of the error in this normal distribution with a mean of zero and the standard deviation as given by the data type and the adjustable weights (see ``data_weights`` in :ref:`Writing input files`).
+The total log probability is the sum of all log probabilities.
+
+Note that any probability density function always returns a positive value between 0 and 1, so the log probability density function should return negative numbers and the log probability reported by ESPEI should be negative.
+
+:ref:`Writing input files`
+
+References
+==========
+
+.. ﻿[1] B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu-Mg, (2019). http://arxiv.org/abs/1902.01269.
+
