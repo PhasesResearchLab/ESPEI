@@ -160,7 +160,7 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
     return target_hyperplane_chempots
 
 
-def driving_force_error(dbf, comps, current_phase, cond_dict, target_hyperplane_chempots,
+def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyperplane_chempots,
                         phase_flag, phase_models, parameters, callables=None):
     """Calculate the integrated driving force between the current hyperplane and target hyperplane.
 
@@ -305,7 +305,7 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                         if val is None:
                             cond_dict[key] = np.nan
                     cond_dict.update(current_statevars)
-                    driving_force = driving_force_error(dbf, data_comps, current_phase, cond_dict, target_hyperplane,
+                    driving_force = driving_force_to_hyperplane(dbf, data_comps, current_phase, cond_dict, target_hyperplane,
                                                   phase_flag, phase_models, parameters, callables=callables)
                     vertex_prob = norm(loc=0, scale=1000/data_weight/weight).logpdf(driving_force)
                     prob_error += vertex_prob
