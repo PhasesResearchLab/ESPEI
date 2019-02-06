@@ -23,6 +23,72 @@ import tinydb
 
 from pycalphad import calculate, equilibrium, variables as v
 
+
+def get_zpf_data(comps, phases, datasets):
+    """
+    Return the ZPF data used in the calculation of ZPF error
+
+    Parameters
+    ----------
+    comps : list
+        List of active component names
+    phases : list
+        List of phases to consider
+    datasets : espei.utils.PickleableTinyDB
+        Datasets that contain single phase data
+
+    Returns
+    -------
+    list
+        List of data dictionaries with keys ``weight``, ``data_comps`` and
+        ``phase_regions``. ``data_comps`` are the components for the data in
+        question. ``phase_regions`` are the ZPF phases, state variables and compositions.
+    """
+    desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
+                                   (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
+                                   (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
+
+    def safe_index(itms, idxx):
+        try:
+            return itms[idxx]
+        except IndexError:
+            return None
+
+    zpf_data = []
+    for data in desired_data:
+        payload = data['values']
+        conditions = data['conditions']
+        # create a dictionary of each set of phases containing a list of individual points on the tieline
+        # individual tieline points are tuples of (conditions, {composition dictionaries})
+        phase_regions = defaultdict(lambda: list())
+        # TODO: Fix to only include equilibria listed in 'phases'
+        for idx, p in enumerate(payload):
+            phase_key = tuple(sorted(rp[0] for rp in p))
+            if len(phase_key) < 2:
+                # Skip single-phase regions for fitting purposes
+                continue
+            # Need to sort 'p' here so we have the sorted ordering used in 'phase_key'
+            # rp[3] optionally contains additional flags, e.g., "disordered", to help the solver
+            comp_dicts = [(dict(zip([v.X(x.upper()) for x in rp[1]], rp[2])), safe_index(rp, 3))
+                          for rp in sorted(p, key=operator.itemgetter(0))]
+            cur_conds = {}
+            for key, value in conditions.items():
+                value = np.atleast_1d(np.asarray(value))
+                if len(value) > 1:
+                    value = value[idx]
+                cur_conds[getattr(v, key)] = float(value)
+            phase_regions[phase_key].append((cur_conds, comp_dicts))
+
+        data_dict = {
+            'weight': data.get('weight', 1.0),
+            'data_comps': list(set(data['components']).union({'VA'})),
+            'phase_regions': phase_regions,
+            'dataset_reference': data['reference']
+        }
+        zpf_data.append(data_dict)
+    return zpf_data
+
+
 def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters,
                         callables=None):
     """
@@ -200,8 +266,8 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
                     f.write(template_error.format(dbf.to_string(fmt='tdb'), comps, [current_phase], cond_dict, {key: float(x) for key, x in parameters.items()}))
         # Sometimes we can get a miscibility gap in our "single-phase" calculation
         # Choose the weighted mixture of site fractions
-            logging.debug('Calculation failure: all NaN phases with conditions: {}'.format(cond_dict))
-            return 0
+            logging.debug('Calculation failure: all NaN phases with phases: {}, conditions: {}, parameters {}'.format(current_phase, cond_dict, parameters))
+            return np.inf
         select_energy = float(single_eqdata['GM'].values)
         region_comps = []
         for comp in [c for c in sorted(comps) if c != 'VA']:
@@ -250,45 +316,12 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
     potentials.
 
     """
-    # Wrangle data, everything between here and doing calculations could be factored out
-    desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
-                                   (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
-                                   (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
-
-    def safe_index(itms, idxx):
-        try:
-            return itms[idxx]
-        except IndexError:
-            return None
-
     prob_error = 0.0
-    for data in desired_data:
-        payload = data['values']
-        conditions = data['conditions']
-        weight = data.get('weight', 1.0)
-        data_comps = list(set(data['components']).union({'VA'}))
-        # create a dictionary of each set of phases containing a list of individual points on the tieline
-        # individual tieline points are tuples of (conditions, {composition dictionaries})
-        phase_regions = defaultdict(lambda: list())
-        # TODO: Fix to only include equilibria listed in 'phases'
-        for idx, p in enumerate(payload):
-            phase_key = tuple(sorted(rp[0] for rp in p))
-            if len(phase_key) < 2:
-                # Skip single-phase regions for fitting purposes
-                continue
-            # Need to sort 'p' here so we have the sorted ordering used in 'phase_key'
-            # rp[3] optionally contains additional flags, e.g., "disordered", to help the solver
-            comp_dicts = [(dict(zip([v.X(x.upper()) for x in rp[1]], rp[2])), safe_index(rp, 3))
-                          for rp in sorted(p, key=operator.itemgetter(0))]
-            cur_conds = {}
-            for key, value in conditions.items():
-                value = np.atleast_1d(np.asarray(value))
-                if len(value) > 1:
-                    value = value[idx]
-                cur_conds[getattr(v, key)] = float(value)
-            phase_regions[phase_key].append((cur_conds, comp_dicts))
-
-        # do the calculations
+    for data in get_zpf_data(comps, phases, datasets):
+        phase_regions = data['phase_regions']
+        data_comps = data['data_comps']
+        weight = data['weight']
+        dataset_ref = data['dataset_reference']
         # for each set of phases in equilibrium and their individual tieline points
         for region, region_eq in phase_regions.items():
             # for each tieline region conditions and compositions
@@ -297,7 +330,7 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                 eq_str = "conds: ({}), comps: ({})".format(current_statevars, ', '.join(['{}: {}'.format(ph,c[0]) for ph, c in zip(region, comp_dicts)]))
                 target_hyperplane = estimate_hyperplane(dbf, data_comps, phases, current_statevars, comp_dicts, phase_models, parameters, callables=callables)
                 if np.any(np.isnan(target_hyperplane)):
-                    logging.warning('Found a NaN ZPF driving force. Equilibria: ({}), reference: {}. Target hyperplane: {}. If this data point consistently gives NaN, consider removing it.'.format(eq_str, data["reference"], target_hyperplane))
+                    logging.warning('Found a NaN ZPF driving force. Equilibria: ({}), reference: {}. Target hyperplane: {}. If this data point consistently gives NaN, consider removing it.'.format(eq_str, dataset_ref, target_hyperplane))
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
                 for current_phase, cond_dict in zip(region, comp_dicts):
                     # TODO: Messy unpacking
@@ -311,7 +344,7 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                                                         phase_models, parameters, callables=callables)
                     vertex_prob = norm(loc=0, scale=1000/data_weight/weight).logpdf(driving_force)
                     prob_error += vertex_prob
-                    logging.debug('ZPF error - Equilibria: ({}), current phase: {}, driving force: {}, probability: {}, reference: {}'.format(eq_str, current_phase, driving_force, vertex_prob, data["reference"]))
+                    logging.debug('ZPF error - Equilibria: ({}), current phase: {}, driving force: {}, probability: {}, reference: {}'.format(eq_str, current_phase, driving_force, vertex_prob, dataset_ref))
     if np.isnan(prob_error):
         return -np.inf
     return prob_error

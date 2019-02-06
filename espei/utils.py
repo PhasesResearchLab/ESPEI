@@ -8,7 +8,6 @@ import itertools
 import re
 import os
 from collections import namedtuple
-import importlib
 
 import bibtexparser
 import numpy as np
