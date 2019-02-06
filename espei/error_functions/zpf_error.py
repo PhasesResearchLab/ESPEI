@@ -83,8 +83,9 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
                                        callables=callables)
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
-            num_phases = len(np.squeeze(multi_eqdata['Phase'].values != ''))
-            zero_dof = np.all((multi_eqdata['Y'].values == 1.) | np.isnan(multi_eqdata['Y'].values))
+            num_phases = np.sum(multi_eqdata['Phase'].values.squeeze() != '')
+            Y_values = multi_eqdata.Y.values.squeeze()
+            zero_dof = np.all((np.isclose(Y_values, 1.)) | np.isnan(Y_values))
             if (num_phases == 1) and zero_dof:
                 region_chemical_potentials.append(np.full_like(np.squeeze(multi_eqdata['MU'].values), np.nan))
             else:
@@ -249,6 +250,7 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
     potentials.
 
     """
+    # Wrangle data, everything between here and doing calculations could be factored out
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
@@ -285,14 +287,17 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                     value = value[idx]
                 cur_conds[getattr(v, key)] = float(value)
             phase_regions[phase_key].append((cur_conds, comp_dicts))
+
+        # do the calculations
         # for each set of phases in equilibrium and their individual tieline points
         for region, region_eq in phase_regions.items():
             # for each tieline region conditions and compositions
             for current_statevars, comp_dicts in region_eq:
                 # a "region" is a set of phase equilibria
                 eq_str = "conds: ({}), comps: ({})".format(current_statevars, ', '.join(['{}: {}'.format(ph,c[0]) for ph, c in zip(region, comp_dicts)]))
-                region_chemical_potentials = estimate_hyperplane(dbf, data_comps, phases, current_statevars, comp_dicts,
-                                                      phase_models, parameters, callables=callables)
+                target_hyperplane = estimate_hyperplane(dbf, data_comps, phases, current_statevars, comp_dicts, phase_models, parameters, callables=callables)
+                if np.any(np.isnan(target_hyperplane)):
+                    logging.warning('Found a NaN ZPF driving force. Equilibria: ({}), reference: {}. Target hyperplane: {}. If this data point consistently gives NaN, consider removing it.'.format(eq_str, data["reference"], target_hyperplane))
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
                 for current_phase, cond_dict in zip(region, comp_dicts):
                     # TODO: Messy unpacking
@@ -302,7 +307,7 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                         if val is None:
                             cond_dict[key] = np.nan
                     cond_dict.update(current_statevars)
-                    driving_force = tieline_error(dbf, data_comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
+                    driving_force = tieline_error(dbf, data_comps, current_phase, cond_dict, target_hyperplane, phase_flag,
                                                         phase_models, parameters, callables=callables)
                     vertex_prob = norm(loc=0, scale=1000/data_weight/weight).logpdf(driving_force)
                     prob_error += vertex_prob
