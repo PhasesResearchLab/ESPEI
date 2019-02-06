@@ -14,7 +14,7 @@ There's some special handling for tieline endpoints where we do not know the
 composition conditions to calculate chemical potentials at.
 """
 
-import textwrap, time, operator, logging
+import operator, logging
 from collections import defaultdict, OrderedDict
 
 import numpy as np
@@ -92,7 +92,7 @@ def get_zpf_data(comps, phases, datasets):
 def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters,
                         callables=None):
     """
-    Calculate the chemical potentials for a hyperplane, one vertex at a time
+    Calculate the chemical potentials for the target hyperplane, one vertex at a time
 
     Parameters
     ----------
@@ -129,7 +129,7 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
     are taken as the target hyperplane for the given equilibria.
 
     """
-    region_chemical_potentials = []
+    target_hyperplane_chempots = []
     parameters = OrderedDict(sorted(parameters.items(), key=str))
     # TODO: unclear whether we use phase_flag and how it would be used. It should be just a 'disordered' kind of flag.
     for cond_dict, phase_flag in comp_dicts:
@@ -144,26 +144,25 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
         else:
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
-            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, verbose=False,
-                                       model=phase_models, scheduler='sync', parameters=parameters,
-                                       callables=callables)
+            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, model=phase_models,
+                                       parameters=parameters, callables=callables,)
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
             num_phases = np.sum(multi_eqdata['Phase'].values.squeeze() != '')
             Y_values = multi_eqdata.Y.values.squeeze()
-            zero_dof = np.all((np.isclose(Y_values, 1.)) | np.isnan(Y_values))
-            if (num_phases == 1) and zero_dof:
-                region_chemical_potentials.append(np.full_like(np.squeeze(multi_eqdata['MU'].values), np.nan))
+            no_internal_dof = np.all((np.isclose(Y_values, 1.)) | np.isnan(Y_values))
+            MU_values = multi_eqdata['MU'].values.squeeze()
+            if (num_phases == 1) and no_internal_dof:
+                target_hyperplane_chempots.append(np.full_like(MU_values, np.nan))
             else:
-                region_chemical_potentials.append(np.squeeze(multi_eqdata['MU'].values))
-    region_chemical_potentials = np.nanmean(region_chemical_potentials, axis=0, dtype=np.float)
-    return region_chemical_potentials
+                target_hyperplane_chempots.append(MU_values)
+    target_hyperplane_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float)
+    return target_hyperplane_chempots
 
 
-def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentials, phase_flag,
-                  phase_models, parameters, debug_mode=False,
-                  callables=None):
-    """Calculate the integrated driving force between the current hyperlane and target hyperplane.
+def driving_force_error(dbf, comps, current_phase, cond_dict, target_hyperplane_chempots,
+                        phase_flag, phase_models, parameters, callables=None):
+    """Calculate the integrated driving force between the current hyperplane and target hyperplane.
 
     Parameters
     ----------
@@ -173,20 +172,15 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
         List of active component names
     current_phase : list
         List of phases to consider
-    current_statevars : dict
-        Dictionary of state variables, e.g. v.P and v.T, no compositions.
-    comp_dicts : list
-        List of tuples of composition dictionaries and phase flags. Composition
-        dictionaries are pycalphad variable dicts and the flag is a string e.g.
-        ({v.X('CU'): 0.5}, 'disordered')
     phase_models : dict
         Phase models to pass to pycalphad calculations
     parameters : dict
         Dictionary of symbols that will be overridden in pycalphad.equilibrium
     callables : dict
         Callables to pass to pycalphad
-    cond_dict :
-    region_chemical_potentials : numpy.ndarray
+    cond_dict : dict
+            Dictionary of state variables, e.g. v.P and v.T, v.X
+    target_hyperplane_chempots : numpy.ndarray
         Array of chemical potentials for target equilibrium hyperplane.
     phase_flag : str
         String of phase flag, e.g. 'disordered'.
@@ -194,9 +188,6 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
         Phase models to pass to pycalphad calculations
     parameters : dict
         Dictionary of symbols that will be overridden in pycalphad.equilibrium
-    debug_mode : bool
-        If True, will write out scripts when pycalphad fails to find a stable
-        equilibrium. These scripts can be used to debug pycalphad.
 
     Returns
     -------
@@ -210,9 +201,8 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
                                   T=cond_dict[v.T], P=cond_dict[v.P],
                                   model=phase_models, parameters=parameters, pdens=100,
                                   callables=callables)
-        driving_force = np.multiply(region_chemical_potentials,
-                                    single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
-        error = float(driving_force.max())
+        driving_force = np.multiply(target_hyperplane_chempots, single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
+        driving_force = float(driving_force.max())
     elif phase_flag == 'disordered':
         # Construct disordered sublattice configuration from composition dict
         # Compute energy
@@ -226,46 +216,21 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
             if (len(dof) == 1) and (dof[0] == 'VA'):
                 return 0
             # If it's disordered config of BCC_B2 with VA, disordered config is tiny vacancy count
-            sitefracs_to_add = np.array([cond_dict.get(v.X(d)) for d in dof],
-                                        dtype=np.float)
+            sitefracs_to_add = np.array([cond_dict.get(v.X(d)) for d in dof], dtype=np.float)
             # Fix composition of dependent component
             sitefracs_to_add[np.isnan(sitefracs_to_add)] = 1 - np.nansum(sitefracs_to_add)
             desired_sitefracs[dof_idx:dof_idx + len(dof)] = sitefracs_to_add
             dof_idx += len(dof)
-        single_eqdata = calculate(dbf, comps, [current_phase],
-                                  T=cond_dict[v.T], P=cond_dict[v.P], points=desired_sitefracs,
+        single_eqdata = calculate(dbf, comps, [current_phase], T=cond_dict[v.T],
+                                  P=cond_dict[v.P], points=desired_sitefracs,
                                   model=phase_models, parameters=parameters, callables=callables,)
-        driving_force = np.multiply(region_chemical_potentials, single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
-        error = float(np.squeeze(driving_force))
+        driving_force = np.multiply(target_hyperplane_chempots, single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
+        driving_force = float(np.squeeze(driving_force))
     else:
         # Extract energies from single-phase calculations
-        single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, verbose=False,
-                                    model=phase_models,
-                                    scheduler='sync', parameters=parameters,
-                                    callables=callables)
+        single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, model=phase_models,
+                                    parameters=parameters, callables=callables)
         if np.all(np.isnan(single_eqdata['NP'].values)):
-            error_time = time.time()
-            template_error = """
-            from pycalphad import Database, equilibrium
-            from pycalphad.variables import T, P, X
-            import dask
-            dbf_string = \"\"\"
-            {0}
-            \"\"\"
-            dbf = Database(dbf_string)
-            comps = {1}
-            phases = {2}
-            cond_dict = {3}
-            parameters = {4}
-            equilibrium(dbf, comps, phases, cond_dict, scheduler='sync', parameters=parameters)
-            """
-            template_error = textwrap.dedent(template_error)
-            if debug_mode:
-                logging.warning('Dumping', 'error-'+str(error_time)+'.py')
-                with open('error-'+str(error_time)+'.py', 'w') as f:
-                    f.write(template_error.format(dbf.to_string(fmt='tdb'), comps, [current_phase], cond_dict, {key: float(x) for key, x in parameters.items()}))
-        # Sometimes we can get a miscibility gap in our "single-phase" calculation
-        # Choose the weighted mixture of site fractions
             logging.debug('Calculation failure: all NaN phases with phases: {}, conditions: {}, parameters {}'.format(current_phase, cond_dict, parameters))
             return np.inf
         select_energy = float(single_eqdata['GM'].values)
@@ -273,9 +238,9 @@ def tieline_error(dbf, comps, current_phase, cond_dict, region_chemical_potentia
         for comp in [c for c in sorted(comps) if c != 'VA']:
             region_comps.append(cond_dict.get(v.X(comp), np.nan))
         region_comps[region_comps.index(np.nan)] = 1 - np.nansum(region_comps)
-        error = np.multiply(region_chemical_potentials, region_comps).sum() - select_energy
-        error = float(error)
-    return error
+        driving_force = np.multiply(target_hyperplane_chempots, region_comps).sum() - select_energy
+        driving_force = float(driving_force)
+    return driving_force
 
 
 def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=None, callables=None, data_weight=1.0):
@@ -305,8 +270,8 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
 
     Returns
     -------
-    list
-        List of errors from phase equilibria data
+    float
+        Log probability of ZPF error
 
     Notes
     -----
@@ -340,8 +305,8 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                         if val is None:
                             cond_dict[key] = np.nan
                     cond_dict.update(current_statevars)
-                    driving_force = tieline_error(dbf, data_comps, current_phase, cond_dict, target_hyperplane, phase_flag,
-                                                        phase_models, parameters, callables=callables)
+                    driving_force = driving_force_error(dbf, data_comps, current_phase, cond_dict, target_hyperplane,
+                                                  phase_flag, phase_models, parameters, callables=callables)
                     vertex_prob = norm(loc=0, scale=1000/data_weight/weight).logpdf(driving_force)
                     prob_error += vertex_prob
                     logging.debug('ZPF error - Equilibria: ({}), current phase: {}, driving force: {}, probability: {}, reference: {}'.format(eq_str, current_phase, driving_force, vertex_prob, dataset_ref))
