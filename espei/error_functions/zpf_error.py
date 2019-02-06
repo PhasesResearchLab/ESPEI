@@ -23,6 +23,12 @@ import tinydb
 
 from pycalphad import calculate, equilibrium, variables as v
 
+def _safe_index(items, index):
+    try:
+        return items[index]
+    except IndexError:
+        return None
+
 
 def get_zpf_data(comps, phases, datasets):
     """
@@ -48,12 +54,6 @@ def get_zpf_data(comps, phases, datasets):
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
 
-    def safe_index(itms, idxx):
-        try:
-            return itms[idxx]
-        except IndexError:
-            return None
-
     zpf_data = []
     for data in desired_data:
         payload = data['values']
@@ -69,7 +69,7 @@ def get_zpf_data(comps, phases, datasets):
                 continue
             # Need to sort 'p' here so we have the sorted ordering used in 'phase_key'
             # rp[3] optionally contains additional flags, e.g., "disordered", to help the solver
-            comp_dicts = [(dict(zip([v.X(x.upper()) for x in rp[1]], rp[2])), safe_index(rp, 3))
+            comp_dicts = [(dict(zip([v.X(x.upper()) for x in rp[1]], rp[2])), _safe_index(rp, 3))
                           for rp in sorted(p, key=operator.itemgetter(0))]
             cur_conds = {}
             for key, value in conditions.items():
