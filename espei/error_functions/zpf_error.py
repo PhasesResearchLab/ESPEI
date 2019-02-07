@@ -295,7 +295,11 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
                 eq_str = "conds: ({}), comps: ({})".format(current_statevars, ', '.join(['{}: {}'.format(ph,c[0]) for ph, c in zip(region, comp_dicts)]))
                 target_hyperplane = estimate_hyperplane(dbf, data_comps, phases, current_statevars, comp_dicts, phase_models, parameters, callables=callables)
                 if np.any(np.isnan(target_hyperplane)):
-                    logging.warning('Found a NaN ZPF driving force. Equilibria: ({}), reference: {}. Target hyperplane: {}. If this data point consistently gives NaN, consider removing it.'.format(eq_str, dataset_ref, target_hyperplane))
+                    zero_probs = norm(loc=0, scale=1000/data_weight/weight).logpdf(np.zeros(len(region)))
+                    total_zero_prob = np.sum(zero_probs)
+                    logging.debug('ZPF error - NaN target hyperplane. Equilibria: ({}), reference: {}. Treating all driving force: 0.0, probability: {}, probabilities: {}'.format(eq_str, dataset_ref, total_zero_prob, zero_probs))
+                    prob_error += total_zero_prob
+                    continue
                 # Now perform the equilibrium calculation for the isolated phases and add the result to the error record
                 for current_phase, cond_dict in zip(region, comp_dicts):
                     # TODO: Messy unpacking
