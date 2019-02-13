@@ -169,7 +169,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                 else:
                     feature_matricies.append(_build_feature_matrix(desired_props[0], candidate_model, desired_data))
 
-                data_qtys = np.concatenate(shift_reference_state(desired_data, feature_transforms[desired_props[0]], fixed_model), axis=-1)
+                data_qtys = np.concatenate(shift_reference_state(desired_data, feature_transforms[desired_props[0]], fixed_model, moles_per_formula_unit), axis=-1)
 
                 # Remove existing partial model contributions from the data
                 data_qtys = data_qtys - feature_transforms[desired_props[0]](fixed_model.ast)

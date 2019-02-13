@@ -17,7 +17,7 @@ feature_transforms = {"CPM_FORM": lambda x: -v.T*sympy.diff(x, v.T, 2),
                       "HM": lambda x: x - v.T*sympy.diff(x, v.T)}
 
 
-def shift_reference_state(desired_data, feature_transform, fixed_model):
+def shift_reference_state(desired_data, feature_transform, fixed_model, moles_per_formula_unit):
     """
     Shift data to a new common reference state.
     """
@@ -35,7 +35,7 @@ def shift_reference_state(desired_data, feature_transform, fixed_model):
                     raise ValueError('Unknown property to shift: {}'.format(dataset['output']))
                 # These contributions are not present in the data, we need to add them here explicitly
                 for excluded_contrib in dataset.get('excluded_model_contributions', []):
-                    values[..., value_idx] += feature_transform(fixed_model.models[excluded_contrib])
+                    values[..., value_idx] += feature_transform(fixed_model.models[excluded_contrib])/moles_per_formula_unit
                 value_idx += 1
         total_response.append(values.flatten())
     return total_response
