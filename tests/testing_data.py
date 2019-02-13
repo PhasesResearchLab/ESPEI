@@ -564,6 +564,16 @@ CR_FE_HM_MIX_EXCLUDED_MAG = {
 "excluded_model_contributions": ["mag"]
 }
 
+CR_FE_HM_MIX_WITH_MAG = {
+"components": ["CR", "FE", "VA"],"phases": ["BCC_A2"],
+"solver": {"mode": "manual", "sublattice_site_ratios": [1, 3],
+           "sublattice_configurations": [[["CR", "FE"], "VA"]],
+"sublattice_occupancies": [[[0.5, 0.5], 1.0]]},
+"conditions": {"P": 101325, "T": 300},
+"output": "HM_MIX",
+"values": [[[7128.41104097]]]
+}
+
 CR_FE_INITIAL_TDB_CONTRIBUTIONS = """$ Cr-Fe database with only magnetic parts
 $ As assessed by Xiong doi:10.1016/j.calphad.2011.05.002
  ELEMENT VA   VACUUM           0.0000E+00  0.0000E+00  0.0000E+00!

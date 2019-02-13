@@ -429,3 +429,12 @@ def test_model_contributions_can_be_excluded(datasets_db):
     datasets_db.insert(CR_FE_HM_MIX_EXCLUDED_MAG)
     dbf = generate_parameters(CR_FE_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', dbf=Database(CR_FE_INITIAL_TDB_CONTRIBUTIONS))
     assert dbf.symbols['VV0000'] == 40000  # 4 mol-atom/mol-form * 10000 J/mol-atom, verified with no initial Database
+
+
+def test_model_contributions_can_be_excluded_mixed_datasets(datasets_db):
+    """Model contributions excluded in the datasets should not be fit and should still work when different types of datasets are mixed"""
+    datasets_db.insert(CR_FE_HM_MIX_EXCLUDED_MAG)
+    datasets_db.insert(CR_FE_HM_MIX_WITH_MAG)
+    dbf = generate_parameters(CR_FE_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', dbf=Database(CR_FE_INITIAL_TDB_CONTRIBUTIONS))
+    assert dbf.symbols['VV0000'] == 40000  # 4 mol-atom/mol-form * 10000 J/mol-atom, verified with no initial Database
+
