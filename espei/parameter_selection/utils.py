@@ -36,6 +36,10 @@ def shift_reference_state(desired_data, feature_transform, fixed_model, moles_pe
                 # These contributions are not present in the data, we need to add them here explicitly
                 for excluded_contrib in dataset.get('excluded_model_contributions', []):
                     values[..., value_idx] += feature_transform(fixed_model.models[excluded_contrib])/moles_per_formula_unit
+                # These contributions are present in the data, but the model is missing them
+                # This is probably only useful for adding ideal mixing, idmix
+                for included_contrib in dataset.get('included_model_contributions', []):
+                    values[..., value_idx] -= feature_transform(fixed_model.models[included_contrib])/moles_per_formula_unit
                 value_idx += 1
         total_response.append(values.flatten())
     return total_response
