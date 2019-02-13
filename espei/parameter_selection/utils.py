@@ -31,9 +31,11 @@ def shift_reference_state(desired_data, feature_transform, fixed_model):
                     pass
                 elif dataset['output'].endswith('_MIX'):
                     values[..., value_idx] += feature_transform(fixed_model.models['ref'])
-                    pass
                 else:
                     raise ValueError('Unknown property to shift: {}'.format(dataset['output']))
+                # These contributions are not present in the data, we need to add them here explicitly
+                for excluded_contrib in dataset.get('excluded_model_contributions', []):
+                    values[..., value_idx] += feature_transform(fixed_model.models[excluded_contrib])
                 value_idx += 1
         total_response.append(values.flatten())
     return total_response
