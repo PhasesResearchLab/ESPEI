@@ -362,7 +362,6 @@ def test_symmetric_ternary_parameter_can_be_generated_in_presence_of_binary_data
     assert dbf.elements == {'AL', 'CO', 'CR'}
     assert set(dbf.phases.keys()) == {'BCC_A2'}
     # rounded to 6 digits by `numdigits`, this is confirmed to be a correct value.
-    print(list(dbf._parameters.search(where('parameter_type') == 'L')))
     assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 2
     assert dbf.symbols['VV0000'] == -4000.0
     assert dbf.symbols['VV0001'] == -200245.0
