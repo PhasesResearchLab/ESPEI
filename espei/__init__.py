@@ -56,3 +56,5 @@ warnings.filterwarnings('ignore', message='invalid value encountered in greater'
 warnings.filterwarnings('ignore', message='divide by zero encountered in log')
 warnings.filterwarnings('ignore', message='invalid value encountered in true_divide')
 warnings.filterwarnings('ignore', message='divide by zero encountered')
+warnings.filterwarnings('ignore', message='Ill-conditioned matrix')
+warnings.filterwarnings('ignore', message='Singular matrix in solving dual problem')
