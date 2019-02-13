@@ -422,3 +422,10 @@ def test_initial_database_can_be_supplied(datasets_db):
     assert len(initial_dbf._parameters.all()) == 11
     dbf = generate_parameters(CR_FE_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', dbf=initial_dbf)
     assert len(dbf._parameters.all()) == 13  # 11 initial parameters + 2 generated endmember parameters
+
+
+def test_model_contributions_can_be_excluded(datasets_db):
+    """Model contributions excluded in the datasets should not be fit"""
+    datasets_db.insert(CR_FE_HM_MIX_EXCLUDED_MAG)
+    dbf = generate_parameters(CR_FE_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', dbf=Database(CR_FE_INITIAL_TDB_CONTRIBUTIONS))
+    assert dbf.symbols['VV0000'] == 40000  # 4 mol-atom/mol-form * 10000 J/mol-atom, verified with no initial Database
