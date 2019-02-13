@@ -439,7 +439,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         del dbf.varcounter
 
 
-def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_alpha=1.0e-100):
+def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_alpha=1.0e-100, dbf=None):
     """Generate parameters from given phase models and datasets
 
     Parameters
@@ -455,6 +455,8 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     ridge_alpha : float
         Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
         with ordinary least squares regression. For now, the parameter is applied to all features.
+    dbf : Database
+        Initial pycalphad Database that can have parameters that would not be fit by ESPEI
 
     Returns
     -------
@@ -462,8 +464,8 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
 
     """
     logging.info('Generating parameters.')
-    dbf = Database()
-    dbf.elements = set(phase_models['components'])
+    dbf = dbf or Database()
+    dbf.elements.update(set(phase_models['components']))
     for el in dbf.elements:
         dbf.species.add(Species(el, {el: 1}, 0))
     # Write reference state to Database
@@ -489,9 +491,10 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
         # TODO: More advanced phase data searching
         site_ratios = phase_obj['sublattice_site_ratios']
         subl_model = phase_obj['sublattice_model']
-        dbf.add_phase(phase_name, dict(), site_ratios)
-        dbf.add_phase_constituents(phase_name, subl_model)
-        dbf.add_structure_entry(phase_name, phase_name)
+        if phase_name not in dbf.phases.keys():
+            dbf.add_phase(phase_name, dict(), site_ratios)
+            dbf.add_phase_constituents(phase_name, subl_model)
+            dbf.add_structure_entry(phase_name, phase_name)
         phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aliases=aliases)
     logging.info('Finished generating parameters.')
     return dbf

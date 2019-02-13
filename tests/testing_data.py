@@ -538,3 +538,55 @@ CU_ZN_SM_MIX_EXPR_TO_FLOAT = {
 "output": "SM_MIX",
 "values": [[[-9.952211364]]]
 }
+
+###############################################################################
+# CR-FE
+###############################################################################
+
+CR_FE_PHASE_MODELS = {
+    "components": ["CR", "FE", "VA"],
+    "phases": {
+           "BCC_A2": {
+              "sublattice_model": [["CR", "FE"], ["VA"]],
+              "sublattice_site_ratios": [1, 3]
+           }
+      }
+  }
+
+CR_FE_HM_MIX_EXCLUDED_MAG = {
+"components": ["CR", "FE", "VA"],"phases": ["BCC_A2"],
+"solver": {"mode": "manual", "sublattice_site_ratios": [1, 3],
+           "sublattice_configurations": [[["CR", "FE"], "VA"]],
+"sublattice_occupancies": [[[0.5, 0.5], 1.0]]},
+"conditions": {"P": 101325, "T": 300},
+"output": "HM_MIX",
+"values": [[[10000]]],
+"excluded_model_contributions": ["mag"]
+}
+
+CR_FE_INITIAL_TDB_CONTRIBUTIONS = """$ Cr-Fe database with only magnetic parts
+$ As assessed by Xiong doi:10.1016/j.calphad.2011.05.002
+ ELEMENT VA   VACUUM           0.0000E+00  0.0000E+00  0.0000E+00!
+ ELEMENT FE   BCC_A2           5.5847E+01  4.4890E+03  2.7280E+01!
+ ELEMENT CR   BCC_A2           5.1996E+01  4.0500E+03  2.3560E+01!
+$             **********   FCC_A1   *********
+ TYPE_DEFINITION G GES AM-PH FCC_A1 MAG -3 0.25 !
+ PHASE FCC_A1  %G  2 1   1 !
+    CONSTITUENT FCC_A1  :CR,FE : VA :  !
+   PARAMETER TC(FCC_A1,FE:VA;0)  2.98150E+02  -201;    6000 N !
+   PARAMETER BMAGN(FCC_A1,FE:VA;0)  2.98150E+02  -2.1; 6000 N !
+   PARAMETER TC(FCC_A1,CR:VA;0)  2.98150E+02  -1109;   6000 N !
+   PARAMETER BMAGN(FCC_A1,CR:VA;0)  2.98150E+02  -2.46; 6000 N !
+
+$             *******   BCC_A2   ************
+ TYPE_DEFINITION C GES AM-PH BCC MAG -1 0.37 !
+ PHASE BCC_A2  %C  2 1   3 !
+    CONSTITUENT BCC_A2  :CR,FE : VA :  !
+   PARAMETER TC(BCC_A2,FE:VA;0)  2.98150E+02  1043; 6000 N !
+   PARAMETER BMAGN(BCC_A2,FE:VA;0)  2.98150E+02  2.22; 6000 N !
+   PARAMETER TC(BCC_A2,CR:VA;0)  2.98150E+02  -311.5; 6000 N !
+   PARAMETER BMAGN(BCC_A2,CR:VA;0)  2.98150E+02  -.008; 6000 N !
+   PARAMETER BMAGN(BCC_A2,CR,FE:VA;0)  2.98150E+02  -.45; 6000 N !
+   PARAMETER TC(BCC_A2,CR,FE:VA;0)  2.98150E+02   865.5; 6000 N !
+   PARAMETER TC(BCC_A2,CR,FE:VA;1)  2.98150E+02   -567.2; 6000 N !
+"""

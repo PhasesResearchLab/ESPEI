@@ -2,6 +2,7 @@
 
 from tinydb import where
 import numpy as np
+from pycalphad import Database
 
 from espei.paramselect import generate_parameters
 from .testing_data import *
@@ -413,3 +414,11 @@ def test_cpm_sm_data_can_be_fit_successively(datasets_db):
     assert dbf.symbols['VV0001'] == -40.953  # T*ln(T) L1 term
     assert dbf.symbols['VV0002'] == -44.57 # T*ln(T) L0 term
     assert dbf.symbols['VV0003'] == 36.6556 # L0 T term, found after CPM_MIX addition
+
+
+def test_initial_database_can_be_supplied(datasets_db):
+    """Initial Databases can be passed to parameter generation"""
+    initial_dbf = Database(CR_FE_INITIAL_TDB_CONTRIBUTIONS)
+    assert len(initial_dbf._parameters.all()) == 11
+    dbf = generate_parameters(CR_FE_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', dbf=initial_dbf)
+    assert len(dbf._parameters.all()) == 13  # 11 initial parameters + 2 generated endmember parameters
