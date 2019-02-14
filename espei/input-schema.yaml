@@ -11,7 +11,6 @@ system: # phase models and input data
       required: True
     tags:  # operations to apply to datasets that are tagged
       type: dict
-      required: False
 
 output:
   type: dict
@@ -55,6 +54,9 @@ generate_parameters:
       type: float
       required: True
       default: 1.0e-100  # very small number, should be backwards compatible to ordinary least squares
+    input_db: # TDB file used to start the parameter generation run
+      type: string
+
 
 ## if present, will run mcmc fitting
 ## you must specifiy some kind of input for the parameters.
