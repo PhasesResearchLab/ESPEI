@@ -242,7 +242,7 @@ def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyp
     return driving_force
 
 
-def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=None, callables=None, data_weight=1.0):
+def calculate_zpf_error(dbf, phases, zpf_data, phase_models, parameters=None, callables=None, data_weight=1.0):
     """
     Calculate error due to phase equilibria data
 
@@ -250,11 +250,9 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
     ----------
     dbf : pycalphad.Database
         Database to consider
-    comps : list
-        List of active component names
     phases : list
         List of phases to consider
-    datasets : espei.utils.PickleableTinyDB
+    zpf_data : list
         Datasets that contain single phase data
     phase_models : dict
         Phase models to pass to pycalphad calculations
@@ -281,7 +279,7 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
 
     """
     prob_error = 0.0
-    for data in get_zpf_data(comps, phases, datasets):
+    for data in zpf_data:
         phase_regions = data['phase_regions']
         data_comps = data['data_comps']
         weight = data['weight']

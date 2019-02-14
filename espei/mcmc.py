@@ -19,29 +19,22 @@ from pycalphad.codegen.callables import build_callables
 from espei.core_utils import get_prop_data
 from espei.utils import database_symbols_to_fit, optimal_parameters
 from espei.priors import build_prior_specs, PriorSpec
-from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error
+from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error, get_zpf_data
 
 
 TRACE = 15  # TRACE logging level
 
 
-def lnlikelihood(params, comps=None, dbf=None, phases=None, datasets=None,
-           symbols_to_fit=None, phase_models=None, weight_dict=None,
-           callables=None, thermochemical_callables=None,
-           ):
+def lnlikelihood(params, symbols_to_fit, zpf_kwargs, activity_kwargs, thermochemical_kwargs):
     """Calculate the likelihood, $$ \ln p(\theta|y) $$ """
     starttime = time.time()
-    weight_dict = weight_dict if weight_dict is not None else {}
     parameters = {param_name: param for param_name, param in zip(symbols_to_fit, params)}
     try:
-        multi_phase_error = calculate_zpf_error(dbf, comps, phases, datasets, phase_models,
-                                                parameters=parameters, callables=callables,
-                                                data_weight=weight_dict.get('ZPF', 1.0),
-                                                )
+        multi_phase_error = calculate_zpf_error(parameters=parameters, **zpf_kwargs)
     except (ValueError, LinAlgError) as e:
         multi_phase_error = -np.inf
-    actvity_error = calculate_activity_error(dbf, comps, phases, datasets, parameters=parameters, phase_models=phase_models, callables=callables, data_weight=weight_dict.get('ACR', 1.0))
-    single_phase_error = calculate_thermochemical_error(dbf, comps, phases, datasets, parameters, phase_models=phase_models, callables=thermochemical_callables, weight_dict=weight_dict)
+    actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
+    single_phase_error = calculate_thermochemical_error(parameters=parameters, **thermochemical_kwargs)
     total_error = multi_phase_error + single_phase_error + actvity_error
     logging.log(TRACE, 'Likelihood - {:0.2f}s - Thermochemical: {:0.3f}. ZPF: {:0.3f}. Activity: {:0.3f}. Total: {:0.3f}.'.format(time.time() - starttime, single_phase_error, multi_phase_error, actvity_error, total_error))
     return np.array(total_error, dtype=np.float64)
@@ -71,9 +64,8 @@ def lnprior(params, priors):
     return np.sum(lnprior_multivariate)
 
 
-def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=None,
-           symbols_to_fit=None, phase_models=None, scheduler=None, weight_dict=None,
-           callables=None, thermochemical_callables=None
+def lnprob(params, prior_rvs=None, symbols_to_fit=None,
+           zpf_kwargs=None, activity_kwargs=None, thermochemical_kwargs=None,
            ):
     """
     Returns the log probability of a set of parameters
@@ -88,32 +80,15 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
         List of priors for each parameter in that obey the rv_contnuous type
         interface. Specifically, each element in the list must have a ``logpdf``
         method. Must correspond (same shape and order) to ``params``.
-    dbf : pycalphad.Database
-        Database to consider
-    comps : list
-        List of active component names
-    phases : list
-        List of phases to consider
-    datasets : espei.utils.PickleableTinyDB
-        Datasets that contain single phase data
-    phase_models : dict
-        Phase models to pass to pycalphad calculations
-    callables : dict
-        Callables to pass to pycalphad
     symbols_to_fit : list
         List of names of parameter symbols to replace. Must correspond (same
         shape and order) to ``params``.
-    phase_models : dict
-        Dictionary of {phase name: Model instance}
-    scheduler : None
-        Deprecated.
-    callables : dict
-        Dictionary of {phase name: {phase callables dict}}
-    thermochemical_callables :
-        Dictionary of {output property: {phase name: {phase callables dict}}}.
-        These callables must have ideal mixing portions removed.
-    weight_dict : dict
-        Dictionary of weights for each data type, e.g. {'ZPF': 20, 'HM': 2}
+    zpf_kwargs : dict
+        Keyword arguments for `calculate_zpf_error`
+    activity_kwargs : list
+        Keyword arguments for `calculate_activity_error`
+    thermochemical_kwargs : list
+        Keyword arguments for `calculate_thermochemical_error`
 
     Returns
     -------
@@ -127,11 +102,9 @@ def lnprob(params, prior_rvs=None, dbf=None, comps=None, phases=None, datasets=N
         logging.log(TRACE, 'Proposal - lnprior: {:0.4f}, lnlike: {}, lnprob: {:0.4f}'.format(logprior, np.nan, logprior))
         return logprior
 
-    loglike = lnlikelihood(params, comps=comps, dbf=dbf, phases=phases, datasets=datasets,
-           symbols_to_fit=symbols_to_fit, phase_models=phase_models,
-           callables=callables, thermochemical_callables=thermochemical_callables,
-                           weight_dict=weight_dict,
-                           )
+    loglike = lnlikelihood(params, symbols_to_fit=symbols_to_fit, zpf_kwargs=zpf_kwargs,
+                           activity_kwargs=activity_kwargs,
+                           thermochemical_kwargs=thermochemical_kwargs,)
 
     logprob = logprior + loglike
     logging.log(TRACE, 'Proposal - lnprior: {:0.4f}, lnlike: {:0.4f}, lnprob: {:0.4f}'.format(logprior, loglike, logprob))
@@ -291,14 +264,28 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
         thermochemical_callables[prop].pop('model')
     logging.log(TRACE, 'Finished building phase models')
 
+    phase_models = eq_callables['phase_models']
     # context for the log probability function
-    error_context = {'comps': comps, 'dbf': dbf,
-                     'phases': phases, 'phase_models': eq_callables['phase_models'],
-                     'datasets': datasets, 'symbols_to_fit': symbols_to_fit,
-                     'thermochemical_callables': thermochemical_callables,
-                     'callables': eq_callables, 'prior_rvs': rv_priors,
-                     'weight_dict': mcmc_data_weights,
-                     }
+    # for all cases, parameters argument addressed in MCMC loop
+    error_context = {
+        'prior_rvs': rv_priors,
+        'symbols_to_fit': symbols_to_fit,
+        'zpf_kwargs': {
+            'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(comps, phases, datasets),
+            'phase_models': phase_models, 'callables': eq_callables,
+            'data_weight': mcmc_data_weights.get('ZPF', 1.0),
+        },
+        'thermochemical_kwargs': {
+            'dbf': dbf, 'comps': comps, 'phases': phases, 'datasets': datasets,
+            'phase_models': phase_models, 'callables': thermochemical_callables,
+            'weight_dict': mcmc_data_weights,
+        },
+        'activity_kwargs': {
+            'dbf': dbf, 'comps': comps, 'phases': phases, 'datasets': datasets,
+            'phase_models': phase_models, 'callables': eq_callables,
+            'data_weight': mcmc_data_weights.get('ACR', 1.0),
+        },
+    }
 
     def save_sampler_state(sampler):
         if tracefile:
