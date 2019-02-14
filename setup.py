@@ -26,7 +26,7 @@ setup(
         'six',
         'dask[complete]>=0.18',
         'distributed',
-        'tinydb>=3',
+        'tinydb>=3.8',
         'scikit-learn',
         'emcee',
         'pycalphad>=0.7.1',

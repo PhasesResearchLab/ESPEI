@@ -3,6 +3,7 @@ import fnmatch, warnings, json, os
 import numpy as np
 from six import string_types
 from tinydb.storages import MemoryStorage
+from tinydb import where
 
 from espei.utils import PickleableTinyDB
 from espei.core_utils import recursive_map
@@ -240,6 +241,62 @@ def load_datasets(dataset_filenames):
             except DatasetError as e:
                 raise DatasetError('Dataset Error in {}: {}'.format(fname, e))
     return ds_database
+
+
+def apply_tags(datasets, tags):
+    """
+    Modify datasets using the tags system
+
+    Parameters
+    ----------
+    datasets : PickleableTinyDB
+        Datasets to modify
+    tags : dict
+        Dictionary of {tag: update_dict}
+
+    Returns
+    -------
+    PickleableTinyDB
+
+    Notes
+    -----
+    In general, everything replaces or is additive. We use the following update rules:
+    1. If the update value is a list, extend the existing list (empty list if key does not exist)
+    2. If the update value is scalar, override the previous (deleting any old value, if present)
+    3. If the update value is a dict, update the exist dict (empty dict if dict does not exist)
+    4. Otherwise, the value is updated, overriding the previous
+
+    Examples
+    --------
+    >>> from espei.utils import PickleableTinyDB
+    >>> from tinydb.storages import MemoryStorage
+    >>> ds = PickleableTinyDB(storage=MemoryStorage)
+    >>> doc_id = ds.insert({'tags': ['dft'], 'exclude_model_contributions': ['contrib']})
+    >>> my_tags = {'dft': {'exclude_model_contributions': ['idmix', 'mag'], 'weight': 5.0}}
+    >>> from espei.datasets import apply_tags
+    >>> apply_tags(ds, my_tags)
+    >>> all_data = ds.all()
+    >>> all(d['exclude_model_contributions'] == ['contrib', 'idmix', 'mag'] for d in all_data)
+    True
+    >>> all(d['weight'] == 5.0 for d in all_data)
+    True
+
+    """
+    for tag, update_dict in tags.items():
+        matching_datasets = datasets.search(where("tags").test(lambda x: tag in x))
+        for newkey, newval in update_dict.items():
+            for match in matching_datasets:
+                if isinstance(newval, list):
+                    match[newkey] = match.get(newkey, []) + newval
+                elif np.isscalar(newval):
+                    match[newkey] = newval
+                elif isinstance(newval, dict):
+                    d = match.get(newkey, dict())
+                    d.update(newval)
+                    match[newkey] = d
+                else:
+                    match[newkey] = newval
+        datasets.write_back(matching_datasets)
 
 
 def recursive_glob(start, pattern):
