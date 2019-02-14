@@ -89,8 +89,7 @@ def get_zpf_data(comps, phases, datasets):
     return zpf_data
 
 
-def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters,
-                        callables=None):
+def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters, callables=None):
     """
     Calculate the chemical potentials for the target hyperplane, one vertex at a time
 
