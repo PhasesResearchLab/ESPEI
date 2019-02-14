@@ -9,6 +9,9 @@ system: # phase models and input data
     datasets: # path to datasets. Defaults to current directory.
       type: string
       required: True
+    tags:  # operations to apply to datasets that are tagged
+      type: dict
+      required: False
 
 output:
   type: dict

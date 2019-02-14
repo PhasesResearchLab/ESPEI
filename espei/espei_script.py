@@ -24,7 +24,7 @@ from pycalphad import Database
 import espei
 from espei import generate_parameters, mcmc_fit, schema
 from espei.utils import ImmediateClient, get_dask_config_paths
-from espei.datasets import DatasetError, load_datasets, recursive_glob
+from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags
 
 TRACE = 15  # TRACE logging level
 
@@ -157,6 +157,7 @@ def run_espei(run_settings):
     datasets = load_datasets(sorted(recursive_glob(dataset_path, '*.json')))
     if len(datasets.all()) == 0:
         logging.warning('No datasets were found in the path {}. This should be a directory containing dataset files ending in `.json`.'.format(dataset_path))
+    apply_tags(datasets, system_settings.get('tags', dict()))
     logging.log(TRACE, 'Finished checking datasets')
 
     with open(system_settings['phase_models']) as fp:
