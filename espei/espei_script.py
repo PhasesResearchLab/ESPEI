@@ -198,9 +198,8 @@ def run_espei(run_settings):
             client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
             logging.info("Running with dask scheduler: %s [%s cores]" % (scheduler, sum(client.ncores().values())))
             try:
-                logging.info(
-                    "bokeh server for dask scheduler at localhost:{}".format(
-                        client.scheduler_info()['services']['bokeh']))
+                bokeh_server_info = client.scheduler_info()['services']['bokeh']
+                logging.info("bokeh server for dask scheduler at localhost:{}".format(bokeh_server_info))
             except KeyError:
                 logging.info("Install bokeh to use the dask bokeh server.")
         elif mcmc_settings['scheduler'] == 'None':
