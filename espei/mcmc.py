@@ -16,10 +16,9 @@ import emcee
 from pycalphad import Model
 from pycalphad.codegen.callables import build_callables
 
-from espei.core_utils import get_prop_data
 from espei.utils import database_symbols_to_fit, optimal_parameters
 from espei.priors import build_prior_specs, PriorSpec
-from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error, get_zpf_data
+from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error, get_zpf_data, get_thermochemical_data
 
 
 TRACE = 15  # TRACE logging level
@@ -29,12 +28,21 @@ def lnlikelihood(params, symbols_to_fit, zpf_kwargs, activity_kwargs, thermochem
     """Calculate the likelihood, $$ \ln p(\theta|y) $$ """
     starttime = time.time()
     parameters = {param_name: param for param_name, param in zip(symbols_to_fit, params)}
-    try:
-        multi_phase_error = calculate_zpf_error(parameters=parameters, **zpf_kwargs)
-    except (ValueError, LinAlgError) as e:
-        multi_phase_error = -np.inf
-    actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
-    single_phase_error = calculate_thermochemical_error(parameters=parameters, **thermochemical_kwargs)
+    if zpf_kwargs is not None:
+        try:
+            multi_phase_error = calculate_zpf_error(parameters=parameters, **zpf_kwargs)
+        except (ValueError, LinAlgError) as e:
+            multi_phase_error = -np.inf
+    else:
+        multi_phase_error = 0
+    if activity_kwargs is not None:
+        actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
+    else:
+        actvity_error = 0
+    if thermochemical_kwargs is not None:
+        single_phase_error = calculate_thermochemical_error(parameters=parameters, **thermochemical_kwargs)
+    else:
+        single_phase_error = 0
     total_error = multi_phase_error + single_phase_error + actvity_error
     logging.log(TRACE, 'Likelihood - {:0.2f}s - Thermochemical: {:0.3f}. ZPF: {:0.3f}. Activity: {:0.3f}. Total: {:0.3f}.'.format(time.time() - starttime, single_phase_error, multi_phase_error, actvity_error, total_error))
     return np.array(total_error, dtype=np.float64)
@@ -226,42 +234,10 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
 
     # construct the models for each phase, substituting in the SymPy symbol to fit.
     logging.log(TRACE, 'Building phase models (this may take some time)')
-    logging.debug('Building GM callables.')
-    # 0 is placeholder value
     phases = sorted(dbf.phases.keys())
-    sympy_symbols_to_fit = [sympy.Symbol(sym) for sym in symbols_to_fit]
     orig_parameters = {sym: p for sym, p in zip(symbols_to_fit, initial_parameters)}
     eq_callables = build_callables(dbf, comps, phases, model=Model, parameters=orig_parameters)
-    # because error_context expencts 'phase_models' key, change it
-    eq_callables['phase_models'] = eq_callables.pop('model')
-    eq_callables.pop('phase_records')
-    # we also need to build models that have no ideal mixing for thermochemical error and to build them for each property we might calculate
-    # TODO: potential optimization to only calculate for phase/property combos that we have in the datasets
-    # first construct dict of models without ideal mixing
-    mods_no_idmix = {}
-    for phase_name in phases:
-        # we have to pass the list of Symbol objects to fit so they are popped from the database and can properly be replaced.
-        mods_no_idmix[phase_name] = Model(dbf, comps, phase_name, parameters=sympy_symbols_to_fit)
-        mods_no_idmix[phase_name].models['idmix'] = 0
-    # now construct callables for each possible property that can be calculated
-    thermochemical_callables = {}  # will be dict of {output_property: eq_callables_dict}
-    whitelist_properties = ['HM', 'SM', 'CPM']
-    whitelist_properties = whitelist_properties + [prop+'_MIX' for prop in whitelist_properties]
-    for prop in whitelist_properties:
-        # try to find them in datasets, skipping the build if they aren't there
-        search_prop = prop + '_FORM' if '_' not in prop else prop
-        total_props = 0
-        for phase_name in phases:
-            total_props += len(get_prop_data(comps, phase_name, search_prop, datasets))
-        if total_props == 0:
-            logging.debug('Skipping build of {} callables because no {} datasets were found.'.format(prop, search_prop))
-            continue
-        else:
-            logging.debug('Building {} callables.'.format(prop))
-        thermochemical_callables[prop] = build_callables(dbf, comps, phases, model=mods_no_idmix, output=prop, parameters=orig_parameters, build_gradients=False)
-        # pop off the callables not used in properties because we don't want them around (they should be None, anyways)
-        thermochemical_callables[prop].pop('phase_records')
-        thermochemical_callables[prop].pop('model')
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=mcmc_data_weights)
     logging.log(TRACE, 'Finished building phase models')
 
     phase_models = eq_callables['phase_models']
@@ -276,9 +252,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
             'data_weight': mcmc_data_weights.get('ZPF', 1.0),
         },
         'thermochemical_kwargs': {
-            'dbf': dbf, 'comps': comps, 'phases': phases, 'datasets': datasets,
-            'phase_models': phase_models, 'callables': thermochemical_callables,
-            'weight_dict': mcmc_data_weights,
+            'dbf': dbf, 'comps': comps, 'thermochemical_data': thermochemical_data,
         },
         'activity_kwargs': {
             'dbf': dbf, 'comps': comps, 'phases': phases, 'datasets': datasets,

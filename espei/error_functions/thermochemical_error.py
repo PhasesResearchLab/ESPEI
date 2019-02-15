@@ -2,16 +2,21 @@
 Calculate error due to thermochemical quantities: heat capacity, entropy, enthalpy.
 """
 
-import itertools
 import logging
+from collections import OrderedDict
+from copy import deepcopy
 
+import sympy
 from scipy.stats import norm
 import numpy as np
+from tinydb import where
 
 from pycalphad import calculate, Model
 from pycalphad.core.utils import unpack_components
+from pycalphad.codegen.callables import build_callables
 
 from espei.core_utils import ravel_conditions, get_prop_data
+from espei.utils import database_symbols_to_fit
 
 
 def calculate_points_array(phase_constituents, configuration, occupancies=None):
@@ -124,9 +129,8 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
     return calculate_dict
 
 
-def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, weight_dict=None):
+def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, parameters=None):
     """
-    Calculate the weighted single phase error in the Database
 
     Parameters
     ----------
@@ -138,17 +142,95 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
         List of phases to consider
     datasets : espei.utils.PickleableTinyDB
         Datasets that contain single phase data
+    weight_dict : dict
+        Dictionary of weights for each data type, e.g. {'HM': 200, 'SM': 2}
+    parameters : dict
+        Parameters to fit. Used to build the models and callables.
+
+    Returns
+    -------
+    list
+        List of data dictionaries to iterate over
+    """
+    # phase by phase, then property by property, then by model exclusions
+    if weight_dict is None:
+        weight_dict = {}
+
+    if parameters is not None:
+        fitting_parameters = parameters
+        symbols_to_fit = sorted(parameters.keys())
+    else:
+        symbols_to_fit = database_symbols_to_fit(dbf)
+        initial_parameters = []
+        for s in symbols_to_fit:
+            val = dbf.symbols[s]
+            if isinstance(val, sympy.Piecewise):
+                val = val.args[0].expr
+            initial_parameters.append(float(val))
+        fitting_parameters = OrderedDict([(sym, p) for sym, p in zip(symbols_to_fit, initial_parameters)])
+
+    # estimated from NIST TRC uncertainties
+    property_std_deviation = {
+        'HM': 500.0/weight_dict.get('HM', 1.0),  # J/mol
+        'SM':   0.2/weight_dict.get('SM', 1.0),  # J/K-mol
+        'CPM':  0.2/weight_dict.get('CPM', 1.0),  # J/K-mol
+    }
+
+    properties = ['HM_FORM', 'SM_FORM', 'CPM_FORM', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
+
+    all_data_dicts = []
+    for phase_name in phases:
+        for prop in properties:
+            desired_data = get_prop_data(comps, phase_name, prop, datasets)
+            if len(desired_data) == 0:
+                continue
+            unique_exclusions = set([tuple(sorted(d.get('excluded_model_contributions', []))) for d in desired_data])
+            for exclusion in unique_exclusions:
+                data_dict = {
+                    'phase_name': phase_name,
+                    'prop': prop,
+                    # needs the following keys to be added:
+                    # calculate_dict, callables, model, output, weights
+                }
+                # get all the data with these model exclusions
+                if exclusion == tuple([]):
+                    exc_search = ~where('excluded_model_contributions').exists()
+                else:
+                    exc_search = where('excluded_model_contributions').test(lambda x: tuple(sorted(x)) == exclusion)
+                curr_data = get_prop_data(comps, phase_name, prop, datasets, additional_query=exc_search)
+                calculate_dict = get_prop_samples(dbf, comps, phase_name, curr_data)
+                if prop.endswith('_FORM'):
+                    output = ''.join(prop.split('_')[:-1])
+                else:
+                    output = prop
+                mod = Model(dbf, comps, phase_name, parameters=symbols_to_fit)
+                for contrib in exclusion:
+                    mod.models[contrib] = 0
+                model = {phase_name: mod}
+                callables = build_callables(dbf, comps, [phase_name], model=model, output=prop, parameters=fitting_parameters, build_gradients=False)
+                data_dict['calculate_dict'] = calculate_dict
+                data_dict['callables'] = callables
+                data_dict['model'] = model
+                data_dict['output'] = output
+                data_dict['weights'] = property_std_deviation[prop.split('_')[0]]/np.array(calculate_dict.pop('weights'))
+                all_data_dicts.append(data_dict)
+    return all_data_dicts
+
+
+def calculate_thermochemical_error(dbf, comps, thermochemical_data, parameters=None):
+    """
+    Calculate the weighted single phase error in the Database
+
+    Parameters
+    ----------
+    dbf : pycalphad.Database
+        Database to consider
+    comps : list
+        List of active component names
+    thermochemical_data : list
+        List of thermochemical data dicts
     parameters : dict
         Dictionary of symbols that will be overridden in pycalphad.calculate
-    phase_models : dict
-        Phase models to pass to pycalphad calculations. Ideal mixing
-        contributions must be removed.
-    callables : dict
-        Dictionary of {output_property: callables_dict} where callables_dict is
-        a dictionary of {phase_name: callables}
-        to pass to pycalphad. These must have ideal mixing portions removed.
-    weight_dict : dict
-        Dictionary of {output_property: weight (float)}, e.g. {'HM': 1.0}.
 
     Returns
     -------
@@ -171,58 +253,30 @@ def calculate_thermochemical_error(dbf, comps, phases, datasets, parameters=None
     if parameters is None:
         parameters = {}
 
-    if weight_dict is None:
-        weight_dict = {}
-
-    if phase_models is None:
-        # create phase models with ideal mixing removed
-        phase_models = {}
-        for phase_name in phases:
-            phase_models[phase_name] = Model(dbf, comps, phase_name)
-            phase_models[phase_name].models['idmix'] = 0
-
-
-    # estimated from NIST TRC uncertainties
-    property_std_deviation = {
-        'HM': 500.0/weight_dict.get('HM', 1.0),  # J/mol
-        'SM':   0.2/weight_dict.get('SM', 1.0),  # J/K-mol
-        'CPM':  0.2/weight_dict.get('CPM', 1.0),  # J/K-mol
-    }
-    property_suffixes = ('_FORM', '_MIX')
-    # the kinds of properties, e.g. 'HM'+suffix =>, 'HM_FORM', 'HM_MIX'
-    # we could also include the bare property ('' => 'HM'), but these are rarely used in ESPEI
-    properties = [''.join(prop) for prop in itertools.product(property_std_deviation.keys(), property_suffixes)]
-
-    whitelist_properties = ['HM', 'SM', 'CPM', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
-    # if callables is None, construct empty callables dicts, which will be JIT compiled by pycalphad later
-    callables = callables if callables is not None else {prop: None for prop in whitelist_properties}
-
     prob_error = 0.0
-    for phase_name in phases:
-        for prop in properties:
-            desired_data = get_prop_data(comps, phase_name, prop, datasets)
-            if len(desired_data) == 0:
-                continue
-            calculate_dict = get_prop_samples(dbf, comps, phase_name, desired_data)
-            if prop.endswith('_FORM'):
-                calculate_dict['output'] = ''.join(prop.split('_')[:-1])
-                params = parameters.copy()
-                params.update({'GHSER' + (c.upper() * 2)[:2]: 0 for c in comps})
-            else:
-                calculate_dict['output'] = prop
-                params = parameters
-            sample_values = calculate_dict.pop('values')
-            weights = calculate_dict.pop('weights')
-            dataset_refs = calculate_dict.pop('references')
-            results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=phase_models,
-                                callables=callables[calculate_dict['output']],
-                                **calculate_dict)[calculate_dict['output']].values
-            std_dev = property_std_deviation[prop.split('_')[0]]
-            probabilities = []
-            differences = []
-            for result, sample_value, weight, ref in zip(results, sample_values, weights, dataset_refs):
-                differences.append(result-sample_value)
-                probabilities.append(norm(loc=0, scale=std_dev/weight).logpdf(result-sample_value))
-            logging.debug('Thermochemical error - data: {}, differences: {}, probabilities: {}, references: {}'.format(sample_values, differences, probabilities, dataset_refs))
-            prob_error += np.sum(probabilities)
+    for data in thermochemical_data:
+        phase_name = data['phase_name']
+        prop = data['prop']
+        calculate_dict = deepcopy(data['calculate_dict'])
+        output = data['output']
+        callables = data['callables']
+        mod = data['model']
+        std_devs = data['weights']
+
+        sample_values = calculate_dict.pop('values')
+        dataset_refs = calculate_dict.pop('references')
+        if prop.endswith('_FORM'):
+            params = parameters.copy()
+            params.update({'GHSER' + (c.upper() * 2)[:2]: 0 for c in comps})
+        else:
+            params = parameters
+        results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=mod,
+                            callables=callables, output=output, **calculate_dict)[output].values
+        probabilities = []
+        differences = []
+        for result, sample_value, std_dev, ref in zip(results, sample_values, std_devs, dataset_refs):
+            differences.append(result-sample_value)
+            probabilities.append(norm(loc=0, scale=std_dev).logpdf(result-sample_value))
+        logging.debug('Thermochemical error - data: {}, differences: {}, probabilities: {}, references: {}'.format(sample_values, differences, probabilities, dataset_refs))
+        prob_error += np.sum(probabilities)
     return prob_error

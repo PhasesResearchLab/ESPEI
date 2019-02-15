@@ -231,7 +231,8 @@ CU_MG_SM_MIX_T_X_FCC_A1 = yaml.load("""{
   "output": "SM_MIX",
     "values":   [[[10, 50], [100, 500]]],
   "reference": "FAKE DATA",
-  "comment": "FAKE DATA"
+  "comment": "FAKE DATA",
+  "excluded_model_contributions": ["idmix"]
 }
 """)
 

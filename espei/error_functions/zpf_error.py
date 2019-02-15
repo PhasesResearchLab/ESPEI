@@ -242,7 +242,7 @@ def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyp
     return driving_force
 
 
-def calculate_zpf_error(dbf, phases, zpf_data, phase_models, parameters=None, callables=None, data_weight=1.0):
+def calculate_zpf_error(dbf, phases, zpf_data, phase_models=None, parameters=None, callables=None, data_weight=1.0):
     """
     Calculate error due to phase equilibria data
 
@@ -278,6 +278,8 @@ def calculate_zpf_error(dbf, phases, zpf_data, phase_models, parameters=None, ca
     potentials.
 
     """
+    if parameters is None:
+        parameters = {}
     prob_error = 0.0
     for data in zpf_data:
         phase_regions = data['phase_regions']
