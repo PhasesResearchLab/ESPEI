@@ -229,7 +229,8 @@ def test_mixing_energies_are_fit_with_higher_order_data(datasets_db):
             "T": 298.15
         },
         "output": "SM_MIX",
-        "values": [[[0.1]]]
+        "values": [[[0.1]]],
+        "excluded_model_contributions": ["idmix", "mag"]
     }
     datasets_db.insert(dataset_excess_mixing)
     datasets_db.insert(dataset_excess_mixing_sm)
@@ -273,7 +274,8 @@ def test_mixing_data_is_excess_only(datasets_db):
             "T": 298.15
         },
         "output": "SM_MIX",
-        "values": [[[0]]]
+        "values": [[[0]]],
+        "excluded_model_contributions": ["idmix", "mag"]
     }
     datasets_db.insert(dataset_excess_mixing)
 

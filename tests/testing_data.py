@@ -537,7 +537,8 @@ CU_ZN_SM_MIX_EXPR_TO_FLOAT = {
 "sublattice_occupancies": [[[0.25, 0.75]]]},
 "conditions": {"P": 101325, "T": 600},
 "output": "SM_MIX",
-"values": [[[-9.952211364]]]
+"values": [[[-9.952211364]]],
+"excluded_model_contributions": ["idmix"]
 }
 
 ###############################################################################

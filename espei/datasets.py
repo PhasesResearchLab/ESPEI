@@ -216,33 +216,6 @@ def clean_dataset(dataset):
     return dataset
 
 
-def load_datasets(dataset_filenames):
-    """
-    Create a PickelableTinyDB with the data from a list of filenames.
-
-    Parameters
-    ----------
-    dataset_filenames : [str]
-        List of filenames to load as datasets
-
-    Returns
-    -------
-    PickleableTinyDB
-    """
-    ds_database = PickleableTinyDB(storage=MemoryStorage)
-    for fname in dataset_filenames:
-        with open(fname) as file_:
-            try:
-                d = json.load(file_)
-                check_dataset(d)
-                ds_database.insert(clean_dataset(d))
-            except ValueError as e:
-                raise ValueError('JSON Error in {}: {}'.format(fname, e))
-            except DatasetError as e:
-                raise DatasetError('Dataset Error in {}: {}'.format(fname, e))
-    return ds_database
-
-
 def apply_tags(datasets, tags):
     """
     Modify datasets using the tags system
@@ -297,6 +270,63 @@ def apply_tags(datasets, tags):
                 else:
                     match[newkey] = newval
         datasets.write_back(matching_datasets)
+
+
+def add_ideal_exclusions(datasets):
+    """
+    If there are single phase datasets present and none of them have an
+    `exclude_model_contributions` key, add ideal exclusions automatically and
+    emit a DeprecationWarning that this feature will be going away.
+
+    Parameters
+    ----------
+    datasets : PickleableTinyDB
+
+    Returns
+    -------
+    PickleableTinyDB
+
+    """
+    all_single_phase = datasets.search(where('solver').exists())
+    no_exclusions = datasets.search(where('solver').exists() & (~where('exclude_model_contributions').exists()))
+    if len(all_single_phase) > 0 and len(all_single_phase) == len(no_exclusions):
+        warnings.warn("Single phase datasets are present, but there are no specified `exclude_model_contributions` keys present."
+                      "'idmix' exclusion will be added automatically for backwards compatibility, but this will go away in ESPEI v0.8."
+                      "If you want ideal mixing contributions to be excluded, see the documentation for building datasets: http://espei.org/en/latest/input_data.html", DeprecationWarning)
+        import espei
+        if int(espei.__version__.split('.')[1]) >= 8 or int(espei.__version__.split('.')[0]) > 0:
+            raise ValueError("ESPEI developer: remove the automatic addition of ideal mixing exclusions")
+        for ds in all_single_phase:
+            ds['exclude_model_contributions'] = ['idmix']
+    datasets.write_back(all_single_phase)
+    return datasets
+
+def load_datasets(dataset_filenames):
+    """
+    Create a PickelableTinyDB with the data from a list of filenames.
+
+    Parameters
+    ----------
+    dataset_filenames : [str]
+        List of filenames to load as datasets
+
+    Returns
+    -------
+    PickleableTinyDB
+    """
+    ds_database = PickleableTinyDB(storage=MemoryStorage)
+    for fname in dataset_filenames:
+        with open(fname) as file_:
+            try:
+                d = json.load(file_)
+                check_dataset(d)
+                ds_database.insert(clean_dataset(d))
+            except ValueError as e:
+                raise ValueError('JSON Error in {}: {}'.format(fname, e))
+            except DatasetError as e:
+                raise DatasetError('Dataset Error in {}: {}'.format(fname, e))
+    add_ideal_exclusions(ds_database)
+    return ds_database
 
 
 def recursive_glob(start, pattern):

@@ -133,7 +133,6 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     # These is our previously fit partial model from previous steps
     # Subtract out all of these contributions (zero out reference state because these are formation properties)
     fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
-    fixed_model.models['idmix'] = 0
     fixed_portions = [0]
 
     moles_per_formula_unit = sympy.S(0)
