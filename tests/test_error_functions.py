@@ -8,7 +8,7 @@ from tinydb import where
 from pycalphad import Database
 
 from espei.paramselect import generate_parameters
-from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error
+from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error, get_thermochemical_data, get_zpf_data
 
 from .fixtures import datasets_db
 from .testing_data import *
@@ -29,7 +29,10 @@ def test_thermochemical_error_with_multiple_X_points(datasets_db):
     datasets_db.insert(CU_MG_CPM_MIX_X_HCP_A3)
 
     dbf = Database(CU_MG_TDB)
-    error = calculate_thermochemical_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db)
+    comps = ['CU','MG','VA']
+    thermochemical_data = get_thermochemical_data(dbf, comps, )
+    error = calculate_thermochemical_error(dbf, comps, thermochemical_data)
+
     assert np.isclose(error, -4061.119001241541, rtol=1e-6)
 
 

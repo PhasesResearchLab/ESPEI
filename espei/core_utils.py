@@ -328,7 +328,7 @@ def symmetry_filter(x, config, symmetry):
     return False
 
 
-def get_prop_data(comps, phase_name, prop, datasets):
+def get_prop_data(comps, phase_name, prop, datasets, additional_query=None):
     """
     Return datasets that match the components, phase and property
 
@@ -342,6 +342,8 @@ def get_prop_data(comps, phase_name, prop, datasets):
         Property to get data for
     datasets : espei.utils.PickleableTinyDB
         Datasets to search for data
+    additional_query : tinydb.Query
+        A TinyDB Query object to search for. If None, a Query() will be created that does nothing.
 
     Returns
     -------
@@ -349,10 +351,13 @@ def get_prop_data(comps, phase_name, prop, datasets):
         List of dictionary datasets that match the criteria
 
     """
+    if additional_query is None:
+        additional_query = tinydb.Query()
     # TODO: we should only search and get phases that have the same sublattice_site_ratios as the phase in the database
     desired_data = datasets.search(
         (tinydb.where('output').test(lambda x: x in prop)) &
         (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
-        (tinydb.where('phases') == [phase_name])
+        (tinydb.where('phases') == [phase_name]) &
+        additional_query
     )
     return desired_data
