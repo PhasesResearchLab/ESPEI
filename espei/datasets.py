@@ -244,12 +244,12 @@ def apply_tags(datasets, tags):
     >>> from espei.utils import PickleableTinyDB
     >>> from tinydb.storages import MemoryStorage
     >>> ds = PickleableTinyDB(storage=MemoryStorage)
-    >>> doc_id = ds.insert({'tags': ['dft'], 'exclude_model_contributions': ['contrib']})
-    >>> my_tags = {'dft': {'exclude_model_contributions': ['idmix', 'mag'], 'weight': 5.0}}
+    >>> doc_id = ds.insert({'tags': ['dft'], 'excluded_model_contributions': ['contrib']})
+    >>> my_tags = {'dft': {'excluded_model_contributions': ['idmix', 'mag'], 'weight': 5.0}}
     >>> from espei.datasets import apply_tags
     >>> apply_tags(ds, my_tags)
     >>> all_data = ds.all()
-    >>> all(d['exclude_model_contributions'] == ['contrib', 'idmix', 'mag'] for d in all_data)
+    >>> all(d['excluded_model_contributions'] == ['contrib', 'idmix', 'mag'] for d in all_data)
     True
     >>> all(d['weight'] == 5.0 for d in all_data)
     True
@@ -275,7 +275,7 @@ def apply_tags(datasets, tags):
 def add_ideal_exclusions(datasets):
     """
     If there are single phase datasets present and none of them have an
-    `exclude_model_contributions` key, add ideal exclusions automatically and
+    `excluded_model_contributions` key, add ideal exclusions automatically and
     emit a DeprecationWarning that this feature will be going away.
 
     Parameters
@@ -288,16 +288,16 @@ def add_ideal_exclusions(datasets):
 
     """
     all_single_phase = datasets.search(where('solver').exists())
-    no_exclusions = datasets.search(where('solver').exists() & (~where('exclude_model_contributions').exists()))
+    no_exclusions = datasets.search(where('solver').exists() & (~where('excluded_model_contributions').exists()))
     if len(all_single_phase) > 0 and len(all_single_phase) == len(no_exclusions):
-        warnings.warn("Single phase datasets are present, but there are no specified `exclude_model_contributions` keys present."
+        warnings.warn("Single phase datasets are present, but there are no specified `excluded_model_contributions` keys present."
                       "'idmix' exclusion will be added automatically for backwards compatibility, but this will go away in ESPEI v0.8."
                       "If you want ideal mixing contributions to be excluded, see the documentation for building datasets: http://espei.org/en/latest/input_data.html", DeprecationWarning)
         import espei
         if int(espei.__version__.split('.')[1]) >= 8 or int(espei.__version__.split('.')[0]) > 0:
             raise ValueError("ESPEI developer: remove the automatic addition of ideal mixing exclusions")
         for ds in all_single_phase:
-            ds['exclude_model_contributions'] = ['idmix']
+            ds['excluded_model_contributions'] = ['idmix']
     datasets.write_back(all_single_phase)
     return datasets
 

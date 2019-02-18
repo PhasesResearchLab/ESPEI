@@ -136,7 +136,7 @@ The ``values`` key is the most complicated and care must be taken to avoid mista
 Alternatively, the size of the array must be ``(len(P), len(T), len(subl_config))``.
 In the example below, the shape of the ``values`` array is (1, 12, 1) as there is one pressure scalar, one sublattice configuration, and 12 temperatures.
 
-There is also a key to ``"exclude_model_contributions"``, which will make those contributions of pycalphad's ``Model`` not be fit to when doing parameter selection or MCMC.
+There is also a key to ``"excluded_model_contributions"``, which will make those contributions of pycalphad's ``Model`` not be fit to when doing parameter selection or MCMC.
 This is useful for cases where the type of data used does not include some specific ``Model`` contributions that parameters may already exist for.
 For example, DFT formation energies do not include ideal mixing or (CALPHAD-type) magnetic model contributions, but formation energies from experiments would include these contributions so experimental formation energies should not be excluded.
 In MCMC, this only takes effect for calculating single phase error (multiphase and activity error do not exclude any model contributions).
@@ -156,7 +156,7 @@ In MCMC, this only takes effect for calculating single phase error (multiphase a
 	      "P": 101325,
 	      "T": [  0,  10,  20,  30,  40,  50,  60,  70,  80,  90, 100, 110]
       },
-      "exclude_model_contributions": ["idmix", "mag"]
+      "excluded_model_contributions": ["idmix", "mag"]
       "output": "CPM_FORM",
       "values":   [[[ 0      ],
 		    [-0.0173 ],
@@ -331,7 +331,7 @@ An example input YAML looks like
      datasets: FE-NI-datasets-sep
      tags:
        dft:
-         exclude_model_contributions: ["idmix", "mag"]
+         excluded_model_contributions: ["idmix", "mag"]
 
    generate_parameters:
      excess_model: linear
@@ -341,7 +341,7 @@ An example input YAML looks like
      verbosity: 2
      output_db: out.tdb
 
-This will add the key ``"exclude_model_contributions"`` to all datasets that have the ``"dft"`` tag:
+This will add the key ``"excluded_model_contributions"`` to all datasets that have the ``"dft"`` tag:
 
 .. code-block:: JSON
 
@@ -353,7 +353,7 @@ This will add the key ``"exclude_model_contributions"`` to all datasets that hav
      "conditions": {"P": 101325, "T": 300},
      "output": "HM_MIX",
      "values": [[[10000]]],
-     "excluded_model_tags": ["idmix", "mag"]
+     "excluded_model_contributions": ["idmix", "mag"]
    }
 
 
