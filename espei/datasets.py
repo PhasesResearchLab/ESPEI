@@ -327,7 +327,6 @@ def load_datasets(dataset_filenames):
                 raise ValueError('JSON Error in {}: {}'.format(fname, e))
             except DatasetError as e:
                 raise DatasetError('Dataset Error in {}: {}'.format(fname, e))
-    add_ideal_exclusions(ds_database)
     return ds_database
 
 
