@@ -330,7 +330,7 @@ def load_datasets(dataset_filenames):
     return ds_database
 
 
-def recursive_glob(start, pattern):
+def recursive_glob(start, pattern='*.json'):
     """
     Recursively glob for the given pattern from the start directory.
 
@@ -339,7 +339,7 @@ def recursive_glob(start, pattern):
     start : str
         Path of the directory to walk while for file globbing
     pattern : str
-        Filename pattern to match in the glob
+        Filename pattern to match in the glob.
 
     Returns
     -------
