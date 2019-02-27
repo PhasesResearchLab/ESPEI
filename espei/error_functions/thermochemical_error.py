@@ -178,6 +178,12 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, para
 
     properties = ['HM_FORM', 'SM_FORM', 'CPM_FORM', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
 
+    # we have to have an original and formation Database
+    # the formation Database will have the GHSER symbols zeroed out, so that 'formation' properties are calculated
+    dbf_orig = dbf
+    dbf_form = deepcopy(dbf)
+    dbf_form.symbols.update({'GHSER' + (c.upper() * 2)[:2]: 0 for c in comps})
+
     all_data_dicts = []
     for phase_name in phases:
         for prop in properties:
@@ -201,13 +207,15 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, para
                 calculate_dict = get_prop_samples(dbf, comps, phase_name, curr_data)
                 if prop.endswith('_FORM'):
                     output = ''.join(prop.split('_')[:-1])
+                    dbf = dbf_form
                 else:
                     output = prop
+                    dbf = dbf_orig
                 mod = Model(dbf, comps, phase_name, parameters=symbols_to_fit)
                 for contrib in exclusion:
                     mod.models[contrib] = 0
                 model = {phase_name: mod}
-                callables = build_callables(dbf, comps, [phase_name], model=model, output=prop, parameters=fitting_parameters, build_gradients=False)
+                callables = build_callables(dbf, comps, [phase_name], model=model, output=output, parameters=fitting_parameters, build_gradients=False)
                 data_dict['calculate_dict'] = calculate_dict
                 data_dict['callables'] = callables
                 data_dict['model'] = model
@@ -267,7 +275,6 @@ def calculate_thermochemical_error(dbf, comps, thermochemical_data, parameters=N
         dataset_refs = calculate_dict.pop('references')
         if prop.endswith('_FORM'):
             params = parameters.copy()
-            params.update({'GHSER' + (c.upper() * 2)[:2]: 0 for c in comps})
         else:
             params = parameters
         results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=mod,
