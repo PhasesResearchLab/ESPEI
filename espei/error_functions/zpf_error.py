@@ -148,7 +148,7 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
             num_phases = np.sum(multi_eqdata['Phase'].values.squeeze() != '')
-            Y_values = multi_eqdata.Y.values.squeeze()
+            Y_values = multi_eqdata['Y'].values.squeeze()
             no_internal_dof = np.all((np.isclose(Y_values, 1.)) | np.isnan(Y_values))
             MU_values = multi_eqdata['MU'].values.squeeze()
             if (num_phases == 1) and no_internal_dof:
