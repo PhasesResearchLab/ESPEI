@@ -240,7 +240,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=mcmc_data_weights)
     logging.log(TRACE, 'Finished building phase models')
 
-    phase_models = eq_callables['phase_models']
+    phase_models = eq_callables['model']
     # context for the log probability function
     # for all cases, parameters argument addressed in MCMC loop
     error_context = {
