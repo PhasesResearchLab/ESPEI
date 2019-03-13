@@ -11,10 +11,11 @@ from scipy.stats import norm
 import numpy as np
 from tinydb import where
 
-from pycalphad import calculate, Model
-from pycalphad.core.utils import unpack_components
+from pycalphad import calculate, Model, ReferenceState, variables as v
+from pycalphad.core.utils import unpack_components, get_pure_elements
 from pycalphad.codegen.callables import build_callables
 
+from espei.refdata import pure_element_phases
 from espei.core_utils import ravel_conditions, get_prop_data
 from espei.utils import database_symbols_to_fit
 
@@ -178,12 +179,11 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, para
 
     properties = ['HM_FORM', 'SM_FORM', 'CPM_FORM', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
 
-    # we have to have an original and formation Database
-    # the formation Database will have the GHSER symbols zeroed out, so that 'formation' properties are calculated
-    dbf_orig = dbf
-    dbf_form = deepcopy(dbf)
-    dbf_form.symbols.update({'GHSER' + (c.upper() * 2)[:2]: 0 for c in comps})
 
+    ref_states = []
+    for el in get_pure_elements(dbf, comps):
+        ref_state = ReferenceState(el, pure_element_phases[el])
+        ref_states.append(ref_state)
     all_data_dicts = []
     for phase_name in phases:
         for prop in properties:
@@ -205,17 +205,17 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, para
                     exc_search = where('excluded_model_contributions').test(lambda x: tuple(sorted(x)) == exclusion)
                 curr_data = get_prop_data(comps, phase_name, prop, datasets, additional_query=exc_search)
                 calculate_dict = get_prop_samples(dbf, comps, phase_name, curr_data)
+                mod = Model(dbf, comps, phase_name, parameters=symbols_to_fit)
                 if prop.endswith('_FORM'):
-                    output = ''.join(prop.split('_')[:-1])
-                    dbf = dbf_form
+                    output = ''.join(prop.split('_')[:-1])+'R'
+                    mod.shift_reference_state(ref_states, dbf, contrib_mods={e: sympy.S.Zero for e in exclusion})
                 else:
                     output = prop
-                    dbf = dbf_orig
-                mod = Model(dbf, comps, phase_name, parameters=symbols_to_fit)
                 for contrib in exclusion:
-                    mod.models[contrib] = 0
+                    mod.models[contrib] = sympy.S.Zero
+                    mod.reference_model.models[contrib] = sympy.S.Zero
                 model = {phase_name: mod}
-                callables = build_callables(dbf, comps, [phase_name], model=model, output=output, parameters=fitting_parameters, build_gradients=False)
+                callables = build_callables(dbf, comps, [phase_name], conds={v.T:300, v.P: 101325}, model=model, output=output, parameters=fitting_parameters, build_gradients=False)
                 data_dict['calculate_dict'] = calculate_dict
                 data_dict['callables'] = callables
                 data_dict['model'] = model
@@ -273,11 +273,7 @@ def calculate_thermochemical_error(dbf, comps, thermochemical_data, parameters=N
 
         sample_values = calculate_dict.pop('values')
         dataset_refs = calculate_dict.pop('references')
-        if prop.endswith('_FORM'):
-            params = parameters.copy()
-        else:
-            params = parameters
-        results = calculate(dbf, comps, phase_name, broadcast=False, parameters=params, model=mod,
+        results = calculate(dbf, comps, phase_name, broadcast=False, parameters=parameters, model=mod,
                             callables=callables, output=output, **calculate_dict)[output].values
         probabilities = []
         differences = []

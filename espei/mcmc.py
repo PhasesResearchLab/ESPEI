@@ -13,7 +13,7 @@ import numpy as np
 from numpy.linalg import LinAlgError
 import emcee
 
-from pycalphad import Model
+from pycalphad import Model, variables as v
 from pycalphad.codegen.callables import build_callables
 
 from espei.utils import database_symbols_to_fit, optimal_parameters
@@ -236,7 +236,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
     logging.log(TRACE, 'Building phase models (this may take some time)')
     phases = sorted(dbf.phases.keys())
     orig_parameters = {sym: p for sym, p in zip(symbols_to_fit, initial_parameters)}
-    eq_callables = build_callables(dbf, comps, phases, model=Model, parameters=orig_parameters)
+    eq_callables = build_callables(dbf, comps, phases, conds={v.T: 1000, v.P:101325}, model=Model, parameters=orig_parameters)
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=mcmc_data_weights)
     logging.log(TRACE, 'Finished building phase models')
 
