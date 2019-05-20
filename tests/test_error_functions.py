@@ -107,7 +107,8 @@ def test_thermochemical_error_for_mixing_entropy_error_is_excess_only(datasets_d
     # the error should be exactly 0 because we are only fitting to one point
     # the dataset is excess only
     zero_error_prob = scipy.stats.norm(loc=0, scale=0.2).logpdf(0.0)  # SM weight = 0.2
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
+    # Explicitly pass parameters={} to not try fitting anything
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, parameters={})
     error = calculate_thermochemical_error(dbf, comps, thermochemical_data)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
 
@@ -157,7 +158,8 @@ def test_thermochemical_error_for_of_enthalpy_mixing(datasets_db):
     # the error should be exactly 0 because we are only fitting to one point
     # the dataset is excess only
     zero_error_prob = scipy.stats.norm(loc=0, scale=500.0).logpdf(0.0)  # HM weight = 500
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
+    # Explicitly pass parameters={} to not try fitting anything
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, parameters={})
     error = calculate_thermochemical_error(dbf, comps, thermochemical_data)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
 

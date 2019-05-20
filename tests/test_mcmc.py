@@ -2,9 +2,9 @@ import mock
 import numpy as np
 
 from numpy.linalg import LinAlgError
-from pycalphad import Database
+from pycalphad import Database, variables as v
 from pycalphad.codegen.callables import build_callables
-from pycalphad import Model
+from pycalphad.core.utils import instantiate_models
 
 from espei.mcmc import lnprob, generate_parameter_distribution
 from espei.error_functions import get_zpf_data, get_thermochemical_data
@@ -21,14 +21,14 @@ def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
     phases = ['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2']
     param = 'VV0001'
     orig_val = dbf.symbols[param].args[0].expr
-    eq_callables = build_callables(dbf, comps, phases, model=Model, parameters={param: orig_val})
-    eq_callables['phase_models'] = eq_callables.pop('model')
-    eq_callables.pop('phase_records')
-
+    models = instantiate_models(dbf, comps, phases, parameters={param: orig_val})
+    eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=[param],
+                        output='GM', build_gradients=True, build_hessians=False,
+                        additional_statevars={v.N, v.P, v.T})
 
     zpf_kwargs = {
         'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(comps, phases, datasets_db),
-        'phase_models': eq_callables['phase_models'], 'callables': eq_callables,
+        'phase_models': models, 'callables': eq_callables,
         'data_weight': 1.0,
     }
     res = lnprob([10], prior_rvs=[rv_zero()], symbols_to_fit=[param], zpf_kwargs=zpf_kwargs)

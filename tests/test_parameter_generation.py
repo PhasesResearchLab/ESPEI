@@ -135,7 +135,8 @@ def test_mixing_energies_are_fit(datasets_db):
     from espei.error_functions import calculate_thermochemical_error, get_thermochemical_data
     # the error should be exactly 0 because we are only fitting to one point
     zero_error_prob = scipy.stats.norm(loc=0, scale=500.0).logpdf(0.0)  # HM weight = 500
-    thermochemical_data = get_thermochemical_data(dbf, sorted(read_dbf.elements), list(read_dbf.phases.keys()), datasets_db)
+    # Explicitly pass parameters={} to not try fitting anything
+    thermochemical_data = get_thermochemical_data(dbf, sorted(read_dbf.elements), list(read_dbf.phases.keys()), datasets_db, parameters={})
     error = calculate_thermochemical_error(dbf, sorted(read_dbf.elements), thermochemical_data)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
 
