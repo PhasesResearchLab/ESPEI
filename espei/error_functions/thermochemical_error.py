@@ -158,7 +158,6 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, para
         weight_dict = {}
 
     if parameters is not None:
-        fitting_parameters = parameters
         symbols_to_fit = sorted(parameters.keys())
     else:
         symbols_to_fit = database_symbols_to_fit(dbf)
@@ -168,7 +167,6 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, para
             if isinstance(val, sympy.Piecewise):
                 val = val.args[0].expr
             initial_parameters.append(float(val))
-        fitting_parameters = OrderedDict([(sym, p) for sym, p in zip(symbols_to_fit, initial_parameters)])
 
     # estimated from NIST TRC uncertainties
     property_std_deviation = {
