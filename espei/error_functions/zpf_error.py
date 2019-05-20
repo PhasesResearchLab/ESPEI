@@ -29,6 +29,8 @@ def _safe_index(items, index):
     except IndexError:
         return None
 
+TRACE = 15  # TRACE logging level
+
 
 def get_zpf_data(comps, phases, datasets):
     """
@@ -129,6 +131,7 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
 
     """
     target_hyperplane_chempots = []
+    target_hyperplane_phases = []
     parameters = OrderedDict(sorted(parameters.items(), key=str))
     # TODO: unclear whether we use phase_flag and how it would be used. It should be just a 'disordered' kind of flag.
     for cond_dict, phase_flag in comp_dicts:
@@ -143,8 +146,8 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
         else:
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
-            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, model=phase_models,
-                                       parameters=parameters, callables=callables,)
+            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, model=phase_models, parameters=parameters, callables=callables,)
+            target_hyperplane_phases.append(multi_eqdata["Phase"].values.squeeze())
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
             num_phases = np.sum(multi_eqdata['Phase'].values.squeeze() != '')
@@ -155,8 +158,15 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
                 target_hyperplane_chempots.append(np.full_like(MU_values, np.nan))
             else:
                 target_hyperplane_chempots.append(MU_values)
-    target_hyperplane_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float)
-    return target_hyperplane_chempots
+    target_hyperplane_mean_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float)
+    eq_str = "conds: ({}), comps: ({})".format(cond_dict, comp_dicts)
+    logging.log(TRACE, 'ZPF error - Target hyperplane: Equilibria: ({0}), All phases found: ({1}), All chemical potentials: ({2}), Target Chemical Potentials: ({3}).'.format(
+        eq_str,
+        target_hyperplane_phases,
+        target_hyperplane_chempots,
+        target_hyperplane_mean_chempots
+        ))
+    return target_hyperplane_mean_chempots
 
 
 def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyperplane_chempots,
@@ -200,8 +210,9 @@ def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyp
                                   T=cond_dict[v.T], P=cond_dict[v.P],
                                   model=phase_models, parameters=parameters, pdens=100,
                                   callables=callables)
-        driving_force = np.multiply(target_hyperplane_chempots, single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
-        driving_force = float(driving_force.max())
+        df = np.multiply(target_hyperplane_chempots, single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
+        driving_force = float(df.max())
+        logging.log(TRACE, "ZPF Error - Estimated driving force for phase {}: {}".format(current_phase, driving_force))
     elif phase_flag == 'disordered':
         # Construct disordered sublattice configuration from composition dict
         # Compute energy
@@ -225,6 +236,7 @@ def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyp
                                   model=phase_models, parameters=parameters, callables=callables,)
         driving_force = np.multiply(target_hyperplane_chempots, single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
         driving_force = float(np.squeeze(driving_force))
+        logging.log(TRACE, "ZPF Error - Disordered driving force for phase {}: {}".format(current_phase, driving_force))
     else:
         # Extract energies from single-phase calculations
         single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, model=phase_models,
@@ -239,6 +251,7 @@ def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyp
         region_comps[region_comps.index(np.nan)] = 1 - np.nansum(region_comps)
         driving_force = np.multiply(target_hyperplane_chempots, region_comps).sum() - select_energy
         driving_force = float(driving_force)
+        logging.log(TRACE, "ZPF Error - Equilibrium driving force for phase {} with conditions {}: {}".format(current_phase, cond_dict, driving_force))
     return driving_force
 
 
