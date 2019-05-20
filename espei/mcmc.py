@@ -13,8 +13,9 @@ import numpy as np
 from numpy.linalg import LinAlgError
 import emcee
 
-from pycalphad import Model, variables as v
+from pycalphad import variables as v
 from pycalphad.codegen.callables import build_callables
+from pycalphad.core.utils import instantiate_models
 
 from espei.utils import database_symbols_to_fit, optimal_parameters
 from espei.priors import build_prior_specs, PriorSpec
@@ -237,11 +238,13 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
     logging.log(TRACE, 'Building phase models (this may take some time)')
     phases = sorted(dbf.phases.keys())
     orig_parameters = {sym: p for sym, p in zip(symbols_to_fit, initial_parameters)}
-    eq_callables = build_callables(dbf, comps, phases, model=Model, parameters=orig_parameters)
+    models = instantiate_models(dbf, comps, phases, parameters=orig_parameters)
+    eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=symbols_to_fit,
+                        output='GM', build_gradients=True, build_hessians=False,
+                        additional_statevars={v.N, v.P, v.T})
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=mcmc_data_weights)
     logging.log(TRACE, 'Finished building phase models')
 
-    phase_models = eq_callables['model']
     # context for the log probability function
     # for all cases, parameters argument addressed in MCMC loop
     error_context = {
@@ -249,7 +252,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
         'symbols_to_fit': symbols_to_fit,
         'zpf_kwargs': {
             'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(comps, phases, datasets),
-            'phase_models': phase_models, 'callables': eq_callables,
+            'phase_models': models, 'callables': eq_callables,
             'data_weight': mcmc_data_weights.get('ZPF', 1.0),
         },
         'thermochemical_kwargs': {
@@ -257,7 +260,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
         },
         'activity_kwargs': {
             'dbf': dbf, 'comps': comps, 'phases': phases, 'datasets': datasets,
-            'phase_models': phase_models, 'callables': eq_callables,
+            'phase_models': models, 'callables': eq_callables,
             'data_weight': mcmc_data_weights.get('ACR', 1.0),
         },
     }

@@ -215,7 +215,11 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, para
                     mod.models[contrib] = sympy.S.Zero
                     mod.reference_model.models[contrib] = sympy.S.Zero
                 model = {phase_name: mod}
-                callables = build_callables(dbf, comps, [phase_name], model=model, output=output, parameters=fitting_parameters, build_gradients=False)
+                callables = build_callables(dbf, comps, [phase_name], model,
+                                            parameter_symbols=symbols_to_fit,
+                                            output=output,
+                                            build_gradients=False, build_hessians=False,
+                                            additional_statevars={v.P, v.T, v.N})
                 data_dict['calculate_dict'] = calculate_dict
                 data_dict['callables'] = callables
                 data_dict['model'] = model
