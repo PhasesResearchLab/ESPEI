@@ -33,6 +33,7 @@ def lnlikelihood(params, symbols_to_fit, zpf_kwargs, activity_kwargs, thermochem
         try:
             multi_phase_error = calculate_zpf_error(parameters=parameters, **zpf_kwargs)
         except (ValueError, LinAlgError) as e:
+            raise e
             print(e)
             multi_phase_error = -np.inf
     else:
