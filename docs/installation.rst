@@ -58,12 +58,12 @@ Testing
 
 If you will be developing in ESPEI, it is likely that you'll want to run the
 test suite or build the documentation. The tests require the addition of the
-pytest and mock packages, while building the docs requires sphinx and
+pytest, nose, and mock packages, while building the docs requires sphinx and
 sphinx_rtd_theme. These can be installed by running
 
 .. code-block:: bash
 
-   conda install mock pytest sphinx sphinx_rtd_theme
+   conda install mock pytest nose sphinx sphinx_rtd_theme
    
 The tests can be run from the root directory of the cloned repository:
 
