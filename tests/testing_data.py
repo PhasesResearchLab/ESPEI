@@ -2,6 +2,8 @@
 
 import yaml
 
+YAML_LOADER = yaml.FullLoader
+
 CU_MG_TDB = """$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 $ Date: 2017-09-27 21:10
 $ Components: CU, MG, VA
@@ -184,7 +186,7 @@ CU_MG_EXP_ACTIVITY = yaml.load("""{
   "reference": "garg1973thermodynamic",
   "comment": "Digitized Figure "
 }
-""")
+""", Loader=YAML_LOADER)
 
 
 CU_MG_HM_MIX_T_CUMG2 = yaml.load("""{
@@ -205,7 +207,7 @@ CU_MG_HM_MIX_T_CUMG2 = yaml.load("""{
   "reference": "FAKE DATA",
   "comment": "FAKE DATA"
 }
-""")
+""", Loader=YAML_LOADER)
 
 
 CU_MG_SM_MIX_T_X_FCC_A1 = yaml.load("""{
@@ -234,7 +236,7 @@ CU_MG_SM_MIX_T_X_FCC_A1 = yaml.load("""{
   "comment": "FAKE DATA",
   "excluded_model_contributions": ["idmix"]
 }
-""")
+""", Loader=YAML_LOADER)
 
 
 CU_MG_CPM_MIX_X_HCP_A3 = yaml.load("""{
@@ -262,7 +264,7 @@ CU_MG_CPM_MIX_X_HCP_A3 = yaml.load("""{
   "reference": "FAKE DATA",
   "comment": "FAKE DATA"
 }
-""")
+""", Loader=YAML_LOADER)
 
 
 CU_MG_HM_MIX_SINGLE_FCC_A1 = yaml.load("""
@@ -282,7 +284,7 @@ CU_MG_HM_MIX_SINGLE_FCC_A1 = yaml.load("""
     "output": "HM_MIX",
     "values": [[[-1000]]]
 }
-""")
+""", Loader=YAML_LOADER)
 
 
 CU_MG_DATASET_ZPF_ZERO_ERROR = yaml.load("""{
@@ -299,7 +301,7 @@ CU_MG_DATASET_ZPF_ZERO_ERROR = yaml.load("""{
   "reference": "testing",
   "comment": "From a calculation of: `equilibrium(Database(CU_MG_TDB), ['CU','MG','VA'], ['FCC_A1', 'LAVES_C15'], {v.P: 101325, v.X('MG'): 0.1, v.T: 600})`"
 }
-""")
+""", Loader=YAML_LOADER)
 
 
 CU_MG_DATASET_ZPF_WORKING = yaml.load("""{
@@ -317,7 +319,7 @@ CU_MG_DATASET_ZPF_WORKING = yaml.load("""{
     ],
     "reference": "Sahmen1908"
 }
-""")
+""", Loader=YAML_LOADER)
 
 
 A_B_DATASET_BINARY_PHASE_EQUILIBRIA = yaml.load("""{
@@ -336,7 +338,7 @@ A_B_DATASET_BINARY_PHASE_EQUILIBRIA = yaml.load("""{
   "reference": "testing",
   "comment": "Examples for 1. one side of tieline, 2. a full tieline, 3. a 3 phase equilibria. For MPL visual checking that plot is correct"
 }
-""")
+""", Loader=YAML_LOADER)
 
 
 A_B_C_DATASET_TERNARY_PHASE_EQUILIBRIA = yaml.load("""{
@@ -355,7 +357,7 @@ A_B_C_DATASET_TERNARY_PHASE_EQUILIBRIA = yaml.load("""{
   "reference": "testing",
   "comment": "Examples for 1. one side of tieline, 2. a full tieline, 3. a 3 phase equilibria. For MPL visual checking that plot is correct"
 }
-""")
+""", Loader=YAML_LOADER)
 
 
 CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES = yaml.load("""{
@@ -376,7 +378,7 @@ CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES = yaml.load("""{
   "reference": "FAKE DATA",
   "comment": "FAKE DATA"
 }
-""")
+""", Loader=YAML_LOADER)
 
 
 CU_MG_DATASET_ZPF_STRING_VALUES = yaml.load("""{
@@ -394,7 +396,7 @@ CU_MG_DATASET_ZPF_STRING_VALUES = yaml.load("""{
     ],
     "reference": "Sahmen1908"
 }
-""")
+""", Loader=YAML_LOADER)
 
 
 AL_CO_CR_A2_PHASE_MODELS = {

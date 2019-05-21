@@ -42,7 +42,7 @@ class ESPEIValidator(Validator):
             self._error(field, "Must be an even number")
 
 with open(os.path.join(MODULE_DIR, 'input-schema.yaml')) as f:
-    schema = ESPEIValidator(yaml.load(f))
+    schema = ESPEIValidator(yaml.load(f, Loader=yaml.FullLoader))
 
 from espei.paramselect import generate_parameters
 from espei.mcmc import mcmc_fit
