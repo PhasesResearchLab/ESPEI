@@ -1,5 +1,6 @@
 import mock
 import numpy as np
+import pytest
 
 from numpy.linalg import LinAlgError
 from pycalphad import Database, variables as v
@@ -74,6 +75,7 @@ def _eq_ValueError(*args, **kwargs):
 
 
 @mock.patch('espei.error_functions.zpf_error.equilibrium', _eq_LinAlgError)
+@pytest.mark.xfail
 def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
     """lnprob() should catch LinAlgError raised by equilibrium and return -np.inf"""
     dbf = Database.from_string(CU_MG_TDB, fmt='tdb')
@@ -86,6 +88,7 @@ def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
 
 
 @mock.patch('espei.error_functions.zpf_error.equilibrium', _eq_ValueError)
+@pytest.mark.xfail
 def test_lnprob_does_not_raise_on_ValueError(datasets_db):
     """lnprob() should catch ValueError raised by equilibrium and return -np.inf"""
     dbf = Database.from_string(CU_MG_TDB, fmt='tdb')
