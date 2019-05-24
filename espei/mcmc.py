@@ -6,7 +6,7 @@ Affine Invariance. Commun. Appl. Math. Comput. Sci. 5, 65-80 (2010).
 
 """
 
-import logging, time, sys
+import logging, time, copy
 
 import sympy
 import numpy as np
@@ -17,7 +17,7 @@ from pycalphad import variables as v
 from pycalphad.codegen.callables import build_callables
 from pycalphad.core.utils import instantiate_models
 
-from espei.utils import database_symbols_to_fit, optimal_parameters
+from espei.utils import database_symbols_to_fit, optimal_parameters, unpack_piecewise
 from espei.priors import build_prior_specs, PriorSpec
 from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error, get_zpf_data, get_thermochemical_data
 
@@ -107,7 +107,10 @@ def lnprob(params, prior_rvs=None, symbols_to_fit=None,
 
     """
     logging.debug('Parameters - {}'.format(params))
-    logprior = lnprior(params, prior_rvs)
+    if prior_rvs is not None:
+        logprior = lnprior(params, prior_rvs)
+    else:
+        logprior = 0.0  # improper prior
     if np.isneginf(logprior):
         # It doesn't matter what the likelihood is. We can skip calculating it to save time.
         logging.log(TRACE, 'Proposal - lnprior: {:0.4f}, lnlike: {}, lnprob: {:0.4f}'.format(logprior, np.nan, logprior))
@@ -150,6 +153,78 @@ def generate_parameter_distribution(parameters, num_samples, std_deviation, dete
     return rng.normal(tiled_parameters, np.abs(tiled_parameters * std_deviation))
 
 
+def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None):
+    """
+    Set up a context dictionary for calculating error.
+
+    Parameters
+    ----------
+    dbf : Database
+        A pycalphad Database that will be fit
+    datasets : PickleableTinyDB
+        A database of single- and multi-phase data to fit
+    symbols_to_fit : list of str
+        List of symbols in the Database that will be fit. If None (default) are
+        passed, then all parameters prefixed with `VV` followed by a number,
+        e.g. VV0001 will be fit.
+
+    Returns
+    -------
+
+    Notes
+    -----
+    A copy of the Database is made and used in the context. To commit changes
+    back to the original database, the dbf.symbols.update method should be used.
+    """
+    dbf = copy.deepcopy(dbf)
+    comps = sorted([sp for sp in dbf.elements])
+    if symbols_to_fit is None:
+        symbols_to_fit = database_symbols_to_fit(dbf)
+    else:
+        symbols_to_fit = sorted(symbols_to_fit)
+    data_weights = data_weights if data_weights is not None else {}
+
+    if len(symbols_to_fit) == 0:
+        raise ValueError('No degrees of freedom. Database must contain symbols starting with \'V\' or \'VV\', followed by a number.')
+    else:
+        logging.info('Fitting {} degrees of freedom.'.format(len(symbols_to_fit)))
+
+    for x in symbols_to_fit:
+        if isinstance(dbf.symbols[x], sympy.Piecewise):
+            logging.debug('Replacing {} in database'.format(x))
+            dbf.symbols[x] = dbf.symbols[x].args[0].expr
+
+    # construct the models for each phase, substituting in the SymPy symbol to fit.
+    logging.log(TRACE, 'Building phase models (this may take some time)')
+    phases = sorted(dbf.phases.keys())
+    models = instantiate_models(dbf, comps, phases, parameters=dict(zip(symbols_to_fit, [0]*len(symbols_to_fit))))
+    eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=symbols_to_fit,
+                        output='GM', build_gradients=True, build_hessians=False,
+                        additional_statevars={v.N, v.P, v.T})
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=data_weights)
+    logging.log(TRACE, 'Finished building phase models')
+
+    # context for the log probability function
+    # for all cases, parameters argument addressed in MCMC loop
+    error_context = {
+        'symbols_to_fit': symbols_to_fit,
+        'zpf_kwargs': {
+            'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(comps, phases, datasets),
+            'phase_models': models, 'callables': eq_callables,
+            'data_weight': data_weights.get('ZPF', 1.0),
+        },
+        'thermochemical_kwargs': {
+            'dbf': dbf, 'comps': comps, 'thermochemical_data': thermochemical_data,
+        },
+        'activity_kwargs': {
+            'dbf': dbf, 'comps': comps, 'phases': phases, 'datasets': datasets,
+            'phase_models': models, 'callables': eq_callables,
+            'data_weight': data_weights.get('ACR', 1.0),
+        },
+    }
+    return error_context
+
+
 def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_parameter=2,
              chain_std_deviation=0.1, scheduler=None, tracefile=None, probfile=None,
              restart_trace=None, deterministic=True, prior=None, mcmc_data_weights=None):
@@ -162,7 +237,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
         A pycalphad Database to fit with symbols to fit prefixed with `VV`
         followed by a number, e.g. `VV0001`
     datasets : PickleableTinyDB
-        A database of single- and multi-phase to fit
+        A database of single- and multi-phase data to fit
     iterations : int
         Number of trace iterations to calculate in MCMC. Default is 1000 iterations.
     save_interval :int
@@ -201,24 +276,11 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
     sampler : EnsembleSampler, ndarray)
         emcee sampler for further data wrangling
     """
-    comps = sorted([sp for sp in dbf.elements])
-    symbols_to_fit = database_symbols_to_fit(dbf)
-
-    if len(symbols_to_fit) == 0:
-        raise ValueError('No degrees of freedom. Database must contain symbols starting with \'V\' or \'VV\', followed by a number.')
-    else:
-        logging.info('Fitting {} degrees of freedom.'.format(len(symbols_to_fit)))
-
-    for x in symbols_to_fit:
-        if isinstance(dbf.symbols[x], sympy.Piecewise):
-            logging.debug('Replacing {} in database'.format(x))
-            dbf.symbols[x] = dbf.symbols[x].args[0].expr
-
-    # get initial parameters and remove these from the database
-    # we'll replace them with SymPy symbols initialized to 0 in the phase models
-    initial_parameters = np.array([np.array(float(dbf.symbols[x])) for x in symbols_to_fit])
+    error_ctx = setup_context(dbf, datasets, data_weights=mcmc_data_weights)
+    symbols_to_fit = error_ctx['symbols_to_fit']
 
     # initialize the priors
+    initial_parameters = np.array([unpack_piecewise(dbf.symbols[x]) for x in symbols_to_fit])
     if isinstance(prior, dict):
         logging.info('Initializing a {} prior for the parameters.'.format(prior['name']))
     elif isinstance(prior, PriorSpec):
@@ -234,46 +296,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
         elif hasattr(spec, "logpdf"):
             logging.debug('Using a user-specified prior for {}.'.format(fit_symbol))
             rv_priors.append(spec)
-
-    # construct the models for each phase, substituting in the SymPy symbol to fit.
-    logging.log(TRACE, 'Building phase models (this may take some time)')
-    phases = sorted(dbf.phases.keys())
-    orig_parameters = {sym: p for sym, p in zip(symbols_to_fit, initial_parameters)}
-    models = instantiate_models(dbf, comps, phases, parameters=orig_parameters)
-    eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=symbols_to_fit,
-                        output='GM', build_gradients=True, build_hessians=False,
-                        additional_statevars={v.N, v.P, v.T})
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=mcmc_data_weights)
-    logging.log(TRACE, 'Finished building phase models')
-
-    # context for the log probability function
-    # for all cases, parameters argument addressed in MCMC loop
-    error_context = {
-        'prior_rvs': rv_priors,
-        'symbols_to_fit': symbols_to_fit,
-        'zpf_kwargs': {
-            'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(comps, phases, datasets),
-            'phase_models': models, 'callables': eq_callables,
-            'data_weight': mcmc_data_weights.get('ZPF', 1.0),
-        },
-        'thermochemical_kwargs': {
-            'dbf': dbf, 'comps': comps, 'thermochemical_data': thermochemical_data,
-        },
-        'activity_kwargs': {
-            'dbf': dbf, 'comps': comps, 'phases': phases, 'datasets': datasets,
-            'phase_models': models, 'callables': eq_callables,
-            'data_weight': mcmc_data_weights.get('ACR', 1.0),
-        },
-    }
-
-    def save_sampler_state(sampler):
-        if tracefile:
-            logging.log(TRACE, 'Writing trace to {}'.format(tracefile))
-            np.save(tracefile, sampler.chain)
-        if probfile:
-            logging.log(TRACE, 'Writing lnprob to {}'.format(probfile))
-            np.save(probfile, sampler.lnprobability)
-
+    error_ctx.update({'prior_rvs': rv_priors})
 
     # initialize the walkers either fresh or from the restart
     if restart_trace is not None:
@@ -292,8 +315,17 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
         logging.info('Initializing {} chains with {} chains per parameter.'.format(nwalkers, chains_per_parameter))
         walkers = generate_parameter_distribution(initial_parameters, nwalkers, chain_std_deviation, deterministic=deterministic)
 
+    def save_sampler_state(sampler):
+        """Convenience function that saves the trace and lnprob"""
+        if tracefile:
+            logging.log(TRACE, 'Writing trace to {}'.format(tracefile))
+            np.save(tracefile, sampler.chain)
+        if probfile:
+            logging.log(TRACE, 'Writing lnprob to {}'.format(probfile))
+            np.save(probfile, sampler.lnprobability)
+
     # the pool must implement a map function
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_context, pool=scheduler)
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_ctx, pool=scheduler)
     if deterministic:
         from espei.rstate import numpy_rstate
         sampler.random_state = numpy_rstate
@@ -309,7 +341,7 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
             n = int((progbar_width + 1) * float(i) / iterations)
             logging.info("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, iterations))
         n = int((progbar_width + 1) * float(i + 1) / iterations)
-        sys.stdout.write("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, iterations))
+        logging.info("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, iterations))
     except KeyboardInterrupt:
         pass
     # final processing
