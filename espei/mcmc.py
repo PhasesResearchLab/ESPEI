@@ -1,235 +1,16 @@
 """
-Module for running MCMC in ESPEI
-
-MCMC uses an EnsembleSampler based on Goodman and Weare, Ensemble Samplers with
-Affine Invariance. Commun. Appl. Math. Comput. Sci. 5, 65-80 (2010).
+Legacy module for running MCMC in ESPEI
 
 """
+import warnings
+from espei.utils import database_symbols_to_fit
+from espei.optimizers.opt_mcmc import EmceeOptimizer
 
-import logging, time, copy
-
-import sympy
-import numpy as np
-from numpy.linalg import LinAlgError
-import emcee
-
-from pycalphad import variables as v
-from pycalphad.codegen.callables import build_callables
-from pycalphad.core.utils import instantiate_models
-
-from espei.utils import database_symbols_to_fit, optimal_parameters, unpack_piecewise
-from espei.priors import build_prior_specs, PriorSpec
-from espei.error_functions import calculate_activity_error, calculate_thermochemical_error, calculate_zpf_error, get_zpf_data, get_thermochemical_data
-
-
-TRACE = 15  # TRACE logging level
-
-
-def lnlikelihood(params, symbols_to_fit, zpf_kwargs, activity_kwargs, thermochemical_kwargs):
-    """Calculate the likelihood, $$ \ln p(\theta|y) $$ """
-    starttime = time.time()
-    parameters = {param_name: param for param_name, param in zip(symbols_to_fit, params)}
-    if zpf_kwargs is not None:
-        try:
-            multi_phase_error = calculate_zpf_error(parameters=parameters, **zpf_kwargs)
-        except (ValueError, LinAlgError) as e:
-            raise e
-            print(e)
-            multi_phase_error = -np.inf
-    else:
-        multi_phase_error = 0
-    if activity_kwargs is not None:
-        actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
-    else:
-        actvity_error = 0
-    if thermochemical_kwargs is not None:
-        single_phase_error = calculate_thermochemical_error(parameters=parameters, **thermochemical_kwargs)
-    else:
-        single_phase_error = 0
-    total_error = multi_phase_error + single_phase_error + actvity_error
-    logging.log(TRACE, 'Likelihood - {:0.2f}s - Thermochemical: {:0.3f}. ZPF: {:0.3f}. Activity: {:0.3f}. Total: {:0.3f}.'.format(time.time() - starttime, single_phase_error, multi_phase_error, actvity_error, total_error))
-    return np.array(total_error, dtype=np.float64)
-
-
-def lnprior(params, priors):
-    """
-    Calculate the log prior given the parameters and prior distributions
-
-    Parameters
-    ----------
-    params : array_like
-        Array of parameters to fit.
-    priors : list of scipy.stats.rv_continuous-like
-        List of priors for each parameter in that obey the rv_contnuous type
-        interface. Specifically, each element in the list must have a ``logpdf``
-        method. Must correspond (same shape and order) to ``params``.
-
-    Returns
-    -------
-    float
-
-    """
-    # multivariate prior is the sum of log univariate priors
-    lnprior_multivariate = [rv.logpdf(theta) for rv, theta in zip(priors, params)]
-    logging.debug('Priors: {}'.format(lnprior_multivariate))
-    return np.sum(lnprior_multivariate)
-
-
-def lnprob(params, prior_rvs=None, symbols_to_fit=None,
-           zpf_kwargs=None, activity_kwargs=None, thermochemical_kwargs=None,
-           ):
-    """
-    Returns the log probability of a set of parameters
-
-    $$ \ln p(y|\theta) \propto \ln p(\theta) + \ln p(\theta|y) $$
-
-    Parameters
-    ----------
-    params : array_like
-        Array of parameters to fit.
-    prior_rvs : list of scipy.stats.rv_continuous-like
-        List of priors for each parameter in that obey the rv_contnuous type
-        interface. Specifically, each element in the list must have a ``logpdf``
-        method. Must correspond (same shape and order) to ``params``.
-    symbols_to_fit : list
-        List of names of parameter symbols to replace. Must correspond (same
-        shape and order) to ``params``.
-    zpf_kwargs : dict
-        Keyword arguments for `calculate_zpf_error`
-    activity_kwargs : list
-        Keyword arguments for `calculate_activity_error`
-    thermochemical_kwargs : list
-        Keyword arguments for `calculate_thermochemical_error`
-
-    Returns
-    -------
-    float
-
-    """
-    logging.debug('Parameters - {}'.format(params))
-    if prior_rvs is not None:
-        logprior = lnprior(params, prior_rvs)
-    else:
-        logprior = 0.0  # improper prior
-    if np.isneginf(logprior):
-        # It doesn't matter what the likelihood is. We can skip calculating it to save time.
-        logging.log(TRACE, 'Proposal - lnprior: {:0.4f}, lnlike: {}, lnprob: {:0.4f}'.format(logprior, np.nan, logprior))
-        return logprior
-
-    loglike = lnlikelihood(params, symbols_to_fit=symbols_to_fit, zpf_kwargs=zpf_kwargs,
-                           activity_kwargs=activity_kwargs,
-                           thermochemical_kwargs=thermochemical_kwargs,)
-
-    logprob = logprior + loglike
-    logging.log(TRACE, 'Proposal - lnprior: {:0.4f}, lnlike: {:0.4f}, lnprob: {:0.4f}'.format(logprior, loglike, logprob))
-    return logprob
-
-
-def generate_parameter_distribution(parameters, num_samples, std_deviation, deterministic=True):
-    """
-    Return an array of num_samples from a Gaussian distribution about each parameter.
-
-    Parameters
-    ----------
-    parameters : ndarray
-        1D array of initial parameters that will be the mean of the distribution.
-    num_samples : int
-        Number of chains to initialize.
-    std_deviation : float
-        Fractional standard deviation of the parameters to use for initialization.
-    deterministic : bool
-        True if the parameters should be generated deterministically.
-
-    Returns
-    -------
-    ndarray
-    """
-    if deterministic:
-        rng = np.random.RandomState(1769)
-    else:
-        rng = np.random.RandomState()
-    # apply a Gaussian random to each parameter with std dev of std_deviation*parameter
-    tiled_parameters = np.tile(parameters, (num_samples, 1))
-    return rng.normal(tiled_parameters, np.abs(tiled_parameters * std_deviation))
-
-
-def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None):
-    """
-    Set up a context dictionary for calculating error.
-
-    Parameters
-    ----------
-    dbf : Database
-        A pycalphad Database that will be fit
-    datasets : PickleableTinyDB
-        A database of single- and multi-phase data to fit
-    symbols_to_fit : list of str
-        List of symbols in the Database that will be fit. If None (default) are
-        passed, then all parameters prefixed with `VV` followed by a number,
-        e.g. VV0001 will be fit.
-
-    Returns
-    -------
-
-    Notes
-    -----
-    A copy of the Database is made and used in the context. To commit changes
-    back to the original database, the dbf.symbols.update method should be used.
-    """
-    dbf = copy.deepcopy(dbf)
-    comps = sorted([sp for sp in dbf.elements])
-    if symbols_to_fit is None:
-        symbols_to_fit = database_symbols_to_fit(dbf)
-    else:
-        symbols_to_fit = sorted(symbols_to_fit)
-    data_weights = data_weights if data_weights is not None else {}
-
-    if len(symbols_to_fit) == 0:
-        raise ValueError('No degrees of freedom. Database must contain symbols starting with \'V\' or \'VV\', followed by a number.')
-    else:
-        logging.info('Fitting {} degrees of freedom.'.format(len(symbols_to_fit)))
-
-    for x in symbols_to_fit:
-        if isinstance(dbf.symbols[x], sympy.Piecewise):
-            logging.debug('Replacing {} in database'.format(x))
-            dbf.symbols[x] = dbf.symbols[x].args[0].expr
-
-    # construct the models for each phase, substituting in the SymPy symbol to fit.
-    logging.log(TRACE, 'Building phase models (this may take some time)')
-    phases = sorted(dbf.phases.keys())
-    models = instantiate_models(dbf, comps, phases, parameters=dict(zip(symbols_to_fit, [0]*len(symbols_to_fit))))
-    eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=symbols_to_fit,
-                        output='GM', build_gradients=True, build_hessians=False,
-                        additional_statevars={v.N, v.P, v.T})
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=data_weights)
-    logging.log(TRACE, 'Finished building phase models')
-
-    # context for the log probability function
-    # for all cases, parameters argument addressed in MCMC loop
-    error_context = {
-        'symbols_to_fit': symbols_to_fit,
-        'zpf_kwargs': {
-            'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(comps, phases, datasets),
-            'phase_models': models, 'callables': eq_callables,
-            'data_weight': data_weights.get('ZPF', 1.0),
-        },
-        'thermochemical_kwargs': {
-            'dbf': dbf, 'comps': comps, 'thermochemical_data': thermochemical_data,
-        },
-        'activity_kwargs': {
-            'dbf': dbf, 'comps': comps, 'phases': phases, 'datasets': datasets,
-            'phase_models': models, 'callables': eq_callables,
-            'data_weight': data_weights.get('ACR', 1.0),
-        },
-    }
-    return error_context
-
-
-def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_parameter=2,
+def mcmc_fit(dbf, datasets, iterations=1000, save_interval=1, chains_per_parameter=2,
              chain_std_deviation=0.1, scheduler=None, tracefile=None, probfile=None,
              restart_trace=None, deterministic=True, prior=None, mcmc_data_weights=None):
     """
-    Run Markov Chain Monte Carlo on the Database given datasets
+    Run MCMC via the EmceeOptimizer class
 
     Parameters
     ----------
@@ -269,88 +50,18 @@ def mcmc_fit(dbf, datasets, iterations=1000, save_interval=100, chains_per_param
     mcmc_data_weights : dict
         Dictionary of weights for each data type, e.g. {'ZPF': 20, 'HM': 2}
 
-    Returns
-    -------
-    dbf : Database
-        Resulting pycalphad database of optimized parameters
-    sampler : EnsembleSampler, ndarray)
-        emcee sampler for further data wrangling
     """
-    error_ctx = setup_context(dbf, datasets, data_weights=mcmc_data_weights)
-    symbols_to_fit = error_ctx['symbols_to_fit']
+    warnings.warn("The mcmc convenience function will be removed in ESPEI 0.8")
+    all_symbols = database_symbols_to_fit(dbf)
 
-    # initialize the priors
-    initial_parameters = np.array([unpack_piecewise(dbf.symbols[x]) for x in symbols_to_fit])
-    if isinstance(prior, dict):
-        logging.info('Initializing a {} prior for the parameters.'.format(prior['name']))
-    elif isinstance(prior, PriorSpec):
-        logging.info('Initializing a {} prior for the parameters.'.format(prior.name))
-    elif prior is None:
-        prior = {'name': 'zero'}
-    prior_specs = build_prior_specs(prior, initial_parameters)
-    rv_priors = []
-    for spec, param, fit_symbol in zip(prior_specs, initial_parameters, symbols_to_fit):
-        if isinstance(spec, PriorSpec):
-            logging.debug('Initializing a {} prior for {} with parameters: {}.'.format(spec.name, fit_symbol, spec.parameters))
-            rv_priors.append(spec.get_prior(param))
-        elif hasattr(spec, "logpdf"):
-            logging.debug('Using a user-specified prior for {}.'.format(fit_symbol))
-            rv_priors.append(spec)
-    error_ctx.update({'prior_rvs': rv_priors})
+    optimizer = EmceeOptimizer(dbf, scheduler=scheduler)
+    optimizer.save_interval = save_interval
+    optimizer.fit(all_symbols, datasets, prior=prior, iterations=iterations,
+                  chains_per_parameter=chains_per_parameter,
+                  chain_std_deviation=chain_std_deviation,
+                  deterministic=deterministic, restart_trace=restart_trace,
+                  tracefile=tracefile, probfile=probfile,
+                  mcmc_data_weights=mcmc_data_weights)
+    optimizer.commit()
+    return optimizer.dbf, optimizer.sampler
 
-    # initialize the walkers either fresh or from the restart
-    if restart_trace is not None:
-        walkers = restart_trace[np.nonzero(restart_trace)].reshape(
-            (restart_trace.shape[0], -1, restart_trace.shape[2]))[:, -1, :]
-        nwalkers = walkers.shape[0]
-        ndim = walkers.shape[1]
-        initial_parameters = walkers.mean(axis=0)
-        logging.info('Restarting from previous calculation with {} chains ({} per parameter).'.format(nwalkers, nwalkers / ndim))
-        logging.log(TRACE, 'Means of restarting parameters are {}'.format(initial_parameters))
-        logging.log(TRACE, 'Standard deviations of restarting parameters are {}'.format(walkers.std(axis=0)))
-    else:
-        logging.log(TRACE, 'Initial parameters: {}'.format(initial_parameters))
-        ndim = initial_parameters.size
-        nwalkers = ndim * chains_per_parameter
-        logging.info('Initializing {} chains with {} chains per parameter.'.format(nwalkers, chains_per_parameter))
-        walkers = generate_parameter_distribution(initial_parameters, nwalkers, chain_std_deviation, deterministic=deterministic)
-
-    def save_sampler_state(sampler):
-        """Convenience function that saves the trace and lnprob"""
-        if tracefile:
-            logging.log(TRACE, 'Writing trace to {}'.format(tracefile))
-            np.save(tracefile, sampler.chain)
-        if probfile:
-            logging.log(TRACE, 'Writing lnprob to {}'.format(probfile))
-            np.save(probfile, sampler.lnprobability)
-
-    # the pool must implement a map function
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, kwargs=error_ctx, pool=scheduler)
-    if deterministic:
-        from espei.rstate import numpy_rstate
-        sampler.random_state = numpy_rstate
-        logging.info('Using a deterministic ensemble sampler.')
-    progbar_width = 30
-    logging.info('Running MCMC for {} iterations.'.format(iterations))
-    try:
-        for i, result in enumerate(sampler.sample(walkers, iterations=iterations)):
-            # progress bar
-            if (i + 1) % save_interval == 0:
-                save_sampler_state(sampler)
-                logging.log(TRACE, 'Acceptance ratios for parameters: {}'.format(sampler.acceptance_fraction))
-            n = int((progbar_width + 1) * float(i) / iterations)
-            logging.info("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, iterations))
-        n = int((progbar_width + 1) * float(i + 1) / iterations)
-        logging.info("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, iterations))
-    except KeyboardInterrupt:
-        pass
-    # final processing
-    save_sampler_state(sampler)
-    optimal_params = optimal_parameters(sampler.chain, sampler.lnprobability)
-    logging.log(TRACE, 'Intial parameters: {}'.format(initial_parameters))
-    logging.log(TRACE, 'Optimal parameters: {}'.format(optimal_params))
-    logging.log(TRACE, 'Change in parameters: {}'.format(np.abs(initial_parameters - optimal_params) / initial_parameters))
-    for param_name, value in zip(symbols_to_fit, optimal_params):
-        dbf.symbols[param_name] = value
-    logging.info('MCMC complete.')
-    return dbf, sampler

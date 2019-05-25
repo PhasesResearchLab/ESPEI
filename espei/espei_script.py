@@ -22,9 +22,10 @@ import pycalphad
 from pycalphad import Database
 
 import espei
-from espei import generate_parameters, mcmc_fit, schema
-from espei.utils import ImmediateClient, get_dask_config_paths
+from espei import generate_parameters, schema
+from espei.utils import ImmediateClient, get_dask_config_paths, database_symbols_to_fit
 from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags, add_ideal_exclusions
+from espei.optimizers.opt_mcmc import EmceeOptimizer
 
 TRACE = 15  # TRACE logging level
 
@@ -231,21 +232,23 @@ def run_espei(run_settings):
         prior = mcmc_settings.get('prior')
         data_weights = mcmc_settings.get('data_weights')
 
-        dbf, sampler = mcmc_fit(dbf, datasets, scheduler=client, iterations=iterations,
-                                chains_per_parameter=chains_per_parameter,
-                                chain_std_deviation=chain_std_deviation,
-                                save_interval=save_interval,
-                                tracefile=tracefile, probfile=probfile,
-                                restart_trace=restart_trace,
-                                deterministic=deterministic,
-                                prior=prior, mcmc_data_weights=data_weights,
-                                )
+        # set up and run the EmceeOptimizer
+        optimizer = EmceeOptimizer(dbf, scheduler=client)
+        optimizer.save_interval = save_interval
+        all_symbols = database_symbols_to_fit(dbf)
+        optimizer.fit(all_symbols, datasets, prior=prior, iterations=iterations,
+                      chains_per_parameter=chains_per_parameter,
+                      chain_std_deviation=chain_std_deviation,
+                      deterministic=deterministic, restart_trace=restart_trace,
+                      tracefile=tracefile, probfile=probfile,
+                      mcmc_data_weights=data_weights)
+        optimizer.commit()
 
-        dbf.to_file(output_settings['output_db'], if_exists='overwrite')
+        optimizer.dbf.to_file(output_settings['output_db'], if_exists='overwrite')
         # close the scheduler, if possible
         if hasattr(client, 'close'):
                 client.close()
-        return dbf, sampler
+        return optimizer.dbf, optimizer.sampler
     return dbf
 
 
