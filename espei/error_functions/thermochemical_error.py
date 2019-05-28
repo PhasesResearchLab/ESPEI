@@ -130,7 +130,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
     return calculate_dict
 
 
-def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, parameters=None):
+def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symbols_to_fit=None):
     """
 
     Parameters
@@ -145,7 +145,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, para
         Datasets that contain single phase data
     weight_dict : dict
         Dictionary of weights for each data type, e.g. {'HM': 200, 'SM': 2}
-    parameters : dict
+    symbols_to_fit : list
         Parameters to fit. Used to build the models and callables.
 
     Returns
@@ -157,16 +157,10 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, para
     if weight_dict is None:
         weight_dict = {}
 
-    if parameters is not None:
-        symbols_to_fit = sorted(parameters.keys())
+    if symbols_to_fit is not None:
+        symbols_to_fit = sorted(symbols_to_fit)
     else:
         symbols_to_fit = database_symbols_to_fit(dbf)
-        initial_parameters = []
-        for s in symbols_to_fit:
-            val = dbf.symbols[s]
-            if isinstance(val, sympy.Piecewise):
-                val = val.args[0].expr
-            initial_parameters.append(float(val))
 
     # estimated from NIST TRC uncertainties
     property_std_deviation = {

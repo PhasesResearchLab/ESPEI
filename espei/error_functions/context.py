@@ -60,7 +60,7 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None):
     eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=symbols_to_fit,
                         output='GM', build_gradients=True, build_hessians=False,
                         additional_statevars={v.N, v.P, v.T})
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=data_weights)
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=data_weights, symbols_to_fit=symbols_to_fit)
     logging.log(TRACE, 'Finished building phase models')
 
     # context for the log probability function
