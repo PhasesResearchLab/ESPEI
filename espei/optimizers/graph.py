@@ -86,7 +86,7 @@ class OptGraph:
     def __str__(self):
         all_nodes = ''
         for nid, node in self.nodes.items():
-            children = ', '.join([c.id for c in node.children])
+            children = ', '.join([str(c.id) for c in node.children])
             all_nodes += '{}: [{}], '.format(nid, children)
         return "<OptGraph({})>".format(all_nodes)
 
@@ -107,7 +107,8 @@ class OptGraph:
         rev_path = [node]  # leaf -> root
         while node.parent is not None:
             rev_path.append(node.parent)
-        return reversed(rev_path)  # root -> leaf
+            node = node.parent
+        return list(reversed(rev_path))  # root -> leaf
 
     def get_transformation_dict(self, node):
         """
