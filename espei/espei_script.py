@@ -231,11 +231,12 @@ def run_espei(run_settings):
         deterministic = mcmc_settings.get('deterministic')
         prior = mcmc_settings.get('prior')
         data_weights = mcmc_settings.get('data_weights')
+        syms = mcmc_settings.get('symbols')
 
         # set up and run the EmceeOptimizer
         optimizer = EmceeOptimizer(dbf, scheduler=client)
         optimizer.save_interval = save_interval
-        all_symbols = database_symbols_to_fit(dbf)
+        all_symbols = syms if syms is not None else database_symbols_to_fit(dbf)
         optimizer.fit(all_symbols, datasets, prior=prior, iterations=iterations,
                       chains_per_parameter=chains_per_parameter,
                       chain_std_deviation=chain_std_deviation,

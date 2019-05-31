@@ -30,6 +30,28 @@ def _safe_index(items, index):
         return None
 
 
+def get_zpf_context(dbf, comps, phases, datasets):
+    """
+
+    Parameters
+    ----------
+    dbf : Database
+    comps : list of str
+        List of components to fit
+    phases : list of str
+        List of phase names that will be fit
+    datasets : espei.utils.PickleableTinyDB
+
+    Returns
+    -------
+    list
+        List of data dictionaries with keys ``weight``, ``data_comps`` and
+        ``phase_regions``. ``data_comps`` are the components for the data in
+        question. ``phase_regions`` are the ZPF phases, state variables and compositions
+    """
+    pass
+
+
 def get_zpf_data(comps, phases, datasets):
     """
     Return the ZPF data used in the calculation of ZPF error
@@ -243,7 +265,9 @@ def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyp
     return driving_force
 
 
-def calculate_zpf_error(dbf, phases, zpf_data, phase_models=None, parameters=None, callables=None, data_weight=1.0):
+def calculate_zpf_error(dbf, phases, zpf_data, phase_models=None,
+                        parameters=None, callables=None, data_weight=1.0,
+                        ):
     """
     Calculate error due to phase equilibria data
 

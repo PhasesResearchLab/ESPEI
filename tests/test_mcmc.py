@@ -53,7 +53,7 @@ def test_lnprob_calculates_single_phase_probability_for_success(datasets_db):
     orig_val = -14.0865
     opt = EmceeOptimizer(dbf)
 
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, parameters={param: orig_val})
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[param])
     thermochemical_kwargs = {'dbf': dbf, 'comps': comps, 'thermochemical_data': thermochemical_data}
     res_orig = opt.predict([orig_val], prior_rvs=[rv_zero()], symbols_to_fit=[param], thermochemical_kwargs=thermochemical_kwargs)
     assert np.isreal(res_orig)
