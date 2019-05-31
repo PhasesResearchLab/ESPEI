@@ -285,7 +285,7 @@ def main():
     ext = os.path.splitext(input_file)[-1]
     if ext == '.yml' or ext == '.yaml':
         with open(input_file) as f:
-            input_settings = yaml.load(f)
+            input_settings = yaml.safe_load(f)
     elif ext == '.json':
         with open(input_file) as f:
             input_settings = json.load(f)

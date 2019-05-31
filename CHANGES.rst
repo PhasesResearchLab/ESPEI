@@ -2,6 +2,41 @@
 What's New
 ==========
 
+0.7 (2019-05-31)
+==================
+
+This is a significant update reflecting many internal improvements, new features, and bugfixes. Users using the YAML input or the ``run_espei`` Python API should see entirely backwards compatible changes with ESPEI 0.6.2.
+
+pycalphad 0.8, which introduced many `key features <https://pycalphad.org/docs/latest/CHANGES.html>`_ for these changes is now required.
+This should almost completely eliminate the time to build phases due to the symengine backend (phases will likely build in less time than to call the MCMC objective function).
+Users can expect a slight performance improvement for MCMC fitting.
+
+Improvements
+------------
+* Priors can now be specified and are documented online.
+* Weights for different datasets are added and are supported by a ``"weight"`` key at the top level of any dataset.
+* Weights for different types of data are added. These are controlled via the input YAML and are documented there.
+* A new internal API is introduced for generic fitting of parameters to datasets in the ``OptimizerBase`` class. The MCMC optimizer in emcee was migrated to this API (the ``mcmc_fit`` function is now deprecated, but still works until the next major version of ESPEI). A simple SciPy-based optimizer was implemented using this API.
+* Parameter selection can now be passed initial databases with parameters (e.g. for adding magnetic or other parameters manually).
+* pycalphad's reference state support can now be used to properly reference out different types of model contributions (ideal mixing, magnetic, etc.). This is especially useful for DFT thermochemical data which does not include model contributions from ideal mixing or magnetic heat capacity. Useful for experimental data which does include ideal mixing (previously ESPEI assumed all data
+* Datasets and input YAML files now have a tag system where tags that are specified in the input YAML can override any keys/values in the JSON datasets at runtime. This is useful for tagging data with different weights/model contribution exclusions (e.g. DFT tags may get lower weights and can be set to exclude model contributions). If no tags are applied, removing ideal mixing from all thermochemical data is applied automatically for backwards compatibility. This backwards compatibility feature will be removed in the next major version of ESPEI (all model contributions will be included by default and exclusions must be specified manually).
+
+Bug fixes
+---------
+* Bug fixed where asymmetric ternary parameters were not properly replaced in SymPy
+* Fixed error where ZPF error was considering the chemical potentials of stoichiometric phases in the target hyperplane (they are meaningless)
+* Report the actual file paths when dask's work-stealing is set to false.
+* Errors in the ZPF error function are no longer swallowed with -np.inf error. Any errors should be reported as bugs.
+* Fix bug where subsets of symbols to fit are not built properly for thermochemical data
+
+Other
+-----
+* Documentation recipe added for `plot_parameters`
+* [Developer] ZPF and thermochemical datasets now have an function to get all the data up front in a dictionary that can be used in the functions for separation of concerns and calculation efficiency by not recalculating the same thing every iteration.
+* [Developer] a function to generate the a context dict to pass to lnprob now exists. It gets the datasets automatically using the above.
+* [Developer] transition to pycalphad's new build_callables function, taking care of the ``v.N`` state variable.
+* [Developer] Load all YAML safely, silencing warnings.
+
 0.6.2 (2018-11-27)
 ==================
 
@@ -25,7 +60,7 @@ This a major release with several important features and bug fixes.
 * Add ternary parameter selection. Works by default, just add data.
 * Set memory limit to zero to avoid dask killing workers near the dask memory limits.
 * Remove ideal mixing from plotting models so that ``plot_parameters`` gives the correct entropy values.
-* Add `recipes documentation <https://github.com/PhasesResearchLab/ESPEI/blob/master/docs/recipes.rst>` that contains some Python code for common utility operations.
+* Add `recipes documentation <https://github.com/PhasesResearchLab/ESPEI/blob/master/docs/recipes.rst>`_ that contains some Python code for common utility operations.
 * Add documentation for running custom distributed schedulers in ESPEI
 
 
