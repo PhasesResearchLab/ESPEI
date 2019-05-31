@@ -55,13 +55,16 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None):
 
     # construct the models for each phase, substituting in the SymPy symbol to fit.
     logging.log(TRACE, 'Building phase models (this may take some time)')
+    import time
+    t1 = time.time()
     phases = sorted(dbf.phases.keys())
     models = instantiate_models(dbf, comps, phases, parameters=dict(zip(symbols_to_fit, [0]*len(symbols_to_fit))))
     eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=symbols_to_fit,
                         output='GM', build_gradients=True, build_hessians=False,
                         additional_statevars={v.N, v.P, v.T})
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=data_weights, symbols_to_fit=symbols_to_fit)
-    logging.log(TRACE, 'Finished building phase models')
+    t2 = time.time()
+    logging.log(TRACE, 'Finished building phase models ({:0.2f}s)'.format(t2-t1))
 
     # context for the log probability function
     # for all cases, parameters argument addressed in MCMC loop
