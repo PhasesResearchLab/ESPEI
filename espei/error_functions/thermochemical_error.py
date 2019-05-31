@@ -130,7 +130,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
     return calculate_dict
 
 
-def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symbols_to_fit=None):
+def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symbols_to_fit=None, make_callables=True):
     """
 
     Parameters
@@ -213,7 +213,8 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
                                             build_gradients=False, build_hessians=False,
                                             additional_statevars={v.P, v.T, v.N})
                 data_dict['calculate_dict'] = calculate_dict
-                data_dict['callables'] = callables
+                if make_callables:
+                    data_dict['callables'] = callables
                 data_dict['model'] = model
                 data_dict['output'] = output
                 data_dict['weights'] = property_std_deviation[prop.split('_')[0]]/np.array(calculate_dict.pop('weights'))
@@ -263,7 +264,7 @@ def calculate_thermochemical_error(dbf, comps, thermochemical_data, parameters=N
         prop = data['prop']
         calculate_dict = deepcopy(data['calculate_dict'])
         output = data['output']
-        callables = data['callables']
+        callables = data.get('callables', None)
         mod = data['model']
         std_devs = data['weights']
 

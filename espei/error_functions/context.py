@@ -12,7 +12,7 @@ from espei.utils import database_symbols_to_fit
 TRACE = 15
 
 
-def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None):
+def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_callables=True):
     """
     Set up a context dictionary for calculating error.
 
@@ -59,10 +59,13 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None):
     t1 = time.time()
     phases = sorted(dbf.phases.keys())
     models = instantiate_models(dbf, comps, phases, parameters=dict(zip(symbols_to_fit, [0]*len(symbols_to_fit))))
-    eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=symbols_to_fit,
-                        output='GM', build_gradients=True, build_hessians=False,
-                        additional_statevars={v.N, v.P, v.T})
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=data_weights, symbols_to_fit=symbols_to_fit)
+    if make_callables:
+        eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=symbols_to_fit,
+                            output='GM', build_gradients=True, build_hessians=False,
+                            additional_statevars={v.N, v.P, v.T})
+    else:
+        eq_callables = None
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=data_weights, symbols_to_fit=symbols_to_fit, make_callables=make_callables)
     t2 = time.time()
     logging.log(TRACE, 'Finished building phase models ({:0.2f}s)'.format(t2-t1))
 

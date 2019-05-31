@@ -204,7 +204,8 @@ class EmceeOptimizer(OptimizerBase):
         OptNode
 
         """
-        ctx = setup_context(self.dbf, ds, symbols, data_weights=mcmc_data_weights)
+        cbs = self.scheduler is None
+        ctx = setup_context(self.dbf, ds, symbols, data_weights=mcmc_data_weights, make_callables=cbs)
         symbols_to_fit = ctx['symbols_to_fit']
         initial_guess = np.array([unpack_piecewise(self.dbf.symbols[s]) for s in symbols_to_fit])
 
