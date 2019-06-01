@@ -29,8 +29,11 @@ install:
 before_script:
   - source activate espei-env
   - pip install -e '.[dev]'
-  - sleep 5
+  - echo '!!! Installed packages'
+  - conda list
+  - echo '!!! Local directory'
+  - ls -lh
 script:
-  - py.test -v espei tests
+  - pytest -v --doctest-modules espei tests
 notifications:
   email: False
