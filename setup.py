@@ -29,7 +29,7 @@ setup(
         'tinydb>=3.8',
         'scikit-learn',
         'emcee',
-        'pycalphad>=0.7.1',
+        'pycalphad>=0.8',
         'pyyaml',
         'cerberus',
         'bibtexparser'],
