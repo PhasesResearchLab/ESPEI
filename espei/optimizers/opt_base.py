@@ -4,7 +4,7 @@ from espei.utils import unpack_piecewise, database_symbols_to_fit
 from .graph import OptNode, OptGraph
 from .utils import OptimizerError
 
-class OptimizerBase():
+class OptimizerBase(object):
     """Enable fitting and replaying fitting steps"""
     def __init__(self, dbf):
         self.orig_dbf = copy.deepcopy(dbf)
