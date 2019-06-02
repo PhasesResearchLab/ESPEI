@@ -22,9 +22,10 @@ import pycalphad
 from pycalphad import Database
 
 import espei
-from espei import generate_parameters, mcmc_fit, schema
-from espei.utils import ImmediateClient, get_dask_config_paths
-from espei.datasets import DatasetError, load_datasets, recursive_glob
+from espei import generate_parameters, schema
+from espei.utils import ImmediateClient, get_dask_config_paths, database_symbols_to_fit
+from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags, add_ideal_exclusions
+from espei.optimizers.opt_mcmc import EmceeOptimizer
 
 TRACE = 15  # TRACE logging level
 
@@ -157,6 +158,8 @@ def run_espei(run_settings):
     datasets = load_datasets(sorted(recursive_glob(dataset_path, '*.json')))
     if len(datasets.all()) == 0:
         logging.warning('No datasets were found in the path {}. This should be a directory containing dataset files ending in `.json`.'.format(dataset_path))
+    apply_tags(datasets, system_settings.get('tags', dict()))
+    add_ideal_exclusions(datasets)
     logging.log(TRACE, 'Finished checking datasets')
 
     with open(system_settings['phase_models']) as fp:
@@ -166,7 +169,10 @@ def run_espei(run_settings):
         refdata = generate_parameters_settings['ref_state']
         excess_model = generate_parameters_settings['excess_model']
         ridge_alpha = generate_parameters_settings['ridge_alpha']
-        dbf = generate_parameters(phase_models, datasets, refdata, excess_model, ridge_alpha=ridge_alpha)
+        input_dbf = generate_parameters_settings.get('input_db', None)
+        if input_dbf is not None:
+            input_dbf = Database(input_dbf)
+        dbf = generate_parameters(phase_models, datasets, refdata, excess_model, ridge_alpha=ridge_alpha, dbf=input_dbf)
         dbf.to_file(output_settings['output_db'], if_exists='overwrite')
 
     if mcmc_settings is not None:
@@ -194,9 +200,8 @@ def run_espei(run_settings):
             client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
             logging.info("Running with dask scheduler: %s [%s cores]" % (scheduler, sum(client.ncores().values())))
             try:
-                logging.info(
-                    "bokeh server for dask scheduler at localhost:{}".format(
-                        client.scheduler_info()['services']['bokeh']))
+                bokeh_server_info = client.scheduler_info()['services']['bokeh']
+                logging.info("bokeh server for dask scheduler at localhost:{}".format(bokeh_server_info))
             except KeyError:
                 logging.info("Install bokeh to use the dask bokeh server.")
         elif mcmc_settings['scheduler'] == 'None':
@@ -226,22 +231,25 @@ def run_espei(run_settings):
         deterministic = mcmc_settings.get('deterministic')
         prior = mcmc_settings.get('prior')
         data_weights = mcmc_settings.get('data_weights')
+        syms = mcmc_settings.get('symbols')
 
-        dbf, sampler = mcmc_fit(dbf, datasets, scheduler=client, iterations=iterations,
-                                chains_per_parameter=chains_per_parameter,
-                                chain_std_deviation=chain_std_deviation,
-                                save_interval=save_interval,
-                                tracefile=tracefile, probfile=probfile,
-                                restart_trace=restart_trace,
-                                deterministic=deterministic,
-                                prior=prior, mcmc_data_weights=data_weights,
-                                )
+        # set up and run the EmceeOptimizer
+        optimizer = EmceeOptimizer(dbf, scheduler=client)
+        optimizer.save_interval = save_interval
+        all_symbols = syms if syms is not None else database_symbols_to_fit(dbf)
+        optimizer.fit(all_symbols, datasets, prior=prior, iterations=iterations,
+                      chains_per_parameter=chains_per_parameter,
+                      chain_std_deviation=chain_std_deviation,
+                      deterministic=deterministic, restart_trace=restart_trace,
+                      tracefile=tracefile, probfile=probfile,
+                      mcmc_data_weights=data_weights)
+        optimizer.commit()
 
-        dbf.to_file(output_settings['output_db'], if_exists='overwrite')
+        optimizer.dbf.to_file(output_settings['output_db'], if_exists='overwrite')
         # close the scheduler, if possible
         if hasattr(client, 'close'):
                 client.close()
-        return dbf, sampler
+        return optimizer.dbf, optimizer.sampler
     return dbf
 
 
@@ -277,7 +285,7 @@ def main():
     ext = os.path.splitext(input_file)[-1]
     if ext == '.yml' or ext == '.yaml':
         with open(input_file) as f:
-            input_settings = yaml.load(f)
+            input_settings = yaml.safe_load(f)
     elif ext == '.json':
         with open(input_file) as f:
             input_settings = json.load(f)

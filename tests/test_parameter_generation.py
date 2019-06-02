@@ -2,6 +2,8 @@
 
 from tinydb import where
 import numpy as np
+from pycalphad import Database
+import scipy
 
 from espei.paramselect import generate_parameters
 from .testing_data import *
@@ -130,9 +132,13 @@ def test_mixing_energies_are_fit(datasets_db):
     assert set(read_dbf.phases.keys()) == {'LIQUID', 'FCC_A1'}
     assert len(read_dbf._parameters.search(where('parameter_type') == 'L')) == 1
 
+    from espei.error_functions import calculate_thermochemical_error, get_thermochemical_data
     # the error should be exactly 0 because we are only fitting to one point
-    from espei.error_functions import calculate_thermochemical_error
-    assert np.isclose(calculate_thermochemical_error(read_dbf, sorted(dbf.elements), sorted(dbf.phases.keys()), datasets_db), -7.133546631626864, rtol=1e-6)
+    zero_error_prob = scipy.stats.norm(loc=0, scale=500.0).logpdf(0.0)  # HM weight = 500
+    # Explicitly pass parameters={} to not try fitting anything
+    thermochemical_data = get_thermochemical_data(dbf, sorted(read_dbf.elements), list(read_dbf.phases.keys()), datasets_db, symbols_to_fit=[])
+    error = calculate_thermochemical_error(dbf, sorted(read_dbf.elements), thermochemical_data)
+    assert np.isclose(error, zero_error_prob, atol=1e-6)
 
 
 def test_mixing_energies_are_reduced_with_ridge_alpha(datasets_db):
@@ -224,7 +230,8 @@ def test_mixing_energies_are_fit_with_higher_order_data(datasets_db):
             "T": 298.15
         },
         "output": "SM_MIX",
-        "values": [[[0.1]]]
+        "values": [[[0.1]]],
+        "excluded_model_contributions": ["idmix", "mag"]
     }
     datasets_db.insert(dataset_excess_mixing)
     datasets_db.insert(dataset_excess_mixing_sm)
@@ -268,7 +275,8 @@ def test_mixing_data_is_excess_only(datasets_db):
             "T": 298.15
         },
         "output": "SM_MIX",
-        "values": [[[0]]]
+        "values": [[[0]]],
+        "excluded_model_contributions": ["idmix", "mag"]
     }
     datasets_db.insert(dataset_excess_mixing)
 
@@ -361,7 +369,6 @@ def test_symmetric_ternary_parameter_can_be_generated_in_presence_of_binary_data
     assert dbf.elements == {'AL', 'CO', 'CR'}
     assert set(dbf.phases.keys()) == {'BCC_A2'}
     # rounded to 6 digits by `numdigits`, this is confirmed to be a correct value.
-    print(list(dbf._parameters.search(where('parameter_type') == 'L')))
     assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 2
     assert dbf.symbols['VV0000'] == -4000.0
     assert dbf.symbols['VV0001'] == -200245.0
@@ -413,3 +420,27 @@ def test_cpm_sm_data_can_be_fit_successively(datasets_db):
     assert dbf.symbols['VV0001'] == -40.953  # T*ln(T) L1 term
     assert dbf.symbols['VV0002'] == -44.57 # T*ln(T) L0 term
     assert dbf.symbols['VV0003'] == 36.6556 # L0 T term, found after CPM_MIX addition
+
+
+def test_initial_database_can_be_supplied(datasets_db):
+    """Initial Databases can be passed to parameter generation"""
+    initial_dbf = Database(CR_FE_INITIAL_TDB_CONTRIBUTIONS)
+    assert len(initial_dbf._parameters.all()) == 11
+    dbf = generate_parameters(CR_FE_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', dbf=initial_dbf)
+    assert len(dbf._parameters.all()) == 13  # 11 initial parameters + 2 generated endmember parameters
+
+
+def test_model_contributions_can_be_excluded(datasets_db):
+    """Model contributions excluded in the datasets should not be fit"""
+    datasets_db.insert(CR_FE_HM_MIX_EXCLUDED_MAG)
+    dbf = generate_parameters(CR_FE_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', dbf=Database(CR_FE_INITIAL_TDB_CONTRIBUTIONS))
+    assert dbf.symbols['VV0000'] == 40000  # 4 mol-atom/mol-form * 10000 J/mol-atom, verified with no initial Database
+
+
+def test_model_contributions_can_be_excluded_mixed_datasets(datasets_db):
+    """Model contributions excluded in the datasets should not be fit and should still work when different types of datasets are mixed"""
+    datasets_db.insert(CR_FE_HM_MIX_EXCLUDED_MAG)
+    datasets_db.insert(CR_FE_HM_MIX_WITH_MAG)
+    dbf = generate_parameters(CR_FE_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', dbf=Database(CR_FE_INITIAL_TDB_CONTRIBUTIONS))
+    assert dbf.symbols['VV0000'] == 40000  # 4 mol-atom/mol-form * 10000 J/mol-atom, verified with no initial Database
+

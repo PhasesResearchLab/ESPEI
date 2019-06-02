@@ -133,7 +133,6 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     # These is our previously fit partial model from previous steps
     # Subtract out all of these contributions (zero out reference state because these are formation properties)
     fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
-    fixed_model.models['idmix'] = 0
     fixed_portions = [0]
 
     moles_per_formula_unit = sympy.S(0)
@@ -169,7 +168,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                 else:
                     feature_matricies.append(_build_feature_matrix(desired_props[0], candidate_model, desired_data))
 
-                data_qtys = np.concatenate(shift_reference_state(desired_data, feature_transforms[desired_props[0]], fixed_model), axis=-1)
+                data_qtys = np.concatenate(shift_reference_state(desired_data, feature_transforms[desired_props[0]], fixed_model, moles_per_formula_unit), axis=-1)
 
                 # Remove existing partial model contributions from the data
                 data_qtys = data_qtys - feature_transforms[desired_props[0]](fixed_model.ast)
@@ -439,7 +438,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         del dbf.varcounter
 
 
-def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_alpha=1.0e-100):
+def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_alpha=1.0e-100, dbf=None):
     """Generate parameters from given phase models and datasets
 
     Parameters
@@ -455,6 +454,8 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     ridge_alpha : float
         Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
         with ordinary least squares regression. For now, the parameter is applied to all features.
+    dbf : Database
+        Initial pycalphad Database that can have parameters that would not be fit by ESPEI
 
     Returns
     -------
@@ -462,8 +463,8 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
 
     """
     logging.info('Generating parameters.')
-    dbf = Database()
-    dbf.elements = set(phase_models['components'])
+    dbf = dbf or Database()
+    dbf.elements.update(set(phase_models['components']))
     for el in dbf.elements:
         dbf.species.add(Species(el, {el: 1}, 0))
     # Write reference state to Database
@@ -489,9 +490,10 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
         # TODO: More advanced phase data searching
         site_ratios = phase_obj['sublattice_site_ratios']
         subl_model = phase_obj['sublattice_model']
-        dbf.add_phase(phase_name, dict(), site_ratios)
-        dbf.add_phase_constituents(phase_name, subl_model)
-        dbf.add_structure_entry(phase_name, phase_name)
+        if phase_name not in dbf.phases.keys():
+            dbf.add_phase(phase_name, dict(), site_ratios)
+            dbf.add_phase_constituents(phase_name, subl_model)
+            dbf.add_structure_entry(phase_name, phase_name)
         phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aliases=aliases)
     logging.info('Finished generating parameters.')
     return dbf

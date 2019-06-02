@@ -29,8 +29,9 @@ All of the possible keys are
 .. code-block:: YAML
 
    system:
-    phase_models
-    datasets
+     phase_models
+     datasets
+     tags
 
    output:
      verbosity
@@ -85,6 +86,18 @@ The path to a directory containing JSON files of input datasets.
 The file extension to each of the datasets must be named as ``.json``, but they can otherwise be named freely.
 
 For an examples of writing these input JSON files, see :ref:`Input data`.
+
+tags
+----
+
+:type: dict
+:default: required
+
+Mapping of keys to values to add to datasets with matching tags.
+These can be used to dynamically drive values in datasets without adjusting the datasets themselves.
+Useful for adjusting weights or other values in datasets in bulk.
+For an examples of using tags in input JSON files, see :ref:`Tags`.
+
 
 output
 ======

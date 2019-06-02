@@ -135,6 +135,13 @@ Note that any probability density function always returns a positive value betwe
 
 :ref:`Writing input files`
 
+Q: Why is the version of ESPEI '0+unknown'?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A: A version number of ``'0+unknown'`` indicates that you do not have git installed.
+This can occur on Windows where git is not in the PATH (and the Python interpreter cannot see it).
+You can install git using ``conda install git`` on Windows.
+
 References
 ==========
 

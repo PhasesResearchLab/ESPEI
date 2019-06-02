@@ -42,7 +42,7 @@ class ESPEIValidator(Validator):
             self._error(field, "Must be an even number")
 
 with open(os.path.join(MODULE_DIR, 'input-schema.yaml')) as f:
-    schema = ESPEIValidator(yaml.load(f))
+    schema = ESPEIValidator(yaml.load(f, Loader=yaml.FullLoader))
 
 from espei.paramselect import generate_parameters
 from espei.mcmc import mcmc_fit
@@ -56,3 +56,5 @@ warnings.filterwarnings('ignore', message='invalid value encountered in greater'
 warnings.filterwarnings('ignore', message='divide by zero encountered in log')
 warnings.filterwarnings('ignore', message='invalid value encountered in true_divide')
 warnings.filterwarnings('ignore', message='divide by zero encountered')
+warnings.filterwarnings('ignore', message='Ill-conditioned matrix')
+warnings.filterwarnings('ignore', message='Singular matrix in solving dual problem')

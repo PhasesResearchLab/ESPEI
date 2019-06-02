@@ -3,6 +3,7 @@ import fnmatch, warnings, json, os
 import numpy as np
 from six import string_types
 from tinydb.storages import MemoryStorage
+from tinydb import where
 
 from espei.utils import PickleableTinyDB
 from espei.core_utils import recursive_map
@@ -215,6 +216,93 @@ def clean_dataset(dataset):
     return dataset
 
 
+def apply_tags(datasets, tags):
+    """
+    Modify datasets using the tags system
+
+    Parameters
+    ----------
+    datasets : PickleableTinyDB
+        Datasets to modify
+    tags : dict
+        Dictionary of {tag: update_dict}
+
+    Returns
+    -------
+    PickleableTinyDB
+
+    Notes
+    -----
+    In general, everything replaces or is additive. We use the following update rules:
+    1. If the update value is a list, extend the existing list (empty list if key does not exist)
+    2. If the update value is scalar, override the previous (deleting any old value, if present)
+    3. If the update value is a dict, update the exist dict (empty dict if dict does not exist)
+    4. Otherwise, the value is updated, overriding the previous
+
+    Examples
+    --------
+    >>> from espei.utils import PickleableTinyDB
+    >>> from tinydb.storages import MemoryStorage
+    >>> ds = PickleableTinyDB(storage=MemoryStorage)
+    >>> doc_id = ds.insert({'tags': ['dft'], 'excluded_model_contributions': ['contrib']})
+    >>> my_tags = {'dft': {'excluded_model_contributions': ['idmix', 'mag'], 'weight': 5.0}}
+    >>> from espei.datasets import apply_tags
+    >>> apply_tags(ds, my_tags)
+    >>> all_data = ds.all()
+    >>> all(d['excluded_model_contributions'] == ['contrib', 'idmix', 'mag'] for d in all_data)
+    True
+    >>> all(d['weight'] == 5.0 for d in all_data)
+    True
+
+    """
+    for tag, update_dict in tags.items():
+        matching_datasets = datasets.search(where("tags").test(lambda x: tag in x))
+        for newkey, newval in update_dict.items():
+            for match in matching_datasets:
+                if isinstance(newval, list):
+                    match[newkey] = match.get(newkey, []) + newval
+                elif np.isscalar(newval):
+                    match[newkey] = newval
+                elif isinstance(newval, dict):
+                    d = match.get(newkey, dict())
+                    d.update(newval)
+                    match[newkey] = d
+                else:
+                    match[newkey] = newval
+        datasets.write_back(matching_datasets)
+
+
+def add_ideal_exclusions(datasets):
+    """
+    If there are single phase datasets present and none of them have an
+    `excluded_model_contributions` key, add ideal exclusions automatically and
+    emit a DeprecationWarning that this feature will be going away.
+
+    Parameters
+    ----------
+    datasets : PickleableTinyDB
+
+    Returns
+    -------
+    PickleableTinyDB
+
+    """
+    all_single_phase = datasets.search(where('solver').exists())
+    no_exclusions = datasets.search(where('solver').exists() & (~where('excluded_model_contributions').exists()))
+    if len(all_single_phase) > 0 and len(all_single_phase) == len(no_exclusions):
+        idmix_warning = "Single phase datasets are present, but there are no specified `excluded_model_contributions` keys present. " + \
+                        "'idmix' exclusion will be added automatically for backwards compatibility, but this will go away in ESPEI v0.8. " + \
+                        "If you want ideal mixing contributions to be excluded, see the documentation for building datasets: http://espei.org/en/latest/input_data.html"
+        warnings.warn(idmix_warning, DeprecationWarning)
+        print(idmix_warning)
+        import espei
+        if int(espei.__version__.split('.')[1]) >= 8 or int(espei.__version__.split('.')[0]) > 0:
+            raise ValueError("ESPEI developer: remove the automatic addition of ideal mixing exclusions")
+        for ds in all_single_phase:
+            ds['excluded_model_contributions'] = ['idmix']
+    datasets.write_back(all_single_phase)
+    return datasets
+
 def load_datasets(dataset_filenames):
     """
     Create a PickelableTinyDB with the data from a list of filenames.
@@ -242,7 +330,7 @@ def load_datasets(dataset_filenames):
     return ds_database
 
 
-def recursive_glob(start, pattern):
+def recursive_glob(start, pattern='*.json'):
     """
     Recursively glob for the given pattern from the start directory.
 
@@ -251,7 +339,7 @@ def recursive_glob(start, pattern):
     start : str
         Path of the directory to walk while for file globbing
     pattern : str
-        Filename pattern to match in the glob
+        Filename pattern to match in the glob.
 
     Returns
     -------

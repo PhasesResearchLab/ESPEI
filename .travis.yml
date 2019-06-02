@@ -1,8 +1,12 @@
 language: python
-python:
-  - 2.7
-  - 3.5 
-  - 3.6 
+matrix:
+    include:
+        - python: 2.7
+        - python: 3.6
+        - name: "Python 3.7.1 on Xenial Linux"
+          python: 3.7           # this works for Linux but is ignored on macOS or Windows
+          dist: xenial          # required for Python >= 3.7
+
 install:
   - sudo apt-get update
   # The following copied from conda documentation.
@@ -21,14 +25,17 @@ install:
   - conda info -a
   - conda create -q -n espei-env python=$TRAVIS_PYTHON_VERSION
   - source activate espei-env
-  - conda install -c conda-forge 'pycalphad>=0.7.1'
+  - conda install -c conda-forge -c pycalphad 'pycalphad>=0.8' numpy scipy 'sympy>=1.2' six 'dask>=0.18' distributed 'tinydb>=3.8' scikit-learn emcee pyyaml cerberus bibtexparser sphinx sphinx_rtd_theme pytest nose mock twine
 before_script:
   - source activate espei-env
   - pip install -e '.[dev]'
-  - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
-  - sleep 3 # give xvfb some time to start
+  - echo '!!! Installed packages'
+  - conda list
+  - echo '!!! Local directory'
+  - ls -lh
+  # Configure matplotlib to use the agg backend to prevent issues on py27
+  - "echo 'backend : Agg' > matplotlibrc"
 script:
-  - py.test -v espei tests
+  - pytest -v --doctest-modules espei tests
 notifications:
   email: False

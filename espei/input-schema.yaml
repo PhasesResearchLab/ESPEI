@@ -9,6 +9,8 @@ system: # phase models and input data
     datasets: # path to datasets. Defaults to current directory.
       type: string
       required: True
+    tags:  # operations to apply to datasets that are tagged
+      type: dict
 
 output:
   type: dict
@@ -52,6 +54,9 @@ generate_parameters:
       type: float
       required: True
       default: 1.0e-100  # very small number, should be backwards compatible to ordinary least squares
+    input_db: # TDB file used to start the parameter generation run
+      type: string
+
 
 ## if present, will run mcmc fitting
 ## you must specifiy some kind of input for the parameters.
@@ -110,3 +115,5 @@ mcmc:
     data_weights:
       type: dict
       default: {'ZPF': 1.0, 'ACR': 1.0, 'HM': 1.0, 'SM': 1.0, 'CPM': 1.0}
+    symbols:
+      type: list

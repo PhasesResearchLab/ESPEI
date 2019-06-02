@@ -36,7 +36,7 @@ def target_chempots_from_activity(component, target_activity, temperatures, refe
     """
     # acr_i = exp((mu_i - mu_i^{ref})/(RT))
     # so mu_i = R*T*ln(acr_i) + mu_i^{ref}
-    ref_chempot = reference_result.MU.sel(component=component).values.flatten()
+    ref_chempot = reference_result["MU"].sel(component=component).values.flatten()
     return v.R * temperatures * np.log(target_activity) + ref_chempot
 
 

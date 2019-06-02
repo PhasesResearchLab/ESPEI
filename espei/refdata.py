@@ -2,6 +2,7 @@
 The refdata module contains pure-element reference state data.
 """
 
+
 from sympy import And, Piecewise, Symbol, log, exp
 from pycalphad.variables import T
 from collections import OrderedDict
@@ -773,3 +774,9 @@ SR2016 = OrderedDict([
     (('MG', 'LIQUID'), Piecewise((-2.2050100179942e-6*T**3 - 4.63131660076452e-5*T**2 + 3.2404446864*T*log(exp(95.82831/T) - 1.0) + 21.6535319868*T*log(exp(247.8675/T) - 1.0) - 7.6943066168765*T - 2555.58510336379, And(T >= 0.01,T < 298.15)), (-8.0176e-20*T**7 - 1.393669e-6*T**3 + 0.0004858*T**2 - 26.1849782*T*log(T) + 134.838617*T - 165.096999676889 + 78950/T, And(T >= 298.15, T < 922.205302616508)), (-34.3088*T*log(T) + 195.324057*T - 5439.86911093575, And(T >= 922.205302616508, T < 10000.0)), (0, True))),
 
 ])
+
+
+def is_pure_element_expr(piecewise_expr):
+    return isinstance(piecewise_expr.args[0][0], Symbol)
+
+pure_element_phases = {el: phase for (el, phase), expr in SGTE91.items() if is_pure_element_expr(expr)}

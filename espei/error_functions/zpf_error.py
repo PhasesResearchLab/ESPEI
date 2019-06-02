@@ -30,6 +30,28 @@ def _safe_index(items, index):
         return None
 
 
+def get_zpf_context(dbf, comps, phases, datasets):
+    """
+
+    Parameters
+    ----------
+    dbf : Database
+    comps : list of str
+        List of components to fit
+    phases : list of str
+        List of phase names that will be fit
+    datasets : espei.utils.PickleableTinyDB
+
+    Returns
+    -------
+    list
+        List of data dictionaries with keys ``weight``, ``data_comps`` and
+        ``phase_regions``. ``data_comps`` are the components for the data in
+        question. ``phase_regions`` are the ZPF phases, state variables and compositions
+    """
+    pass
+
+
 def get_zpf_data(comps, phases, datasets):
     """
     Return the ZPF data used in the calculation of ZPF error
@@ -89,8 +111,7 @@ def get_zpf_data(comps, phases, datasets):
     return zpf_data
 
 
-def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters,
-                        callables=None):
+def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters, callables=None):
     """
     Calculate the chemical potentials for the target hyperplane, one vertex at a time
 
@@ -130,6 +151,7 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
 
     """
     target_hyperplane_chempots = []
+    target_hyperplane_phases = []
     parameters = OrderedDict(sorted(parameters.items(), key=str))
     # TODO: unclear whether we use phase_flag and how it would be used. It should be just a 'disordered' kind of flag.
     for cond_dict, phase_flag in comp_dicts:
@@ -144,20 +166,20 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
         else:
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
-            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, model=phase_models,
-                                       parameters=parameters, callables=callables,)
+            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, model=phase_models, parameters=parameters, callables=callables,)
+            target_hyperplane_phases.append(multi_eqdata["Phase"].values.squeeze())
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
             num_phases = np.sum(multi_eqdata['Phase'].values.squeeze() != '')
-            Y_values = multi_eqdata.Y.values.squeeze()
+            Y_values = multi_eqdata['Y'].values.squeeze()
             no_internal_dof = np.all((np.isclose(Y_values, 1.)) | np.isnan(Y_values))
             MU_values = multi_eqdata['MU'].values.squeeze()
             if (num_phases == 1) and no_internal_dof:
                 target_hyperplane_chempots.append(np.full_like(MU_values, np.nan))
             else:
                 target_hyperplane_chempots.append(MU_values)
-    target_hyperplane_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float)
-    return target_hyperplane_chempots
+    target_hyperplane_mean_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float)
+    return target_hyperplane_mean_chempots
 
 
 def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyperplane_chempots,
@@ -201,8 +223,8 @@ def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyp
                                   T=cond_dict[v.T], P=cond_dict[v.P],
                                   model=phase_models, parameters=parameters, pdens=100,
                                   callables=callables)
-        driving_force = np.multiply(target_hyperplane_chempots, single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
-        driving_force = float(driving_force.max())
+        df = np.multiply(target_hyperplane_chempots, single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
+        driving_force = float(df.max())
     elif phase_flag == 'disordered':
         # Construct disordered sublattice configuration from composition dict
         # Compute energy
@@ -243,7 +265,9 @@ def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyp
     return driving_force
 
 
-def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=None, callables=None, data_weight=1.0):
+def calculate_zpf_error(dbf, phases, zpf_data, phase_models=None,
+                        parameters=None, callables=None, data_weight=1.0,
+                        ):
     """
     Calculate error due to phase equilibria data
 
@@ -251,11 +275,9 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
     ----------
     dbf : pycalphad.Database
         Database to consider
-    comps : list
-        List of active component names
     phases : list
         List of phases to consider
-    datasets : espei.utils.PickleableTinyDB
+    zpf_data : list
         Datasets that contain single phase data
     phase_models : dict
         Phase models to pass to pycalphad calculations
@@ -281,8 +303,10 @@ def calculate_zpf_error(dbf, comps, phases, datasets, phase_models, parameters=N
     potentials.
 
     """
+    if parameters is None:
+        parameters = {}
     prob_error = 0.0
-    for data in get_zpf_data(comps, phases, datasets):
+    for data in zpf_data:
         phase_regions = data['phase_regions']
         data_comps = data['data_comps']
         weight = data['weight']

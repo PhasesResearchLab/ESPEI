@@ -136,6 +136,11 @@ The ``values`` key is the most complicated and care must be taken to avoid mista
 Alternatively, the size of the array must be ``(len(P), len(T), len(subl_config))``.
 In the example below, the shape of the ``values`` array is (1, 12, 1) as there is one pressure scalar, one sublattice configuration, and 12 temperatures.
 
+There is also a key to ``"excluded_model_contributions"``, which will make those contributions of pycalphad's ``Model`` not be fit to when doing parameter selection or MCMC.
+This is useful for cases where the type of data used does not include some specific ``Model`` contributions that parameters may already exist for.
+For example, DFT formation energies do not include ideal mixing or (CALPHAD-type) magnetic model contributions, but formation energies from experiments would include these contributions so experimental formation energies should not be excluded.
+In MCMC, this only takes effect for calculating single phase error (multiphase and activity error do not exclude any model contributions).
+
 .. code-block:: JSON
 
     {
@@ -151,6 +156,7 @@ In the example below, the shape of the ``values`` array is (1, 12, 1) as there i
 	      "P": 101325,
 	      "T": [  0,  10,  20,  30,  40,  50,  60,  70,  80,  90, 100, 110]
       },
+      "excluded_model_contributions": ["idmix", "mag"]
       "output": "CPM_FORM",
       "values":   [[[ 0      ],
 		    [-0.0173 ],
@@ -289,6 +295,67 @@ An example for Cu-Mg activties follows, with data digitized from S.P. Garg, Y.J.
       "reference": "garg1973thermodynamic",
       "comment": "Digitized Figure 3 and converted from activity coefficients."
     }
+
+.. _Tags:
+
+Tags
+====
+
+Tags are a flexible method to adjust many ESPEI datasets simultaneously and drive them via the ESPEI's input YAML file.
+Each dataset can have a ``"tags"`` key, with a corresponding value of a list of tags, e.g. ``["dft"]``.
+Any tag modifications present in the input YAML file are applied to the datasets before ESPEI is run.
+
+They can be used in many creative ways, but some suggested ways include to add weights or to exclude model contributions, e.g. for DFT data that should not have contributions for a CALPHAD magnetic model or ideal mixing energy.
+An example of using the tags in an input file looks like:
+
+.. code-block:: JSON
+
+   {
+     "components": ["CR", "FE", "VA"],"phases": ["BCC_A2"],
+     "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3],
+                "sublattice_configurations": [[["CR", "FE"], "VA"]],
+     "sublattice_occupancies": [[[0.5, 0.5], 1.0]]},
+     "conditions": {"P": 101325, "T": 300},
+     "output": "HM_MIX",
+     "values": [[[10000]]],
+     "tags": ["dft"]
+   }
+
+
+An example input YAML looks like
+
+.. code-block:: YAML
+
+   system:
+     phase_models: CR-FE.json
+     datasets: FE-NI-datasets-sep
+     tags:
+       dft:
+         excluded_model_contributions: ["idmix", "mag"]
+
+   generate_parameters:
+     excess_model: linear
+     ref_state: SGTE91
+     ridge_alpha: 1.0e-20
+   output:
+     verbosity: 2
+     output_db: out.tdb
+
+This will add the key ``"excluded_model_contributions"`` to all datasets that have the ``"dft"`` tag:
+
+.. code-block:: JSON
+
+   {
+     "components": ["CR", "FE", "VA"],"phases": ["BCC_A2"],
+     "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3],
+                "sublattice_configurations": [[["CR", "FE"], "VA"]],
+     "sublattice_occupancies": [[[0.5, 0.5], 1.0]]},
+     "conditions": {"P": 101325, "T": 300},
+     "output": "HM_MIX",
+     "values": [[[10000]]],
+     "excluded_model_contributions": ["idmix", "mag"]
+   }
+
 
 Common Mistakes and Notes
 =========================

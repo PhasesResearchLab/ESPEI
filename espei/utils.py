@@ -16,11 +16,18 @@ import dask
 from bibtexparser.bparser import BibTexParser
 from bibtexparser.customization import convert_to_unicode
 from distributed import Client
-from pycalphad import Model, variables as v
+from pycalphad import variables as v
 from six import string_types
 from sympy import Symbol
 from tinydb import TinyDB, where
 from tinydb.storages import MemoryStorage
+
+
+def unpack_piecewise(x):
+    if isinstance(x, sympy.Piecewise):
+        return float(x.args[0].expr)
+    else:
+        return float(x)
 
 
 class PickleableTinyDB(TinyDB):
@@ -119,7 +126,8 @@ def database_symbols_to_fit(dbf, symbol_regex="^V[V]?([0-9]+)$"):
 
     Returns
     -------
-    list
+    dict
+        Context dictionary for different methods of calculation the error.
     """
     pattern = re.compile(symbol_regex)
     return sorted([x for x in sorted(dbf.symbols.keys()) if pattern.match(x)])
