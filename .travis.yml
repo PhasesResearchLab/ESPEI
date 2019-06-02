@@ -33,6 +33,9 @@ before_script:
   - conda list
   - echo '!!! Local directory'
   - ls -lh
+  # Configure matplotlib to use the agg backend to prevent issues on py27
+  - mkdir -p ~/.config/matplotlib
+  - echo "backend : Agg" > ~/.config/matplotlib/matplotlibrc
 script:
   - pytest -v --doctest-modules espei tests
 notifications:
