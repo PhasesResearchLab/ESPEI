@@ -34,7 +34,7 @@ before_script:
   - echo '!!! Local directory'
   - ls -lh
   # Configure matplotlib to use the agg backend to prevent issues on py27
-  - echo "backend : Agg" > matplotlibrc
+  - "echo 'backend : Agg' > matplotlibrc"
 script:
   - pytest -v --doctest-modules espei tests
 notifications:
