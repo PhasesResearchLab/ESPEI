@@ -97,7 +97,6 @@ See `what's new <CHANGES.html>`_!
 
    writing_input
    specifying_priors
-   theory
    recipes
    advanced_schedulers
    api/modules

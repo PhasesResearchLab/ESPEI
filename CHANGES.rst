@@ -2,7 +2,7 @@
 What's New
 ==========
 
-0.7 (2019-05-31)
+0.7 (2019-06-03)
 ==================
 
 This is a significant update reflecting many internal improvements, new features, and bugfixes. Users using the YAML input or the ``run_espei`` Python API should see entirely backwards compatible changes with ESPEI 0.6.2.

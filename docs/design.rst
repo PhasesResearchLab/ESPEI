@@ -31,9 +31,10 @@ Module Hierarchy
 ----------------
 
 * ``espei_script.py`` is the main entry point for the YAML input API.
-* ``paramselect.py`` is where parameter generation happens.
-* ``mcmc.py`` creates the likelihood function and runs MCMC.
+* ``optimzers`` is a package that defines an ``OptimizerBase`` class for writing optimizers. ``EmceeOptimzer`` and ``ScipyOptimizer`` subclasses this.
 * ``error_functions`` is a package with modules for each type of likelihood function.
+* ``paramselect.py`` is where parameter generation happens.
+* ``mcmc.py`` creates the likelihood function and runs MCMC. Deprecated. In the future, users should use ``EmceeOptimizer``.
 * ``parameter_selection`` is a package with core pieces of parameter selection.
 * ``utils.py`` are utilities with reuse potential across several parts of ESPEI.
 * ``plot.py`` holds plotting functions.
@@ -52,7 +53,7 @@ complexity in both temperature and interaction order (an L0 excess parameter, L0
 
 Each model is then fit by ``espei.parameter_selection.selection.fit_model``, which currently uses a simple
 pseudo-inverse linear model from scikit-learn. Then the tradeoff between the goodness of fit and the model complexity
-is scored by the AICc (see :ref:`Theory`) in ``espei.parameter_selection.selection.score_model``.
+is scored by the AICc in ``espei.parameter_selection.selection.score_model``.
 The optimal scoring model is accepted as the model with the fit model parameters set as degrees of freedom for the MCMC step.
 
 The main principle is that ESPEI transforms the data and candidate models to vectors and matricies that fit a typical machine learning type problem of :math:`Ax = b`.
@@ -65,7 +66,14 @@ This is also true for custom types of data that one would use in fitting a custo
 MCMC optimization and uncertainty quantification
 ------------------------------------------------
 
-Most of the Markov chain Monte Carlo optimization and uncertainty quantification happen in the ``espei.mcmc`` module through the ``espei.mcmc.mcmc_fit`` function.
+Most of the Markov chain Monte Carlo optimization and uncertainty quantification happen in the ``espei.optimizers.opt_mcmc.py`` module through the ``EmceeOptimizer`` class.
+
+``EmceeOptimizer`` is a subclass of ``OptimizerBase``, which defines an interface for performing opitmizations of parameters. It defines several methods:
+
+``fit`` takes a list of symbol names and datasets to fit to. It calls an ``_fit`` method that returns an ``OptNode`` representing the parameters that result from the fit to the datasets.
+``fit`` evaluates the parameters by calling the objective function on some parameters (an array of values) and a context in the ``predict`` method, which is overridden by ``OptimizerBase`` subclasses.
+There is also an interface for storing a history of successive fits to different parameter sets, using the ``commit`` method, which will store the history of the calls to ``fit`` in a graph of fitting steps.
+The idea is that users can generate a graph of fitting results and go back to specific points on the graph and test fitting different sets of parameters or different datasets, creating a unique history of committed parameter sets and optimization paths, similar to a history in version control software like git.
 
 The main reason ESPEI's parameter selection and MCMC routines are split up is that custom Models or existing TDB files can be provided and fit.
 In other words, if you are using a model that doesn't need parameter selection or is for a property that is not Gibbs energy, MCMC can fit it with uncertainty quantification.
@@ -74,8 +82,8 @@ The general process is
 
 1. Take a database with degrees of freedom as database symbols named ``VV####``, where ``####`` is a number, e.g. ``0001``.
    The symbols correspond to ``FUNCTION`` in the TDB files.
-2. Initialize those degrees of freedom to a starting distribution for ensemble MCMC (see :ref:`Theory`).
-   The starting distribution is controlled by the ``espei.mcmc.generate_parameter_distribution`` function, which currently
+2. Initialize those degrees of freedom to a starting distribution for ensemble MCMC.
+   The starting distribution is controlled by the ``EmceeOptimizer.initialize_new_chains`` function, which currently
    supports initializing the parameters to a Gaussian ball.
 3. Use the `emcee <http://dfm.io/emcee/current/>`_ package to run ensemble MCMC
 
@@ -84,7 +92,8 @@ have correctly named degrees of freedom (``VV####``).
 
 To fit an existing or custom model to new types of data, just write a function that takes in datasets and the parameters
 that are required to calculate the values (e.g. pycalphad Database, components, phases, ...) and returns the error.
-Then override the ``espei.mcmc.lnprob`` function to include your custom error contribution.
+Then override the ``EmceeOptimizer.predict`` function to include your custom error contribution.
 There are examples of these functions ``espei.error_functions`` that ESPEI uses by default.
 
-In addition, custom starting distributions can be obtained by overriding ``espei.mcmc.generate_parameter_distribution``.
+Modifications to how parameters are initialized can be made by subclassing ``EmceeOptimizer.initialize_new_chains``.
+Many other modifications can be made by subclassing ``EmceeOptimizer``.

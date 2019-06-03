@@ -82,7 +82,7 @@ A minimal full run of ESPEI with single phase fitting and MCMC fitting is done b
       excess_model: linear
       ref_state: SGTE91
     mcmc:
-      mcmc_steps: 1000
+      iterations: 1000
 
 
 Input Customization
@@ -145,5 +145,5 @@ You can install git using ``conda install git`` on Windows.
 References
 ==========
 
-.. ﻿[1] B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu-Mg, (2019). http://arxiv.org/abs/1902.01269.
+.. [1] B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu-Mg, (2019). http://arxiv.org/abs/1902.01269.
 

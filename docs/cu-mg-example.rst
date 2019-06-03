@@ -206,8 +206,7 @@ describing equilibria between phases. For large systems, global numerical
 optimization of many parameters simultaneously is computationally intractable.
 
 To combat the problem of optimizing many paramters, ESPEI uses MCMC, a
-stochastic optimzation method. For more details on how MCMC is used in ESPEI,
-see the :ref:`Theory` page.
+stochastic optimzation method.
 
 Now we will use our zero phase fraction equilibria data to optimize our
 first-principles database with MCMC. The following command will take the
