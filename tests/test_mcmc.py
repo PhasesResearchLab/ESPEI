@@ -114,3 +114,14 @@ def test_parameter_initialization():
         [1.00664662e+00, 1.07178898e+01, 9.63696718e+01, 1.36872292e+03],
         [1.07642366e+00, 1.16413520e+01, 8.71742457e+01, 9.61836382e+02]])
     assert np.all(np.isclose(deterministic_params, expected_parameters))
+
+
+def test_emcee_opitmizer_can_restart(datasets_db):
+    """A restart trace can be passed to the Emcee optimizer """
+    dbf = Database.from_string(CU_MG_TDB, fmt='tdb')
+    datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
+    param = 'VV0001'
+    opt = EmceeOptimizer(dbf)
+    restart_tr = -4*np.ones((2, 10, 1))  # 2 chains, 10 iterations, 1 parameter
+    opt.fit([param], datasets_db, iterations=1, chains_per_parameter=2, restart_trace=restart_tr)
+    assert opt.sampler.chain.shape == (2, 1, 1)

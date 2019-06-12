@@ -91,6 +91,7 @@ class EmceeOptimizer(OptimizerBase):
         logging.info('Restarting from previous calculation with {} chains ({} per parameter).'.format(nchains, nchains / ndim))
         logging.log(TRACE, 'Means of restarting parameters are {}'.format(initial_parameters))
         logging.log(TRACE, 'Standard deviations of restarting parameters are {}'.format(walkers.std(axis=0)))
+        return walkers
 
     @staticmethod
     def get_priors(prior, symbols, params):
