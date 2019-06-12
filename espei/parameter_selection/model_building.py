@@ -3,9 +3,7 @@ Building candidate models
 """
 
 import itertools
-
 import sympy
-
 from espei.sublattice_tools import interaction_test
 
 

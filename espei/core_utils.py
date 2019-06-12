@@ -3,12 +3,8 @@ Internal utilities for developer use. May not be useful to users.
 """
 import copy
 import itertools
-import operator
-from functools import reduce
-
 import numpy as np
 import tinydb
-
 from espei.sublattice_tools import canonicalize, recursive_tuplify
 from espei.parameter_selection.redlich_kister import calc_site_fraction_product, calc_interaction_product
 

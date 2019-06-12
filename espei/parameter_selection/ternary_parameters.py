@@ -2,11 +2,9 @@
 Build fittable models for ternary parameter selection
 """
 
-
 import numpy as np
 import sympy
 from pycalphad import variables as v
-
 from espei.core_utils import get_samples
 from espei.parameter_selection.utils import feature_transforms
 

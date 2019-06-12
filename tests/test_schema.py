@@ -128,18 +128,27 @@ def test_input_yaml_invalid_for_mcmc_when_input_is_overspecified():
 
 def test_correct_defaults_are_applied_from_minimal_specification():
     """A minimal run should generate several default settings for i/o and optional settings."""
+    # parameters are popped off in order to assert that no additional parameters
+    # are added and none are not tested.
     d = get_run_settings(FULL_RUN_DICT)
     assert d.get('output') is not None
-    assert d['output']['verbosity'] == 0
-    assert d['output']['output_db'] == 'out.tdb'
-    assert d['output']['tracefile'] == 'trace.npy'
-    assert d['output']['probfile'] == 'lnprob.npy'
-    assert d['generate_parameters']['ridge_alpha'] == 1e-100
-    assert d['mcmc']['save_interval'] == 1
-    assert d['mcmc']['scheduler'] == 'dask'
-    assert d['mcmc']['chains_per_parameter'] == 2
-    assert d['mcmc']['chain_std_deviation'] == 0.1
-    assert d['mcmc']['deterministic'] == True
+    assert d['output'].pop('verbosity') == 0
+    assert d['output'].pop('output_db') == 'out.tdb'
+    assert d['output'].pop('logfile') == None
+    assert d['output'].pop('tracefile') == 'trace.npy'
+    assert d['output'].pop('probfile') == 'lnprob.npy'
+    assert len(d['output']) == 0
+    assert d['generate_parameters'].pop('ridge_alpha') == None
+    assert d['generate_parameters'].pop('aicc_penalty_factor') == None
+    assert len(d['generate_parameters']) == 2
+    assert d['mcmc'].pop('save_interval') == 1
+    assert d['mcmc'].pop('scheduler') == 'dask'
+    assert d['mcmc'].pop('chains_per_parameter') == 2
+    assert d['mcmc'].pop('chain_std_deviation') == 0.1
+    assert d['mcmc'].pop('deterministic') == True
+    assert d['mcmc'].pop('data_weights') == {'ACR': 1.0, 'CPM': 1.0, 'HM': 1.0, 'SM': 1.0, 'ZPF': 1.0}
+    assert d['mcmc'].pop('prior') == {'name': 'zero'}
+    assert len(d['mcmc']) == 1
 
 
 def test_chains_per_parameter_read_correctly():
