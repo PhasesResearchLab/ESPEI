@@ -41,7 +41,7 @@ def fit_model(feature_matrix, data_quantities, ridge_alpha):
     return clf.coef_
 
 
-def score_model(feature_matrix, data_quantities, model_coefficients, feature_list, rss_numerical_limit=1.0e-16):
+def score_model(feature_matrix, data_quantities, model_coefficients, feature_list, aicc_factor=None, rss_numerical_limit=1.0e-16):
     """
     Use the AICc to score a model that has been fit.
 
@@ -56,6 +56,8 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     feature_list : list
         Polynomial coefficients corresponding to each column of 'feature_matrix'.
         Has shape (N,). Purely a logging aid.
+    aicc_factor : float
+        Multiplication factor for the AICc's parameter penalty.
     rss_numerical_limit : float
         Anything with an absolute value smaller than this is set to zero.
 
@@ -72,6 +74,7 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     assumption all sample variances are random and Gaussian, model is univariate. It is assumed the model here is
     univariate with T.
     """
+    factor = aicc_factor if aicc_factor is not None else 1.0
     num_params = len(feature_list)
     rss = np.square(np.dot(feature_matrix, model_coefficients) - data_quantities.astype(np.float)).sum()
     if np.abs(rss) < rss_numerical_limit:
@@ -82,20 +85,20 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     # Our correction can blow up if (n-k-1) = 0 and if n - 1 < k (we will actually be *lowering* the AICc)
     # So we will prevent blowing up by taking the denominator as 1/(p-n+1) for p > n - 1
     num_samples = data_quantities.size
-    if (num_samples - 1.0) > num_params:
-        correction_denom = num_samples - num_params - 1.0
-    elif (num_samples - 1.0) == num_params:
+    if (num_samples - 1.0) > num_params*factor:
+        correction_denom = num_samples - factor*num_params - 1.0
+    elif (num_samples - 1.0) == num_params*factor:
         correction_denom = 0.99
     else:
-        correction_denom = 1.0 / (num_params - num_samples + 1.0)
-    correction = (2.0*num_params**2 + 2.0*num_params)/correction_denom
-    aic = 2.0*num_params + num_samples * np.log(rss/num_samples)
+        correction_denom = 1.0 / (factor*num_params - num_samples + 1.0)
+    correction = factor*(2.0*num_params**2 + 2.0*num_params)/correction_denom
+    aic = 2.0*factor*num_params + num_samples * np.log(rss/num_samples)
     aicc = aic + correction  # model score
     logging.log(TRACE, '{} rss: {}, AIC: {}, AICc: {}'.format(feature_list, rss, aic, aicc))
     return aicc
 
 
-def select_model(candidate_models, ridge_alpha):
+def select_model(candidate_models, ridge_alpha, aicc_factor=None):
     """
     Select a model from a series of candidates by fitting and scoring them
 
@@ -106,7 +109,8 @@ def select_model(candidate_models, ridge_alpha):
     ridge_alpha : float
         Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
         with ordinary least squares regression. For now, the parameter is applied to all features.
-
+    aicc_factor : float
+        Multiplication factor for the AICc's parameter penalty.
     Returns
     -------
     tuple
@@ -116,7 +120,9 @@ def select_model(candidate_models, ridge_alpha):
     opt_model = None  # will hold a (feature_list, model_coefficients)
     for feature_list, feature_matrix, data_quantities in candidate_models:
         model_coefficients = fit_model(feature_matrix, data_quantities, ridge_alpha)
-        model_score = score_model(feature_matrix, data_quantities, model_coefficients, feature_list)
+        model_score = score_model(feature_matrix, data_quantities, model_coefficients, feature_list, aicc_factor=aicc_factor)
+        if np.isneginf(model_score):  # exact fit, stop here
+            return (feature_list, model_coefficients)
         if model_score < opt_model_score:
             opt_model_score = model_score
             opt_model = (feature_list, model_coefficients)

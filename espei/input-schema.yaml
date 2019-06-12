@@ -55,10 +55,11 @@ generate_parameters:
       required: True
       nullable: True
       default: null
-    aicc_penalty:  # penalty multiplier for phases and features in AICc
+    aicc_penalty_factor:  # penalty multiplier for phases and features in AICc
       type: dict
       required: True
-      default: {}
+      nullable: True
+      default: null
     input_db: # TDB file used to start the parameter generation run
       type: string
 
