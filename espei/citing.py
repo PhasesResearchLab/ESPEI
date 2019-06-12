@@ -2,7 +2,7 @@
 Define citations for ESPEI
 """
 
-ESPEI_CITATION = "B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg, MRS Commun. (2019) 1–10. doi:10.1557/mrc.2019.59."
+ESPEI_CITATION = "B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu-Mg, MRS Commun. (2019) 1–10. doi:10.1557/mrc.2019.59."
 ESPEI_BIBTEX = """@article{Bocklund2019ESPEI,
 archivePrefix = {arXiv},
 arxivId = {1902.01269},
