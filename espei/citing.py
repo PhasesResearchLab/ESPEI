@@ -13,7 +13,7 @@ issn = {2159-6859},
 journal = {MRS Communications},
 month = {jun},
 pages = {1--10},
-title = {{ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg}},
+title = {{ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu-Mg}},
 year = {2019}
 }
 """
