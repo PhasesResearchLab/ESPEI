@@ -27,7 +27,6 @@ from pycalphad.io.database import Species
 
 import espei.refdata
 from espei.core_utils import get_data, get_samples
-from espei.parameter_selection.redlich_kister import calc_interaction_product, calc_site_fraction_product
 from espei.parameter_selection.model_building import build_candidate_models
 from espei.parameter_selection.selection import select_model
 from espei.parameter_selection.ternary_parameters import build_ternary_feature_matrix

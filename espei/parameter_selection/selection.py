@@ -3,10 +3,8 @@ Fit, score and select models
 """
 
 import logging
-
 import numpy as np
 from sklearn.linear_model import Ridge
-
 
 TRACE = 15  # TRACE logging level
 

@@ -6,6 +6,7 @@ import itertools
 import numpy as np
 from espei.sublattice_tools import interaction_test
 
+
 def calc_site_fraction_product(site_fractions):
     """Calculate the site fraction product for sublattice configurations
 
