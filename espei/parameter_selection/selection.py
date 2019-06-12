@@ -4,7 +4,7 @@ Fit, score and select models
 
 import logging
 import numpy as np
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import Ridge, LinearRegression
 
 TRACE = 15  # TRACE logging level
 
@@ -33,7 +33,10 @@ def fit_model(feature_matrix, data_quantities, ridge_alpha):
     Solve Ax = b. `x` are the desired model coefficients. `A` is the
     'feature_matrix'. `b` corrresponds to 'data_quantities'.
     """
-    clf = Ridge(fit_intercept=False, normalize=True, alpha=ridge_alpha)
+    if ridge_alpha is not None:
+        clf = Ridge(fit_intercept=False, normalize=True, alpha=ridge_alpha)
+    else:
+        clf = LinearRegression(fit_intercept=False, normalize=True)
     clf.fit(feature_matrix, data_quantities)
     return clf.coef_
 

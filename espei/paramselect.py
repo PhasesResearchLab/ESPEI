@@ -66,7 +66,7 @@ def _build_feature_matrix(prop, features, desired_data):
     return feature_matrix
 
 
-def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, ridge_alpha=1.0e-100, features=None):
+def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, ridge_alpha=None, features=None):
     """
     Find suitable linear model parameters for the given phase.
     We do this by successively fitting heat capacities, entropies and
@@ -225,7 +225,7 @@ def get_next_symbol(dbf):
     return symbol_name
 
 
-def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ridge_alpha=1.0e-1000000):
+def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ridge_alpha=None):
     """
     Fit ternary interactions for a database in place
 
@@ -437,7 +437,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         del dbf.varcounter
 
 
-def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_alpha=1.0e-100, dbf=None):
+def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_alpha=None, dbf=None):
     """Generate parameters from given phase models and datasets
 
     Parameters
@@ -451,8 +451,9 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     excess_model : str
         String of the type of excess model to fit to, e.g. 'linear'
     ridge_alpha : float
-        Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
-        with ordinary least squares regression. For now, the parameter is applied to all features.
+        Value of the $alpha$ hyperparameter used in ridge regression. Defaults
+        to None, which falls back to ordinary least squares regression.
+        For now, the parameter is applied to all features.
     dbf : Database
         Initial pycalphad Database that can have parameters that would not be fit by ESPEI
 

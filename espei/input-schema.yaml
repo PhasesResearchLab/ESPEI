@@ -53,7 +53,12 @@ generate_parameters:
     ridge_alpha:  # ridge regression hyperparameter
       type: float
       required: True
-      default: 1.0e-100  # very small number, should be backwards compatible to ordinary least squares
+      nullable: True
+      default: null
+    aicc_penalty:  # penalty multiplier for phases and features in AICc
+      type: dict
+      required: True
+      default: {}
     input_db: # TDB file used to start the parameter generation run
       type: string
 
