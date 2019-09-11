@@ -113,7 +113,6 @@ def get_weights(desired_data):
         else:
             weight = np.ones(np.array(data['values']).shape)
         weights.extend(weight.flatten().tolist())
-    print(weights)
     return weights
 
 
