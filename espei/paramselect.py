@@ -26,7 +26,7 @@ from pycalphad import Database, Model, variables as v
 from pycalphad.io.database import Species
 
 import espei.refdata
-from espei.core_utils import get_data, get_samples
+from espei.core_utils import get_data, get_samples, get_weights
 from espei.parameter_selection.model_building import build_candidate_models
 from espei.parameter_selection.selection import select_model
 from espei.parameter_selection.ternary_parameters import build_ternary_feature_matrix
@@ -155,6 +155,9 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
         logging.log(TRACE, '{}: datasets found: {}'.format(desired_props, len(desired_data)))
         if len(desired_data) > 0:
+            # Ravelled weights for all data
+            weights = get_weights(desired_data)
+
             # We assume all properties in the same fitting step have the same features (all CPM, all HM, etc.) (but different ref states)
             all_samples = get_samples(desired_data)
             site_fractions = [build_sitefractions(phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies',
@@ -199,7 +202,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                 data_quantities.append(data_qtys)
 
             # provide candidate models and get back a selected model.
-            selected_model = select_model(zip(candidate_models_features[desired_props[0]], feature_matricies, data_quantities), ridge_alpha, aicc_factor=aicc_factor)
+            selected_model = select_model(zip(candidate_models_features[desired_props[0]], feature_matricies, data_quantities), ridge_alpha, weights=weights, aicc_factor=aicc_factor)
             selected_features, selected_values = selected_model
             parameters.update(zip(*(selected_features, selected_values)))
             # Add these parameters to be fixed for the next fitting step

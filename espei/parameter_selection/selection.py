@@ -9,7 +9,7 @@ from sklearn.linear_model import Ridge, LinearRegression
 TRACE = 15  # TRACE logging level
 
 
-def fit_model(feature_matrix, data_quantities, ridge_alpha):
+def fit_model(feature_matrix, data_quantities, ridge_alpha, weights=None):
     """
     Return model coefficients fit by scikit-learn's LinearRegression
 
@@ -37,11 +37,11 @@ def fit_model(feature_matrix, data_quantities, ridge_alpha):
         clf = Ridge(fit_intercept=False, normalize=True, alpha=ridge_alpha)
     else:
         clf = LinearRegression(fit_intercept=False, normalize=True)
-    clf.fit(feature_matrix, data_quantities)
+    clf.fit(feature_matrix, data_quantities, sample_weight=weights)
     return clf.coef_
 
 
-def score_model(feature_matrix, data_quantities, model_coefficients, feature_list, aicc_factor=None, rss_numerical_limit=1.0e-16):
+def score_model(feature_matrix, data_quantities, model_coefficients, feature_list, weights, aicc_factor=None, rss_numerical_limit=1.0e-16):
     """
     Use the AICc to score a model that has been fit.
 
@@ -76,7 +76,7 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     """
     factor = aicc_factor if aicc_factor is not None else 1.0
     num_params = len(feature_list)
-    rss = np.square(np.dot(feature_matrix, model_coefficients) - data_quantities.astype(np.float)).sum()
+    rss = np.square(np.dot(feature_matrix, model_coefficients) - data_quantities.astype(np.float)*np.array(weights)).sum()
     if np.abs(rss) < rss_numerical_limit:
         rss = 0.0
     # Compute the corrected Akaike Information Criterion
@@ -98,7 +98,7 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     return aicc
 
 
-def select_model(candidate_models, ridge_alpha, aicc_factor=None):
+def select_model(candidate_models, ridge_alpha, weights, aicc_factor=None):
     """
     Select a model from a series of candidates by fitting and scoring them
 
@@ -119,8 +119,8 @@ def select_model(candidate_models, ridge_alpha, aicc_factor=None):
     opt_model_score = np.inf
     opt_model = None  # will hold a (feature_list, model_coefficients)
     for feature_list, feature_matrix, data_quantities in candidate_models:
-        model_coefficients = fit_model(feature_matrix, data_quantities, ridge_alpha)
-        model_score = score_model(feature_matrix, data_quantities, model_coefficients, feature_list, aicc_factor=aicc_factor)
+        model_coefficients = fit_model(feature_matrix, data_quantities, ridge_alpha, weights=weights)
+        model_score = score_model(feature_matrix, data_quantities, model_coefficients, feature_list, weights, aicc_factor=aicc_factor)
         if np.isneginf(model_score):  # exact fit, stop here
             return (feature_list, model_coefficients)
         if model_score < opt_model_score:

@@ -104,6 +104,18 @@ def get_samples(desired_data):
         all_samples.extend(list(itertools.product(temperatures, comp_features)))
     return all_samples
 
+def get_weights(desired_data):
+    weights = []
+    for data in desired_data:
+        weight = data.get('weight')
+        if weight is not None:
+            weight = np.array(weight)
+        else:
+            weight = np.ones(np.array(data['values']).shape)
+        weights.extend(weight.flatten().tolist())
+    print(weights)
+    return weights
+
 
 def _zpf_conditions_shape(zpf_values):
     """
