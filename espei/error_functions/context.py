@@ -61,7 +61,7 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
     models = instantiate_models(dbf, comps, phases, parameters=dict(zip(symbols_to_fit, [0]*len(symbols_to_fit))))
     if make_callables:
         eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=symbols_to_fit,
-                            output='GM', build_gradients=True, build_hessians=False,
+                            output='GM', build_gradients=True, build_hessians=True,
                             additional_statevars={v.N, v.P, v.T})
     else:
         eq_callables = None
