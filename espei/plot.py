@@ -596,7 +596,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
                 stability = calculate(dbf, comps, [phase_name], output=data['output'][:-5],
                                       T=temps, P=pressures, points=points,
                                       model=mod_latticeonly, mode='numpy')
-                response_data -= stability[data['output'][:-5]].values
+                response_data -= stability[data['output'][:-5]].values.squeeze()
 
         response_data += np.array(data['values'], dtype=np.float)
         response_data = response_data.flatten()
