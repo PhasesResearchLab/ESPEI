@@ -477,10 +477,21 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
 
     """
     logging.info('Generating parameters.')
+    phases = sorted(phase_models['phases'].keys())
     dbf = dbf or Database()
     dbf.elements.update(set(phase_models['components']))
     for el in dbf.elements:
         dbf.species.add(Species(el, {el: 1}, 0))
+        # update the refdata for this eleemnt with the reference phase
+        refdata_phase = espei.refdata.pure_element_phases[el]
+        if refdata_phase in phases:
+            dbf.refstates[el] = {'phase': refdata_phase}
+        else:
+            # Check all the aliases and set the one that matches
+            for phase_name, phase_obj in phase_models['phases'].items():
+                for alias in phase_obj.get('aliases', []):
+                    if alias == refdata_phase:
+                        dbf.refstates[el] = {'phase': phase_name}
     # Write reference state to Database
     refdata = getattr(espei.refdata, ref_state)
     stabledata = getattr(espei.refdata, ref_state + 'Stable')

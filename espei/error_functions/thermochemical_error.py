@@ -174,7 +174,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
 
     ref_states = []
     for el in get_pure_elements(dbf, comps):
-        ref_state = ReferenceState(el, pure_element_phases[el])
+        ref_state = ReferenceState(el, dbf.refstates[el]['phase'])
         ref_states.append(ref_state)
     all_data_dicts = []
     for phase_name in phases:
