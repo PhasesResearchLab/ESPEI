@@ -78,7 +78,7 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     num_params = len(feature_list)
     rss = np.square(np.dot(feature_matrix, model_coefficients) - data_quantities.astype(np.float)*np.array(weights)).sum()
     if np.abs(rss) < rss_numerical_limit:
-        rss = 0.0
+        rss = rss_numerical_limit
     # Compute the corrected Akaike Information Criterion
     # The correction is (2k^2 + 2k)/(n - k - 1)
     # Our denominator for the correction must always be an integer by this equation.
