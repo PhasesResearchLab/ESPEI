@@ -22,7 +22,8 @@ import pycalphad
 from pycalphad import Database
 
 import espei
-from espei import generate_parameters, schema
+from espei.validation import schema
+from espei import generate_parameters
 from espei.utils import ImmediateClient, get_dask_config_paths, database_symbols_to_fit
 from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags, add_ideal_exclusions
 from espei.optimizers.opt_mcmc import EmceeOptimizer
