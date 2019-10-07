@@ -142,7 +142,7 @@ class EmceeOptimizer(OptimizerBase):
             logging.log(TRACE, 'Writing trace to {}'.format(tr))
             np.save(tr, self.sampler.chain)
         prob = self.probfile
-        if prob is not None and prob != 'None:
+        if prob is not None and prob != 'None':
             logging.log(TRACE, 'Writing lnprob to {}'.format(prob))
             np.save(prob, self.sampler.lnprobability)
 
