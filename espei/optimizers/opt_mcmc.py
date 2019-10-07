@@ -132,15 +132,17 @@ class EmceeOptimizer(OptimizerBase):
 
     def save_sampler_state(self):
         """
-        Convenience function that saves the trace and lnprob.
+        Convenience function that saves the trace and lnprob if
+        they haven't been set to None by the user.
+
         Requires that the sampler attribute be set.
         """
         tr = self.tracefile
-        if tr is not None:
+        if tr is not None and tr != 'None':
             logging.log(TRACE, 'Writing trace to {}'.format(tr))
             np.save(tr, self.sampler.chain)
         prob = self.probfile
-        if prob is not None:
+        if prob is not None and prob != 'None:
             logging.log(TRACE, 'Writing lnprob to {}'.format(prob))
             np.save(prob, self.sampler.lnprobability)
 
