@@ -76,7 +76,7 @@ def optimal_parameters(trace_array, lnprob_array, kth=0):
     Parameters
     ----------
     trace_array : ndarray
-        Array of shape (iterations, number of chains, number of parameters)
+        Array of shape (number of chains, iterations, number of parameters)
     lnprob_array : ndarray
         Array of shape (number of chains, iterations)
     kth : int
@@ -93,8 +93,6 @@ def optimal_parameters(trace_array, lnprob_array, kth=0):
     zeros. The number of chains and iterations in the trace and lnprob arrays
     must match.
     """
-    # Swap first two indices of trace_array for compatability with new version of emcee.
-    trace_array = np.swapaxes(trace_array, 0, 1)
     # indicies of chains + iterations that have non-zero parameters (that step has run)
     nz = np.nonzero(np.all(trace_array != 0, axis=-1))
     # chain + iteration index with the highest likelihood
