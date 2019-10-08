@@ -132,7 +132,9 @@ class EmceeOptimizer(OptimizerBase):
 
     def save_sampler_state(self):
         """
-        Convenience function that saves the trace and lnprob.
+        Convenience function that saves the trace and lnprob if
+        they haven't been set to None by the user.
+
         Requires that the sampler attribute be set.
         """
         tr = self.tracefile

@@ -181,11 +181,16 @@ def run_espei(run_settings):
     if mcmc_settings is not None:
         tracefile = output_settings['tracefile']
         probfile = output_settings['probfile']
+        # Set trace and prob files to None if specified by the user.
+        if tracefile == 'None':
+          tracefile = None
+        if probfile == 'None':
+          probfile = None
         # check that the MCMC output files do not already exist
         # only matters if we are actually running MCMC
-        if os.path.exists(tracefile):
+        if tracefile is not None and os.path.exists(tracefile):
             raise OSError('Tracefile "{}" exists and would be overwritten by a new run. Use the ``output.tracefile`` setting to set a different name.'.format(tracefile))
-        if os.path.exists(probfile):
+        if probfile is not None and os.path.exists(probfile):
             raise OSError('Probfile "{}" exists and would be overwritten by a new run. Use the ``output.probfile`` setting to set a different name.'.format(probfile))
 
         # scheduler setup

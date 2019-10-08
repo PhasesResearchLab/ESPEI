@@ -32,11 +32,11 @@ output:
     tracefile: # name of the file containing the mcmc trace array
       type: string
       default: trace.npy
-      regex: '.*\.npy$'
+      regex: '.*\.npy$|None'
     probfile: # name of the file containing the mcmc ln probability array
       type: string
       default: lnprob.npy
-      regex: '.*\.npy$'
+      regex: '.*\.npy$|None'
 
 ## if present, will do a single phase fitting
 generate_parameters:
