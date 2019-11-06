@@ -88,10 +88,6 @@ def get_zpf_data(comps, phases, datasets):
         zpf_data.append(data_dict)
     return zpf_data
 
-from pycalphad.core.solver import SolverBase
-class NoOptSolver(SolverBase):
-    ignore_convergence = True
-no_opt_solver = NoOptSolver()
 
 def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase_models, parameters, callables=None):
     """
@@ -148,7 +144,7 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
         else:
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
-            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, model=phase_models, calc_opts={'pdens': 1000}, parameters=parameters, solver=no_opt_solver, callables=callables, to_xarray=False)
+            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, model=phase_models, parameters=parameters, callables=callables, to_xarray=False)
             target_hyperplane_phases.append(multi_eqdata.Phase.squeeze())
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
@@ -234,7 +230,7 @@ def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyp
     else:
         # Extract energies from single-phase calculations
         single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, model=phase_models,
-                                    parameters=parameters, callables=callables, solver=no_opt_solver, calc_opts={'pdens': 1000}, to_xarray=False)
+                                    parameters=parameters, callables=callables, to_xarray=False)
         if np.all(np.isnan(single_eqdata.NP)):
             logging.debug('Calculation failure: all NaN phases with phases: {}, conditions: {}, parameters {}'.format(current_phase, cond_dict, parameters))
             return np.inf
