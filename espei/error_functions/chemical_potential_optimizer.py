@@ -69,7 +69,7 @@ class PhaseConditions:
   def set_state_vars(self, state_vars):
     self.state_vars = state_vars
 
-def single_phase_opt_at_chem_pot(phase_conditions, chemical_potentials, pdof=1000):
+def single_phase_opt_at_chem_pot(phase_conditions, chemical_potentials, pdof=100):
   """
   Calculates the optimal gibbs energy plane for a single phase at a given chemical potential.
   Begins by sampling and then refines the estimate using Newton's method.
@@ -82,7 +82,7 @@ def single_phase_opt_at_chem_pot(phase_conditions, chemical_potentials, pdof=100
   offset = (sample_compositions[min_indices].transpose() * chemical_potentials).sum(axis=0)
   return chemical_potentials + (sample_energy[min_indices] - offset)
 
-def single_phase_energy_at_composition(phase_conditions, composition, pdof=1000):
+def single_phase_energy_at_composition(phase_conditions, composition, pdof=100):
   if phase_conditions.site_fraction_counts == [2]:
     return phase_conditions.obj(composition)    
   if phase_conditions.site_fraction_counts == [2,1]:
@@ -99,4 +99,16 @@ def single_phase_energy_at_composition(phase_conditions, composition, pdof=1000)
     energies = phase_conditions.obj(np.column_stack((points, 1.0 - points, second_points, 1.0 - second_points)))
     return np.min(energies)
   else:
-    raise NotImplementedError('This has not yet been implemented.') 
+    raise NotImplementedError('This has not yet been implemented.')
+
+# Function which uniformly randomly samples simplices to produce samples for each phase.
+def generate_phase_samples(site_fraction_counts, sample_count):
+  sample_list = []
+  for count in site_fraction_counts:
+    if count <= 1:
+      sample_list.append(np.ones((sample_count, 1)))
+    else:
+      raw_samples = np.random.rand(sample_count, count-1)
+      raw_samples = np.sort(raw_samples, axis=1)
+      sample_list.append(np.diff(np.concatenate((np.zeros((sample_count, 1)), raw_samples, np.ones((sample_count, 1))), axis=1), axis=1))
+  return np.concatenate(sample_list, axis=1)
