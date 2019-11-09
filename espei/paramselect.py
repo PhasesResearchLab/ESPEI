@@ -503,7 +503,7 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
 
     """
     logging.info('Generating parameters.')
-    phases = sorted(phase_models['phases'].keys())
+    phases = sorted(map(lambda x: x.upper(), phase_models['phases'].keys()))
     dbf = dbf or Database()
     dbf.elements.update(set(phase_models['components']))
     for el in dbf.elements:
