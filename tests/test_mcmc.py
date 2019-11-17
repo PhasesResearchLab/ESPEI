@@ -116,7 +116,7 @@ def test_parameter_initialization():
     assert np.all(np.isclose(deterministic_params, expected_parameters))
 
 
-def test_emcee_opitmizer_can_restart(datasets_db):
+def test_emcee_optimizer_can_restart(datasets_db):
     """A restart trace can be passed to the Emcee optimizer """
     dbf = Database.from_string(CU_MG_TDB, fmt='tdb')
     datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
