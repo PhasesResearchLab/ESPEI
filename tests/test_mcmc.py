@@ -122,6 +122,8 @@ def test_emcee_opitmizer_can_restart(datasets_db):
     datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
     param = 'VV0001'
     opt = EmceeOptimizer(dbf)
-    restart_tr = -4*np.ones((2, 10, 1))  # 2 chains, 10 iterations, 1 parameter
+    restart_tr = np.array([[[-4],[-3],[-2],[-1],[0],[1],[2],[3],[4],[5]],
+                           [[-6],[-4],[-2],[0],[2],[4],[6],[8],[10],[12]]])  # 2 chains, 10 iterations, 1 parameter
     opt.fit([param], datasets_db, iterations=1, chains_per_parameter=2, restart_trace=restart_tr)
     assert opt.sampler.chain.shape == (2, 1, 1)
+
