@@ -132,32 +132,55 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
     target_hyperplane_phases = []
     parameters = OrderedDict(sorted(parameters.items(), key=str))
     # TODO: unclear whether we use phase_flag and how it would be used. It should be just a 'disordered' kind of flag.
+    # Determine whether all tie vertices have compositions.
+    all_tie_vertices_present = True
     for cond_dict, phase_flag in comp_dicts:
-        # We are now considering a particular tie vertex
         for key, val in cond_dict.items():
             if val is None:
                 cond_dict[key] = np.nan
-        cond_dict.update(current_statevars)
         if np.any(np.isnan(list(cond_dict.values()))):
-            # This composition is unknown -- it doesn't contribute to hyperplane estimation
-            pass
-        else:
-            # Extract chemical potential hyperplane from multi-phase calculation
-            # Note that we consider all phases in the system, not just ones in this tie region
-            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, model=phase_models, parameters=parameters, callables=callables,)
-            target_hyperplane_phases.append(multi_eqdata["Phase"].values.squeeze())
-            # Does there exist only a single phase in the result with zero internal degrees of freedom?
-            # We should exclude those chemical potentials from the average because they are meaningless.
-            num_phases = np.sum(multi_eqdata['Phase'].values.squeeze() != '')
-            Y_values = multi_eqdata['Y'].values.squeeze()
-            no_internal_dof = np.all((np.isclose(Y_values, 1.)) | np.isnan(Y_values))
-            MU_values = multi_eqdata['MU'].values.squeeze()
-            if (num_phases == 1) and no_internal_dof:
-                target_hyperplane_chempots.append(np.full_like(MU_values, np.nan))
+            all_tie_vertices_present = False
+    # If all tie vertices have compositions, evaluate hyperplane at the average composition.
+    if all_tie_vertices_present:
+        av_cond_dict = {}
+        for cond_dict, phase_flag in comp_dicts:
+            for key, val in cond_dict.items():
+                if not key in av_cond_dict:
+                    av_cond_dict[key] = []
+                av_cond_dict[key].append(val)
+        for key, val in av_cond_dict.items():
+            av_cond_dict[key] = np.mean(av_cond_dict[key])
+        av_cond_dict.update(current_statevars)
+        # Extract chemical potential hyperplane from multi-phase calculation
+        # Note that we consider all phases in the system, not just ones in this tie region
+        multi_eqdata = equilibrium(dbf, comps, phases, av_cond_dict, model=phase_models, parameters=parameters, callables=callables,)
+        target_hyperplane_phases.append(multi_eqdata["Phase"].values.squeeze())
+        MU_values = multi_eqdata['MU'].values.squeeze()
+        return MU_values
+    else:
+        for cond_dict, phase_flag in comp_dicts:
+            # We are now considering a particular tie vertex
+            cond_dict.update(current_statevars)
+            if np.any(np.isnan(list(cond_dict.values()))):
+                # This composition is unknown -- it doesn't contribute to hyperplane estimation
+                pass
             else:
-                target_hyperplane_chempots.append(MU_values)
-    target_hyperplane_mean_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float)
-    return target_hyperplane_mean_chempots
+                # Extract chemical potential hyperplane from multi-phase calculation
+                # Note that we consider all phases in the system, not just ones in this tie region
+                multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, model=phase_models, parameters=parameters, callables=callables,)
+                target_hyperplane_phases.append(multi_eqdata["Phase"].values.squeeze())
+                # Does there exist only a single phase in the result with zero internal degrees of freedom?
+                # We should exclude those chemical potentials from the average because they are meaningless.
+                num_phases = np.sum(multi_eqdata['Phase'].values.squeeze() != '')
+                Y_values = multi_eqdata['Y'].values.squeeze()
+                no_internal_dof = np.all((np.isclose(Y_values, 1.)) | np.isnan(Y_values))
+                MU_values = multi_eqdata['MU'].values.squeeze()
+                if (num_phases == 1) and no_internal_dof:
+                    target_hyperplane_chempots.append(np.full_like(MU_values, np.nan))
+                else:
+                    target_hyperplane_chempots.append(MU_values)
+        target_hyperplane_mean_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float)
+        return target_hyperplane_mean_chempots
 
 
 def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyperplane_chempots,
