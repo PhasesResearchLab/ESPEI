@@ -154,7 +154,6 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
         # Extract chemical potential hyperplane from multi-phase calculation
         # Note that we consider all phases in the system, not just ones in this tie region
         multi_eqdata = equilibrium(dbf, comps, phases, av_cond_dict, model=phase_models, parameters=parameters, callables=callables,)
-        target_hyperplane_phases.append(multi_eqdata["Phase"].values.squeeze())
         MU_values = multi_eqdata['MU'].values.squeeze()
         return MU_values
     else:
