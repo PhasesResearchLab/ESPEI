@@ -266,7 +266,7 @@ class EmceeOptimizer(OptimizerBase):
         starttime = time.time()
         if zpf_kwargs is not None:
             try:
-                multi_phase_error = calculate_zpf_error(parameters=parameters, **zpf_kwargs)
+                multi_phase_error = calculate_zpf_error(parameters=np.array(params), **zpf_kwargs)
             except (ValueError, np.linalg.LinAlgError) as e:
                 raise e
                 print(e)

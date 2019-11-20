@@ -36,8 +36,9 @@ def _safe_index(items, index):
         return None
 
 def update_phase_record_parameters(phase_records: Dict[str, PhaseRecord], parameters: np.ndarray) -> None:
-    for phase_name, phase_record in phase_records.items():
-        phase_record.parameters[:] = parameters
+    if parameters.size > 0:
+        for phase_name, phase_record in phase_records.items():
+            phase_record.parameters[:] = parameters
 
 def extract_conditions(all_conditions: Dict[v.StateVariable, np.ndarray], idx: int) -> Dict[v.StateVariable, float]:
     """Conditions are either scalar or 1d arrays for the conditions in the entire dataset.
@@ -288,7 +289,7 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
 
     """
     if parameters is None:
-        parameters = {}
+        parameters = np.array([])
     prob_error = 0.0
     for data in zpf_data:
         data_comps = data['data_comps']
