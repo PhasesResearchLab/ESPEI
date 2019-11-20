@@ -69,13 +69,18 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=data_weights, symbols_to_fit=symbols_to_fit, make_callables=make_callables)
     t2 = time.time()
     logging.log(TRACE, 'Finished building phase models ({:0.2f}s)'.format(t2-t1))
+    t1 = time.time()
+    zpf_data = get_zpf_data(dbf, comps, phases, datasets, parameters)
+    t2 = time.time()
+    logging.log(TRACE, f'ZPF data time {(t2-t1):0.1f} s')
+
 
     # context for the log probability function
     # for all cases, parameters argument addressed in MCMC loop
     error_context = {
         'symbols_to_fit': symbols_to_fit,
         'zpf_kwargs': {
-            'zpf_data': get_zpf_data(dbf, comps, phases, datasets, parameters),
+            'zpf_data': zpf_data,
             'data_weight': data_weights.get('ZPF', 1.0),
         },
         'thermochemical_kwargs': {
