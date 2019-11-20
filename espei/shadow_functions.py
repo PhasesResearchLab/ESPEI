@@ -66,18 +66,24 @@ def calculate_(dbf: Database, species: Sequence[v.Species], phases: Sequence[str
         final_ds = all_phase_data[0]
     return final_ds
 
-
+from time import time
 def equilibrium_(species: Sequence[v.Species], phase_records: Dict[str, PhaseRecord],
                  conditions: Dict[v.StateVariable, np.ndarray], grid: LightDataset
                  ) -> LightDataset:
     """
     Perform a fast equilibrium calculation with virtually no overhead.
     """
+
     statevars = get_state_variables(conds=conditions)
     conditions = _adjust_conditions(conditions)
     str_conds = OrderedDict([(str(ky), conditions[ky]) for ky in sorted(conditions.keys(), key=str)])
+    t1 = time()
     start_point = starting_point(conditions, statevars, phase_records, grid)
-    return _solve_eq_at_conditions(species, start_point, phase_records, grid, str_conds, statevars, False)
+    t2 = time()
+    res = _solve_eq_at_conditions(species, start_point, phase_records, grid, str_conds, statevars, False)
+    t3 = time()
+    print(f'Start point time: {(t2-t1)*1000:0.1f} ms, Solve time: {(t3-t2)*1000:0.1f} ms, conditions: {conditions}, GM: {res.GM.squeeze()}')
+    return res
 
 
 def no_op_equilibrium_(_, phase_records: Dict[str, PhaseRecord],
