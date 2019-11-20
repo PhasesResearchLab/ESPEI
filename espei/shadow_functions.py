@@ -28,7 +28,7 @@ def calculate_(dbf: Database, species: Sequence[v.Species], phases: Sequence[str
     points_dict = unpack_kwarg(points, default_arg=None)
     pdens_dict = unpack_kwarg(pdens, default_arg=2000)
     nonvacant_components = [x for x in sorted(species) if x.number_of_atoms > 0]
-    maximum_internal_dof = max(len(models[phase_name].site_fractions) for phase_name in phases)
+    maximum_internal_dof = max(prx.phase_dof for prx in phase_records.values())
     all_phase_data = []
     for phase_name in sorted(phases):
         phase_obj = dbf.phases[phase_name]

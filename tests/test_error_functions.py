@@ -175,6 +175,6 @@ def test_zpf_error_zero(datasets_db):
     # ZPF weight = 1 kJ and there are two points in the tieline
     zero_error_prob = 2 * scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0)
 
-    zpf_data = get_zpf_data(comps, phases, datasets_db)
-    error = calculate_zpf_error(dbf, phases, zpf_data)
+    zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
+    error = calculate_zpf_error(zpf_data, np.array([]))
     assert np.isclose(error, zero_error_prob, rtol=1e-6)
