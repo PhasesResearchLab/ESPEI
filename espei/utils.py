@@ -54,9 +54,9 @@ class ImmediateClient(Client):
     A subclass of distributed.Client that automatically unwraps the Futures
     returned by map.
     """
-    def map(self, *args, **kwargs):
+    def map(self, f, *iterators, **kwargs):
         _client = super(ImmediateClient, self)
-        result = _client.gather(_client.map(*args, **kwargs))
+        result = _client.gather(_client.map(f, *[list(it) for it in iterators], **kwargs))
         return result
 
 
@@ -430,6 +430,22 @@ def popget(d, key, default=None):
 
 
 def get_dask_config_paths():
+    """
+    Return a list of configuration file paths for dask.
+
+    The last path in the list has the highest precedence.
+
+    Returns
+    -------
+    list
+
+    Examples
+    --------
+    >>> config_files = get_dask_config_paths()
+    >>> len(config_files) > 1
+    True
+
+    """
     candidates = dask.config.paths
     file_paths = []
     for path in candidates:

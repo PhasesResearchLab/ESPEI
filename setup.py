@@ -24,8 +24,8 @@ setup(
         'scipy',
         'sympy>=1.2',
         'six',
-        'dask[complete]>=1,<2',
-        'distributed>=1,<2',
+        'dask[complete]>=2',
+        'distributed>=2',
         'tinydb>=3.8',
         'scikit-learn',
         'emcee<3',
@@ -59,8 +59,6 @@ setup(
 
         'License :: OSI Approved :: MIT License',
 
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
