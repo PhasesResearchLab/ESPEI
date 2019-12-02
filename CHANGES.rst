@@ -2,6 +2,21 @@
 What's New
 ==========
 
+0.7.3 (2019-12-02)
+==================
+
+This change includes several new features and performance improvements.
+
+* Drop Python 2 support (Python 2 is no longer supported on January 1, 2020).
+* Update dask and distributed support to versions >=2. (`@bocklund`_)
+* Users can tweak the AICc penalty factor for each phase to nudge parameter selection towards adding more or fewer parameters based on user modeling intitution. (`@bocklund`_)
+* Allow for tracefile and probfile to be set to None. (`@jwsiegel2510`_)
+* Weighting individual datasets in single phase fitting is now implemented via scikit-learn.  (`@bocklund`_)
+* Performance improvements by reducing overhead. (`@bocklund`_)
+* Increased solver accuracy by using pycalphad's exact Hessian solver. (`@bocklund`_)
+* Support writing SER reference state information to the `ELEMENT` keyword in TDBs based on the SGTE unary 5 database.  (`@bocklund`_)
+* MCMC now calculates the likelihood of the initial parameter set so the starting point can be reasonably compared.  (`@bocklund`_)
+* Fixed a bug where mis-aligned configurations and site occupancies in single phase datasets passed the dataset checker  (`@bocklund`_)
 
 0.7.2 (2019-06-12)
 ==================
@@ -200,7 +215,7 @@ Fixes to the 0.2 release plotting interface
 * Option (and default) to output the log probability array matching the trace. Use ``--probfile`` option to control.
 * Optimal parameters are now chosen based on lowest error in chain.
 * Bug fixes including
-   
+
    - py2/3 compatibility
    - Unicode datasets
    - handling of singular matrix errors from pycalphad's ``equilibrium``
@@ -251,3 +266,5 @@ ESPEI is now a package! New features include
 * Significant code cleanup
 * Better usage documentation
 
+.. _`@bocklund`: https://github.com/bocklund
+.. _`@jwsiegel2510`: https://github.com/jwsiegel2510
