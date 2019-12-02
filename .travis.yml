@@ -25,7 +25,7 @@ install:
   - conda info -a
   - conda create -q -n espei-env python=$TRAVIS_PYTHON_VERSION
   - source activate espei-env
-  - conda install -c conda-forge -c pycalphad 'pycalphad>=0.8.1' numpy scipy 'sympy>=1.2' six 'dask>=1,<2' 'distributed>=1,<2' 'tinydb>=3.8' scikit-learn 'emcee<3' pyyaml cerberus bibtexparser sphinx sphinx_rtd_theme pytest nose mock twine
+  - conda install -c conda-forge -c pycalphad 'pycalphad>=0.8.1' numpy scipy 'sympy>=1.2' six 'dask>=2' 'distributed>=2' 'tinydb>=3.8' scikit-learn 'emcee<3' pyyaml cerberus bibtexparser sphinx sphinx_rtd_theme pytest nose mock twine
 before_script:
   - source activate espei-env
   - pip install -e '.[dev]'

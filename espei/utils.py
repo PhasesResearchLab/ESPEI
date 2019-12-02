@@ -54,9 +54,9 @@ class ImmediateClient(Client):
     A subclass of distributed.Client that automatically unwraps the Futures
     returned by map.
     """
-    def map(self, *args, **kwargs):
+    def map(self, f, *iterators, **kwargs):
         _client = super(ImmediateClient, self)
-        result = _client.gather(_client.map(*args, **kwargs))
+        result = _client.gather(_client.map(f, *[list(it) for it in iterators], **kwargs))
         return result
 
 
