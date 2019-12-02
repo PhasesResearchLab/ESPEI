@@ -124,7 +124,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         calculate_dict['T'] = np.concatenate([calculate_dict['T'], T])
         calculate_dict['points'] = np.concatenate([calculate_dict['points'], np.repeat(points, len(T)/points.shape[0], axis=0)], axis=0)
         calculate_dict['values'] = np.concatenate([calculate_dict['values'], values.flatten()])
-        calculate_dict['weights'].extend([datum.get('weight', 1.0) for _ in range(values.flatten().size)])
+        calculate_dict['weights'].extend(np.array([datum.get('weight', 1.0) for _ in range(values.flatten().size)]).flatten())
         calculate_dict['references'].extend([datum.get('reference', "") for _ in range(values.flatten().size)])
 
     return calculate_dict
@@ -174,7 +174,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
 
     ref_states = []
     for el in get_pure_elements(dbf, comps):
-        ref_state = ReferenceState(el, pure_element_phases[el])
+        ref_state = ReferenceState(el, dbf.refstates[el]['phase'])
         ref_states.append(ref_state)
     all_data_dicts = []
     for phase_name in phases:
@@ -217,7 +217,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
                     data_dict['callables'] = callables
                 data_dict['model'] = model
                 data_dict['output'] = output
-                data_dict['weights'] = property_std_deviation[prop.split('_')[0]]/np.array(calculate_dict.pop('weights'))
+                data_dict['weights'] = np.array(property_std_deviation[prop.split('_')[0]])/np.array(calculate_dict.pop('weights'))
                 all_data_dicts.append(data_dict)
     return all_data_dicts
 

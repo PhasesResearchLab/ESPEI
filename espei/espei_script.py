@@ -18,11 +18,14 @@ import yaml
 import dask
 import distributed
 import sympy
+import symengine
+import emcee
 import pycalphad
 from pycalphad import Database
 
 import espei
-from espei import generate_parameters, schema
+from espei.validation import schema
+from espei import generate_parameters
 from espei.utils import ImmediateClient, get_dask_config_paths, database_symbols_to_fit
 from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags, add_ideal_exclusions
 from espei.optimizers.opt_mcmc import EmceeOptimizer
@@ -55,6 +58,8 @@ def log_version_info():
     logging.debug('dask version        ' + str(dask.__version__))
     logging.debug('distributed version ' + str(distributed.__version__))
     logging.debug('sympy version       ' + str(sympy.__version__))
+    logging.debug('symengine version   ' + str(symengine.__version__))
+    logging.debug('emcee version       ' + str(emcee.__version__))
     logging.info("If you use ESPEI for work presented in a publication, we ask that you cite the following paper:\n    {}".format(espei.__citation__))
 
 def get_dask_config_paths():

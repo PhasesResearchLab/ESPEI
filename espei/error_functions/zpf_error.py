@@ -144,14 +144,14 @@ def estimate_hyperplane(dbf, comps, phases, current_statevars, comp_dicts, phase
         else:
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
-            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, model=phase_models, parameters=parameters, callables=callables,)
-            target_hyperplane_phases.append(multi_eqdata["Phase"].values.squeeze())
+            multi_eqdata = equilibrium(dbf, comps, phases, cond_dict, model=phase_models, parameters=parameters, callables=callables, to_xarray=False)
+            target_hyperplane_phases.append(multi_eqdata.Phase.squeeze())
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
-            num_phases = np.sum(multi_eqdata['Phase'].values.squeeze() != '')
-            Y_values = multi_eqdata['Y'].values.squeeze()
+            num_phases = np.sum(multi_eqdata.Phase.squeeze() != '')
+            Y_values = multi_eqdata.Y.squeeze()
             no_internal_dof = np.all((np.isclose(Y_values, 1.)) | np.isnan(Y_values))
-            MU_values = multi_eqdata['MU'].values.squeeze()
+            MU_values = multi_eqdata.MU.squeeze()
             if (num_phases == 1) and no_internal_dof:
                 target_hyperplane_chempots.append(np.full_like(MU_values, np.nan))
             else:
@@ -200,8 +200,8 @@ def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyp
         single_eqdata = calculate(dbf, comps, [current_phase],
                                   T=cond_dict[v.T], P=cond_dict[v.P],
                                   model=phase_models, parameters=parameters, pdens=100,
-                                  callables=callables)
-        df = np.multiply(target_hyperplane_chempots, single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
+                                  callables=callables, to_xarray=False)
+        df = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(df.max())
     elif phase_flag == 'disordered':
         # Construct disordered sublattice configuration from composition dict
@@ -223,17 +223,18 @@ def driving_force_to_hyperplane(dbf, comps, current_phase, cond_dict, target_hyp
             dof_idx += len(dof)
         single_eqdata = calculate(dbf, comps, [current_phase], T=cond_dict[v.T],
                                   P=cond_dict[v.P], points=desired_sitefracs,
-                                  model=phase_models, parameters=parameters, callables=callables,)
-        driving_force = np.multiply(target_hyperplane_chempots, single_eqdata['X'].values).sum(axis=-1) - single_eqdata['GM'].values
+                                  model=phase_models, parameters=parameters,
+                                  callables=callables, to_xarray=False,)
+        driving_force = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(np.squeeze(driving_force))
     else:
         # Extract energies from single-phase calculations
         single_eqdata = equilibrium(dbf, comps, [current_phase], cond_dict, model=phase_models,
-                                    parameters=parameters, callables=callables)
-        if np.all(np.isnan(single_eqdata['NP'].values)):
+                                    parameters=parameters, callables=callables, to_xarray=False)
+        if np.all(np.isnan(single_eqdata.NP)):
             logging.debug('Calculation failure: all NaN phases with phases: {}, conditions: {}, parameters {}'.format(current_phase, cond_dict, parameters))
             return np.inf
-        select_energy = float(single_eqdata['GM'].values)
+        select_energy = float(single_eqdata.GM)
         region_comps = []
         for comp in [c for c in sorted(comps) if c != 'VA']:
             region_comps.append(cond_dict.get(v.X(comp), np.nan))

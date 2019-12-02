@@ -22,22 +22,33 @@ from collections import OrderedDict
 
 import numpy as np
 import sympy
+from tinydb import where
 from pycalphad import Database, Model, variables as v
 from pycalphad.io.database import Species
 
 import espei.refdata
-from espei.core_utils import get_data, get_samples
+from espei.core_utils import get_data, get_samples, get_weights
 from espei.parameter_selection.model_building import build_candidate_models
 from espei.parameter_selection.selection import select_model
 from espei.parameter_selection.ternary_parameters import build_ternary_feature_matrix
 from espei.parameter_selection.utils import feature_transforms, shift_reference_state
 from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
-    tuplify, interaction_test, endmembers_from_interaction, \
-    generate_endmembers
+    tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
 from espei.utils import PickleableTinyDB, sigfigs, build_sitefractions
 
 
 TRACE = 15  # TRACE logging level
+
+
+def _param_present_in_database(dbf, phase_name, configuration, param_type):
+    const_arr = tuple([tuple(map(lambda x: v.Species(x), subl)) for subl in map(tuplify, configuration)])
+    # parameter order doesn't matter here, since the generated might not exactly match. Always override.
+    query = (where('phase_name') == phase_name) & \
+            (where('parameter_type') == param_type) & \
+            (where('constituent_array') == const_arr)
+    search_result = dbf._parameters.search(query)
+    if len(search_result) > 0:
+        return True
 
 
 def _build_feature_matrix(prop, features, desired_data):
@@ -155,6 +166,9 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
         logging.log(TRACE, '{}: datasets found: {}'.format(desired_props, len(desired_data)))
         if len(desired_data) > 0:
+            # Ravelled weights for all data
+            weights = get_weights(desired_data)
+
             # We assume all properties in the same fitting step have the same features (all CPM, all HM, etc.) (but different ref states)
             all_samples = get_samples(desired_data)
             site_fractions = [build_sitefractions(phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies',
@@ -199,7 +213,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                 data_quantities.append(data_qtys)
 
             # provide candidate models and get back a selected model.
-            selected_model = select_model(zip(candidate_models_features[desired_props[0]], feature_matricies, data_quantities), ridge_alpha, aicc_factor=aicc_factor)
+            selected_model = select_model(zip(candidate_models_features[desired_props[0]], feature_matricies, data_quantities), ridge_alpha, weights=weights, aicc_factor=aicc_factor)
             selected_features, selected_values = selected_model
             parameters.update(zip(*(selected_features, selected_values)))
             # Add these parameters to be fixed for the next fitting step
@@ -260,7 +274,13 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
     logging.log(TRACE, '{0} distinct ternary interactions'.format(len(interactions)))
     for interaction in interactions:
         ixx = interaction
-        logging.log(TRACE, 'INTERACTION: {}'.format(ixx))
+        config = tuple(map(tuplify, ixx))
+        if _param_present_in_database(dbf, phase_name, config, 'L'):
+            logging.log(TRACE, 'INTERACTION: {} already in Database'.format(ixx))
+            print('INTERACTION: {} already in Database'.format(ixx))
+            continue
+        else:
+            logging.log(TRACE, 'INTERACTION: {}'.format(ixx))
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(3, dtype=np.object)
@@ -349,7 +369,13 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
 
     all_endmembers = []
     for endmember in endmembers:
-        logging.log(TRACE, 'ENDMEMBER: {}'.format(endmember))
+        symmetric_endmembers = generate_symmetric_group(endmember, symmetry)
+        all_endmembers.extend(symmetric_endmembers)
+        if _param_present_in_database(dbf, phase_name, endmember, 'G'):
+            logging.log(TRACE, 'ENDMEMBER: {} already in Database'.format(endmember))
+            continue
+        else:
+            logging.log(TRACE, 'ENDMEMBER: {}'.format(endmember))
         # Some endmembers are fixed by our choice of standard lattice stabilities, e.g., SGTE91
         # If a (phase, pure component endmember) tuple is fixed, we should use that value instead of fitting
         endmember_comps = list(set(endmember))
@@ -392,9 +418,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
                 subl = (subl.upper()*2)[:2]
                 ref = ref + ratio * sympy.Symbol('GHSER'+subl)
             fit_eq += ref
-        symmetric_endmembers = generate_symmetric_group(endmember, symmetry)
         logging.log(TRACE, 'SYMMETRIC_ENDMEMBERS: {}'.format(symmetric_endmembers))
-        all_endmembers.extend(symmetric_endmembers)
         for em in symmetric_endmembers:
             em_dict[em] = fit_eq
             dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, fit_eq)
@@ -410,7 +434,12 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
             else:
                 ixx.append(i)
         ixx = tuple(ixx)
-        logging.log(TRACE, 'INTERACTION: {}'.format(ixx))
+        config = tuple(map(tuplify, ixx))
+        if _param_present_in_database(dbf, phase_name, config, 'L'):
+            logging.log(TRACE, 'INTERACTION: {} already in Database'.format(ixx))
+            continue
+        else:
+            logging.log(TRACE, 'INTERACTION: {}'.format(ixx))
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(10, dtype=np.object)
@@ -474,10 +503,26 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
 
     """
     logging.info('Generating parameters.')
+    phases = sorted(map(lambda x: x.upper(), phase_models['phases'].keys()))
     dbf = dbf or Database()
     dbf.elements.update(set(phase_models['components']))
     for el in dbf.elements:
         dbf.species.add(Species(el, {el: 1}, 0))
+        # Add the SER reference data
+        dbf.refstates[el] = espei.refdata.ser_dict[el]
+        # update the refdata for this element with the reference phase
+        if el not in espei.refdata.pure_element_phases.keys():
+            # Probably VA, /- or something else
+            continue
+        refdata_phase = espei.refdata.pure_element_phases[el]
+        if refdata_phase in phases:
+            dbf.refstates[el] = {'phase': refdata_phase}
+        else:
+            # Check all the aliases and set the one that matches
+            for phase_name, phase_obj in phase_models['phases'].items():
+                for alias in phase_obj.get('aliases', []):
+                    if alias == refdata_phase:
+                        dbf.refstates[el] = {'phase': phase_name}
     # Write reference state to Database
     refdata = getattr(espei.refdata, ref_state)
     stabledata = getattr(espei.refdata, ref_state + 'Stable')

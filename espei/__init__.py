@@ -11,38 +11,10 @@ from .citing import ESPEI_BIBTEX, ESPEI_CITATION
 __citation__ = ESPEI_CITATION
 __bibtex__ = ESPEI_BIBTEX
 
-# the hackiest hack such that importing pickle will import our model that overrides the dump function
-# subclasses made later will probably be maintained.
-# we are overrideing a builtin, which is HORRIBLE
-# from espei import pickle_override
-# import sys
-# # we want to be able to get back the old pickle for dask/distributed
-# sys.modules['pickle'] = sys.modules['espei.pickle_override']
-
 import logging
 # setup logger with a TRACE setting, which is between INFO and DEBUG
 TRACE = 15  # TRACE logging level
 logging.addLevelName(TRACE, 'TRACE')
-
-import os
-import yaml
-from cerberus import Validator
-
-MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# extension for iseven
-class ESPEIValidator(Validator):
-    def _validate_iseven(self, iseven, field, value):
-        """ Test the oddity of a value.
-
-        The rule's arguments are validated against this schema:
-        {'type': 'boolean'}
-        """
-        if iseven and bool(value & 1):
-            self._error(field, "Must be an even number")
-
-with open(os.path.join(MODULE_DIR, 'input-schema.yaml')) as f:
-    schema = ESPEIValidator(yaml.load(f, Loader=yaml.FullLoader))
 
 from espei.paramselect import generate_parameters
 from espei.mcmc import mcmc_fit
