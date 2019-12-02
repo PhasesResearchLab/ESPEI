@@ -25,7 +25,10 @@ import tinydb
 from pycalphad import Database, calculate, equilibrium, Model, variables as v
 from pycalphad.codegen.callables import build_phase_records
 from pycalphad.core.utils import instantiate_models
+from pycalphad.core.light_dataset import LightDataset
 from pycalphad.core.phase_rec import PhaseRecord
+from pycalphad.core.composition_set import CompositionSet
+from pycalphad.core.problem import Problem
 from espei.utils import PickleableTinyDB
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_
 
@@ -34,6 +37,84 @@ def _safe_index(items, index):
         return items[index]
     except IndexError:
         return None
+
+def prob_x_from_Dataset(eq_res: LightDataset, species: Sequence[v.Species], phase_records: Dict[str, PhaseRecord]):
+    """Return a Problem and the solution vector from an equilibrium result
+
+    Parameters
+    ----------
+    eq_res : pycalphad.core.light_dataset.LightDataset
+        Result of an equilibrium calculation
+    phase_records : Dict[str, PhaseRecord]
+        Map of phase name to the corresponding phase record
+
+    Returns
+    -------
+    Tuple[Problem, np.ndarray]
+
+    """
+    stable_phases = [str(ph) for ph in eq_res.Phase.squeeze() if str(ph) != '']
+    compsets = []
+    NPs = []
+    Ys = []
+    NPT = ["N", "P", "T"]
+    statevars = np.array([np.array(getattr(eq_res, sv)).squeeze() for sv in NPT])
+    str_conds = OrderedDict(zip(NPT, statevars))
+    for ph_idx in range(len(stable_phases)):
+        site_fracs = eq_res.Y.squeeze()[ph_idx]
+        site_fracs = site_fracs[~np.isnan(site_fracs)] # truncate any padded NaNs in DOF
+        cs = CompositionSet(phase_records[stable_phases[ph_idx]])
+        dof = np.array([*statevars, *site_fracs])
+        assert dof.shape[0] == cs.dof.shape[0]
+        cs.dof[:] = dof
+        cs.NP = eq_res.NP.squeeze()[ph_idx]
+        compsets.append(cs)
+        NPs.append(cs.NP)
+        Ys.extend(site_fracs)
+
+    x_eq = np.array([*statevars.tolist(), *Ys, *NPs])
+    prob = Problem(compsets, species, str_conds)
+    return prob, x_eq
+
+def prob_x_from_Calculate(eq_res: LightDataset, species: Sequence[v.Species], phase_records: Dict[str, PhaseRecord], point_idx: int):
+    """Return a Problem and the solution vector from an single point from a calculate LightDataset
+
+    Parameters
+    ----------
+    eq_res : pycalphad.core.light_dataset.LightDataset
+        Result of an equilibrium calculation
+    phase_records : Dict[str, PhaseRecord]
+        Map of phase name to the corresponding phase record
+
+    Returns
+    -------
+    Tuple[Problem, np.ndarray]
+
+    """
+    stable_phase = eq_res.Phase.squeeze()[point_idx]
+    compsets = []
+    Ys = []
+    NPT = ["N", "P", "T"]
+    statevars = np.array([np.array(getattr(eq_res, sv)).squeeze() for sv in NPT])
+    str_conds = OrderedDict(zip(NPT, statevars))
+    site_fracs = eq_res.Y.squeeze()[point_idx]
+    site_fracs = site_fracs[~np.isnan(site_fracs)]
+    dof = np.array([*statevars, *site_fracs])
+    cs = CompositionSet(phase_records[stable_phase])
+    cs.dof[:] = dof
+    cs.NP = 1.0
+    x_eq = np.array([*statevars.tolist(), *site_fracs.tolist(), 1.0])
+    prob = Problem([cs], species, str_conds)
+    return prob, x_eq
+
+def local_chemical_potential_parameter_grad(eq_res: LightDataset, species: Sequence[v.Species], phase_records: Dict[str, PhaseRecord]):
+    problem, x_eq = prob_x_from_Dataset(eq_res, species, phase_records)
+    return problem.chemical_potential_parameter_gradient(x_eq)
+
+def point_chemical_potential_parameter_grad(calc_res: LightDataset, species: Sequence[v.Species], phase_records: Dict[str, PhaseRecord], point_idx: int):
+    problem, x_calc = prob_x_from_Calculate(calc_res, species, phase_records, point_idx)
+    return problem.chemical_potential_parameter_gradient(x_calc)
+
 
 def update_phase_record_parameters(phase_records: Dict[str, PhaseRecord], parameters: np.ndarray) -> None:
     if parameters.size > 0:
@@ -161,6 +242,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray) -> np
 
     """
     target_hyperplane_chempots = []
+    target_hyperplane_chempots_grad = []
     target_hyperplane_phases = []
     dbf = phase_region.dbf
     species = phase_region.species
@@ -191,8 +273,10 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray) -> np
             MU_values = multi_eqdata.MU.squeeze()
             if (num_phases == 1) and no_internal_dof:
                 target_hyperplane_chempots.append(np.full_like(MU_values, np.nan))
+                target_hyperplane_chempots_grad.append(np.full((parameters.shape[0], MU_values.shape[0]), np.nan))
             else:
                 target_hyperplane_chempots.append(MU_values)
+                target_hyperplane_chempots_grad.append(local_chemical_potential_parameter_grad(multi_eqdata, species, phase_records))
     target_hyperplane_mean_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float)
     return target_hyperplane_mean_chempots
 
@@ -217,7 +301,9 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
         # We don't actually know the phase composition here, so we estimate it
         single_eqdata = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, pdens=500)
         df = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
+        max_pt = np.argmax(df.max())
         driving_force = float(df.max())
+        dDdp = point_chemical_potential_parameter_grad(single_eqdata, species, phase_records, max_pt)
     elif phase_flag == 'disordered':
         # Construct disordered sublattice configuration from composition dict
         # Compute energy
@@ -236,8 +322,9 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
             sitefracs_to_add[np.isnan(sitefracs_to_add)] = 1 - np.nansum(sitefracs_to_add)
             desired_sitefracs[dof_idx:dof_idx + len(dof)] = sitefracs_to_add
             dof_idx += len(dof)
-        single_eqdata = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, pdens=500)
+        single_eqdata = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, points=desired_sitefracs)
         driving_force = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
+        dDdp = point_chemical_potential_parameter_grad(single_eqdata, species, phase_records, max_pt)
         driving_force = float(np.squeeze(driving_force))
     else:
         # Extract energies from single-phase calculations
