@@ -1,7 +1,6 @@
 language: python
 matrix:
     include:
-        - python: 2.7
         - python: 3.6
         - name: "Python 3.7.1 on Xenial Linux"
           python: 3.7           # this works for Linux but is ignored on macOS or Windows
@@ -9,14 +8,7 @@ matrix:
 
 install:
   - sudo apt-get update
-  # The following copied from conda documentation.
-  # This is done conditionally because it saves some downloading
-  # if the version is the same.
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
-    else
-      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-    fi
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda config --set always_yes yes --set changeps1 no
