@@ -271,7 +271,7 @@ class EmceeOptimizer(OptimizerBase):
                 multi_phase_error = -np.inf
         else:
             multi_phase_error = 0
-        if activity_kwargs is not None:
+        if activity_kwargs is not None and False:
             actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
         else:
             actvity_error = 0
