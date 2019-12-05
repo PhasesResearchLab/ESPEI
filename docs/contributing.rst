@@ -67,6 +67,25 @@ Some tips for testing:
 * If possible, keep the tests small and fast. If you do have a long running tests (longer than ~15 second run time) mark the test with the ``@pytest.mark.slow`` decorator.
 * See the `NumPy/SciPy testing guidelines <https://github.com/numpy/numpy/blob/master/doc/TESTS.rst.txt>`_ for more tips
 
+Running Tests
+-------------
+
+If you will be developing in ESPEI, it is likely that you'll want to run the
+test suite or build the documentation. The tests require the addition of the
+pytest, nose, and mock packages, while building the docs requires sphinx and
+sphinx_rtd_theme. These can be installed by running
+
+.. code-block:: bash
+
+   conda install mock pytest nose sphinx sphinx_rtd_theme
+
+The tests can be run from the root directory of the cloned repository:
+
+.. code-block:: bash
+
+   pytest --doctest-modules tests espei
+
+
 Style
 =====
 
@@ -103,6 +122,34 @@ visting the URL at the end of the output, usually ``localhost port 8000 <http://
 When you are finished, type ``Ctrl-C`` to stop the server and the command will clean up the build for you.
 
 Make sure to fix any warnings that come up if you are adding documentation.
+
+
+Building Documentation
+~~~~~~~~~~~~~~~~~~~~~~
+
+The docs can be built by running the docs/Makefile (or docs/make.bat on
+Windows). Then Python can be used to serve the html files in the _build
+directory and you can visit ``http://localhost:8000`` in your broswer to
+see the built documentation.
+
+For Unix systems:
+
+.. code-block:: bash
+
+   cd docs
+   make html
+   cd _build/html
+   python -m http.server
+
+Windows:
+
+.. code-block:: bash
+
+   cd docs
+   make.bat html
+   cd _build\html
+   python -m http.server
+
 
 Logging
 =======

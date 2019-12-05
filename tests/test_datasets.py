@@ -337,6 +337,30 @@ dataset_single_unsorted_interaction = {
 }
 
 
+dataset_mismatched_configs_occupancies = {
+# 2 configurations (values) 1 occupancy
+    "components": ["AL", "NI", "VA"],
+    "phases": ["BCC_B2"],
+    "solver": {
+        "sublattice_site_ratios": [0.5, 0.5, 1],
+        "sublattice_occupancies": [
+        [1, [0.25, 0.75], 1]
+        ],
+        "sublattice_configurations": [
+        ["AL", ["AL", "NI"], "VA"],
+        ["AL", ["AL", "NI"], "VA"]
+        ],
+        "comment": "NiAl sublattice configuration (2SL)"
+    },
+    "conditions": {
+        "P": 101325,
+        "T": [0, 10]
+    },
+    "output": "CPM_FORM",
+    "values": [[[0, 1], [-0.0173, -1.0173]]]
+}
+
+
 def test_check_datasets_run_on_good_data():
     """Passed valid datasets that should raise DatasetError."""
     check_dataset(dataset_single_valid)
@@ -419,3 +443,8 @@ def test_datasets_convert_zpf_string_values_producing_correct_value(datasets_db)
     assert np.issubdtype(np.array([t[0][2] for t in ds['values']]).dtype, np.number)
     assert np.issubdtype(np.array(ds['conditions']['T']).dtype, np.number)
     assert np.issubdtype(np.array(ds['conditions']['P']).dtype, np.number)
+
+def test_check_datasets_raises_if_configs_occupancies_not_aligned(datasets_db):
+    """Checking datasets that don't have the same number/shape of configurations/occupancies should raise."""
+    with pytest.raises(DatasetError):
+        check_dataset(dataset_mismatched_configs_occupancies)

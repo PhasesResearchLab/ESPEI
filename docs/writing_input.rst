@@ -155,6 +155,7 @@ The array is preallocated and padded with zeros, so if you selected to take 2000
 
 You must choose a unique file name.
 An error will be raised if file specified by ``tracefile`` already exists.
+If you don't want a file to be output (e.g. for debugging), you can enter ``None``.
 
 probfile
 --------
@@ -169,6 +170,7 @@ The array is preallocated and padded with zeros, so if you selected to take 2000
 
 You must choose a unique file name.
 An error will be raised if file specified by ``probfile`` already exists.
+If you don't want a file to be output (e.g. for debugging), you can enter ``None``.
 
 
 generate_parameters
@@ -349,7 +351,7 @@ This parameter can only be used when initializing the first MCMC run.
 If you are restarting a calculation, the standard deviation for your chains are fixed by the value you chose previously.
 
 You may technically set this to any positive value, you would like.
-Be warned that too small of a standard deviation may cause convergence to a local minimum in parameter space and slow convergence, while a standard deviation that is too large may cause convergence to meaningless thermodynamic descriptions. 
+Be warned that too small of a standard deviation may cause convergence to a local minimum in parameter space and slow convergence, while a standard deviation that is too large may cause convergence to meaningless thermodynamic descriptions.
 
 deterministic
 -------------

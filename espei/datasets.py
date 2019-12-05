@@ -153,6 +153,10 @@ def check_dataset(dataset):
 
     # check that the site ratios are valid as well as site occupancies, if applicable
     if is_single_phase:
+        nconfigs = len(sublattice_configurations)
+        noccupancies = len(sublattice_occupancies)
+        if nconfigs != noccupancies:
+            raise DatasetError('Number of sublattice configurations ({}) does not match the number of sublattice occupancies ({})'.format(nconfigs, noccupancies))
         for configuration, occupancy in zip(sublattice_configurations, sublattice_occupancies):
             if len(configuration) != len(sublattice_site_ratios):
                 raise DatasetError('Sublattice configuration {} and sublattice site ratio {} describe different numbers of sublattices ({} and {}).'.format(configuration, sublattice_site_ratios, len(configuration), len(sublattice_site_ratios)))

@@ -24,7 +24,7 @@ def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
     orig_val = dbf.symbols[param].args[0].expr
     models = instantiate_models(dbf, comps, phases, parameters={param: orig_val})
     eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=[param],
-                        output='GM', build_gradients=True, build_hessians=False,
+                        output='GM', build_gradients=True, build_hessians=True,
                         additional_statevars={v.N, v.P, v.T})
 
     zpf_kwargs = {

@@ -214,6 +214,9 @@ class EmceeOptimizer(OptimizerBase):
 
         prior_dict = self.get_priors(prior, symbols_to_fit, initial_guess)
         ctx.update(prior_dict)
+        # Run the initial parameters for guessing purposes:
+        logging.log(TRACE, "Probability for initial parameters")
+        self.predict(initial_guess, **ctx)
         if restart_trace is not None:
             chains = self.initialize_chains_from_trace(restart_trace)
             # TODO: check that the shape is valid with the existing parameters
@@ -227,7 +230,6 @@ class EmceeOptimizer(OptimizerBase):
         self.sampler = sampler
         self.tracefile = tracefile
         self.probfile = probfile
-
         # Run the MCMC simulation
         self.do_sampling(chains, iterations)
 
