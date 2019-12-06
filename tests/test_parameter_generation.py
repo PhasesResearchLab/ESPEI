@@ -140,6 +140,21 @@ def test_mixing_energies_are_fit(datasets_db):
     error = calculate_thermochemical_error(dbf, sorted(read_dbf.elements), thermochemical_data)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
 
+def test_duplicate_parameters_are_not_added_with_input_database(datasets_db):
+    phase_models = {
+        "components": ["AL", "B"],
+        "phases": {
+            "LIQUID" : {
+                "sublattice_model": [["AL", "B"]],
+                "sublattice_site_ratios": [1]
+            }
+        }
+    }
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', 1e-2)
+    assert len(dbf._parameters.search(where('parameter_type') == 'G')) == 2 # each endmember
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', 1e-2, dbf=dbf)
+    assert len(dbf._parameters.search(where('parameter_type') == 'G')) == 2 # each endmember
 
 def test_mixing_energies_are_reduced_with_ridge_alpha(datasets_db):
     """Tests that given mixing energy data, the excess parameter is fit."""
