@@ -17,6 +17,7 @@ composition conditions to calculate chemical potentials at.
 import operator, logging
 from collections import defaultdict, OrderedDict
 
+import math
 import numpy as np
 from scipy.stats import norm
 import tinydb
@@ -60,17 +61,17 @@ class PotentialProblem(Problem):
     self.chem_pot = chem_pot
 
   def objective(self, x_in):
-    output = super(PotentialProblem, self).objective(x_in)
+    orig_obj = super(PotentialProblem, self).objective(x_in)
     mass_grad = super(PotentialProblem, self).mass_gradient(x_in)
     # TODO Remove this hack. The final entry of x_in is the total mass, 
     # the derivative with respect to which gives the composition.
     composition = mass_grad[-1,:]
-    return output + np.inner(self.chem_pot, composition)
+    return orig_obj - np.inner(self.chem_pot, composition)
 
   def gradient(self, x_in):
     original_grad = super(PotentialProblem, self).gradient(x_in)
     mass_grad = super(PotentialProblem, self).mass_gradient(x_in)
-    return original_grad + np.matmul(mass_grad, self.chem_pot)
+    return original_grad - np.matmul(mass_grad, self.chem_pot)
 
 def get_zpf_data(comps, phases, datasets):
     """
@@ -131,37 +132,199 @@ def get_zpf_data(comps, phases, datasets):
     return zpf_data
 
 def calculate_driving_force_at_chem_potential(chem_pot, species, phase_dict, phase_records, str_conds):
-  for key in phase_records:
-    solver = InteriorPointSolver()
-    cs_l = CompositionSet(phase_records[key])
-    potential_problem = PotentialProblem([cs_l], species, str_conds, chem_pot)
-    res = pointsolve([cs_l], species, str_conds, potential_problem, solver)
-  return 0
+    """
+    Calculate the driving force assuming a particular chemical potential.
 
-def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_dict, phase_models, parameters, callables):
-  # TODO Refactor absurd unpacking which represents a significant overhead.
-  species = list(map(v.Species, data_comps))
-  conditions = current_statevars
-  if conditions.get(v.N) is None:
-    conditions[v.N] = 1
-  if np.any(np.array(conditions[v.N]) != 1):
-    raise ConditionError('N!=1 is not yet supported, got N={}'.format(conditions[v.N]))
-  conds = conditions
-  str_conds = OrderedDict([(str(key), conds[key]) for key in sorted(conds.keys(), key=str)])
-  models = instantiate_models(dbf, data_comps, phases, model=phase_models, parameters=parameters)
-  prxs = build_phase_records(dbf, species, phases, conds, models, build_gradients=True, build_hessians=True, callables=callables)
-  phase_dict = {}
-  for ph, cond in ph_cond_dict:
-    ph_conds = cond[0]
-    for key in ph_conds:
-      if ph_conds[key] is None:
-        phase_dict[ph] = None
-    if ph not in phase_dict:
-      ph_conds.update(conditions)
-      phase_records = build_phase_records(dbf, species, [ph], ph_conds, models, build_gradients=True, build_hessians=True, callables=callables)
-      phase_dict[ph] = {'phase_record': phase_records[ph], 'str_conds': OrderedDict([(str(key), ph_conds[key]) for key in sorted(ph_conds.keys(), key=str)])}
-  calculate_driving_force_at_chem_potential(np.array([0, 0]), species, phase_dict, prxs, str_conds)
-  return 0
+    Parameters
+    ----------
+    chem_pot: np.array
+      The chemical potential for the calculation
+    species: list
+      A list of the species involved in the calculation
+    phase_dict: dict
+      A dictionary mapping the phases which occurred in the experiment to a phase
+      record and an str_cond which correspond to the tie point measured (if the tie point is known,
+      None otherwise)
+    phase_records: dict
+      A dictionary of phase records for all phases with no composition specified
+    str_conds: string
+      A string representation of the conditions which are common to all phases.
+      Needed for the solver.
+
+    Notes
+    ---------
+    By fixing the chemical potential, the whole calculation decouples over the different phases.
+    """
+    phase_plane_dict = {}
+    phase_point_dict = {}
+    solver = InteriorPointSolver()
+    # Find hyperplane equilibrium point for each phase.
+    for key in phase_records:
+        cs_l = CompositionSet(phase_records[key])
+        phase_min_problem = PotentialProblem([cs_l], species, str_conds, chem_pot)
+        res = pointsolve([cs_l], species, str_conds, phase_min_problem, solver)
+        if not res.converged:
+            return None
+        phase_plane_dict[key] = chem_pot + cs_l.energy - np.dot(np.asarray(cs_l.X), chem_pot)
+        phase_point_dict[key] = np.asarray(cs_l.X)
+    # Select the best phase and corresponding equilibrium point.
+    lower_plane = np.zeros_like(chem_pot)
+    min_composition = np.zeros_like(chem_pot)
+    started = False
+    for key in phase_plane_dict.keys():
+        if not started:
+            lower_plane = phase_plane_dict[key]
+            min_composition = phase_point_dict[key]
+            started = True
+        else:
+            if lower_plane[0] > phase_plane_dict[key][0]:
+                lower_plane = phase_plane_dict[key]
+                min_composition = phase_point_dict[key]
+    # Calculate driving force to equilibrium for each phase in the data based on potentially available tie lines.
+    driving_force = 0.0
+    grad_vect = np.zeros_like(chem_pot)
+    for key in phase_dict:
+        if phase_dict[key] is None:
+            driving_force += phase_plane_dict[key][0] - lower_plane[0]
+            grad_vect += (phase_point_dict[key] - min_composition)
+        else:
+            cs = CompositionSet(phase_dict[key]['phase_record'])
+            phase_composition_problem = PotentialProblem([cs], species, phase_dict[key]['str_conds'], np.zeros_like(chem_pot))
+            res = pointsolve([cs], species, phase_dict[key]['str_conds'], phase_composition_problem, solver)
+            if not res.converged:
+                return None
+            driving_force += cs.energy - np.dot(np.asarray(cs.X), lower_plane)
+            grad_vect += (np.asarray(cs.X) - min_composition)
+    output_dict = {'driving_force': driving_force, 'grad_vect': grad_vect}
+    return output_dict
+
+def generate_random_hyperplane(species):
+    """
+    Generates a random initial hyperplane.
+
+    Parameters
+    ----------
+    species: list
+      A list of species to be used in the calculation.
+    """
+    dim = len([sp for sp in species if sp.__str__() != 'VA'])
+    circle_sample = np.random.randn(dim)
+    hyperplane = circle_sample / np.abs(circle_sample[-1])
+    hyperplane[-1] = 0
+    return hyperplane
+
+def update_hyperplane(current_hyperplane_input, direction_input, step_size):
+    """
+    Updates hyperplane based upon gradient information obtained from the calculation.
+
+    Parameters
+    ----------
+    current_hyperplane: np.array
+      the current hyperplane
+    direction: np.array
+      the gradient direction
+    step_size: double
+      the desired step size
+
+    Notes
+    ----------
+    Views the hyperplane as a point on the sphere and takes step on the sphere.
+    """
+    current_hyperplane = current_hyperplane_input
+    direction = direction_input
+    current_hyperplane = current_hyperplane - current_hyperplane[-1]
+    direction[-1] = 0
+    current_hyperplane[-1] = 1
+    current_hyperplane /= np.linalg.norm(current_hyperplane)
+    direction -= current_hyperplane * np.inner(current_hyperplane, direction)
+    direction /= np.linalg.norm(direction)
+    new_hyperplane = current_hyperplane * math.cos(step_size) + direction * math.sin(step_size)
+    # If we have rotated out of the half-sphere.
+    if new_hyperplane[-1] <= 0:
+        return None
+    new_hyperplane /= new_hyperplane[-1]
+    new_hyperplane[-1] = 0
+    return new_hyperplane
+
+def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_dict, phase_models, parameters, callables, tol=0.1, max_it=30):
+    """
+    Calculates driving force for a single data point.
+
+    Parameters
+    ----------
+    dbf : pycalphad.Database
+        Database to consider
+    data_comps : list
+        List of active component names
+    phases : list
+        List of phases to consider
+    current_statevars : dict
+        Dictionary of state variables, e.g. v.P and v.T, no compositions.
+    ph_cond_dict : dict
+        Dictionary mapping phases to the conditions at which they occurred in experiment.
+    phase_models : dict
+        Phase models to pass to pycalphad calculations
+    parameters : dict
+        Dictionary of symbols that will be overridden in pycalphad.equilibrium
+    callables : dict
+        Callables to pass to pycalphad
+    tol: double
+        The tolerance allowed for optimization over hyperplanes.
+    max_it: int
+        The maximum number of iterations allowed for optimization over hyperplanes.
+
+    Notes
+    ------
+    Calculates the driving force by optimizing the driving force over the chemical potential.
+    Allow calculation of the driving force even when both tie points are missing.
+    """
+    # TODO Refactor absurd unpacking which represents a significant overhead.
+    species = list(map(v.Species, data_comps))
+    conditions = current_statevars
+    if conditions.get(v.N) is None:
+        conditions[v.N] = 1
+    if np.any(np.array(conditions[v.N]) != 1):
+        raise ConditionError('N!=1 is not yet supported, got N={}'.format(conditions[v.N]))
+    conds = conditions
+    str_conds = OrderedDict([(str(key), conds[key]) for key in sorted(conds.keys(), key=str)])
+    models = instantiate_models(dbf, data_comps, phases, model=phase_models, parameters=parameters)
+    prxs = build_phase_records(dbf, species, phases, conds, models, build_gradients=True, build_hessians=True, callables=callables)
+    phase_dict = {}
+    for ph, cond in ph_cond_dict:
+        ph_conds = cond[0]
+        for key in ph_conds:
+            if ph_conds[key] is None:
+                phase_dict[ph] = None
+        if ph not in phase_dict:
+            ph_conds.update(conditions)
+            phase_records = build_phase_records(dbf, species, [ph], ph_conds, models, build_gradients=True, build_hessians=True, callables=callables)
+            phase_dict[ph] = {'phase_record': phase_records[ph], 'str_conds': OrderedDict([(str(key), ph_conds[key]) for key in sorted(ph_conds.keys(), key=str)])}
+    hyperplane = generate_random_hyperplane(species)
+    result = calculate_driving_force_at_chem_potential(hyperplane, species, phase_dict, prxs, str_conds)
+    # Ignore entire data point if pointsolver fails to converge.
+    if result is None:
+        return 0
+    # Optimize over the hyperplane.
+    it = 0
+    step_size = math.pi / 5
+    current_driving_force = result['driving_force']
+    grad_dir = result['grad_vect']
+    while np.linalg.norm(grad_dir) > tol and it < max_it:
+        it += 1
+        new_hyperplane = update_hyperplane(hyperplane, grad_dir, step_size)
+        if new_hyperplane is None:
+            step_size /= 2
+            continue
+        result = calculate_driving_force_at_chem_potential(new_hyperplane, species, phase_dict, prxs, str_conds)
+        if result is None:
+            return 0
+        if result['driving_force'] < current_driving_force:
+            hyperplane = new_hyperplane
+            current_driving_force = result['driving_force']
+            grad_dir = result['grad_vect']
+        else:
+            step_size /= 2
+    return current_driving_force
 
 def calculate_zpf_error(dbf, phases, zpf_data, phase_models=None,
                         parameters=None, callables=None, data_weight=1.0,
