@@ -81,8 +81,8 @@ def get_samples(desired_data):
 
     Returns
     -------
-    list
-        List of sample values that are properly transformed.
+    List[Tuple[float, Tuple[float, float]]]
+        Tuples of (temperature, (site fraction product, interaction product))
 
     Notes
     -----
@@ -103,6 +103,7 @@ def get_samples(desired_data):
         comp_features = zip(site_fraction_product, interaction_product)
         all_samples.extend(list(itertools.product(temperatures, comp_features)))
     return all_samples
+
 
 def get_weights(desired_data):
     weights = []
