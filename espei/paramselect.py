@@ -177,6 +177,27 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
             # Flatten list
             site_fractions = list(itertools.chain(*site_fractions))
 
+            # data quantities are the same for each candidate model and can be computed up front
+            data_qtys = np.concatenate(shift_reference_state(desired_data, feature_transforms[desired_props[0]], fixed_model, moles_per_formula_unit), axis=-1)
+            # Remove existing partial model contributions from the data
+            data_qtys = data_qtys - feature_transforms[desired_props[0]](fixed_model.ast)
+            # Subtract out high-order (in T) parameters we've already fit
+            data_qtys = data_qtys - feature_transforms[desired_props[0]](sum(fixed_portions))
+            # if any site fractions show up in our data_qtys that aren't in this datasets site fractions, set them to zero.
+            for sf, i, (_, (sf_product, inter_product)) in zip(site_fractions, data_qtys, all_samples):
+                missing_variables = sympy.S(i).atoms(v.SiteFraction) - set(sf.keys())
+                sf.update({x: 0. for x in missing_variables})
+                # The equations we have just have the site fractions as YS
+                # and interaction products as Z, so take the product of all
+                # the site fractions that we see in our data qtys
+                if hasattr(inter_product, '__len__'):  # Z is an array of [V_I, V_J, V_K]
+                    sf.update({YS: sf_product, V_I: inter_product[0], V_J: inter_product[1], V_K: inter_product[2]})
+                else:  # Z is probably a number
+                    sf.update({YS: sf_product, Z: inter_product})
+            data_qtys = [sympy.S(i).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
+                         for i, sf, ixx in zip(data_qtys, site_fractions, all_samples)]
+            data_qtys = np.asarray(data_qtys, dtype=np.float)
+
             # build the candidate model transformation matrix and response vector (A, b in Ax=b)
             feature_matricies = []
             data_quantities = []
@@ -185,30 +206,6 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                     feature_matricies.append(build_ternary_feature_matrix(desired_props[0], candidate_model, desired_data))
                 else:
                     feature_matricies.append(_build_feature_matrix(desired_props[0], candidate_model, desired_data))
-
-                data_qtys = np.concatenate(shift_reference_state(desired_data, feature_transforms[desired_props[0]], fixed_model, moles_per_formula_unit), axis=-1)
-
-                # Remove existing partial model contributions from the data
-                data_qtys = data_qtys - feature_transforms[desired_props[0]](fixed_model.ast)
-                # Subtract out high-order (in T) parameters we've already fit
-                data_qtys = data_qtys - feature_transforms[desired_props[0]](sum(fixed_portions))
-
-                # if any site fractions show up in our data_qtys that aren't in this datasets site fractions, set them to zero.
-                for sf, i, (_, (sf_product, inter_product)) in zip(site_fractions, data_qtys, all_samples):
-                    missing_variables = sympy.S(i).atoms(v.SiteFraction) - set(sf.keys())
-                    sf.update({x: 0. for x in missing_variables})
-                    # The equations we have just have the site fractions as YS
-                    # and interaction products as Z, so take the product of all
-                    # the site fractions that we see in our data qtys
-                    if hasattr(inter_product, '__len__'):  # Z is an array of [V_I, V_J, V_K]
-                        sf.update({YS: sf_product, V_I: inter_product[0], V_J: inter_product[1], V_K: inter_product[2]})
-                    else:  # Z is probably a number
-                        sf.update({YS: sf_product, Z: inter_product})
-
-                # but all of our fits are per-formula-unit
-                data_qtys = [sympy.S(i).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
-                                   for i, sf, ixx in zip(data_qtys, site_fractions, all_samples)]
-                data_qtys = np.asarray(data_qtys, dtype=np.float)
                 data_quantities.append(data_qtys)
 
             # provide candidate models and get back a selected model.
