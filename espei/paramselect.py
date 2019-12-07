@@ -15,7 +15,7 @@ Cp - TlnT, T**2, T**-1, T**3 - 4 candidate models
 Choose parameter set with best AICc score.
 
 """
-import itertools
+
 import logging
 import operator
 from collections import OrderedDict
@@ -31,10 +31,10 @@ from espei.core_utils import get_data, get_samples, get_weights
 from espei.parameter_selection.model_building import build_candidate_models
 from espei.parameter_selection.selection import select_model
 from espei.parameter_selection.ternary_parameters import build_ternary_feature_matrix
-from espei.parameter_selection.utils import feature_transforms, shift_reference_state
+from espei.parameter_selection.utils import get_data_quantities, feature_transforms
 from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
     tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
-from espei.utils import PickleableTinyDB, sigfigs, build_sitefractions
+from espei.utils import PickleableTinyDB, sigfigs
 
 
 TRACE = 15  # TRACE logging level
@@ -149,9 +149,6 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     fixed_portions = [0]
 
     moles_per_formula_unit = sympy.S(0)  # units: moles-atom/moles-formula-unit
-    YS = sympy.Symbol('YS')  # site fraction symbol that we will reuse
-    Z = sympy.Symbol('Z')  # site fraction symbol that we will reuse
-    V_I, V_J, V_K = sympy.Symbol('V_I'), sympy.Symbol('V_J'), sympy.Symbol('V_K')
     subl_idx = 0
     for num_sites, const in zip(dbf.phases[phase_name].sublattices, dbf.phases[phase_name].constituents):
         if v.Species('VA') in const:
@@ -171,32 +168,8 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
 
             # We assume all properties in the same fitting step have the same features (all CPM, all HM, etc.) (but different ref states)
             all_samples = get_samples(desired_data)
-            site_fractions = [build_sitefractions(phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies',
-                                 np.ones((len(ds['solver']['sublattice_configurations']), len(ds['solver']['sublattice_configurations'][0])), dtype=np.float)))
-                              for ds in desired_data for _ in ds['conditions']['T']]
-            # Flatten list
-            site_fractions = list(itertools.chain(*site_fractions))
-
             # data quantities are the same for each candidate model and can be computed up front
-            data_qtys = np.concatenate(shift_reference_state(desired_data, feature_transforms[desired_props[0]], fixed_model, moles_per_formula_unit), axis=-1)
-            # Remove existing partial model contributions from the data
-            data_qtys = data_qtys - feature_transforms[desired_props[0]](fixed_model.ast)
-            # Subtract out high-order (in T) parameters we've already fit
-            data_qtys = data_qtys - feature_transforms[desired_props[0]](sum(fixed_portions))
-            # if any site fractions show up in our data_qtys that aren't in this datasets site fractions, set them to zero.
-            for sf, i, (_, (sf_product, inter_product)) in zip(site_fractions, data_qtys, all_samples):
-                missing_variables = sympy.S(i).atoms(v.SiteFraction) - set(sf.keys())
-                sf.update({x: 0. for x in missing_variables})
-                # The equations we have just have the site fractions as YS
-                # and interaction products as Z, so take the product of all
-                # the site fractions that we see in our data qtys
-                if hasattr(inter_product, '__len__'):  # Z is an array of [V_I, V_J, V_K]
-                    sf.update({YS: sf_product, V_I: inter_product[0], V_J: inter_product[1], V_K: inter_product[2]})
-                else:  # Z is probably a number
-                    sf.update({YS: sf_product, Z: inter_product})
-            data_qtys = [sympy.S(i).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
-                         for i, sf, ixx in zip(data_qtys, site_fractions, all_samples)]
-            data_qtys = np.asarray(data_qtys, dtype=np.float)
+            data_qtys = get_data_quantities(feature_type, fixed_model, moles_per_formula_unit, fixed_portions, desired_data, all_samples)
 
             # build the candidate model transformation matrix and response vector (A, b in Ax=b)
             feature_matricies = []
