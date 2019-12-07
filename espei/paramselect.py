@@ -127,9 +127,9 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     # create the candidate models and fitting steps
     if features is None:
         features = OrderedDict([("CPM_FORM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3)),
-                    ("SM_FORM", (v.T,)),
-                    ("HM_FORM", (sympy.S.One,))
-                    ])
+                                ("SM_FORM", (v.T,)),
+                                ("HM_FORM", (sympy.S.One,)),
+                                ])
     # dict of {feature, [candidate_models]}
     candidate_models_features = build_candidate_models(configuration, features)
 
@@ -148,7 +148,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
     fixed_portions = [0]
 
-    moles_per_formula_unit = sympy.S(0)
+    moles_per_formula_unit = sympy.S(0)  # units: moles-atom/moles-formula-unit
     YS = sympy.Symbol('YS')  # site fraction symbol that we will reuse
     Z = sympy.Symbol('Z')  # site fraction symbol that we will reuse
     V_I, V_J, V_K = sympy.Symbol('V_I'), sympy.Symbol('V_J'), sympy.Symbol('V_K')
@@ -191,11 +191,11 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                 # Remove existing partial model contributions from the data
                 data_qtys = data_qtys - feature_transforms[desired_props[0]](fixed_model.ast)
                 # Subtract out high-order (in T) parameters we've already fit
-                data_qtys = data_qtys - feature_transforms[desired_props[0]](sum(fixed_portions)) / moles_per_formula_unit
+                data_qtys = data_qtys - feature_transforms[desired_props[0]](sum(fixed_portions))
 
                 # if any site fractions show up in our data_qtys that aren't in this datasets site fractions, set them to zero.
                 for sf, i, (_, (sf_product, inter_product)) in zip(site_fractions, data_qtys, all_samples):
-                    missing_variables = sympy.S(i * moles_per_formula_unit).atoms(v.SiteFraction) - set(sf.keys())
+                    missing_variables = sympy.S(i).atoms(v.SiteFraction) - set(sf.keys())
                     sf.update({x: 0. for x in missing_variables})
                     # The equations we have just have the site fractions as YS
                     # and interaction products as Z, so take the product of all
@@ -205,9 +205,8 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                     else:  # Z is probably a number
                         sf.update({YS: sf_product, Z: inter_product})
 
-                # moles_per_formula_unit factor is here because our data is stored per-atom
                 # but all of our fits are per-formula-unit
-                data_qtys = [sympy.S(i * moles_per_formula_unit).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
+                data_qtys = [sympy.S(i).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
                                    for i, sf, ixx in zip(data_qtys, site_fractions, all_samples)]
                 data_qtys = np.asarray(data_qtys, dtype=np.float)
                 data_quantities.append(data_qtys)
