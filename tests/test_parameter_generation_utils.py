@@ -127,3 +127,47 @@ def test_get_data_quantities_mixing_entropy():
     qty = get_data_quantities('SM_MIX', mod, [0], data)
     print(qty)
     assert np.all(np.isclose([7.27266667], qty))
+
+
+def test_get_data_quantities_magnetic_energy():
+    data = [{"components": ["AL", "CR"], "phases": ["ALCR2"], "solver": {"mode": "manual", "sublattice_site_ratios": [1.0, 2.0], "sublattice_configurations": [["AL", "CR"]]}, "conditions": {"P": [101325], "T": [300]}, "excluded_model_contributions": ["idmix", "mag"], "output": "SM_FORM", "values": [[[5.59631999999999]]]}]
+    # First test without any magnetic parameters
+    dbf_nomag = Database("""
+    ELEMENT AL FCC_A1 26.982 4577.3 28.322 !
+    ELEMENT CR BCC_A2 51.996 4050.0 23.56 !
+
+    PHASE ALCR2 %  2 1.0 2.0 !
+    CONSTITUENT ALCR2 :AL,CR:AL,CR: !
+    """)
+    mod_nomag = Model(dbf_nomag, ['AL', 'CR'], 'ALCR2')
+    qty_nomag = get_data_quantities('SM_FORM', mod_nomag, [0], data)
+    print(qty_nomag)
+    assert np.all(np.isclose([16.78896], qty_nomag))
+
+    # Then with magnetic parameters, which are excluded model contributions
+    dbf = Database("""
+    ELEMENT AL   FCC_A1                    2.6982E+01  4.5773E+03  2.8322E+01!
+    ELEMENT CR   BCC_A2                    5.1996E+01  4.0500E+03  2.3560E+01!
+
+    TYPE_DEFINITION & GES A_P_D ALCR2 MAGNETIC  -1.0    4.00000E-01 !
+    PHASE ALCR2  %&  2 1   2 !
+    CONSTITUENT ALCR2  :AL,CR : AL,CR :  !
+
+    PARAMETER TC(ALCR2,AL:AL;0)            298.15 -619; 6000 N REF0 !
+    PARAMETER BMAGN(ALCR2,AL:AL;0)         298.15 -.92; 6000 N REF0 !
+    PARAMETER TC(ALCR2,CR:AL;0)            298.15 -619; 6000 N REF0 !
+    PARAMETER BMAGN(ALCR2,CR:AL;0)         298.15 -.92; 6000 N REF0 !
+    PARAMETER TC(ALCR2,AL:CR;0)            298.15 -619; 6000 N REF0 !
+    PARAMETER BMAGN(ALCR2,AL:CR;0)         298.15 -.92; 6000 N REF0 !
+    PARAMETER TC(ALCR2,CR:CR;0)            298.15 -619; 6000 N REF0 !
+    PARAMETER BMAGN(ALCR2,CR:CR;0)         298.15 -.92; 6000 N REF0 !
+    PARAMETER TC(ALCR2,AL,CR:AL;0)         298.15 -485; 6000 N REF0 !
+    PARAMETER BMAGN(ALCR2,AL,CR:AL;0)      298.15 -.92; 6000 N REF0 !
+    PARAMETER TC(ALCR2,AL,CR:CR;0)         298.15 -485; 6000 N REF0 !
+    PARAMETER BMAGN(ALCR2,AL,CR:CR;0)      298.15 -.92; 6000 N REF0 !
+    """)
+    mod = Model(dbf, ['AL', 'CR'], 'ALCR2')
+    qty = get_data_quantities('SM_FORM', mod, [0], data)
+    print(qty)
+    assert np.all(np.isclose([16.78896], qty))
+
