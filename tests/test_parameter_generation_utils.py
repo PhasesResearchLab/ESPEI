@@ -170,4 +170,3 @@ def test_get_data_quantities_magnetic_energy():
     qty = get_data_quantities('SM_FORM', mod, [0], data)
     print(qty)
     assert np.all(np.isclose([16.78896], qty))
-

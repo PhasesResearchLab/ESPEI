@@ -57,19 +57,19 @@ def shift_reference_state(desired_data, feature_transform, fixed_model, mole_ato
     total_response = []
     for dataset in desired_data:
         values = np.asarray(dataset['values'], dtype=np.object)*mole_atoms_per_mole_formula_unit
-        if dataset['solver'].get('sublattice_occupancies', None) is not None:
-            value_idx = 0
-            for occupancy, config in zip(dataset['solver']['sublattice_occupancies'], dataset['solver']['sublattice_configurations']):
-                if dataset['output'].endswith('_FORM'):
-                    pass
-                elif dataset['output'].endswith('_MIX'):
-                    values[..., value_idx] += feature_transform(fixed_model.models['ref'])*mole_atoms_per_mole_formula_unit
+        for config_idx in range(len(dataset['solver']['sublattice_configurations'])):
+            occupancy = dataset['solver'].get('sublattice_occupancies', None)
+            if dataset['output'].endswith('_FORM'):
+                pass
+            elif dataset['output'].endswith('_MIX'):
+                if occupancy is None:
+                    raise ValueError('Cannot have a _MIX property without sublattice occupancies.')
                 else:
-                    raise ValueError('Unknown property to shift: {}'.format(dataset['output']))
-                # These contributions are not present in the data, we need to add them here explicitly
-                for excluded_contrib in dataset.get('excluded_model_contributions', []):
-                    values[..., value_idx] += feature_transform(fixed_model.models[excluded_contrib])*mole_atoms_per_mole_formula_unit
-                value_idx += 1
+                    values[..., config_idx] += feature_transform(fixed_model.models['ref'])*mole_atoms_per_mole_formula_unit
+            else:
+                raise ValueError(f'Unknown property to shift: {dataset["output"]}')
+            for excluded_contrib in dataset.get('excluded_model_contributions', []):
+                values[..., config_idx] += feature_transform(fixed_model.models[excluded_contrib])*mole_atoms_per_mole_formula_unit
         total_response.append(values.flatten())
     return total_response
 
