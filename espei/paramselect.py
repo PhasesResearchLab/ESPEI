@@ -148,15 +148,6 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
     fixed_portions = [0]
 
-    moles_per_formula_unit = sympy.S(0)  # units: moles-atom/moles-formula-unit
-    subl_idx = 0
-    for num_sites, const in zip(dbf.phases[phase_name].sublattices, dbf.phases[phase_name].constituents):
-        if v.Species('VA') in const:
-            moles_per_formula_unit += num_sites * (1 - v.SiteFraction(phase_name, subl_idx, v.Species('VA')))
-        else:
-            moles_per_formula_unit += num_sites
-        subl_idx += 1
-
     for desired_props in fitting_steps:
         feature_type = desired_props[0].split('_')[0]  # HM_FORM -> HM
         aicc_factor = aicc_feature_factors.get(feature_type, 1.0)
@@ -166,10 +157,10 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
             # Ravelled weights for all data
             weights = get_weights(desired_data)
 
-            # We assume all properties in the same fitting step have the same features (all CPM, all HM, etc.) (but different ref states)
-            all_samples = get_samples(desired_data)
+            # We assume all properties in the same fitting step have the same
+            # features (all CPM, all HM, etc., but different ref states).
             # data quantities are the same for each candidate model and can be computed up front
-            data_qtys = get_data_quantities(feature_type, fixed_model, moles_per_formula_unit, fixed_portions, desired_data, all_samples)
+            data_qtys = get_data_quantities(feature_type, fixed_model, fixed_portions, desired_data)
 
             # build the candidate model transformation matrix and response vector (A, b in Ax=b)
             feature_matricies = []

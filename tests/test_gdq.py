@@ -2,22 +2,9 @@ from espei.parameter_selection.utils import get_data_quantities
 from pycalphad import Database, Model, variables as v
 from espei.core_utils import get_samples
 
-import sympy
 import numpy as np
 from numpy import array
 from sympy import log, Piecewise
-
-
-def compute_moles_fu(dbf, phase_name):
-    moles_per_formula_unit = sympy.S(0)  # units: moles-atom/moles-formula-unit
-    subl_idx = 0
-    for num_sites, const in zip(dbf.phases[phase_name].sublattices, dbf.phases[phase_name].constituents):
-        if v.Species('VA') in const:
-            moles_per_formula_unit += num_sites * (1 - v.SiteFraction(phase_name, subl_idx, v.Species('VA')))
-        else:
-            moles_per_formula_unit += num_sites
-        subl_idx += 1
-    return moles_per_formula_unit
 
 
 def test_get_data_quantities_AL_NI_VA_interaction():
@@ -65,13 +52,12 @@ def test_get_data_quantities_AL_NI_VA_interaction():
     dd['GM'] = NEW_GM
     mod.models = dd
     print(mod.HM)
-    moles_per_formula_unit = compute_moles_fu(dbf, 'BCC_B2')
-    print(moles_per_formula_unit)
     print(get_samples(data))
-    # desired_property, fixed_model, moles_per_formula_unit, fixed_portions, data, samples
-    qty = get_data_quantities('HM_FORM', mod, moles_per_formula_unit, [0], data, get_samples(data))
+    # desired_property, fixed_model, fixed_portions, data, samples
+    qty = get_data_quantities('HM_FORM', mod, [0], data)
     print(qty)
     assert np.all(np.isclose([-6254.7802775, -5126.1206475, -7458.3974225, -6358.04118875], qty))
+
 
 def test_get_data_quantities_mixing_entropy():
     """Test that mixing entropy produces correct data quantities.
@@ -88,11 +74,9 @@ def test_get_data_quantities_mixing_entropy():
 
     """)
     mod = Model(dbf, ['AL', 'CR'], 'AL11CR2')
-    moles_per_formula_unit = compute_moles_fu(dbf, 'AL11CR2')
-    print(moles_per_formula_unit)
     print(get_samples(data))
-    # desired_property, fixed_model, moles_per_formula_unit, fixed_portions, data, samples
-    qty = get_data_quantities('SM_MIX', mod, moles_per_formula_unit, [0], data, get_samples(data))
+    # desired_property, fixed_model, fixed_portions, data, samples
+    qty = get_data_quantities('SM_MIX', mod, [0], data)
     print(qty)
     assert np.all(np.isclose([7.27266667], qty))
 

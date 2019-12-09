@@ -7,6 +7,7 @@ import numpy as np
 import sympy
 from pycalphad import variables as v
 from espei.utils import build_sitefractions
+from espei.core_utils import get_samples
 
 feature_transforms = {"CPM_FORM": lambda GM: -v.T*sympy.diff(GM, v.T, 2),
                       "CPM_MIX": lambda GM: -v.T*sympy.diff(GM, v.T, 2),
@@ -73,7 +74,7 @@ def shift_reference_state(desired_data, feature_transform, fixed_model, mole_ato
     return total_response
 
 
-def get_data_quantities(desired_property, fixed_model, mole_atoms_per_mole_formula_unit, fixed_portions, data, samples):
+def get_data_quantities(desired_property, fixed_model, fixed_portions, data):
     """
     Parameters
     ----------
@@ -82,16 +83,12 @@ def get_data_quantities(desired_property, fixed_model, mole_atoms_per_mole_formu
     fixed_model : pycalphad.Model
         Model with all lower order (in composition) terms already fit. Pure
         element reference state (GHSER functions) should be set to zero.
-    mole_atoms_per_mole_formula_unit : float
-        Number of moles of atoms in every mole formula unit.
     fixed_portions : List[sympy.Expr]
         SymPy expressions for model parameters and interaction productions for
         higher order (in T) terms for this property, e.g. [0, 3.0*YS*v.T]. In
         [qty]/mole-formula.
     data : List[Dict[str, Any]]
         ESPEI single phase datasets for this property.
-    samples : List[Tuple[float, Tuple[float, float]]]
-        Tuples of (temperature, (site fraction product, interaction product))
 
     Returns
     -------
@@ -106,6 +103,8 @@ def get_data_quantities(desired_property, fixed_model, mole_atoms_per_mole_formu
     units to [qty]/mole-formula.
 
     """
+    mole_atoms_per_mole_formula_unit = fixed_model._site_ratio_normalization
+    samples = get_samples(data)
     # Define site fraction symbols that will be reused
     YS = sympy.Symbol('YS')
     Z = sympy.Symbol('Z')
