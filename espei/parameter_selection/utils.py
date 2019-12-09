@@ -48,9 +48,7 @@ def shift_reference_state(desired_data, feature_transform, fixed_model, moles_pe
     """
     total_response = []
     for dataset in desired_data:
-        # Transform data from J/mole-atom to J/mole-formula (or J/K-mole-atom to J/K-mole-formula etc.)
-        # The pycalphad Model quantities are all per mole-formula
-        values = np.asarray(dataset['values'], dtype=np.object)*moles_per_formula_unit
+        values = np.asarray(dataset['values'], dtype=np.object)
         if dataset['solver'].get('sublattice_occupancies', None) is not None:
             value_idx = 0
             for occupancy, config in zip(dataset['solver']['sublattice_occupancies'], dataset['solver']['sublattice_configurations']):
@@ -112,10 +110,10 @@ def get_data_quantities(desired_property, fixed_model, moles_per_formula_unit, f
     # Remove existing partial model contributions from the data
     data_qtys = data_qtys - feat_transform(fixed_model.ast)
     # Subtract out high-order (in T) parameters we've already fit
-    data_qtys = data_qtys - feat_transform(sum(fixed_portions))
+    data_qtys = data_qtys - feat_transform(sum(fixed_portions))/moles_per_formula_unit
     # if any site fractions show up in our data_qtys that aren't in this datasets site fractions, set them to zero.
     for sf, i, (_, (sf_product, inter_product)) in zip(site_fractions, data_qtys, samples):
-        missing_variables = sympy.S(i).atoms(v.SiteFraction) - set(sf.keys())
+        missing_variables = sympy.S(i*moles_per_formula_unit).atoms(v.SiteFraction) - set(sf.keys())
         sf.update({x: 0. for x in missing_variables})
         # The equations we have just have the site fractions as YS
         # and interaction products as Z, so take the product of all
@@ -124,7 +122,7 @@ def get_data_quantities(desired_property, fixed_model, moles_per_formula_unit, f
             sf.update({YS: sf_product, V_I: inter_product[0], V_J: inter_product[1], V_K: inter_product[2]})
         else:  # Z is probably a number
             sf.update({YS: sf_product, Z: inter_product})
-    data_qtys = [sympy.S(i).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
+    data_qtys = [sympy.S(i*moles_per_formula_unit).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
                  for i, sf, ixx in zip(data_qtys, site_fractions, samples)]
     data_qtys = np.asarray(data_qtys, dtype=np.float)
     return data_qtys
