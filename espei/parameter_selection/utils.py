@@ -19,9 +19,9 @@ feature_transforms = {"CPM_FORM": lambda GM: -v.T*sympy.diff(GM, v.T, 2),
                       "HM": lambda GM: GM - v.T*sympy.diff(GM, v.T)}
 
 
-def shift_reference_state(desired_data, feature_transform, fixed_model, moles_per_formula_unit):
+def shift_reference_state(desired_data, feature_transform, fixed_model, mole_atoms_per_mole_formula_unit):
     """
-    Shift _MIX or _FORM data to a common reference state in per mole-formula units.
+    Shift _MIX or _FORM data to a common reference state in per mole-atom units.
 
     Parameters
     ----------
@@ -33,8 +33,8 @@ def shift_reference_state(desired_data, feature_transform, fixed_model, moles_pe
     fixed_model : pycalphad.Model
         Model with all lower order (in composition) terms already fit. Pure
         element reference state (GHSER functions) should be set to zero.
-    moles_per_formula_unit : float
-        Number of moles of atoms in every mole formula unit.
+    mole_atoms_per_mole_formula_unit : float
+        Number of moles of atoms in every mole atom unit.
 
     Returns
     -------
@@ -45,28 +45,35 @@ def shift_reference_state(desired_data, feature_transform, fixed_model, moles_pe
     ------
     ValueError
 
+    Notes
+    -----
+    pycalphad Model parameters are stored as per mole-formula quantites, but
+    the calculated properties and our data are all in [qty]/mole-atoms. We
+    multiply by mole-atoms/mole-formula to convert the units to
+    [qty]/mole-formula.
+
     """
     total_response = []
     for dataset in desired_data:
-        values = np.asarray(dataset['values'], dtype=np.object)
+        values = np.asarray(dataset['values'], dtype=np.object)*mole_atoms_per_mole_formula_unit
         if dataset['solver'].get('sublattice_occupancies', None) is not None:
             value_idx = 0
             for occupancy, config in zip(dataset['solver']['sublattice_occupancies'], dataset['solver']['sublattice_configurations']):
                 if dataset['output'].endswith('_FORM'):
                     pass
                 elif dataset['output'].endswith('_MIX'):
-                    values[..., value_idx] += feature_transform(fixed_model.models['ref'])
+                    values[..., value_idx] += feature_transform(fixed_model.models['ref'])*mole_atoms_per_mole_formula_unit
                 else:
                     raise ValueError('Unknown property to shift: {}'.format(dataset['output']))
                 # These contributions are not present in the data, we need to add them here explicitly
                 for excluded_contrib in dataset.get('excluded_model_contributions', []):
-                    values[..., value_idx] += feature_transform(fixed_model.models[excluded_contrib])
+                    values[..., value_idx] += feature_transform(fixed_model.models[excluded_contrib])*mole_atoms_per_mole_formula_unit
                 value_idx += 1
         total_response.append(values.flatten())
     return total_response
 
 
-def get_data_quantities(desired_property, fixed_model, moles_per_formula_unit, fixed_portions, data, samples):
+def get_data_quantities(desired_property, fixed_model, mole_atoms_per_mole_formula_unit, fixed_portions, data, samples):
     """
     Parameters
     ----------
@@ -75,11 +82,12 @@ def get_data_quantities(desired_property, fixed_model, moles_per_formula_unit, f
     fixed_model : pycalphad.Model
         Model with all lower order (in composition) terms already fit. Pure
         element reference state (GHSER functions) should be set to zero.
-    moles_per_formula_unit : float
+    mole_atoms_per_mole_formula_unit : float
         Number of moles of atoms in every mole formula unit.
     fixed_portions : List[sympy.Expr]
-        SymPy expressions for parameters and interaction productions for higher
-        order (in T) terms for this property, e.g. [0, 3.0*YS*v.T]
+        SymPy expressions for model parameters and interaction productions for
+        higher order (in T) terms for this property, e.g. [0, 3.0*YS*v.T]. In
+        [qty]/mole-formula.
     data : List[Dict[str, Any]]
         ESPEI single phase datasets for this property.
     samples : List[Tuple[float, Tuple[float, float]]]
@@ -89,6 +97,13 @@ def get_data_quantities(desired_property, fixed_model, moles_per_formula_unit, f
     -------
     np.ndarray[:]
         Ravelled data quantities in [qty]/mole-formula
+
+    Notes
+    -----
+    pycalphad Model parameters (and therefore fixed_portions) are stored as per
+    mole-formula quantites, but the calculated properties and our data are all
+    in [qty]/mole-atoms. We multiply by mole-atoms/mole-formula to convert the
+    units to [qty]/mole-formula.
 
     """
     # Define site fraction symbols that will be reused
@@ -106,14 +121,14 @@ def get_data_quantities(desired_property, fixed_model, moles_per_formula_unit, f
     site_fractions = list(itertools.chain(*site_fractions))
 
     feat_transform = feature_transforms[desired_property]
-    data_qtys = np.concatenate(shift_reference_state(data, feat_transform, fixed_model, moles_per_formula_unit), axis=-1)
-    # Remove existing partial model contributions from the data
-    data_qtys = data_qtys - feat_transform(fixed_model.ast)
-    # Subtract out high-order (in T) parameters we've already fit
-    data_qtys = data_qtys - feat_transform(sum(fixed_portions))/moles_per_formula_unit
+    data_qtys = np.concatenate(shift_reference_state(data, feat_transform, fixed_model, mole_atoms_per_mole_formula_unit), axis=-1)
+    # Remove existing partial model contributions from the data, convert to per mole-formula units
+    data_qtys = data_qtys - feat_transform(fixed_model.ast)*mole_atoms_per_mole_formula_unit
+    # Subtract out high-order (in T) parameters we've already fit, already in per mole-formula units
+    data_qtys = data_qtys - feat_transform(sum(fixed_portions))
     # if any site fractions show up in our data_qtys that aren't in this datasets site fractions, set them to zero.
     for sf, i, (_, (sf_product, inter_product)) in zip(site_fractions, data_qtys, samples):
-        missing_variables = sympy.S(i*moles_per_formula_unit).atoms(v.SiteFraction) - set(sf.keys())
+        missing_variables = sympy.S(i).atoms(v.SiteFraction) - set(sf.keys())
         sf.update({x: 0. for x in missing_variables})
         # The equations we have just have the site fractions as YS
         # and interaction products as Z, so take the product of all
@@ -122,7 +137,7 @@ def get_data_quantities(desired_property, fixed_model, moles_per_formula_unit, f
             sf.update({YS: sf_product, V_I: inter_product[0], V_J: inter_product[1], V_K: inter_product[2]})
         else:  # Z is probably a number
             sf.update({YS: sf_product, Z: inter_product})
-    data_qtys = [sympy.S(i*moles_per_formula_unit).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
+    data_qtys = [sympy.S(i).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
                  for i, sf, ixx in zip(data_qtys, site_fractions, samples)]
     data_qtys = np.asarray(data_qtys, dtype=np.float)
     return data_qtys
