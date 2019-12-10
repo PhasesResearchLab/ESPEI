@@ -44,6 +44,7 @@ setup(
         ],
         'mpi': [
             'mpi4py',
+            'dask-mpi>=2',
         ]
     },
     classifiers=[

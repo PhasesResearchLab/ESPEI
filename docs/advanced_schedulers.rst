@@ -32,8 +32,28 @@ Starting a scheduler
 MPI-based dask scheduler
 ------------------------
 
-Dask provides a ``dask-mpi`` command that sets this up for you and creates a scheduler file to pass to ESPEI.
+Dask provides a ``dask-mpi`` package that sets this up for you and creates a scheduler file to pass to ESPEI.
 The scheduler information will be serialized as a JSON file that you set in your ESPEI input file.
+
+The dask-mpi package (version 2.0.0 or greater) must be installed before you can use it:
+
+.. code-block:: bash
+
+    conda install -c conda-forge --yes "dask-mpi>=2"
+
+Note that you may also need a particular MPI implementation, conda-forge provides packages for OpenMPI or MPICH. You can pick a particular one by installing dask-mpi using either:
+
+.. code-block:: bash
+
+    conda install -c conda-forge --yes "dask-mpi>=2" "mpi=*=openmpi"
+
+or
+
+.. code-block:: bash
+
+    conda install -c conda-forge --yes "dask-mpi>=2" "mpi=*=mpich"
+
+or let conda pick one for you by not including any.
 
 To start the scheduler and workers in the background, you can run the ``dask-mpi`` command (use ``dask-mpi --help`` to check the arguments).
 The following command will start a scheduler on the main MPI task, then a worker for each remaining MPI task that ``mpirun`` sees.

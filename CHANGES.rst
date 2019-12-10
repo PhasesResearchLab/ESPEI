@@ -2,6 +2,13 @@
 What's New
 ==========
 
+0.7.4 (2019-12-09)
+==================
+
+This release includes small fixes for parameter generation.
+
+* Excluded model contributions are fixed for models with different sublattice site ratios and for data that are not endmembers (`@bocklund`_ - `#113 <https://github.com/PhasesResearchLab/ESPEI/pull/113>`_)
+
 0.7.3 (2019-12-02)
 ==================
 
