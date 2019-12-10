@@ -155,15 +155,17 @@ def calculate_driving_force_at_chem_potential(chem_pot, species, phase_dict, pha
     ---------
     By fixing the chemical potential, the whole calculation decouples over the different phases.
     """
+    species = sorted(species, key=str)
     phase_plane_dict = {}
     phase_point_dict = {}
     solver = InteriorPointSolver()
     # Find hyperplane equilibrium point for each phase.
     for key in phase_records:
         cs_l = CompositionSet(phase_records[key])
-        phase_min_problem = PotentialProblem([cs_l], species, str_conds, chem_pot)
+        phase_min_problem = prob = PotentialProblem([cs_l], species, str_conds, chem_pot)
         res = pointsolve([cs_l], species, str_conds, phase_min_problem, solver)
         if not res.converged:
+            logging.debug('Pointsolver failed to Converge')
             return None
         phase_plane_dict[key] = chem_pot + cs_l.energy - np.dot(np.asarray(cs_l.X), chem_pot)
         phase_point_dict[key] = np.asarray(cs_l.X)
@@ -192,6 +194,7 @@ def calculate_driving_force_at_chem_potential(chem_pot, species, phase_dict, pha
             phase_composition_problem = PotentialProblem([cs], species, phase_dict[key]['str_conds'], np.zeros_like(chem_pot))
             res = pointsolve([cs], species, phase_dict[key]['str_conds'], phase_composition_problem, solver)
             if not res.converged:
+                logging.debug('Pointsolver failed to Converge')
                 return None
             driving_force += cs.energy - np.dot(np.asarray(cs.X), lower_plane)
             grad_vect += (np.asarray(cs.X) - min_composition)
@@ -230,8 +233,8 @@ def update_hyperplane(current_hyperplane_input, direction_input, step_size):
     ----------
     Views the hyperplane as a point on the sphere and takes step on the sphere.
     """
-    current_hyperplane = current_hyperplane_input
-    direction = direction_input
+    current_hyperplane = np.copy(current_hyperplane_input)
+    direction = np.copy(direction_input)
     current_hyperplane = current_hyperplane - current_hyperplane[-1]
     direction[-1] = 0
     current_hyperplane[-1] = 1
@@ -282,13 +285,13 @@ def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_
     species = list(map(v.Species, data_comps))
     conditions = current_statevars
     if conditions.get(v.N) is None:
-        conditions[v.N] = 1
+        conditions[v.N] = 1.0
     if np.any(np.array(conditions[v.N]) != 1):
         raise ConditionError('N!=1 is not yet supported, got N={}'.format(conditions[v.N]))
     conds = conditions
     str_conds = OrderedDict([(str(key), conds[key]) for key in sorted(conds.keys(), key=str)])
     models = instantiate_models(dbf, data_comps, phases, model=phase_models, parameters=parameters)
-    prxs = build_phase_records(dbf, species, phases, conds, models, build_gradients=True, build_hessians=True, callables=callables)
+    prxs = build_phase_records(dbf, species, phases, conds, models, build_gradients=True, build_hessians=True, callables=callables, parameters=parameters)
     phase_dict = {}
     for ph, cond in ph_cond_dict:
         ph_conds = cond[0]
@@ -297,7 +300,7 @@ def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_
                 phase_dict[ph] = None
         if ph not in phase_dict:
             ph_conds.update(conditions)
-            phase_records = build_phase_records(dbf, species, [ph], ph_conds, models, build_gradients=True, build_hessians=True, callables=callables)
+            phase_records = build_phase_records(dbf, species, [ph], ph_conds, models, build_gradients=True, build_hessians=True, callables=callables, parameters=parameters)
             phase_dict[ph] = {'phase_record': phase_records[ph], 'str_conds': OrderedDict([(str(key), ph_conds[key]) for key in sorted(ph_conds.keys(), key=str)])}
     hyperplane = generate_random_hyperplane(species)
     result = calculate_driving_force_at_chem_potential(hyperplane, species, phase_dict, prxs, str_conds)
