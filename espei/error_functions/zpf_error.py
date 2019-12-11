@@ -249,7 +249,7 @@ def update_hyperplane(current_hyperplane_input, direction_input, step_size):
     new_hyperplane[-1] = 0
     return new_hyperplane
 
-def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_dict, phase_models, parameters, callables, tol=0.1, max_it=30):
+def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_dict, phase_models, parameters, callables, tol=0.03, max_it=50):
     """
     Calculates driving force for a single data point.
 
