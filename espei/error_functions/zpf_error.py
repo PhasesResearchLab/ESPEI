@@ -132,7 +132,7 @@ def get_zpf_data(comps, phases, datasets):
         zpf_data.append(data_dict)
     return zpf_data
 
-def minimize_single_phase(dbf, composition_set, phase_name, phase_min_problem, species, str_conds, models, approx, sample_count=500):
+def minimize_single_phase(dbf, composition_set, phase_name, phase_min_problem, species, str_conds, phase_dict, approx):
     """
     Calculate the minimum at a single phase. Samples and, if approx is false, refines 
     the sampled minimum using ipopt.
@@ -158,17 +158,11 @@ def minimize_single_phase(dbf, composition_set, phase_name, phase_min_problem, s
       Indicates whether we tolerate an approximate solution obtained via sampling or
       whether we should use ipopt to refine the approximate solution.
     """
-    phase_obj = dbf.phases[phase_name]
-    components = models[phase_name].components
-    variables, sublattice_dof = generate_dof(phase_obj, components)
-    comps = sorted(unpack_components(dbf, species))
-    sample_points = _sample_phase_constitution(phase_name, phase_obj.constituents, sublattice_dof, comps, tuple(variables), point_sample, True, sample_count)
+    energy_values = phase_dict[phase_name]['energy_values']
+    values = energy_values - np.matmul(phase_dict[phase_name]['composition_values'], phase_min_problem.chem_pot)
+    min_ind = np.argmin(values)
     state_variables = np.array([str_conds[key] for key in sorted(str_conds.keys(), key=str)])
-    obj_values = np.apply_along_axis(phase_min_problem.objective, 1,
-                                     np.concatenate((np.broadcast_to(state_variables, (sample_points.shape[0], state_variables.size)),
-                                                    sample_points, np.ones((sample_points.shape[0], 1))), axis=1))
-    min_ind = np.argmin(obj_values)
-    composition_set.py_update(sample_points[min_ind,:], np.array([1.0]), state_variables, False)
+    composition_set.py_update(phase_dict[phase_name]['sample_points'][min_ind,:], np.array([1.0]), state_variables, False)
     if not approx:
         solver = InteriorPointSolver()
         res = pointsolve([composition_set], species, str_conds, phase_min_problem, solver)
@@ -176,7 +170,7 @@ def minimize_single_phase(dbf, composition_set, phase_name, phase_min_problem, s
             logging.debug('Pointsolver failed to Converge')
             return None
 
-def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict, phase_records, str_conds, models, approx=False):
+def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict, phase_records, str_conds, approx=False):
     """
     Calculate the driving force assuming a particular chemical potential.
 
@@ -215,7 +209,7 @@ def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict
     for key in phase_records:
         cs_l = CompositionSet(phase_records[key])
         phase_min_problem = PotentialProblem([cs_l], species, str_conds, chem_pot)
-        minimize_single_phase(dbf, cs_l, key, phase_min_problem, species, str_conds, models, approx)
+        minimize_single_phase(dbf, cs_l, key, phase_min_problem, species, str_conds, phase_dict, approx)
         phase_plane_dict[key] = chem_pot + cs_l.energy - np.dot(np.asarray(cs_l.X), chem_pot)
         phase_point_dict[key] = np.asarray(cs_l.X)
     # Select the best phase and corresponding equilibrium point.
@@ -235,7 +229,9 @@ def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict
     driving_force = 0.0
     grad_vect = np.zeros_like(chem_pot)
     for key in phase_dict:
-        if phase_dict[key] is None:
+        if not phase_dict[key]['data']:
+            continue
+        if phase_dict[key]['phase_record'] is None:
             driving_force += phase_plane_dict[key][0] - lower_plane[0]
             grad_vect += (phase_point_dict[key] - min_composition)
         else:
@@ -349,13 +345,31 @@ def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_
         ph_conds = cond[0]
         for key in ph_conds:
             if ph_conds[key] is None:
-                phase_dict[ph] = None
+                phase_dict[ph] = {'data': True, 'phase_record': None, 'str_conds': None}
         if ph not in phase_dict:
             ph_conds.update(conditions)
             phase_records = build_phase_records(dbf, species, [ph], ph_conds, models, build_gradients=True, build_hessians=True, callables=callables, parameters=parameters)
-            phase_dict[ph] = {'phase_record': phase_records[ph], 'str_conds': OrderedDict([(str(key), ph_conds[key]) for key in sorted(ph_conds.keys(), key=str)])}
+            phase_dict[ph] = {'data': True, 'phase_record': phase_records[ph], 'str_conds': OrderedDict([(str(key), ph_conds[key]) for key in sorted(ph_conds.keys(), key=str)])}
+    # Collect sampling and equilibrium information in phase_dict as well.
+    for phase in phases:
+        if not phase in phase_dict:
+            phase_dict[phase] = {'data': False}
+        phase_obj = dbf.phases[phase]
+        components = models[phase].components
+        variables, sublattice_dof = generate_dof(phase_obj, components)
+        sample_points = _sample_phase_constitution(phase, phase_obj.constituents, sublattice_dof, data_comps, tuple(variables), point_sample, True, 2000)
+        phase_dict[phase]['sample_points'] = sample_points
+        energies = calculate(dbf, data_comps, [phase], points=sample_points, to_xarray=False, **str_conds)
+        phase_dict[phase]['energy_values'] = np.array(energies['GM'][0][0][0])
+        composition_values = np.zeros((sample_points.shape[0], len([sp for sp in species if sp.__str__() != 'VA'])))
+        temp_comp_set = CompositionSet(prxs[phase])
+        current_state_variables = np.array([str_conds[key] for key in sorted(str_conds.keys(), key=str)])
+        for i in range(sample_points.shape[0]):
+            temp_comp_set.py_update(sample_points[i,:], np.array([1.0]), current_state_variables, False)
+            composition_values[i,:] = temp_comp_set.X
+        phase_dict[phase]['composition_values'] = composition_values
     hyperplane = generate_random_hyperplane(species)
-    result = calculate_driving_force_at_chem_potential(dbf, hyperplane, species, phase_dict, prxs, str_conds, models, approx=False)
+    result = calculate_driving_force_at_chem_potential(dbf, hyperplane, species, phase_dict, prxs, str_conds, approx=True)
     # Ignore entire data point if pointsolver fails to converge.
     if result is None:
         return 0
@@ -370,7 +384,7 @@ def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_
         if new_hyperplane is None:
             step_size /= 2
             continue
-        result = calculate_driving_force_at_chem_potential(dbf, new_hyperplane, species, phase_dict, prxs, str_conds, models, approx=False)
+        result = calculate_driving_force_at_chem_potential(dbf, new_hyperplane, species, phase_dict, prxs, str_conds, approx=True)
         if result is None:
             return 0
         if result['driving_force'] < current_driving_force:
@@ -379,10 +393,8 @@ def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_
             grad_dir = result['grad_vect']
         else:
             step_size /= 2
-    print(current_driving_force)
-    print(grad_dir)
-    print(it)
-    return current_driving_force
+    final_driving_force = calculate_driving_force_at_chem_potential(dbf, hyperplane, species, phase_dict, prxs, str_conds, approx=False)['driving_force']
+    return final_driving_force
 
 def calculate_zpf_error(dbf, phases, zpf_data, phase_models=None,
                         parameters=None, callables=None, data_weight=1.0,
@@ -436,7 +448,6 @@ def calculate_zpf_error(dbf, phases, zpf_data, phase_models=None,
             for current_statevars, comp_dicts in region_eq:
                 # a "region" is a set of phase equilibria
                 eq_str = "conds: ({}), comps: ({})".format(current_statevars, ', '.join(['{}: {}'.format(ph,c[0]) for ph, c in zip(region, comp_dicts)]))
-                print(eq_str)
                 driving_force = calculate_driving_force(dbf, data_comps, phases, current_statevars, list(zip(region, comp_dicts)), phase_models, parameters, callables=callables)
                 data_prob = norm(loc=0, scale=1000/data_weight/weight).logpdf(driving_force)
                 prob_error += data_prob
