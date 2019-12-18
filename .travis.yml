@@ -37,7 +37,7 @@ install:
   - conda install -c conda-forge -c pycalphad 'pycalphad>=0.8.1' numpy scipy 'sympy>=1.2' six 'dask>=2' 'distributed>=2' 'tinydb>=3.8' scikit-learn 'emcee<3' pyyaml cerberus bibtexparser sphinx sphinx_rtd_theme pytest nose mock twine
   # If pycalphad develop is defined, uninstall the release and install the development version from github
   - if [[ $PYCALPHAD_DEVELOP ]]; then conda remove --force --yes pycalphad; fi
-  - if [[ $PYCALPHAD_DEVELOP ]]; then git clone pycalphad pycalphad-dev; fi
+  - if [[ $PYCALPHAD_DEVELOP ]]; then git clone https://github.com/pycalphad/pycalphad pycalphad-dev; fi
   - if [[ $PYCALPHAD_DEVELOP ]]; then cd pycalphad-dev; fi
   - if [[ $PYCALPHAD_DEVELOP ]]; then pip install --no-deps -e . ; fi
   - if [[ $PYCALPHAD_DEVELOP ]]; then cd .. ; fi
