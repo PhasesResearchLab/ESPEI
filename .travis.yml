@@ -1,14 +1,27 @@
 language: python
 matrix:
     include:
-        - python: 3.6
-        - name: "Python 3.7.1 on Xenial Linux"
-          python: 3.7           # this works for Linux but is ignored on macOS or Windows
-          dist: xenial          # required for Python >= 3.7
-        - name: "Python 3.8 on Xenial Linux"
+        - name: "pycalphad release - Python 3.6"
+          python: 3.6
+          dist: xenial
+        - name: "pycalphad release - Python 3.7"
+          python: 3.7
+          dist: xenial
+        - name: "pycalphad release - Python 3.8"
           python: 3.8
-          dist: xenial 
-
+          dist: xenial
+        - name: "pycalphad develop - Python 3.6"
+          python: 3.6
+          dist: xenial
+          env: PYCALPHAD_DEVELOP=1
+        - name: "pycalphad develop - Python 3.7"
+          python: 3.7
+          dist: xenial
+          env: PYCALPHAD_DEVELOP=1
+        - name: "pycalphad develop - Python 3.8"
+          python: 3.8
+          dist: xenial
+          env: PYCALPHAD_DEVELOP=1
 
 install:
   - sudo apt-get update
@@ -22,6 +35,13 @@ install:
   - conda create -q -n espei-env python=$TRAVIS_PYTHON_VERSION
   - source activate espei-env
   - conda install -c conda-forge -c pycalphad 'pycalphad>=0.8.1' numpy scipy 'sympy>=1.2' six 'dask>=2' 'distributed>=2' 'tinydb>=3.8' scikit-learn 'emcee<3' pyyaml cerberus bibtexparser sphinx sphinx_rtd_theme pytest nose mock twine
+  # If pycalphad develop is defined, uninstall the release and install the development version from github
+  - if [[ $PYCALPHAD_DEVELOP ]] then conda remove --force --yes pycalphad; fi
+  - if [[ $PYCALPHAD_DEVELOP ]] then git clone pycalphad pycalphad-dev; fi
+  - if [[ $PYCALPHAD_DEVELOP ]] then cd pycalphad-dev; fi
+  - if [[ $PYCALPHAD_DEVELOP ]] then pip install --no-deps -e . ; fi
+  - if [[ $PYCALPHAD_DEVELOP ]] then cd .. ; fi
+
 before_script:
   - source activate espei-env
   - pip install -e '.[dev]'
