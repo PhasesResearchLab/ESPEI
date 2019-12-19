@@ -481,5 +481,5 @@ def calculate_zpf_error(dbf, phases, zpf_data, phase_models=None,
                               repeat(parameters),
                               repeat(callables),
                               repeat(data_weight))
-    return 0 # sum(x for x in map(calculate_log_data_prob, iter_data))
+    return sum(x for x in map(calculate_log_data_prob, iter_data))
 
