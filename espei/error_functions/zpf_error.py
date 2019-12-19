@@ -16,11 +16,13 @@ composition conditions to calculate chemical potentials at.
 
 import operator, logging
 from collections import defaultdict, OrderedDict
+from itertools import repeat
 
 import math
 import numpy as np
 from scipy.stats import norm
 import tinydb
+import multiprocessing as mp
 
 from pycalphad.core.problem import Problem
 from pycalphad.core.composition_set import CompositionSet
@@ -396,6 +398,43 @@ def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_
     final_driving_force = calculate_driving_force_at_chem_potential(dbf, hyperplane, species, phase_dict, prxs, str_conds, approx=False)['driving_force']
     return final_driving_force
 
+def calculate_log_data_prob(arg_list):
+    """
+    Wrapper function used in parallelization.
+
+    Parameters
+    ----------
+    arg_list: list
+        List of parameters required to calculate the data probability
+    """
+    # Unpack parameters from list.
+    data = arg_list[0]
+    dbf = arg_list[1]
+    phases = arg_list[2]
+    phase_models = arg_list[3]
+    parameters = arg_list[4]
+    callables = arg_list[5]
+    data_weight = arg_list[6]
+    # Perform calculation.
+    prob_error = 0
+    phase_regions = data['phase_regions']
+    data_comps = data['data_comps']
+    weight = data['weight']
+    dataset_ref = data['dataset_reference']
+    # for each set of phases in equilibrium and their individual tieline points
+    for region, region_eq in phase_regions.items():
+        # for each tieline region conditions and compositions
+        for current_statevars, comp_dicts in region_eq:
+            # a "region" is a set of phase equilibria
+            eq_str = "conds: ({}), comps: ({})".format(current_statevars, ', '.join(['{}: {}'.format(ph,c[0]) for ph, c in zip(region, comp_dicts)]))
+            driving_force = calculate_driving_force(dbf, data_comps, phases, current_statevars, list(zip(region, comp_dicts)), phase_models, parameters, callables=callables)
+            data_prob = norm(loc=0, scale=1000/data_weight/weight).logpdf(driving_force)
+            prob_error += data_prob
+            logging.debug('ZPF error - Equilibria: ({}), driving force: {}, probability: {}, reference: {}'.format(eq_str, driving_force, data_prob, dataset_ref))
+    if np.isnan(prob_error):
+        return -np.inf
+    return prob_error
+
 def calculate_zpf_error(dbf, phases, zpf_data, phase_models=None,
                         parameters=None, callables=None, data_weight=1.0,
                         ):
@@ -436,23 +475,11 @@ def calculate_zpf_error(dbf, phases, zpf_data, phase_models=None,
     """
     if parameters is None:
         parameters = {}
-    prob_error = 0.0
-    for data in zpf_data:
-        phase_regions = data['phase_regions']
-        data_comps = data['data_comps']
-        weight = data['weight']
-        dataset_ref = data['dataset_reference']
-        # for each set of phases in equilibrium and their individual tieline points
-        for region, region_eq in phase_regions.items():
-            # for each tieline region conditions and compositions
-            for current_statevars, comp_dicts in region_eq:
-                # a "region" is a set of phase equilibria
-                eq_str = "conds: ({}), comps: ({})".format(current_statevars, ', '.join(['{}: {}'.format(ph,c[0]) for ph, c in zip(region, comp_dicts)]))
-                driving_force = calculate_driving_force(dbf, data_comps, phases, current_statevars, list(zip(region, comp_dicts)), phase_models, parameters, callables=callables)
-                data_prob = norm(loc=0, scale=1000/data_weight/weight).logpdf(driving_force)
-                prob_error += data_prob
-                logging.debug('ZPF error - Equilibria: ({}), driving force: {}, probability: {}, reference: {}'.format(eq_str, driving_force, data_prob, dataset_ref))
-    if np.isnan(prob_error):
-        return -np.inf
-    return prob_error
+    iter_data = zip(zpf_data, repeat(dbf),
+                              repeat(phases),
+                              repeat(phase_models),
+                              repeat(parameters),
+                              repeat(callables),
+                              repeat(data_weight))
+    return 0 # sum(x for x in map(calculate_log_data_prob, iter_data))
 
