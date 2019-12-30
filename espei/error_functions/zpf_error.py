@@ -266,39 +266,6 @@ def generate_random_hyperplane(species):
     hyperplane[-1] = 0
     return hyperplane
 
-def update_hyperplane(current_hyperplane_input, direction_input, step_size):
-    """
-    Updates hyperplane based upon gradient information obtained from the calculation.
-
-    Parameters
-    ----------
-    current_hyperplane: np.array
-      the current hyperplane
-    direction: np.array
-      the gradient direction
-    step_size: double
-      the desired step size
-
-    Notes
-    ----------
-    Views the hyperplane as a point on the sphere and takes step on the sphere.
-    """
-    current_hyperplane = np.copy(current_hyperplane_input)
-    direction = np.copy(direction_input)
-    current_hyperplane = current_hyperplane - current_hyperplane[-1]
-    direction[-1] = 0
-    current_hyperplane[-1] = 1
-    current_hyperplane /= np.linalg.norm(current_hyperplane)
-    direction -= current_hyperplane * np.inner(current_hyperplane, direction)
-    direction /= np.linalg.norm(direction)
-    new_hyperplane = current_hyperplane * math.cos(step_size) + direction * math.sin(step_size)
-    # If we have rotated out of the half-sphere.
-    if new_hyperplane[-1] <= 0:
-        return None
-    new_hyperplane /= new_hyperplane[-1]
-    new_hyperplane[-1] = 0
-    return new_hyperplane
-
 def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_dict, phase_models, parameters, callables, tol=0.01, max_it=100):
     """
     Calculates driving force for a single data point.
@@ -377,25 +344,27 @@ def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_
         return 0
     # Optimize over the hyperplane.
     it = 0
-    step_size = math.pi / 5
+    step_size = 1.0
     current_driving_force = result['driving_force']
     grad_dir = result['grad_vect']
-    while np.linalg.norm(grad_dir) > tol and it < max_it:
+    increase = True
+    while step_size > tol and it < max_it:
         it += 1
-        new_hyperplane = update_hyperplane(hyperplane, grad_dir, step_size)
-        if new_hyperplane is None:
-            step_size /= 2
-            continue
+        new_hyperplane = hyperplane + step_size * grad_dir / np.linalg.norm(grad_dir)
         result = calculate_driving_force_at_chem_potential(dbf, new_hyperplane, species, phase_dict, prxs, str_conds, approx=True)
-        if result is None:
-            return 0
         if result['driving_force'] < current_driving_force:
-            hyperplane = new_hyperplane
-            current_driving_force = result['driving_force']
-            grad_dir = result['grad_vect']
+            if increase:
+                step_size *= 2
+            else:
+                hyperplane = new_hyperplane
+                current_driving_force = result['driving_force']
+                grad_dir = result['grad_vect']
+                increase = True
         else:
             step_size /= 2
-    final_driving_force = calculate_driving_force_at_chem_potential(dbf, hyperplane, species, phase_dict, prxs, str_conds, approx=False)['driving_force']
+            increase = False
+    final_result = calculate_driving_force_at_chem_potential(dbf, hyperplane, species, phase_dict, prxs, str_conds, approx=True)
+    final_driving_force = final_result['driving_force']
     return final_driving_force
 
 def calculate_log_data_prob(arg_list):
