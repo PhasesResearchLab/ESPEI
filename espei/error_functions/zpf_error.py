@@ -128,7 +128,7 @@ def get_zpf_data(comps, phases, datasets):
         data_dict = {
             'weight': data.get('weight', 1.0),
             'data_comps': list(set(data['components']).union({'VA'})),
-            'phase_regions': phase_regions,
+            'phase_regions': list(phase_regions.items()),
             'dataset_reference': data['reference']
         }
         zpf_data.append(data_dict)
@@ -206,7 +206,6 @@ def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict
     species = sorted(species, key=str)
     phase_plane_dict = {}
     phase_point_dict = {}
-    solver = InteriorPointSolver()
     # Find hyperplane equilibrium point for each phase.
     for key in phase_records:
         cs_l = CompositionSet(phase_records[key])
@@ -238,6 +237,7 @@ def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict
             grad_vect += (phase_point_dict[key] - min_composition)
         else:
             if not 'min_energy' in phase_dict[key] or phase_dict[key]['min_energy'] is None:
+                solver = InteriorPointSolver()
                 cs = CompositionSet(phase_dict[key]['phase_record'])
                 phase_composition_problem = PotentialProblem([cs], species, phase_dict[key]['str_conds'], np.zeros_like(chem_pot))
                 res = pointsolve([cs], species, phase_dict[key]['str_conds'], phase_composition_problem, solver)
@@ -266,7 +266,7 @@ def generate_random_hyperplane(species):
     hyperplane[-1] = 0
     return hyperplane
 
-def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_dict, phase_models, phase_dict, parameters, callables, tol=0.01, max_it=30):
+def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_dict, phase_models, phase_dict, parameters, callables, tol=0.001, max_it=50):
     """
     Calculates driving force for a single data point.
 
@@ -410,7 +410,7 @@ def calculate_log_data_prob(arg_list):
     weight = data['weight']
     dataset_ref = data['dataset_reference']
     # for each set of phases in equilibrium and their individual tieline points
-    for region, region_eq in phase_regions.items():
+    for region, region_eq in phase_regions:
         # for each tieline region conditions and compositions
         for current_statevars, comp_dicts in region_eq:
             # a "region" is a set of phase equilibria
@@ -463,6 +463,7 @@ def calculate_zpf_error(dbf, phases, zpf_data, phase_models=None,
     """
     if parameters is None:
         parameters = {}
+    # logging.info("{}".format(parameters))
     phase_dict = {}
     for phase in phases:
         phase_dict[phase] = {}

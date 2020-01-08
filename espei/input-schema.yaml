@@ -91,7 +91,7 @@ mcmc:
     scheduler: # scheduler to use for parallelization
       type: string
       default: dask # dask | None | A JSON file
-      regex: 'dask|None|.*\.json$'
+      regex: 'dask|multiprocessing|None|.*\.json$'
       required: True
     cores:
       type: integer

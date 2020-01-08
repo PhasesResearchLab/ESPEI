@@ -199,6 +199,8 @@ def run_espei(run_settings):
             raise OSError('Probfile "{}" exists and would be overwritten by a new run. Use the ``output.probfile`` setting to set a different name.'.format(probfile))
 
         # scheduler setup
+        # Turn off numpy's automatic parallelization since it can interfere with our parallelization.
+        os.environ["OMP_NUM_THREADS"] = "1"
         if mcmc_settings['scheduler'] == 'dask':
             _raise_dask_work_stealing()  # check for work-stealing
             from distributed import LocalCluster
@@ -220,6 +222,10 @@ def run_espei(run_settings):
         elif mcmc_settings['scheduler'] == 'None':
             client = None
             logging.info("Not using a parallel scheduler. ESPEI is running MCMC on a single core.")
+        elif mcmc_settings['scheduler'] == 'multiprocessing':
+            logging.info("Using multiprocessing to parallelize")
+            cores = mcmc_settings.get('cores', multiprocessing.cpu_count())
+            client = multiprocessing.Pool(processes=cores)
         else: # we were passed a scheduler file name
             _raise_dask_work_stealing()  # check for work-stealing
             client = ImmediateClient(scheduler_file=mcmc_settings['scheduler'])
