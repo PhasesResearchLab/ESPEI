@@ -172,6 +172,16 @@ def minimize_single_phase(dbf, composition_set, phase_name, phase_min_problem, s
             logging.debug('Pointsolver failed to Converge')
             return None
 
+class _hyperplane_data:
+    """
+    This class is only used in the loss function calculation.
+    """
+    def __init__(self, intercept, active, point_left, point_right):
+        self.intercept = intercept
+        self.active = active
+        self.point_left = point_left
+        self.point_right = point_right
+
 def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict, phase_records, str_conds, approx=False):
     """
     Calculate the driving force assuming a particular chemical potential.
@@ -204,37 +214,21 @@ def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict
     By fixing the chemical potential, the whole calculation decouples over the different phases.
     """
     species = sorted(species, key=str)
-    phase_plane_dict = {}
-    phase_point_dict = {}
-    # Find hyperplane equilibrium point for each phase.
+    hyperplane_data_list = []
+    active_phase_count = 0
+    total_offset = 0.0
+    # Find hyperplane equilibrium for each phase.
     for key in phase_records:
         cs_l = CompositionSet(phase_records[key])
         phase_min_problem = PotentialProblem([cs_l], species, str_conds, chem_pot)
         minimize_single_phase(dbf, cs_l, key, phase_min_problem, species, str_conds, phase_dict, approx)
-        phase_plane_dict[key] = chem_pot + cs_l.energy - np.dot(np.asarray(cs_l.X), chem_pot)
-        phase_point_dict[key] = np.asarray(cs_l.X)
-    # Select the best phase and corresponding equilibrium point.
-    lower_plane = np.zeros_like(chem_pot)
-    min_composition = np.zeros_like(chem_pot)
-    started = False
-    for key in phase_plane_dict.keys():
-        if not started:
-            lower_plane = phase_plane_dict[key]
-            min_composition = phase_point_dict[key]
-            started = True
-        else:
-            if lower_plane[0] > phase_plane_dict[key][0]:
-                lower_plane = phase_plane_dict[key]
-                min_composition = phase_point_dict[key]
-    # Calculate driving force to equilibrium for each phase in the data based on potentially available tie lines.
-    driving_force = 0.0
-    grad_vect = np.zeros_like(chem_pot)
-    for key in phase_dict:
+        lower_plane = chem_pot + cs_l.energy - np.dot(np.asarray(cs_l.X), chem_pot)
+        min_point = np.asarray(cs_l.X)
         if not phase_dict[key]['data']:
-            continue
-        if phase_dict[key]['phase_record'] is None:
-            driving_force += phase_plane_dict[key][0] - lower_plane[0]
-            grad_vect += (phase_point_dict[key] - min_composition)
+            hyperplane_data_list.append(_hyperplane_data(lower_plane[0], False, -1.0*min_point, np.zeros_like(min_point)))
+        elif phase_dict[key]['phase_record'] is None:
+            hyperplane_data_list.append(_hyperplane_data(lower_plane[0], True, -1.0*min_point, min_point))
+            active_phase_count += 1
         else:
             if not 'min_energy' in phase_dict[key] or phase_dict[key]['min_energy'] is None:
                 solver = InteriorPointSolver()
@@ -245,9 +239,31 @@ def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict
                     logging.debug('Pointsolver failed to Converge')
                     return None
                 phase_dict[key]['min_energy'] = cs.energy
-                phase_dict[key]['composition'] = cs.X
-            driving_force += phase_dict[key]['min_energy'] - np.dot(np.asarray(phase_dict[key]['composition']), lower_plane)
-            grad_vect += (np.asarray(phase_dict[key]['composition']) - min_composition)
+                phase_dict[key]['composition'] = np.array(cs.X)
+            point_plane = chem_pot + phase_dict[key]['min_energy'] - np.dot(phase_dict[key]['composition'], chem_pot)
+            hyperplane_data_list.append(_hyperplane_data(0.5*lower_plane[0] + 0.5*point_plane[0], True, -1.0*min_point, phase_dict[key]['composition']))
+            total_offset += 0.5*(point_plane[0] - lower_plane[0])
+            active_phase_count += 1
+    hyperplane_data_list.sort(key=lambda x: x.intercept)
+    driving_force = total_offset
+    grad_vect = np.zeros_like(chem_pot)
+    optimal_intercept = hyperplane_data_list[0].intercept
+    for data in hyperplane_data_list:
+        if active_phase_count == 0:
+            optimal_intercept = 0.5 * optimal_intercept + 0.5 * data.intercept
+        if data.active:
+            active_phase_count -= 2
+        else:
+            active_phase_count -= 1
+        if active_phase_count == 0 or (active_phase_count == -1 and data.active):
+            optimal_intercept = data.intercept
+    for data in hyperplane_data_list:
+        if data.intercept < optimal_intercept:
+            driving_force += optimal_intercept - data.intercept
+            grad_vect += data.point_left
+        elif data.active and data.intercept > optimal_intercept:
+            driving_force += data.intercept - optimal_intercept
+            grad_vect += data.point_right
     output_dict = {'driving_force': driving_force, 'grad_vect': grad_vect}
     return output_dict
 
