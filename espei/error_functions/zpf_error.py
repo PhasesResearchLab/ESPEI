@@ -258,10 +258,10 @@ def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict
         if active_phase_count == 0 or (active_phase_count == -1 and data.active):
             optimal_intercept = data.intercept
     for data in hyperplane_data_list:
-        if data.intercept < optimal_intercept:
+        if data.intercept <= optimal_intercept:
             driving_force += optimal_intercept - data.intercept
             grad_vect += data.point_left
-        elif data.active and data.intercept > optimal_intercept:
+        elif data.active and data.intercept >= optimal_intercept:
             driving_force += data.intercept - optimal_intercept
             grad_vect += data.point_right
     output_dict = {'driving_force': driving_force, 'grad_vect': grad_vect}
