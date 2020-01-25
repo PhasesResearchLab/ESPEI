@@ -302,7 +302,7 @@ def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict
     current_driving_force = result['driving_force']
     grad_dir = result['grad_vect']
     hyperplane = chem_pot
-    while step_size > tol and it < max_it:
+    while step_size > tol and it < max_it and np.linalg.norm(grad_dir) > 0:
         it += 1
         new_hyperplane = hyperplane + step_size * grad_dir / np.linalg.norm(grad_dir)
         total_offset = update_hyperplane_data_list(hyperplane_data_list, new_hyperplane)
