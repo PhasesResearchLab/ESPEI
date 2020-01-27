@@ -176,7 +176,7 @@ class _hyperplane_data:
     """
     This class is only used in the loss function calculation.
     """
-    def __init__(self, intercept, active, point_left, point_right, right_energy=0, left_energy=0, both=False):
+    def __init__(self, intercept, active, point_left, point_right, right_energy=0, left_energy=0, both=False, offset=0):
         self.intercept = intercept
         self.active = active
         self.point_left = point_left
@@ -184,56 +184,68 @@ class _hyperplane_data:
         self.right_energy = right_energy
         self.left_energy = left_energy
         self.both = both
+        self.offset = offset
 
-def evaluate_hyperplane_data_list(hyperplane_data_list, total_offset):
+def evaluate_hyperplane_data_list(hyperplane_data_list):
     hyperplane_data_list.sort(key=lambda x: x.intercept)
-    driving_force = total_offset
+    driving_force_sq = 0
     grad_vect = np.zeros_like(hyperplane_data_list[0].point_left)
     optimal_intercept = hyperplane_data_list[0].intercept
-    active_phase_count = 0
+    current_gradient = 0
+    phase_count = 0
+    imbalance = 0
     for data in hyperplane_data_list:
         if data.active:
-            active_phase_count += 1
+            current_gradient += data.intercept - optimal_intercept + data.offset
+            phase_count += 1
+    prev_gradient = current_gradient
+    prev_intercept = optimal_intercept
     for data in hyperplane_data_list:
-        if active_phase_count == 0:
-            optimal_intercept = 0.5 * optimal_intercept + 0.5 * data.intercept
-        if data.active:
-            active_phase_count -= 2
-        else:
-            active_phase_count -= 1
-        if active_phase_count == 0 or (active_phase_count == -1 and data.active):
+        current_gradient -= (data.intercept - prev_intercept) * phase_count
+        if current_gradient < 0:
+            optimal_intercept = data.intercept + (current_gradient / phase_count)
+            break
+        current_gradient -= 2*data.offset
+        if current_gradient < 0:
             optimal_intercept = data.intercept
+            imbalance = current_gradient + data.offset
+            break
+        if not data.active:
+            phase_count += 1
+        prev_intercept = data.intercept
     for data in hyperplane_data_list:
         # print(data.intercept, optimal_intercept, driving_force, total_offset)
         if data.intercept < optimal_intercept:
-            driving_force += optimal_intercept - data.intercept
-            if not data.active or total_offset > 0:
-                grad_vect += data.point_left
+            driving_force_sq += (data.offset + optimal_intercept - data.intercept)**2
+            if not data.active or data.offset > 0:
+                grad_vect += (data.offset + optimal_intercept - data.intercept) * data.point_left
             else:
-                grad_vect -= data.point_right
+                grad_vect -= (data.offset + optimal_intercept - data.intercept) * data.point_right
         elif data.active and data.intercept > optimal_intercept:
-            driving_force += data.intercept - optimal_intercept
-            grad_vect += data.point_right
-        elif data.active and data.intercept == optimal_intercept and total_offset > 0:
-            grad_vect += 0.5 * (data.point_right + data.point_left)
-    output_dict = {'driving_force': driving_force, 'grad_vect': grad_vect}
+            driving_force_sq += (data.offset + data.intercept - optimal_intercept)**2
+            grad_vect += (data.offset + data.intercept - optimal_intercept) * data.point_right
+        elif data.active and data.intercept == optimal_intercept:
+            driving_force_sq += data.offset**2
+            grad_vect += 0.5 * data.offset * (data.point_right + data.point_left)
+            grad_vect -= imbalance * 0.5 * (data.point_right - data.point_left)
+    output_dict = {'driving_force': np.sqrt(driving_force_sq), 'grad_vect': grad_vect}
+    # print(grad_vect, imbalance)
     return output_dict
 
 def update_hyperplane_data_list(hyperplane_data_list, chem_pot):
-    total_offset = 0
     for data in hyperplane_data_list:
         if data.both:
             lower_plane = chem_pot + data.right_energy + np.dot(data.point_left, chem_pot)
             point_plane = chem_pot + data.left_energy - np.dot(data.point_right, chem_pot)
             if lower_plane[0] < point_plane[0]:
                 data.intercept = 0.5*lower_plane[0] + 0.5*point_plane[0]
-                total_offset += 0.5*(point_plane[0] - lower_plane[0])
+                data.offset = 0.5*(point_plane[0] - lower_plane[0])
             else:
                 data.intercept = point_plane[0]
+                data.offset = 0
         else:    
             lower_plane = chem_pot + data.right_energy + np.dot(data.point_left, chem_pot)
             data.intercept = lower_plane[0]
-    return total_offset
 
 def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict, phase_records, str_conds, approx=False, tol=0.001, max_it=50):
     """
@@ -268,7 +280,6 @@ def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict
     """
     species = sorted(species, key=str)
     hyperplane_data_list = []
-    total_offset = 0.0
     # Find hyperplane equilibrium for each phase.
     for key in phase_records:
         cs_l = CompositionSet(phase_records[key])
@@ -292,9 +303,8 @@ def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict
                 phase_dict[key]['min_energy'] = cs.energy
                 phase_dict[key]['composition'] = np.array(cs.X)
             point_plane = chem_pot + phase_dict[key]['min_energy'] - np.dot(phase_dict[key]['composition'], chem_pot)
-            hyperplane_data_list.append(_hyperplane_data(0.5*lower_plane[0] + 0.5*point_plane[0], True, -1.0*min_point, phase_dict[key]['composition'], right_energy=cs_l.energy, left_energy=phase_dict[key]['min_energy'], both=True)) 
-            total_offset += 0.5*(point_plane[0] - lower_plane[0])
-    result = evaluate_hyperplane_data_list(hyperplane_data_list, total_offset)
+            hyperplane_data_list.append(_hyperplane_data(0.5*lower_plane[0] + 0.5*point_plane[0], True, -1.0*min_point, phase_dict[key]['composition'], right_energy=cs_l.energy, left_energy=phase_dict[key]['min_energy'], both=True, offset=0.5*(point_plane[0] - lower_plane[0]))) 
+    result = evaluate_hyperplane_data_list(hyperplane_data_list)
     driving_force = result['driving_force']
     # Optimize over the hyperplane with points fixed.
     it = 0
@@ -305,8 +315,8 @@ def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict
     while step_size > tol and it < max_it and np.linalg.norm(grad_dir) > 0:
         it += 1
         new_hyperplane = hyperplane + step_size * grad_dir / np.linalg.norm(grad_dir)
-        total_offset = update_hyperplane_data_list(hyperplane_data_list, new_hyperplane)
-        result = evaluate_hyperplane_data_list(hyperplane_data_list, total_offset)
+        update_hyperplane_data_list(hyperplane_data_list, new_hyperplane)
+        result = evaluate_hyperplane_data_list(hyperplane_data_list)
         # If step results in objective decrease, double the step size until decrease becomes maximal.
         if result['driving_force'] < current_driving_force:
             while result['driving_force'] < current_driving_force:
@@ -315,8 +325,8 @@ def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict
                 current_grad_dir = result['grad_vect']
                 step_size *= 2
                 new_hyperplane = hyperplane + step_size * grad_dir / np.linalg.norm(grad_dir)
-                total_offset = update_hyperplane_data_list(hyperplane_data_list, new_hyperplane)
-                result = evaluate_hyperplane_data_list(hyperplane_data_list, total_offset)
+                update_hyperplane_data_list(hyperplane_data_list, new_hyperplane)
+                result = evaluate_hyperplane_data_list(hyperplane_data_list)
                 # print(current_driving_force, result, new_hyperplane)
             hyperplane = current_hyperplane
             grad_dir = current_grad_dir
@@ -325,8 +335,8 @@ def calculate_driving_force_at_chem_potential(dbf, chem_pot, species, phase_dict
             while result['driving_force'] > current_driving_force and step_size > tol:
                 step_size /= 2
                 new_hyperplane = hyperplane + step_size * grad_dir / np.linalg.norm(grad_dir)
-                total_offset = update_hyperplane_data_list(hyperplane_data_list, new_hyperplane)
-                result = evaluate_hyperplane_data_list(hyperplane_data_list, total_offset)
+                update_hyperplane_data_list(hyperplane_data_list, new_hyperplane)
+                result = evaluate_hyperplane_data_list(hyperplane_data_list)
             current_driving_force = result['driving_force']
             hyperplane = new_hyperplane
             grad_dir = result['grad_vect']
@@ -461,6 +471,7 @@ def calculate_driving_force(dbf, data_comps, phases, current_statevars, ph_cond_
             current_driving_force = result['driving_force']
     final_result = calculate_driving_force_at_chem_potential(dbf, hyperplane, species, phase_dict, prxs, str_conds, approx=True)
     final_driving_force = final_result['driving_force']
+    print(it, final_driving_force, hyperplane)
     return final_driving_force
 
 def calculate_log_data_prob(arg_list):
