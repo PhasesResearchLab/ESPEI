@@ -79,7 +79,7 @@ def extract_phases_comps(phase_region):
 
 PhaseRegion = NamedTuple('PhaseRegion', (('region_phases', Sequence[str]),
                                          ('potential_conds', Dict[v.StateVariable, float]),
-                                         ('comp_conds', Sequence[Dict[v.Composition, float]]),
+                                         ('comp_conds', Sequence[Dict[v.X, float]]),
                                          ('phase_flags', Sequence[str]),
                                          ('dbf', Database),
                                          ('species', Sequence[v.Species]),
