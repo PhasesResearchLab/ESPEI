@@ -498,6 +498,7 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     comp_refs['VA'] = 0
     # note that the `c.upper()*2)[:2]` returns 'AL' for c.upper()=='AL' and 'VV' for c.upper()=='V'
     dbf.symbols.update({'GHSER' + (c.upper()*2)[:2]: data for c, data in comp_refs.items()})
+    ordered_phases_to_fit = []
     for phase_name, phase_obj in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
         # Perform parameter selection and single-phase fitting based on input
         # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
@@ -507,9 +508,31 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
         site_ratios = phase_obj['sublattice_site_ratios']
         subl_model = phase_obj['sublattice_model']
         if phase_name not in dbf.phases.keys():
-            dbf.add_phase(phase_name, dict(), site_ratios)
+            if "model_hints" in phase_models['phases'][phase_name].keys():
+                hints = phase_models['phases'][phase_name]["model_hints"]
+                if hints.get('ordered_phase') == phase_name:
+                    ordered_phases_to_fit.append((phase_name, phase_obj))
+                    continue
+                dbf.add_phase(phase_name, phase_models['phases'][phase_name]["model_hints"], site_ratios)
+            else:
+                dbf.add_phase(phase_name, dict(), site_ratios)
+            dbf.add_phase_constituents(phase_name, subl_model)
+            dbf.add_structure_entry(phase_name, phase_name)
+        print(dbf)
+        phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
+    for phase_name,phase_obj in ordered_phases_to_fit:
+        # Perform parameter selection and single-phase fitting based on input
+        # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
+        symmetry = phase_obj.get('equivalent_sublattices', None)
+        aliases = phase_obj.get('aliases', None)
+        # TODO: More advanced phase data searching
+        site_ratios = phase_obj['sublattice_site_ratios']
+        subl_model = phase_obj['sublattice_model']
+        if phase_name not in dbf.phases.keys():
+            dbf.add_phase(phase_name, phase_models['phases'][phase_name]["model_hints"], site_ratios)
             dbf.add_phase_constituents(phase_name, subl_model)
             dbf.add_structure_entry(phase_name, phase_name)
         phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
+
     logging.info('Finished generating parameters.')
     return dbf

@@ -300,8 +300,8 @@ def add_ideal_exclusions(datasets):
         warnings.warn(idmix_warning, DeprecationWarning)
         print(idmix_warning)
         import espei
-        if int(espei.__version__.split('.')[1]) >= 8 or int(espei.__version__.split('.')[0]) > 0:
-            raise ValueError("ESPEI developer: remove the automatic addition of ideal mixing exclusions")
+        # if int(espei.__version__.split('.')[1]) >= 8 or int(espei.__version__.split('.')[0]) > 0:
+        #     raise ValueError("ESPEI developer: remove the automatic addition of ideal mixing exclusions")
         for ds in all_single_phase:
             ds['excluded_model_contributions'] = ['idmix']
     datasets.write_back(all_single_phase)

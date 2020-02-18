@@ -169,18 +169,18 @@ def run_espei(run_settings):
 
     with open(system_settings['phase_models']) as fp:
         phase_models = json.load(fp)
-
     if generate_parameters_settings is not None:
         refdata = generate_parameters_settings['ref_state']
         excess_model = generate_parameters_settings['excess_model']
         ridge_alpha = generate_parameters_settings['ridge_alpha']
         aicc_penalty = generate_parameters_settings['aicc_penalty_factor']
-        input_dbf = generate_parameters_settings.get('input_db', None)
+        input_dbf = generate_parameters_settings.get('input_db', None)          
         if input_dbf is not None:
             input_dbf = Database(input_dbf)
         dbf = generate_parameters(phase_models, datasets, refdata, excess_model,
                                   ridge_alpha=ridge_alpha, dbf=input_dbf,
                                   aicc_penalty_factor=aicc_penalty,)
+        print(dbf)
         dbf.to_file(output_settings['output_db'], if_exists='overwrite')
 
     if mcmc_settings is not None:
