@@ -64,9 +64,9 @@ def extract_phases_comps(phase_region):
     region_comp_conds = []
     phase_flags = []
     for tie_point in phase_region:
-        if len(tie_point) == 4: # phase_flag within
+        if len(tie_point) == 4:  # phase_flag within
             phase_name, components, compositions, flag = tie_point
-        elif len(tie_point) == 3: # no phase_flag within
+        elif len(tie_point) == 3:  # no phase_flag within
             phase_name, components, compositions = tie_point
             flag = None
         else:
@@ -86,7 +86,7 @@ PhaseRegion = NamedTuple('PhaseRegion', (('region_phases', Sequence[str]),
                                          ('phases', Sequence[str]),
                                          ('models', Dict[str, Model]),
                                          ('phase_records', Sequence[Dict[str, PhaseRecord]]),
-                                        ))
+                                         ))
 
 
 def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], datasets: PickleableTinyDB, parameters: Dict[str, float]):
