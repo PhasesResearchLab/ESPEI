@@ -245,6 +245,7 @@ def run_espei(run_settings):
         prior = mcmc_settings.get('prior')
         data_weights = mcmc_settings.get('data_weights')
         syms = mcmc_settings.get('symbols')
+        approximate_equilibrium = mcmc_settings.get('approximate_equilibrium')
 
         # set up and run the EmceeOptimizer
         optimizer = EmceeOptimizer(dbf, scheduler=client)
@@ -255,7 +256,9 @@ def run_espei(run_settings):
                       chain_std_deviation=chain_std_deviation,
                       deterministic=deterministic, restart_trace=restart_trace,
                       tracefile=tracefile, probfile=probfile,
-                      mcmc_data_weights=data_weights)
+                      mcmc_data_weights=data_weights,
+                      approximate_equilibrium=approximate_equilibrium,
+                      )
         optimizer.commit()
 
         optimizer.dbf.to_file(output_settings['output_db'], if_exists='overwrite')

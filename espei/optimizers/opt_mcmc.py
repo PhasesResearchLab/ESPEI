@@ -167,7 +167,7 @@ class EmceeOptimizer(OptimizerBase):
     def _fit(self, symbols, ds, prior=None, iterations=1000,
              chains_per_parameter=2, chain_std_deviation=0.1, deterministic=True,
              restart_trace=None, tracefile=None, probfile=None,
-             mcmc_data_weights=None,
+             mcmc_data_weights=None, approximate_equilibrium=False,
              ):
         """
 
@@ -214,6 +214,7 @@ class EmceeOptimizer(OptimizerBase):
 
         prior_dict = self.get_priors(prior, symbols_to_fit, initial_guess)
         ctx.update(prior_dict)
+        ctx['zpf_kwargs']['approximate_equilibrium'] = approximate_equilibrium
         # Run the initial parameters for guessing purposes:
         logging.log(TRACE, "Probability for initial parameters")
         self.predict(initial_guess, **ctx)
