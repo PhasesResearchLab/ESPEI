@@ -131,7 +131,7 @@ measurements.
 The following command will generate a database named ``cu-mg_dft.tdb`` with
 parameters selected and fit by ESPEI::
 
-    espei --input espei-in.yaml 
+    espei --input espei-in.yaml
 
 
 where ``espei-in.yaml`` is a :ref:`ESPEI input file <Writing input files>` with

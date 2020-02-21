@@ -141,4 +141,116 @@ Running for the single sublattice LIQUID phase in Cu-Mg gives the following outp
     :scale: 75%
 
 
+Probability convergence
+=======================
+
+Convergence can be qualitatively estimated by looking at how the
+log-probability changes for all of the chains as a function of iterations.
+
+.. code:: python
+
+    # remove next line if not using iPython or Juypter Notebooks
+    %matplotlib inline
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from espei.analysis import truncate_arrays
+
+    trace = np.load('trace.npy')
+    lnprob = np.load('lnprob.npy')
+
+    trace, lnprob = truncate_arrays(trace, lnprob)
+
+
+    ax = plt.gca()
+    ax.set_yscale('log')
+    ax.set_ylim(1e7, 1e10)
+    ax.set_xlabel('Iterations')
+    ax.set_ylabel('- lnprob')
+    num_chains = lnprob.shape[0]
+    for i in range(num_chains):
+        ax.plot(-lnprob[i,:])
+    plt.show()
+
+
+
+.. image:: _static/docs-analysis-example_1_0.png
+
+
+Visualizing the trace of each parameter
+=======================================
+
+Looking at how each parameter chain evolves across the chains can show
+if any particular chains are diverging from the rest, if there are
+multiple modes being explored, or how wide the distribution of parameters
+are relative to each other.
+
+.. code:: python
+
+    # remove next line if not using iPython or Juypter Notebooks
+    %matplotlib inline
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    from espei.analysis import truncate_arrays
+
+    trace = np.load('trace.npy')
+    lnprob = np.load('lnprob.npy')
+
+    trace, lnprob = truncate_arrays(trace, lnprob)
+
+    num_chains = trace.shape[0]
+    num_parameters = trace.shape[2]
+    for parameter in range(num_parameters):
+        ax = plt.figure().gca()
+        ax.set_xlabel('Iterations')
+        ax.set_ylabel('Parameter value')
+        for chain in range(num_chains):
+            ax.plot(trace[chain, :, parameter])
+    plt.show()
+
+
+The example below is for *one* parameter. Running the snippet above will plot
+all of the parameters on separate plots.
+
+.. image:: _static/docs-analysis-example_3_0.png
+
+Corner plots
+============
+
+Note: You must install the ``corner`` package before using it
+(``conda install corner`` or ``pip install corner``).
+
+In a corner plot, the distributions for each parameter are plotted along
+the diagonal and covariances between them under the diagonal. A more
+circular covariance means that parameters are not correlated to each
+other, while elongated shapes indicate that the two parameters are
+correlated. Strongly correlated parameters are expected for some
+parameters in CALPHAD models within phases or for phases in equilibrium,
+because increasing one parameter while decreasing another would give a
+similar likelihood.
+
+.. code:: python
+
+    # remove next line if not using iPython or Juypter Notebooks
+    %matplotlib inline
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import corner
+
+    from espei.analysis import truncate_arrays
+
+    trace = np.load('trace.npy')
+    lnprob = np.load('lnprob.npy')
+
+    trace, lnprob = truncate_arrays(trace, lnprob)
+
+    # flatten the along the first dimension containing all the chains in parallel
+    fig = corner.corner(trace.reshape(-1, trace.shape[-1]))
+    plt.show()
+
+
+
+.. image:: _static/docs-analysis-example_5_0.png
+
+
 
