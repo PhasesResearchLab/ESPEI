@@ -23,15 +23,39 @@
    installation
    quickstart
 
+ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for thermodynamic database development within the CALPHAD method. It uses `pycalphad`_ for calculating Gibbs free energies of thermodynamic models.
 
-ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for automated thermodynamic database development within the CALPHAD method. It uses `pycalphad`_ for calculating Gibbs free energies of thermodynamic models.
 
 
-.. _pycalphad-fitting: https://github.com/richardotis/pycalphad-fitting
-.. _pycalphad: http://pycalphad.org
-.. _Richard Otis's thesis: https://etda.libraries.psu.edu/catalog/s1784k73d
-.. _Jom 69, (2017): http://dx.doi.org/10.1007/s11837-017-2318-6
-.. _Magnes. Technol. 2010 617-622 (2010): http://www.phases.psu.edu/wp-content/uploads/2010-Shang-Shunli-MagTech-ESPEI-0617-1.pdf
+What is ESPEI?
+--------------
+
+1. ESPEI parameterizes CALPHAD models with enthalpy, entropy, and heat capacity data using the corrected Akiake Information Criterion (AICc). This parameter generation step augments the CALPHAD modeler by providing tools for data-driven model selection, rather than relying on a modeler's intuition alone.
+2. ESPEI optimizes CALPHAD model parameters to thermochemical and phase boundary data and quantifies the uncertainty of the model parameters using Markov Chain Monte Carlo (MCMC). This is similar to the PARROT module of Thermo-Calc, but goes beyond by adjusting all parameters simultaneously and evaluating parameter uncertainty.
+
+Details on the implmementation of ESPEI can be found in the publication: B. Bocklund *et al.*, MRS Communications 9(2) (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_.
+
+What ESPEI can do?
+------------------
+
+ESPEI can be used to generate model parameters for CALPHAD models of the Gibbs energy that follow the temperature-dependent polynomial by Dinsdale (CALPHAD 15(4) 1991 317-425) within the compound energy formalism (CEF) for endmembers and Redlich-Kister-Mugganu excess mixing parameters in unary, binary and ternary systems.
+
+All thermodynamic quantities are computed by pycalphad. The MCMC-based Bayesian parameter estimation can optimize data for any model that is supported by pycalphad, including models beyond the endmember Gibbs energies Redlich-Kister-Mugganiu excess terms, such as parameters in the ionic liquid model, magnetic, or two-state models. Performing Bayesian parameter estimation for arbitrary multicomponent thermodynamic data is supported.
+
+
+Goals
+-----
+
+1. Offer a free and open-source tool for users to develop multicomponent databases with quantified uncertainty
+2. Enable development of CALPHAD-type models for Gibbs energy, thermodynamic or kinetic properties
+3. Provide a platform to build and apply novel model selection, optimization, and uncertainty quantification methods
+
+The implementation for ESPEI involves first fitting single-phase data by calculating parameters in thermodynamic models that are linearly described by the single-phase input data.
+Then Markov Chain Monte Carlo (MCMC) is used to optimize the candidate models from the single-phase fitting to multi-phase zero-phase fraction data.
+More details on
+
+The benefit of this approach is the automated, simultaneous fitting for many parameters that yields uncertainty quantification, as shown in Otis and Liu High-Throughput Thermodynamic Modeling and Uncertainty Quantification for ICME. `Jom 69, (2017)`_.
+Single-phase and multi-phase fitting methods are described in Chapter 3 of `Richard Otis's thesis`_.
 
 
 .. figure:: _static/cu-mg-mcmc-phase-diagram.png
@@ -42,24 +66,17 @@ ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool 
     See the :ref:`Cu-Mg Example`.
 
 
-
-Goals
------
-
-1. Offer a free and open-source tool for users to develop multicomponent databases with quantified uncertainty
-2. Enable development of CALPHAD-type models for Gibbs energy, thermodynamic or kinetic properties
-3. Provide a platform to build and apply novel model selection and optimization methods
-
-The implementation for ESPEI involves first fitting single-phase data by calculating parameters in thermodynamic models that are linearly described by the single-phase input data.
-Then Markov Chain Monte Carlo (MCMC) is used to optimize the candidate models from the single-phase fitting to multi-phase zero-phase fraction data.
-The benefit of this approach is the automated, simultaneous fitting for many parameters that yields uncertainty quantification, as shown in Otis and Liu High-Throughput Thermodynamic Modeling and Uncertainty Quantification for ICME. `Jom 69, (2017)`_.
-Single-phase and multi-phase fitting methods are described in Chapter 3 of `Richard Otis's thesis`_.
-
-
 History
 -------
 
 The ESPEI package is based on a fork of `pycalphad-fitting`_. The name and idea of ESPEI are originally based off of Shang, Wang, and Liu, ESPEI: Extensible, Self-optimizing Phase Equilibrium Infrastructure for Magnesium Alloys `Magnes. Technol. 2010 617-622 (2010)`_.
+
+Implementation details for ESPEI have been described in the following publications:
+
+- B. Bocklund *et al.*, MRS Communications 9(2) (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_
+- R. Otis *et al.*, JOM 69 (2017) doi:`10.1007/s11837-017-2318-6 <http://doi.org/10.1007/s11837-017-2318-6>`_
+- Richard Otis's `thesis <https://etda.libraries.psu.edu/catalog/s1784k73d>`_
+
 
 Change log
 ----------
@@ -84,7 +101,19 @@ See `what's new <CHANGES.html>`_!
 
 
    cu-mg-example
+
+.. raw:: latex
+
+   \part{How-to}
+
+.. toctree::
+   :maxdepth: 2
+   :caption: How-to
+
+   writing_input
+   specifying_priors
    input_data
+   recipes
 
 
 .. raw:: latex
@@ -95,9 +124,6 @@ See `what's new <CHANGES.html>`_!
    :maxdepth: 1
    :caption: Reference
 
-   writing_input
-   specifying_priors
-   recipes
    advanced_schedulers
    api/modules
 
@@ -194,3 +220,9 @@ B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for 
    * :ref:`genindex`
    * :ref:`modindex`
    * :ref:`search`
+
+.. _pycalphad-fitting: https://github.com/richardotis/pycalphad-fitting
+.. _pycalphad: http://pycalphad.org
+.. _Richard Otis's thesis: https://etda.libraries.psu.edu/catalog/s1784k73d
+.. _Jom 69, (2017): http://dx.doi.org/10.1007/s11837-017-2318-6
+.. _Magnes. Technol. 2010 617-622 (2010): http://www.phases.psu.edu/wp-content/uploads/2010-Shang-Shunli-MagTech-ESPEI-0617-1.pdf
