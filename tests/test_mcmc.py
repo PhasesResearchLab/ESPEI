@@ -22,21 +22,17 @@ def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
     phases = ['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2']
     param = 'VV0001'
     orig_val = dbf.symbols[param].args[0].expr
-    models = instantiate_models(dbf, comps, phases, parameters={param: orig_val})
-    eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=[param],
-                        output='GM', build_gradients=True, build_hessians=True,
-                        additional_statevars={v.N, v.P, v.T})
+    initial_params = {param: orig_val}
 
     zpf_kwargs = {
-        'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(comps, phases, datasets_db),
-        'phase_models': models, 'callables': eq_callables,
+        'zpf_data': get_zpf_data(dbf, comps, phases, datasets_db, initial_params),
         'data_weight': 1.0,
     }
     opt = EmceeOptimizer(dbf)
     res = opt.predict([10], prior_rvs=[rv_zero()], symbols_to_fit=[param], zpf_kwargs=zpf_kwargs)
 
     assert np.isreal(res)
-    assert np.isclose(res, -31.309645520830344, rtol=1e-6)
+    assert np.isclose(res, -31.309645520830344, rtol=1e-4)
 
     res_2 = opt.predict([10000000], prior_rvs=[rv_zero()], symbols_to_fit=[param], zpf_kwargs=zpf_kwargs)
 
@@ -84,7 +80,7 @@ def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
     comps = ['CU', 'MG', 'VA']
     phases = ['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2']
     datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
-    zpf_kwargs = {'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(comps, phases, datasets_db), 'data_weight': 1.0}
+    zpf_kwargs = {'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(dbf, comps, phases, datasets_db, {'VV0001': 0.0}), 'data_weight': 1.0}
     res = opt.predict([10], prior_rvs=[rv_zero()], symbols_to_fit=['VV0001'], zpf_kwargs=zpf_kwargs)
     assert np.isneginf(res)
 
@@ -98,7 +94,7 @@ def test_lnprob_does_not_raise_on_ValueError(datasets_db):
     comps = ['CU', 'MG', 'VA']
     phases = ['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2']
     datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
-    zpf_kwargs = {'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(comps, phases, datasets_db), 'data_weight': 1.0}
+    zpf_kwargs = {'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(dbf, comps, phases, datasets_db, {'VV0001': 0.0}), 'data_weight': 1.0}
     res = opt.predict([10], prior_rvs=[rv_zero()], symbols_to_fit=['VV0001'], zpf_kwargs=zpf_kwargs)
     assert np.isneginf(res)
 

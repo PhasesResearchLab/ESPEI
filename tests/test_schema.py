@@ -146,6 +146,7 @@ def test_correct_defaults_are_applied_from_minimal_specification():
     assert d['mcmc'].pop('chains_per_parameter') == 2
     assert d['mcmc'].pop('chain_std_deviation') == 0.1
     assert d['mcmc'].pop('deterministic') == True
+    assert d['mcmc'].pop('approximate_equilibrium') == False
     assert d['mcmc'].pop('data_weights') == {'ACR': 1.0, 'CPM': 1.0, 'HM': 1.0, 'SM': 1.0, 'ZPF': 1.0}
     assert d['mcmc'].pop('prior') == {'name': 'zero'}
     assert len(d['mcmc']) == 1

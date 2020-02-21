@@ -58,7 +58,8 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
     import time
     t1 = time.time()
     phases = sorted(dbf.phases.keys())
-    models = instantiate_models(dbf, comps, phases, parameters=dict(zip(symbols_to_fit, [0]*len(symbols_to_fit))))
+    parameters = dict(zip(symbols_to_fit, [0]*len(symbols_to_fit)))
+    models = instantiate_models(dbf, comps, phases, parameters=parameters)
     if make_callables:
         eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=symbols_to_fit,
                             output='GM', build_gradients=True, build_hessians=True,
@@ -74,8 +75,7 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
     error_context = {
         'symbols_to_fit': symbols_to_fit,
         'zpf_kwargs': {
-            'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(comps, phases, datasets),
-            'phase_models': models, 'callables': eq_callables,
+            'zpf_data': get_zpf_data(dbf, comps, phases, datasets, parameters),
             'data_weight': data_weights.get('ZPF', 1.0),
         },
         'thermochemical_kwargs': {

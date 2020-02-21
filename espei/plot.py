@@ -157,7 +157,7 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
     >>> dataplot(my_components, my_phases, conditions, datasets)  # doctest: +SKIP
 
     """
-    indep_comps = [key for key, value in conds.items() if isinstance(key, v.Composition) and len(np.atleast_1d(value)) > 1]
+    indep_comps = [key for key, value in conds.items() if isinstance(key, v.X) and len(np.atleast_1d(value)) > 1]
     indep_pots = [key for key, value in conds.items() if ((key == v.T) or (key == v.P)) and len(np.atleast_1d(value)) > 1]
     plot_kwargs = plot_kwargs or {}
     phases = sorted(phases)
