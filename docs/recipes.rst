@@ -117,7 +117,7 @@ The ``plot_parameters`` code will automatically plot all of the energies that da
    # object in order to be a tuple, not just parantheses.
    # some examples:
    # ('CU', 'MG')  # endmember
-   # (('CU', 'MG'),)  # (('CU', 'MG')) is invalid because it will be come ('CU', 'MG')
+   # (('CU', 'MG'),)  # (('CU', 'MG')) is invalid because it will become ('CU', 'MG')
    # ('MG', ('CU', 'MG'))
    CONFIGURATION = (('CU', 'MG'),)
 
@@ -163,7 +163,6 @@ log-probability changes for all of the chains as a function of iterations.
 
     ax = plt.gca()
     ax.set_yscale('log')
-    ax.set_ylim(1e7, 1e10)
     ax.set_xlabel('Iterations')
     ax.set_ylabel('- lnprob')
     num_chains = lnprob.shape[0]
