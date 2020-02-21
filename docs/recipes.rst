@@ -8,8 +8,8 @@ Recipes
 
 Here you can find some useful snippets of code to make using ESPEI easier.
 
-Optimal parameter TDBs
-======================
+Get optimal parameter TDB files from a trace
+============================================
 
 Creating TDBs of optimal parameters from a tracefile and probfile:
 
@@ -41,8 +41,8 @@ Creating TDBs of optimal parameters from a tracefile and probfile:
    dbf.to_file(OUTPUT_TDB_FILENAME)
 
 
-Plotting phase equilibria data
-==============================
+Plot phase equilibria data
+==========================
 
 When compiling ESPEI datasets of phase equilibria data, it can be useful to plot the data to check that it matches visually with what you are expecting.
 This script plots a binary phase diagram.
@@ -90,8 +90,8 @@ The script gives the following output:
     :alt: Cu-Mg dataplot recipe
     :scale: 100%
 
-Plotting thermochemical properties parameters with data
-=======================================================
+Plot thermochemical properties parameters with data
+===================================================
 
 Parameter selection in ESPEI fits Calphad parameters to thermochemical data.
 MCMC can adjust these parameters.
@@ -141,8 +141,8 @@ Running for the single sublattice LIQUID phase in Cu-Mg gives the following outp
     :scale: 75%
 
 
-Probability convergence
-=======================
+Visualize probability convergence
+=================================
 
 Convergence can be qualitatively estimated by looking at how the
 log-probability changes for all of the chains as a function of iterations.
@@ -176,8 +176,8 @@ log-probability changes for all of the chains as a function of iterations.
 .. image:: _static/docs-analysis-example_1_0.png
 
 
-Visualizing the trace of each parameter
-=======================================
+Visualize the trace of each parameter
+=====================================
 
 Looking at how each parameter chain evolves across the chains can show
 if any particular chains are diverging from the rest, if there are
@@ -214,8 +214,8 @@ all of the parameters on separate plots.
 
 .. image:: _static/docs-analysis-example_3_0.png
 
-Corner plots
-============
+Plot a corner plot
+==================
 
 Note: You must install the ``corner`` package before using it
 (``conda install corner`` or ``pip install corner``).
