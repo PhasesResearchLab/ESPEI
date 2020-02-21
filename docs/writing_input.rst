@@ -44,6 +44,8 @@ All of the possible keys are
      excess_model
      ref_state
      ridge_alpha
+     aicc_penalty_factor
+     input_db
 
    mcmc:
      iterations
@@ -56,7 +58,9 @@ All of the possible keys are
      chains_per_parameter
      chain_std_deviation
      deterministic
+     approximate_equilibrium
      data_weights
+     symbols
 
 
 The next sections describe each of the keys individually.
@@ -224,6 +228,47 @@ If an exponential form is used, the floating point value must have a decimal pla
 that is ``1e-4`` is invalid while ``1.e-4`` is valid. More generally, the floating point must match the following
 regular expression per the `YAML 1.1 spec <http://yaml.org/type/float.html>`_: ``[-+]?([0-9][0-9_]*)?\.[0-9.]*([eE][-+][0-9]+)?``.
 
+
+aicc_penalty_factor
+-------------------
+
+:type: dict
+:default: null
+
+
+This parameter is a mapping from a phase name and property to a penalty factor to apply to the AICc number of parameters. The default is ``null``, which means that all the penalty factors are one (1) for all phases, which means no bias for more or fewer parameters compared to the textbook definition of AICc. If phases or data are not included, the penalty factors remain one.
+
+Increasing the penalty factor will increase the penalty for more parameters, so it will bias parameter selection to choose fewer parameters. This can be especially useful when there is not many data points and an exact fit is possible (e.g. 4 points and 4 parameters), but modeling intutition would suggest that fewer parameters are required. A negative penalty factor will bias ESPEI's parameter selection to choose more parameters, which can be useful for generating more degrees of freedom for MCMC.
+
+.. code-block:: yaml
+
+     aicc_penalty_factor:
+       BCC_A2:
+         HM: 5.0
+         SM: 5.0
+       LIQUID:
+         HM: 2.0
+         SM: 2.0
+
+
+input_db
+--------
+
+:type: string
+:default: null
+
+A file path that can be read as a pycalphad
+`Database <https://pycalphad.org/docs/latest/api/pycalphad.io.html?highlight=database#pycalphad.io.database.Database>`_,
+which can provide existing parameters to add as a starting point for parameter
+generation, for example magnetic parameters.
+
+If you have single phase data, ESPEI will try to fit parameters to that data
+regardless of whether or not parameters were passed in for that phase. You must
+be careful to only add initial parameters that do not have data that ESPEI will
+try to fit. For example, do not include liquid enthalpy of mixing data for
+ESPEI to fit if you are providing an initial set of parameters.
+
+
 mcmc
 ====
 
@@ -353,6 +398,23 @@ If you are restarting a calculation, the standard deviation for your chains are 
 You may technically set this to any positive value, you would like.
 Be warned that too small of a standard deviation may cause convergence to a local minimum in parameter space and slow convergence, while a standard deviation that is too large may cause convergence to meaningless thermodynamic descriptions.
 
+
+approximate_equilibrium
+-----------------------
+
+:type: bool
+:default: False
+
+If True, an approximate version of pycalphad's ``equilibrium()`` function will
+be used to calculate the driving force for phase boundary data. It uses
+pycalphad's ``starting_point`` to construct a approximate equilibrium
+hyperplanes of the lowest energy solution from a numerical sampling of each
+active phases's internal degrees of freedom. This can give speedups of up to
+10x for calculating the ZPF likelihood, but may miss low energy solutions that
+are not sampled well numerically, especially for phases with many sublattices,
+which have low energy solutions far from the endmembers.
+
+
 deterministic
 -------------
 
@@ -390,3 +452,16 @@ used to modify the initial standard deviation of each data type by
 .. figure:: _static/weight_equation.png
     :alt: Data weight equation
     :scale: 100%
+
+symbols
+-------
+
+:type: list[str]
+:default: null
+
+By default, any symbol in the database following the naming pattern `VV####`
+where `####` is any number is optimized by ESPEI. If this option is set, this
+can be used to manually fit a subset of the degrees of freedom in the system,
+or fit degrees of freedom that do not folow the naming convention of 'VV####'::
+
+   symbols: ['VV0000', 'FF0000', ...]
