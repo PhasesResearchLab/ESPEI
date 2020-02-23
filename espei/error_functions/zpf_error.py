@@ -24,7 +24,7 @@ import tinydb
 
 from pycalphad import Database, Model, variables as v
 from pycalphad.codegen.callables import build_phase_records
-from pycalphad.core.utils import instantiate_models
+from pycalphad.core.utils import instantiate_models, filter_phases
 from pycalphad.core.phase_rec import PhaseRecord
 from espei.utils import PickleableTinyDB
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_
@@ -119,7 +119,8 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
     for data in desired_data:
         data_comps = list(set(data['components']).union({'VA'}))
         species = sorted(map(v.Species, data_comps), key=str)
-        models = instantiate_models(dbf, species, phases, parameters=parameters)
+        data_phases = filter_phases(dbf, species, candidate_phases=phases)
+        models = instantiate_models(dbf, species, data_phases, parameters=parameters)
         all_regions = data['values']
         conditions = data['conditions']
         phase_regions = []
@@ -135,9 +136,9 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
             region_potential_conds[v.N] = region_potential_conds.get(v.N) or 1.0  # Add v.N condition, if missing
             # Extract all the phases and compositions from the tie-line points
             region_phases, region_comp_conds, phase_flags = extract_phases_comps(phase_region)
-            region_phase_records = [build_phase_records(dbf, species, phases, {**region_potential_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
+            region_phase_records = [build_phase_records(dbf, species, data_phases, {**region_potential_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
                                     for comp_conds in region_comp_conds]
-            phase_regions.append(PhaseRegion(region_phases, region_potential_conds, region_comp_conds, phase_flags, dbf, species, phases, models, region_phase_records))
+            phase_regions.append(PhaseRegion(region_phases, region_potential_conds, region_comp_conds, phase_flags, dbf, species, data_phases, models, region_phase_records))
 
         data_dict = {
             'weight': data.get('weight', 1.0),
