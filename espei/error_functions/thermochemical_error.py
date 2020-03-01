@@ -168,10 +168,8 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
         'SM':   0.2/weight_dict.get('SM', 1.0),  # J/K-mol
         'CPM':  0.2/weight_dict.get('CPM', 1.0),  # J/K-mol
     }
-
     properties = ['HM_FORM', 'SM_FORM', 'CPM_FORM', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
 
-    # TODO: modify for data_comps, where the data is a subset of the total number of components
     ref_states = []
     for el in get_pure_elements(dbf, comps):
         ref_state = ReferenceState(el, dbf.refstates[el]['phase'])
