@@ -277,8 +277,8 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
         Datasets that contain single phase data
     phase_models : dict
         Phase models to pass to pycalphad calculations
-    parameters : dict
-        Dictionary of symbols that will be overridden in pycalphad.equilibrium
+    parameters : np.ndarray
+        Array of parameters to calculate the error with.
     callables : dict
         Callables to pass to pycalphad
     data_weight : float
