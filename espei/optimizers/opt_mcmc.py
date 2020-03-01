@@ -3,7 +3,7 @@ import time
 import numpy as np
 import emcee
 from espei.error_functions import calculate_zpf_error, calculate_activity_error, \
-    calculate_thermochemical_error
+    calculate_non_equilibrium_thermochemical_probability
 from espei.priors import PriorSpec, build_prior_specs
 from espei.utils import unpack_piecewise, optimal_parameters
 from espei.error_functions.context import setup_context
@@ -279,7 +279,7 @@ class EmceeOptimizer(OptimizerBase):
         else:
             actvity_error = 0
         if thermochemical_kwargs is not None:
-            single_phase_error = calculate_thermochemical_error(parameters=np.array(params), **thermochemical_kwargs)
+            single_phase_error = calculate_non_equilibrium_thermochemical_probability(parameters=np.array(params), **thermochemical_kwargs)
         else:
             single_phase_error = 0
         total_error = multi_phase_error + single_phase_error + actvity_error

@@ -223,7 +223,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
     return all_data_dicts
 
 
-def calculate_thermochemical_error(dbf, thermochemical_data, parameters=None):
+def calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data, parameters=None):
     """
     Calculate the weighted single phase error in the Database
 
