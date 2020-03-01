@@ -101,6 +101,8 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         List of phases to consider
     datasets : espei.utils.PickleableTinyDB
         Datasets that contain single phase data
+    parameters : dict
+        Dictionary mapping symbols to optimize to their initial values
 
     Returns
     -------
