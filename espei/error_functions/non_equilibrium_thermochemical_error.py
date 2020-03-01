@@ -4,20 +4,20 @@ Calculate error due to thermochemical quantities: heat capacity, entropy, enthal
 
 import logging
 from collections import OrderedDict
-from copy import deepcopy
 
 import sympy
 from scipy.stats import norm
 import numpy as np
 from tinydb import where
 
-from pycalphad import calculate, Model, ReferenceState, variables as v
+from pycalphad import Model, ReferenceState, variables as v
 from pycalphad.core.utils import unpack_components, get_pure_elements
-from pycalphad.codegen.callables import build_callables
 
-from espei.refdata import pure_element_phases
 from espei.core_utils import ravel_conditions, get_prop_data
 from espei.utils import database_symbols_to_fit
+from espei.error_functions.zpf_error import update_phase_record_parameters
+from espei.shadow_functions import calculate_
+from pycalphad.codegen.callables import build_phase_records
 
 
 def calculate_points_array(phase_constituents, configuration, occupancies=None):
@@ -130,7 +130,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
     return calculate_dict
 
 
-def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symbols_to_fit=None, make_callables=True):
+def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symbols_to_fit=None):
     """
 
     Parameters
@@ -146,7 +146,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
     weight_dict : dict
         Dictionary of weights for each data type, e.g. {'HM': 200, 'SM': 2}
     symbols_to_fit : list
-        Parameters to fit. Used to build the models and callables.
+        Parameters to fit. Used to build the models and PhaseRecords.
 
     Returns
     -------
@@ -168,9 +168,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
         'SM':   0.2/weight_dict.get('SM', 1.0),  # J/K-mol
         'CPM':  0.2/weight_dict.get('CPM', 1.0),  # J/K-mol
     }
-
     properties = ['HM_FORM', 'SM_FORM', 'CPM_FORM', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
-
 
     ref_states = []
     for el in get_pure_elements(dbf, comps):
@@ -188,7 +186,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
                     'phase_name': phase_name,
                     'prop': prop,
                     # needs the following keys to be added:
-                    # calculate_dict, callables, model, output, weights
+                    # species, calculate_dict, phase_records, model, output, weights
                 }
                 # get all the data with these model exclusions
                 if exclusion == tuple([]):
@@ -206,15 +204,18 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
                 for contrib in exclusion:
                     mod.models[contrib] = sympy.S.Zero
                     mod.reference_model.models[contrib] = sympy.S.Zero
+                species = sorted(map(v.Species, comps))
+                data_dict['species'] = species
                 model = {phase_name: mod}
-                callables = build_callables(dbf, comps, [phase_name], model,
-                                            parameter_symbols=symbols_to_fit,
-                                            output=output,
-                                            build_gradients=False, build_hessians=False,
-                                            additional_statevars={v.P, v.T, v.N})
+                statevar_dict = {getattr(v, c, None): vals for c, vals in calculate_dict.items() if isinstance(getattr(v, c, None), v.StateVariable)}
+                statevar_dict = OrderedDict(sorted(statevar_dict.items(), key=lambda x: str(x[0])))
+                str_statevar_dict = OrderedDict((str(k), vals) for k, vals in statevar_dict.items())
+                phase_records = build_phase_records(dbf, species, [phase_name], statevar_dict, model,
+                                                    output=output, parameters={s: 0 for s in symbols_to_fit},
+                                                    build_gradients=False, build_hessians=False)
+                data_dict['str_statevar_dict'] = str_statevar_dict
+                data_dict['phase_records'] = phase_records
                 data_dict['calculate_dict'] = calculate_dict
-                if make_callables:
-                    data_dict['callables'] = callables
                 data_dict['model'] = model
                 data_dict['output'] = output
                 data_dict['weights'] = np.array(property_std_deviation[prop.split('_')[0]])/np.array(calculate_dict.pop('weights'))
@@ -222,7 +223,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
     return all_data_dicts
 
 
-def calculate_thermochemical_error(dbf, comps, thermochemical_data, parameters=None):
+def calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data, parameters=None):
     """
     Calculate the weighted single phase error in the Database
 
@@ -230,12 +231,10 @@ def calculate_thermochemical_error(dbf, comps, thermochemical_data, parameters=N
     ----------
     dbf : pycalphad.Database
         Database to consider
-    comps : list
-        List of active component names
     thermochemical_data : list
         List of thermochemical data dicts
-    parameters : dict
-        Dictionary of symbols that will be overridden in pycalphad.calculate
+    parameters : np.ndarray
+        Array of parameters to calculate the error with.
 
     Returns
     -------
@@ -256,27 +255,23 @@ def calculate_thermochemical_error(dbf, comps, thermochemical_data, parameters=N
 
     """
     if parameters is None:
-        parameters = {}
+        parameters = np.array([])
 
     prob_error = 0.0
     for data in thermochemical_data:
         phase_name = data['phase_name']
-        prop = data['prop']
-        calculate_dict = deepcopy(data['calculate_dict'])
         output = data['output']
-        callables = data.get('callables', None)
-        mod = data['model']
-        std_devs = data['weights']
+        phase_records = data['phase_records']
+        sample_values = data['calculate_dict']['values']
 
-        sample_values = calculate_dict.pop('values')
-        dataset_refs = calculate_dict.pop('references')
-        results = calculate(dbf, comps, phase_name, broadcast=False, parameters=parameters, model=mod,
-                            callables=callables, output=output, **calculate_dict)[output].values
-        probabilities = []
-        differences = []
-        for result, sample_value, std_dev, ref in zip(results, sample_values, std_devs, dataset_refs):
-            differences.append(result-sample_value)
-            probabilities.append(norm(loc=0, scale=std_dev).logpdf(result-sample_value))
-        logging.debug('Thermochemical error - data: {}, differences: {}, probabilities: {}, references: {}'.format(sample_values, differences, probabilities, dataset_refs))
-        prob_error += np.sum(probabilities)
+        update_phase_record_parameters(phase_records, parameters)
+        results = calculate_(dbf, data['species'], [phase_name],
+                             data['str_statevar_dict'], data['model'],
+                             phase_records, output=output, broadcast=False,
+                             points=data['calculate_dict']['points'])[output]
+        differences = results - sample_values
+        probabilities = norm.logpdf(differences, loc=0, scale=data['weights'])
+        prob_sum = np.sum(probabilities)
+        logging.debug(f"Thermochemical error - {data['prop']}({phase_name}) = {prob_sum} - data: {sample_values}, differences: {differences}, probabilities: {probabilities}, references: {data['calculate_dict']['references']}")
+        prob_error += prob_sum
     return prob_error

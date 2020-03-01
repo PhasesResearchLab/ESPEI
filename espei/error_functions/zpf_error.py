@@ -14,15 +14,15 @@ There's some special handling for tieline endpoints where we do not know the
 composition conditions to calculate chemical potentials at.
 """
 
-import operator, logging
-from collections import defaultdict, OrderedDict
+import logging
+from collections import OrderedDict
 from typing import Sequence, Dict, NamedTuple, Any
 
 import numpy as np
 from scipy.stats import norm
 import tinydb
 
-from pycalphad import Database, calculate, equilibrium, Model, variables as v
+from pycalphad import Database, Model, variables as v
 from pycalphad.codegen.callables import build_phase_records
 from pycalphad.core.utils import instantiate_models
 from pycalphad.core.phase_rec import PhaseRecord
@@ -101,6 +101,8 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         List of phases to consider
     datasets : espei.utils.PickleableTinyDB
         Datasets that contain single phase data
+    parameters : dict
+        Dictionary mapping symbols to optimize to their initial values
 
     Returns
     -------
@@ -277,8 +279,8 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
         Datasets that contain single phase data
     phase_models : dict
         Phase models to pass to pycalphad calculations
-    parameters : dict
-        Dictionary of symbols that will be overridden in pycalphad.equilibrium
+    parameters : np.ndarray
+        Array of parameters to calculate the error with.
     callables : dict
         Callables to pass to pycalphad
     data_weight : float
@@ -315,7 +317,7 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
             eq_str = "conds: ({}), comps: ({})".format(phase_region.potential_conds, ', '.join(['{}: {}'.format(ph, c) for ph, c in zip(phase_region.region_phases, phase_region.comp_conds)]))
             target_hyperplane = estimate_hyperplane(phase_region, parameters, approximate_equilibrium=approximate_equilibrium)
             if np.any(np.isnan(target_hyperplane)):
-                zero_probs = norm(loc=0, scale=1000/data_weight/weight).logpdf(np.zeros(len(region)))
+                zero_probs = norm.logpdf(np.zeros(len(phase_region.comp_conds), loc=0, scale=1000/data_weight/weight))
                 total_zero_prob = np.sum(zero_probs)
                 logging.debug('ZPF error - NaN target hyperplane. Equilibria: ({}), reference: {}. Treating all driving force: 0.0, probability: {}, probabilities: {}'.format(eq_str, dataset_ref, total_zero_prob, zero_probs))
                 prob_error += total_zero_prob
@@ -327,10 +329,9 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
                                                             phase_region, vertex_idx, parameters,
                                                             approximate_equilibrium=approximate_equilibrium,
                                                             )
-                vertex_prob = norm(loc=0, scale=1000/data_weight/weight).logpdf(driving_force)
+                vertex_prob = norm.logpdf(driving_force, loc=0, scale=1000/data_weight/weight)
                 prob_error += vertex_prob
                 logging.debug('ZPF error - Equilibria: ({}), current phase: {}, driving force: {}, probability: {}, reference: {}'.format(eq_str, phase_region.region_phases[vertex_idx], driving_force, vertex_prob, dataset_ref))
     if np.isnan(prob_error):
         return -np.inf
     return prob_error
-
