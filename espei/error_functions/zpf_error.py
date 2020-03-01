@@ -14,15 +14,15 @@ There's some special handling for tieline endpoints where we do not know the
 composition conditions to calculate chemical potentials at.
 """
 
-import operator, logging
-from collections import defaultdict, OrderedDict
+import logging
+from collections import OrderedDict
 from typing import Sequence, Dict, NamedTuple, Any
 
 import numpy as np
 from scipy.stats import norm
 import tinydb
 
-from pycalphad import Database, calculate, equilibrium, Model, variables as v
+from pycalphad import Database, Model, variables as v
 from pycalphad.codegen.callables import build_phase_records
 from pycalphad.core.utils import instantiate_models
 from pycalphad.core.phase_rec import PhaseRecord
