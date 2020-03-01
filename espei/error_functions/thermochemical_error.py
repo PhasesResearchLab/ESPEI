@@ -272,7 +272,8 @@ def calculate_thermochemical_error(dbf, thermochemical_data, parameters=None):
                              phase_records, output=output, broadcast=False,
                              points=data['calculate_dict']['points'])[output]
         differences = results - sample_values
-        probabilities = norm.logpdf(differences, 0, data['weights'])
-        logging.debug(f"Thermochemical error - data: {sample_values}, differences: {differences}, probabilities: {probabilities}, references: {data['calculate_dict']['references']}")
-        prob_error += np.sum(probabilities)
+        probabilities = norm.logpdf(differences, loc=0, scale=data['weights'])
+        prob_sum = np.sum(probabilities)
+        logging.debug(f"Thermochemical error - {data['prop']}({phase_name}) = {prob_sum} - data: {sample_values}, differences: {differences}, probabilities: {probabilities}, references: {data['calculate_dict']['references']}")
+        prob_error += prob_sum
     return prob_error
