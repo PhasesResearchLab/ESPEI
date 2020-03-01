@@ -137,7 +137,7 @@ def test_mixing_energies_are_fit(datasets_db):
     zero_error_prob = scipy.stats.norm(loc=0, scale=500.0).logpdf(0.0)  # HM weight = 500
     # Explicitly pass parameters={} to not try fitting anything
     thermochemical_data = get_thermochemical_data(dbf, sorted(read_dbf.elements), list(read_dbf.phases.keys()), datasets_db, symbols_to_fit=[])
-    error = calculate_thermochemical_error(dbf, sorted(read_dbf.elements), thermochemical_data)
+    error = calculate_thermochemical_error(dbf, thermochemical_data)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
 
 def test_duplicate_parameters_are_not_added_with_input_database(datasets_db):

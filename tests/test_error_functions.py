@@ -33,7 +33,7 @@ def test_thermochemical_error_with_multiple_X_points(datasets_db):
     phases = list(dbf.phases.keys())
     comps = ['CU', 'MG', 'VA']
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
-    error = calculate_thermochemical_error(dbf, comps, thermochemical_data)
+    error = calculate_thermochemical_error(dbf, thermochemical_data)
 
     assert np.isclose(error, -4061.119001241541, rtol=1e-6)
 
@@ -46,7 +46,7 @@ def test_thermochemical_error_with_multiple_T_points(datasets_db):
     phases = list(dbf.phases.keys())
     comps = ['CU', 'MG', 'VA']
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
-    error = calculate_thermochemical_error(dbf, comps, thermochemical_data)
+    error = calculate_thermochemical_error(dbf, thermochemical_data)
     assert np.isclose(error,-14.287293263253728, rtol=1e-6)
 
 
@@ -58,7 +58,7 @@ def test_thermochemical_error_with_multiple_T_X_points(datasets_db):
     phases = list(dbf.phases.keys())
     comps = ['CU', 'MG', 'VA']
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
-    error = calculate_thermochemical_error(dbf, comps, thermochemical_data)
+    error = calculate_thermochemical_error(dbf, thermochemical_data)
     assert np.isclose(float(error), -3282497.2380024833, rtol=1e-6)
 
 def test_thermochemical_error_for_mixing_entropy_error_is_excess_only(datasets_db):
@@ -109,7 +109,7 @@ def test_thermochemical_error_for_mixing_entropy_error_is_excess_only(datasets_d
     zero_error_prob = scipy.stats.norm(loc=0, scale=0.2).logpdf(0.0)  # SM weight = 0.2
     # Explicitly pass parameters={} to not try fitting anything
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
-    error = calculate_thermochemical_error(dbf, comps, thermochemical_data)
+    error = calculate_thermochemical_error(dbf, thermochemical_data)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
 
 
@@ -160,7 +160,7 @@ def test_thermochemical_error_for_of_enthalpy_mixing(datasets_db):
     zero_error_prob = scipy.stats.norm(loc=0, scale=500.0).logpdf(0.0)  # HM weight = 500
     # Explicitly pass parameters={} to not try fitting anything
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
-    error = calculate_thermochemical_error(dbf, comps, thermochemical_data)
+    error = calculate_thermochemical_error(dbf, thermochemical_data)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
 
 
