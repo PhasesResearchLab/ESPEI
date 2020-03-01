@@ -33,6 +33,7 @@ Module Hierarchy
 * ``espei_script.py`` is the main entry point for the YAML input API.
 * ``optimzers`` is a package that defines an ``OptimizerBase`` class for writing optimizers. ``EmceeOptimzer`` and ``ScipyOptimizer`` subclasses this.
 * ``error_functions`` is a package with modules for each type of likelihood function.
+* ``priors.py`` defines priors to be used in MCMC, see :ref:`Specifying priors`.
 * ``paramselect.py`` is where parameter generation happens.
 * ``mcmc.py`` creates the likelihood function and runs MCMC. Deprecated. In the future, users should use ``EmceeOptimizer``.
 * ``parameter_selection`` is a package with core pieces of parameter selection.
@@ -40,6 +41,7 @@ Module Hierarchy
 * ``plot.py`` holds plotting functions.
 * ``datasets.py`` manages validating and loading datasets into a TinyDB in memory database.
 * ``core_utils.py`` are legacy utility functions that should be refactored out to be closer to individual modules and packages where they are used.
+* ``shadow_functions.py`` are core internals that are designed to be fast, minimal versions of pycalphad's ``calculate`` and ``equilibrium`` functions.
 
 Parameter selection
 -------------------

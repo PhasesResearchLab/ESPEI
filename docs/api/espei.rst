@@ -101,6 +101,14 @@ espei.rstate module
    :undoc-members:
    :show-inheritance:
 
+espei.shadow\_functions module
+------------------------------
+
+.. automodule:: espei.shadow_functions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 espei.sublattice\_tools module
 ------------------------------
 

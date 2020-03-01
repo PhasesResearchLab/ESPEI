@@ -20,10 +20,10 @@ espei.error\_functions.context module
    :undoc-members:
    :show-inheritance:
 
-espei.error\_functions.thermochemical\_error module
----------------------------------------------------
+espei.error\_functions.non\_equilibrium\_thermochemical\_error module
+---------------------------------------------------------------------
 
-.. automodule:: espei.error_functions.thermochemical_error
+.. automodule:: espei.error_functions.non_equilibrium_thermochemical_error
    :members:
    :undoc-members:
    :show-inheritance:
