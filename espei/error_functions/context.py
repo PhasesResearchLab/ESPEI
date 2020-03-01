@@ -66,13 +66,13 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
                             additional_statevars={v.N, v.P, v.T})
     else:
         eq_callables = None
+    t2 = time.time()
+    logging.log(TRACE, 'Finished building phase models ({:0.2f}s)'.format(t2-t1))
     logging.log(TRACE, 'Getting non-equilibrium thermochemical data (this may take some time)')
     t1 = time.time()
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=data_weights, symbols_to_fit=symbols_to_fit)
     t2 = time.time()
     logging.log(TRACE, 'Finished getting non-equilibrium thermochemical data ({:0.2f}s)'.format(t2-t1))
-    t2 = time.time()
-    logging.log(TRACE, 'Finished building phase models ({:0.2f}s)'.format(t2-t1))
     logging.log(TRACE, 'Getting ZPF data (this may take some time)')
     t1 = time.time()
     zpf_data = get_zpf_data(dbf, comps, phases, datasets, parameters)
