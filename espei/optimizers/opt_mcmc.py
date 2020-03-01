@@ -279,7 +279,7 @@ class EmceeOptimizer(OptimizerBase):
         else:
             actvity_error = 0
         if thermochemical_kwargs is not None:
-            single_phase_error = calculate_thermochemical_error(parameters=parameters, **thermochemical_kwargs)
+            single_phase_error = calculate_thermochemical_error(parameters=np.array(params), **thermochemical_kwargs)
         else:
             single_phase_error = 0
         total_error = multi_phase_error + single_phase_error + actvity_error
