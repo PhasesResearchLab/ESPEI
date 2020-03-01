@@ -25,7 +25,7 @@ def test_activity_error(datasets_db):
     assert np.isclose(error, -257.41020886970756, rtol=1e-6)
 
 
-def test_thermochemical_error_with_multiple_X_points(datasets_db):
+def test_non_equilibrium_thermochemical_error_with_multiple_X_points(datasets_db):
     """Multiple composition datapoints in a dataset for a mixing phase should be successful."""
     datasets_db.insert(CU_MG_CPM_MIX_X_HCP_A3)
 
@@ -38,7 +38,7 @@ def test_thermochemical_error_with_multiple_X_points(datasets_db):
     assert np.isclose(error, -4061.119001241541, rtol=1e-6)
 
 
-def test_thermochemical_error_with_multiple_T_points(datasets_db):
+def test_non_equilibrium_thermochemical_error_with_multiple_T_points(datasets_db):
     """Multiple temperature datapoints in a dataset for a stoichiometric comnpound should be successful."""
     datasets_db.insert(CU_MG_HM_MIX_T_CUMG2)
 
@@ -50,7 +50,7 @@ def test_thermochemical_error_with_multiple_T_points(datasets_db):
     assert np.isclose(error,-14.287293263253728, rtol=1e-6)
 
 
-def test_thermochemical_error_with_multiple_T_X_points(datasets_db):
+def test_non_equilibrium_thermochemical_error_with_multiple_T_X_points(datasets_db):
     """Multiple temperature and composition datapoints in a dataset for a mixing phase should be successful."""
     datasets_db.insert(CU_MG_SM_MIX_T_X_FCC_A1)
 
@@ -61,7 +61,7 @@ def test_thermochemical_error_with_multiple_T_X_points(datasets_db):
     error = calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data)
     assert np.isclose(float(error), -3282497.2380024833, rtol=1e-6)
 
-def test_thermochemical_error_for_mixing_entropy_error_is_excess_only(datasets_db):
+def test_non_equilibrium_thermochemical_error_for_mixing_entropy_error_is_excess_only(datasets_db):
     """Tests that error in mixing entropy data is excess only (the ideal part is removed)."""
     # If this fails, make sure the ideal mixing contribution is removed.
     phase_models = {
@@ -113,7 +113,7 @@ def test_thermochemical_error_for_mixing_entropy_error_is_excess_only(datasets_d
     assert np.isclose(error, zero_error_prob, atol=1e-6)
 
 
-def test_thermochemical_error_for_of_enthalpy_mixing(datasets_db):
+def test_non_equilibrium_thermochemical_error_for_of_enthalpy_mixing(datasets_db):
     """Tests that error in mixing enthalpy data is calculated correctly"""
     phase_models = {
         "components": ["AL", "B"],
