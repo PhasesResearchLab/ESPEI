@@ -257,7 +257,7 @@ def calculate_thermochemical_error(dbf, thermochemical_data, parameters=None):
 
     """
     if parameters is None:
-        parameters = {}
+        parameters = np.array([])
 
     prob_error = 0.0
     for data in thermochemical_data:
