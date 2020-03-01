@@ -273,6 +273,6 @@ def calculate_thermochemical_error(dbf, thermochemical_data, parameters=None):
                              points=data['calculate_dict']['points'])[output]
         differences = results - sample_values
         probabilities = norm.logpdf(differences, 0, data['weights'])
-        logging.debug('Thermochemical error - data: {}, differences: {}, probabilities: {}, references: {}'.format(sample_values, differences, probabilities, data['calculate_dict']['references']))
+        logging.debug(f"Thermochemical error - data: {sample_values}, differences: {differences}, probabilities: {probabilities}, references: {data['calculate_dict']['references']}")
         prob_error += np.sum(probabilities)
     return prob_error
