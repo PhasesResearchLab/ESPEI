@@ -263,22 +263,16 @@ def calculate_thermochemical_error(dbf, thermochemical_data, parameters=None):
     for data in thermochemical_data:
         phase_name = data['phase_name']
         output = data['output']
-        model_dict = data['model']
-        std_devs = data['weights']
-        species = data['species']
-        str_statevar_dict = data['str_statevar_dict']
         phase_records = data['phase_records']
-        calculate_dict = data['calculate_dict']
-        points = calculate_dict['points']
-        sample_values = calculate_dict['values']
-        dataset_refs = calculate_dict['references']
+        sample_values = data['calculate_dict']['values']
 
         update_phase_record_parameters(phase_records, parameters)
-        results = calculate_(dbf, species, [phase_name], str_statevar_dict,
-                             model_dict, phase_records, output=output,
-                             points=points, broadcast=False)[output]
+        results = calculate_(dbf, data['species'], [phase_name],
+                             data['str_statevar_dict'], data['model'],
+                             phase_records, output=output, broadcast=False,
+                             points=data['calculate_dict']['points'])[output]
         differences = results - sample_values
-        probabilities = norm.logpdf(differences, 0, std_devs)
-        logging.debug('Thermochemical error - data: {}, differences: {}, probabilities: {}, references: {}'.format(sample_values, differences, probabilities, dataset_refs))
+        probabilities = norm.logpdf(differences, 0, data['weights'])
+        logging.debug('Thermochemical error - data: {}, differences: {}, probabilities: {}, references: {}'.format(sample_values, differences, probabilities, data['calculate_dict']['references']))
         prob_error += np.sum(probabilities)
     return prob_error
