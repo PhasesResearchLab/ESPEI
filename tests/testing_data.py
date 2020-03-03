@@ -604,3 +604,262 @@ $             *******   BCC_A2   ************
    PARAMETER TC(BCC_A2,CR,FE:VA;0)  2.98150E+02   865.5; 6000 N !
    PARAMETER TC(BCC_A2,CR,FE:VA;1)  2.98150E+02   -567.2; 6000 N !
 """
+
+
+CR_NI_LIQUID_DATA = {
+    "components": ["CR", "NI"],
+    "phases": ["LIQUID"],
+    "solver": {
+        "mode": "manual",
+        "sublattice_site_ratios": [1],
+        "sublattice_configurations": [[["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]]],
+        "sublattice_occupancies": [[[0.023, 0.977]], [[0.048, 0.952]], [[0.075, 0.925]], [[0.073, 0.927]]]
+    },
+    "conditions": {"P": 101325, "T": 1729},
+    "output": "HM_MIX",
+    "values": [[[-300, -700, -1200, -1200]]],
+    "reference": "non-equilibrium thermochemical tests", "comment": ""
+}
+
+
+CR_NI_ZPF_DATA = {
+    "components": ["CR", "NI", "VA"],
+    "phases": ["A2", "A1"],
+    "broadcast_conditions": False,
+    "conditions": {
+        "T": [1073, 1173, 1273, 1373, 1548],
+        "P": [101325.0]
+    },
+    "output": "ZPF",
+    "values": [
+        [["A1", ["CR"], [0.3866]], ["A2", ["NI"], [None]]],
+        [["A1", ["CR"], [0.3975]], ["A2", ["NI"], [None]]],
+        [["A1", ["CR"], [0.4480]], ["A2", ["NI"], [None]]],
+        [["A1", ["CR"], [0.4643]], ["A2", ["NI"], [None]]],
+        [["A1", ["CR"], [0.4984]], ["A2", ["NI"], [None]]]
+    ],
+    "reference": "zpf test", "comment": ""
+}
+
+
+CR_NI_ACTIVITY = {
+    "components": ["CR", "NI", "VA"],
+    "phases": ["LIQUID"],
+    "reference_state": {
+        "phases": ["LIQUID"],
+        "conditions": {"P": 101325, "T": 1200, "X_NI": 1.0}
+    },
+    "conditions": {"P": 101325, "T": 1200, "X_NI": [0.9]},
+    "output": "ACR_NI",
+    "values": [[[0.9]]],
+    "reference": "activity test", "comment": "Example, nearly ideal"
+}
+
+CR_FE_NI_TDB = """
+Element VA                VACUUM         0         0         0  !
+ELEMENT CR                BCC_A2    51.996      4050    23.560  !
+ELEMENT FE                BCC_A2    55.847      4489    27.28   !
+Element NI                FCC_A1    58.69       4787    29.7955 !
+
+FUNCTION GLIQCR  300 +15483.015+146.059775*T-26.908*T*LN(T)
+   +.00189435*T**2-1.47721E-06*T**3+139250*T**(-1)+2.37615E-21*T**7;  2180 Y
+   -16459.984+335.616316*T-50*T*LN(T);                                6000 N !
+FUNCTION GBCCCR  300 -8856.94+157.48*T
+ -26.908*T*LN(T)+.00189435*T**2-1.47721E-06*T**3+139250*T**(-1);      2180 Y
+  -34869.344+344.18*T-50*T*LN(T)-2.885261E+32*T**(-9);                6000 N !
+FUNCTION GFCCCR  300 -1572.94+157.643*T
+ -26.908*T*LN(T)+.00189435*T**2-1.47721E-06*T**3+139250*T**(-1);      2180 Y
+  -27585.344+344.343*T-50*T*LN(T)-2.885261E+32*T**(-9);               6000 N !
+FUNCTION GBCCFE  300  +1225.7+124.134*T-23.5143*T*LN(T)
+     -.00439752*T**2-5.8927E-08*T**3+77359*T**(-1);                    1811 Y
+      -25383.581+299.31255*T-46*T*LN(T)+2.29603E+31*T**(-9);           6000 N !
+FUNCTION GFCCFE 300 -1462.4+8.282*T-1.15*T*LN(T)+6.4E-4*T**2+GBCCFE;   1811 Y
+      -1713.815+0.94001*T+4.9251E+30*T**(-9)+GBCCFE;                   6000 N !
+FUNCTION GLIQFE  300  +13265.87+117.57557*T-23.5143*T*LN(T)
+      -0.00439752*T**2-5.8927E-08*T**3+77359*T**(-1)-3.67516E-21*T**7; 1811 Y
+      -10838.83+291.302*T-46*T*LN(T);                                  6000 N !
+FUNCTION GFCCNI  300 -5179.159+117.854*T
+      -22.096*T*ln(T)-0.0048407*T**2;                                 1728 Y
+      -27840.655+279.135*T-43.1*T*ln(T)+1.12754e+031*T**(-9);         3000 N !
+FUNCTION GLIQNI  300  11235.527+108.457*T-22.096*T*ln(T)
+      -0.0048407*T**2-3.82318e-021*T**7;                              1728 Y
+      -9549.775+268.598*T-43.1*T*ln(T);                               3000 N !
+FUNCTION GBCCNI     300  +8715.084-3.556*T+GFCCNI;                    6000 N !
+
+FUNCTION ZERO       300  +0;                                          6000 N !
+FUNCTION UN_ASS     300  +0;                                          6000 N !
+
+
+TYPE_DEFINITION % SEQ * !
+DEFINE_SYSTEM_DEFAULT ELEMENT 3 !
+
+TYPE_DEFINITION ' GES A_P_D BCC_A2 MAGNETIC  -1    0.4  !
+Type_Definition ( GES A_P_D FCC_A1 Magnetic  -3    0.28 !
+
+ Phase LIQUID % 1 1 !
+ Constituent LIQUID : CR,FE,NI : !
+
+ PARAMETER G(LIQUID,CR;0)     300  +GLIQCR;               6000 N !
+ PARAMETER G(LIQUID,FE;0)     300  +GLIQFE;               6000 N !
+ PARAMETER G(LIQUID,NI;0)     300  +GLIQNI;               6000 N !
+
+ PARAMETER G(LIQUID,CR,FE;0)  300  -17737+7.996546*T;     6000 N !
+ PARAMETER G(LIQUID,CR,FE;1)  300  -1331;                 6000 N !
+ PARAMETER G(LIQUID,CR,NI;0)  300  +318-7.3318*T;         6000 N !
+ PARAMETER G(LIQUID,CR,NI;1)  300  +16941-6.3696*T;       6000 N !
+ PARAMETER G(LIQUID,FE,NI;0)  300  -16911+5.1622*T;       6000 N !
+ PARAMETER G(LIQUID,FE,NI;1)  300  +10180-4.146656*T;     6000 N !
+
+ PARAMETER G(LIQUID,CR,FE,NI;0) 300 +130000-50*T;         6000 N !
+ PARAMETER G(LIQUID,CR,FE,NI;1) 300 +80000-50*T;          6000 N !
+ PARAMETER G(LIQUID,CR,FE,NI;2) 300 +60000-50*T;          6000 N !
+
+
+PHASE BCC_A2  %'  2 1   3 !
+CONSTITUENT BCC_A2  : CR,FE,NI : VA :  !
+
+ PARAMETER G(BCC_A2,CR:VA;0)      300 +GBCCCR;             6000 N !
+ PARAMETER G(BCC_A2,FE:VA;0)      300 +GBCCFE;             6000 N !
+ PARAMETER G(BCC_A2,NI:VA;0)      300 +GBCCNI;             3000 N !
+ PARAMETER TC(BCC_A2,CR:VA;0)     300 -311.5;              6000 N !
+ PARAMETER TC(BCC_A2,FE:VA;0)     300 +1043;               6000 N !
+ PARAMETER TC(BCC_A2,NI:VA;0)     300 +575;                6000 N !
+ PARAMETER BMAGN(BCC_A2,CR:VA;0)  300 -0.008;              6000 N !
+ PARAMETER BMAGN(BCC_A2,FE:VA;0)  300 +2.22;               6000 N !
+ PARAMETER BMAGN(BCC_A2,NI:VA;0)  300 +0.85;               6000 N !
+
+ PARAMETER TC(BCC_A2,CR,FE:VA;0)  300 +1650;               6000 N !
+ PARAMETER TC(BCC_A2,CR,FE:VA;1)  300 +550;                6000 N !
+ PARAMETER TC(BCC_A2,CR,NI:VA;0)  300 +2373;               6000 N !
+ PARAMETER TC(BCC_A2,CR,NI:VA;1)  300 +617;                6000 N !
+ PARAMETER TC(BCC_A2,FE,NI:VA;0)    300 +ZERO;             6000 N !
+ PARAMETER BMAGN(BCC_A2,CR,FE:VA;0) 300 -0.85;             6000 N !
+ PARAMETER BMAGN(BCC_A2,CR,NI:VA;0) 300 +4;                6000 N !
+ PARAMETER BMAGN(BCC_A2,FE,NI:VA;0) 300 +ZERO;             6000 N !
+
+ PARAMETER G(BCC_A2,CR,FE:VA;0)   300 +20500-9.68*T;       6000 N !
+ PARAMETER G(BCC_A2,CR,NI:VA;0)   300 +17170-11.8199*T;    6000 N !
+ PARAMETER G(BCC_A2,CR,NI:VA;1)   300 +34418-11.8577*T;    6000 N !
+ PARAMETER G(BCC_A2,FE,NI:VA;0)   300 -956.63-1.28726*T;   6000 N !
+ PARAMETER G(BCC_A2,FE,NI:VA;1)   300 +1789.03-1.92912*T;  6000 N !
+
+ PARAMETER G(BCC_A2,CR,FE,NI:VA;0) 300 +6000.+10*T;        6000 N !
+ PARAMETER G(BCC_A2,CR,FE,NI:VA;1) 300 -18500+10*T;        6000 N !
+ PARAMETER G(BCC_A2,CR,FE,NI:VA;2) 300 -27000+10*T;        6000 N !
+
+Phase FCC_A1 %( 2  1  1  !
+Constituent FCC_A1 : CR,FE,NI : VA : !
+
+ PARAMETER G(FCC_A1,CR:VA;0)      300  +GFCCCR;             6000 N !
+ PARAMETER G(FCC_A1,FE:VA;0)      300  +GFCCFE;             6000 N !
+ PARAMETER G(FCC_A1,NI:VA;0)      300  +GFCCNI;             3000 N !
+ PARAMETER TC(FCC_A1,CR:VA;0)     300  -1109;               6000 N !
+ PARAMETER TC(FCC_A1,FE:VA;0)     300  -201;                6000 N !
+ PARAMETER TC(FCC_A1,NI:VA;0)     300  +633;                6000 N !
+ PARAMETER BMAGN(FCC_A1,CR:VA;0)  300  -2.46;               6000 N !
+ PARAMETER BMAGN(FCC_A1,FE:VA;0)  300  -2.1;                6000 N !
+ PARAMETER BMAGN(FCC_A1,NI:VA;0)  300  +0.52;               6000 N !
+
+ PARAMETER TC(FCC_A1,CR,FE:VA;0)    300  +UN_ASS;           6000 N !
+ PARAMETER TC(FCC_A1,CR,NI:VA;0)    300  -3605;             6000 N !
+ PARAMETER TC(FCC_A1,FE,NI:VA;0)    300  +2133;             6000 N !
+ PARAMETER TC(FCC_A1,FE,NI:VA;1)    300  -682;              6000 N !
+ PARAMETER BMAGN(FCC_A1,CR,FE:VA;0) 300  +UN_ASS;           6000 N !
+ PARAMETER BMAGN(FCC_A1,CR,NI:VA;0) 300  -1.91;             6000 N !
+ PARAMETER BMAGN(FCC_A1,FE,NI:VA;0) 300  +9.55;             6000 N !
+ PARAMETER BMAGN(FCC_A1,FE,NI:VA;1) 300  +7.23;             6000 N !
+ PARAMETER BMAGN(FCC_A1,FE,NI:VA;2) 300  +5.93;             6000 N !
+ PARAMETER BMAGN(FCC_A1,FE,NI:VA;3) 300  +6.18;             6000 N !
+
+ PARAMETER G(FCC_A1,CR,FE:VA;0)  300 +10833-7.477*T;        6000 N !
+ PARAMETER G(FCC_A1,CR,FE:VA;1)  300 +1410;                 6000 N !
+ PARAMETER G(FCC_A1,CR,NI:VA;0)  300 +8030-12.8801*T;       6000 N !
+ PARAMETER G(FCC_A1,CR,NI:VA;1)  300 +33080-16.0362*T;      6000 N !
+ PARAMETER G(FCC_A1,FE,NI:VA;0)  300 -12054.355+3.27413*T;  6000 N !
+ PARAMETER G(FCC_A1,FE,NI:VA;1)  300 +11082.1315-4.4507*T;  6000 N !
+ PARAMETER G(FCC_A1,FE,NI:VA;2)  300 -725.805174;           6000 N !
+
+ PARAMETER G(FCC_A1,CR,FE,NI:VA;0) 300 +10000+10*T;         6000 N !
+ PARAMETER G(FCC_A1,CR,FE,NI:VA;1) 300 -6500;               6000 N !
+ PARAMETER G(FCC_A1,CR,FE,NI:VA;2) 300 +48000;              6000 N !
+
+
+"""
+
+CR_NI_TDB = """
+Element VA                VACUUM         0         0         0  !
+ELEMENT CR                BCC_A2    51.996      4050    23.560  !
+Element NI                FCC_A1    58.69       4787    29.7955 !
+
+FUNCTION GLIQCR  300 +15483.015+146.059775*T-26.908*T*LN(T)
+   +.00189435*T**2-1.47721E-06*T**3+139250*T**(-1)+2.37615E-21*T**7;  2180 Y
+   -16459.984+335.616316*T-50*T*LN(T);                                6000 N !
+FUNCTION GBCCCR  300 -8856.94+157.48*T
+ -26.908*T*LN(T)+.00189435*T**2-1.47721E-06*T**3+139250*T**(-1);      2180 Y
+  -34869.344+344.18*T-50*T*LN(T)-2.885261E+32*T**(-9);                6000 N !
+FUNCTION GFCCCR  300 -1572.94+157.643*T
+ -26.908*T*LN(T)+.00189435*T**2-1.47721E-06*T**3+139250*T**(-1);      2180 Y
+  -27585.344+344.343*T-50*T*LN(T)-2.885261E+32*T**(-9);               6000 N !
+FUNCTION GFCCNI  300 -5179.159+117.854*T
+      -22.096*T*ln(T)-0.0048407*T**2;                                 1728 Y
+      -27840.655+279.135*T-43.1*T*ln(T)+1.12754e+031*T**(-9);         3000 N !
+FUNCTION GLIQNI  300  11235.527+108.457*T-22.096*T*ln(T)
+      -0.0048407*T**2-3.82318e-021*T**7;                              1728 Y
+      -9549.775+268.598*T-43.1*T*ln(T);                               3000 N !
+FUNCTION GBCCNI     300  +8715.084-3.556*T+GFCCNI;                    6000 N !
+
+FUNCTION ZERO       300  +0;                                          6000 N !
+FUNCTION UN_ASS     300  +0;                                          6000 N !
+
+
+TYPE_DEFINITION % SEQ * !
+DEFINE_SYSTEM_DEFAULT ELEMENT 2 !
+
+TYPE_DEFINITION ' GES A_P_D BCC_A2 MAGNETIC  -1    0.4  !
+Type_Definition ( GES A_P_D FCC_A1 Magnetic  -3    0.28 !
+
+ Phase LIQUID % 1 1 !
+ Constituent LIQUID : CR,NI : !
+
+ PARAMETER G(LIQUID,CR;0)     300  +GLIQCR;               6000 N !
+ PARAMETER G(LIQUID,NI;0)     300  +GLIQNI;               6000 N !
+
+ PARAMETER G(LIQUID,CR,NI;0)  300  +318-7.3318*T;         6000 N !
+ PARAMETER G(LIQUID,CR,NI;1)  300  +16941-6.3696*T;       6000 N !
+
+PHASE BCC_A2  %'  2 1   3 !
+CONSTITUENT BCC_A2  : CR,NI : VA :  !
+
+ PARAMETER G(BCC_A2,CR:VA;0)      300 +GBCCCR;             6000 N !
+ PARAMETER G(BCC_A2,NI:VA;0)      300 +GBCCNI;             3000 N !
+ PARAMETER TC(BCC_A2,CR:VA;0)     300 -311.5;              6000 N !
+ PARAMETER TC(BCC_A2,NI:VA;0)     300 +575;                6000 N !
+ PARAMETER BMAGN(BCC_A2,CR:VA;0)  300 -0.008;              6000 N !
+ PARAMETER BMAGN(BCC_A2,NI:VA;0)  300 +0.85;               6000 N !
+
+ PARAMETER TC(BCC_A2,CR,NI:VA;0)  300 +2373;               6000 N !
+ PARAMETER TC(BCC_A2,CR,NI:VA;1)  300 +617;                6000 N !
+ PARAMETER BMAGN(BCC_A2,CR,NI:VA;0) 300 +4;                6000 N !
+
+ PARAMETER G(BCC_A2,CR,NI:VA;0)   300 +17170-11.8199*T;    6000 N !
+ PARAMETER G(BCC_A2,CR,NI:VA;1)   300 +34418-11.8577*T;    6000 N !
+
+Phase FCC_A1 %( 2  1  1  !
+Constituent FCC_A1 : CR,NI : VA : !
+
+ PARAMETER G(FCC_A1,CR:VA;0)      300  +GFCCCR;             6000 N !
+ PARAMETER G(FCC_A1,NI:VA;0)      300  +GFCCNI;             3000 N !
+ PARAMETER TC(FCC_A1,CR:VA;0)     300  -1109;               6000 N !
+ PARAMETER TC(FCC_A1,NI:VA;0)     300  +633;                6000 N !
+ PARAMETER BMAGN(FCC_A1,CR:VA;0)  300  -2.46;               6000 N !
+ PARAMETER BMAGN(FCC_A1,NI:VA;0)  300  +0.52;               6000 N !
+
+ PARAMETER TC(FCC_A1,CR,NI:VA;0)    300  -3605;             6000 N !
+ PARAMETER BMAGN(FCC_A1,CR,NI:VA;0) 300  -1.91;             6000 N !
+
+ PARAMETER G(FCC_A1,CR,NI:VA;0)  300 +8030-12.8801*T;       6000 N !
+ PARAMETER G(FCC_A1,CR,NI:VA;1)  300 +33080-16.0362*T;      6000 N !
+
+
+"""
+

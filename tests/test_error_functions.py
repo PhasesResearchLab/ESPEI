@@ -25,6 +25,27 @@ def test_activity_error(datasets_db):
     assert np.isclose(error, -257.41020886970756, rtol=1e-6)
 
 
+def test_subsystem_activity_probability(datasets_db):
+    """Test binary Cr-Ni data produces the same probability regardless of whether the main system is a binary or ternary."""
+
+    datasets_db.insert(CR_NI_ACTIVITY)
+
+    dbf_bin = Database(CR_NI_TDB)
+    dbf_tern = Database(CR_FE_NI_TDB)
+    phases = list(dbf_bin.phases.keys())
+
+    # Truth
+    bin_prob = calculate_activity_error(dbf_bin, ['CR','NI','VA'], phases, datasets_db, {}, {}, {})
+
+    # Getting binary subsystem data explictly (from binary input)
+    prob = calculate_activity_error(dbf_tern, ['CR','NI','VA'], phases, datasets_db, {}, {}, {})
+    assert np.isclose(prob, bin_prob)
+
+    # Getting binary subsystem from ternary input
+    prob = calculate_activity_error(dbf_tern, ['CR', 'FE', 'NI','VA'], phases, datasets_db, {}, {}, {})
+    assert np.isclose(prob, bin_prob)
+
+
 def test_non_equilibrium_thermochemical_error_with_multiple_X_points(datasets_db):
     """Multiple composition datapoints in a dataset for a mixing phase should be successful."""
     datasets_db.insert(CU_MG_CPM_MIX_X_HCP_A3)
