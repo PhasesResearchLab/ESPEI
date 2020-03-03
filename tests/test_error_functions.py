@@ -185,6 +185,30 @@ def test_non_equilibrium_thermochemical_error_for_of_enthalpy_mixing(datasets_db
     assert np.isclose(error, zero_error_prob, atol=1e-6)
 
 
+def test_subsystem_non_equilibrium_thermochemcial_probability(datasets_db):
+    """Test binary Cr-Ni data produces the same probability regardless of whether the main system is a binary or ternary."""
+
+    datasets_db.insert(CR_NI_LIQUID_DATA)
+
+    dbf_bin = Database(CR_NI_TDB)
+    dbf_tern = Database(CR_FE_NI_TDB)
+    phases = list(dbf_bin.phases.keys())
+
+    # Truth
+    thermochemical_data = get_thermochemical_data(dbf_bin, ['CR', 'NI', 'VA'], phases, datasets_db)
+    bin_prob = calculate_non_equilibrium_thermochemical_probability(dbf_bin, thermochemical_data)
+
+    # Getting binary subsystem data explictly (from binary input)
+    thermochemical_data = get_thermochemical_data(dbf_tern, ['CR', 'NI', 'VA'], phases, datasets_db)
+    prob = calculate_non_equilibrium_thermochemical_probability(dbf_tern, thermochemical_data)
+    assert np.isclose(prob, bin_prob)
+
+    # Getting binary subsystem from ternary input
+    thermochemical_data = get_thermochemical_data(dbf_tern, ['CR', 'FE', 'NI', 'VA'], phases, datasets_db)
+    prob = calculate_non_equilibrium_thermochemical_probability(dbf_tern, thermochemical_data)
+    assert np.isclose(prob, bin_prob)
+
+
 def test_zpf_error_zero(datasets_db):
     """Test that sum of square ZPF errors returns 0 for an exactly correct result"""
     datasets_db.insert(CU_MG_DATASET_ZPF_ZERO_ERROR)
@@ -199,3 +223,27 @@ def test_zpf_error_zero(datasets_db):
     zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
     error = calculate_zpf_error(zpf_data, np.array([]))
     assert np.isclose(error, zero_error_prob, rtol=1e-6)
+
+
+def test_subsystem_zpf_probability(datasets_db):
+    """Test binary Cr-Ni data produces the same probability regardless of whether the main system is a binary or ternary."""
+
+    datasets_db.insert(CR_NI_ZPF_DATA)
+
+    dbf_bin = Database(CR_NI_TDB)
+    dbf_tern = Database(CR_FE_NI_TDB)
+    phases = list(dbf_bin.phases.keys())
+
+    # Truth
+    zpf_data = get_zpf_data(dbf_bin, ['CR', 'NI', 'VA'], phases, datasets_db, {})
+    bin_prob = calculate_zpf_error(zpf_data, np.array([]))
+
+    # Getting binary subsystem data explictly (from binary input)
+    zpf_data = get_zpf_data(dbf_tern, ['CR', 'NI', 'VA'], phases, datasets_db, {})
+    prob = calculate_zpf_error(zpf_data, np.array([]))
+    assert np.isclose(prob, bin_prob)
+
+    # Getting binary subsystem from ternary input
+    zpf_data = get_zpf_data(dbf_tern, ['CR', 'FE', 'NI', 'VA'], phases, datasets_db, {})
+    prob = calculate_zpf_error(zpf_data, np.array([]))
+    assert np.isclose(prob, bin_prob)
