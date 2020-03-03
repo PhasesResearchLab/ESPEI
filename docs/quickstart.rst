@@ -1,7 +1,7 @@
 Quickstart
 ==========
 
-ESPEI has two different fitting modes: single-phase and multi-phase fitting.
+ESPEI has two different fitting modes: parameter generation and Bayesian parameter estimation, which uses Markov Chain Monte Carlo (MCMC).
 You can run either of these modes or both of them sequentially.
 
 To run either of the modes, you need to have a phase models file that describes the phases in the system using the standard CALPHAD approach within the compound energy formalism.
@@ -12,10 +12,10 @@ All of your input datasets should be validated by running ``espei --check-datase
 
 The main output result is going to be a database (defaults to ``out.tdb``), an array of the steps in the MCMC trace (defaults to ``trace.npy``), and the an array of the log-probabilities for each iteration and chain (defaults to ``lnprob.npy``).
 
-Single-phase only
------------------
+Parameter Generation only
+-------------------------
 
-If you have only heat capacity, entropy and enthalpy data and mixing data (e.g. from first-principles),
+If you have only :ref:`non-equilibrium thermochemical data <non_equilibrium_thermochemical_data>`, e.g. heat capacity, entropy and enthalpy data and mixing data from first-principles calculations,
 you may want to see the starting point for your MCMC calculation.
 
 Create an input file called ``espei-in.yaml``.
@@ -36,10 +36,10 @@ Then ESPEI can be run by running
     espei --input espei-in.yaml
 
 
-Multi-phase only
-----------------
+Bayesian Parameter Estimation (MCMC) only
+-----------------------------------------
 
-If you have a database already and just want to do a multi-phase fitting, you can specify a starting TDB file (named ``my-tdb.tdb``) with
+If you have a database already and want to do a Bayesian parameter estimation, you can specify a starting TDB file (named ``my-tdb.tdb``) with
 
 .. code-block:: YAML
 
@@ -71,7 +71,7 @@ If you've run an MCMC fitting already in ESPEI and have a trace file called ``my
 Full run
 --------
 
-A minimal full run of ESPEI with single phase fitting and MCMC fitting is done by the following
+A minimal full run of ESPEI is done by the following
 
 .. code-block:: yaml
 

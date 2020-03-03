@@ -13,14 +13,13 @@ JSON Format
 ===========
 
 ESPEI has a single input style in JSON format that is used for all data entry.
-Single-phase and multi-phase input files are almost identical, but detailed descriptions and key differences can be found in the following sections.
 For those unfamiliar with JSON, it is fairly similar to Python dictionaries with some rigid requirements
 
 	•	All string quotes must be double quotes. Use ``"key"`` instead of ``'key'``.
 	•	Numbers should not have leading zeros. ``00.123`` should be ``0.123`` and ``012.34`` must be ``12.34``.
 	•	Lists and nested key-value pairs cannot have trailing commas. ``{"nums": [1,2,3,],}`` is invalid and should be ``{"nums": [1,2,3]}``.
 
-These errors can be challenging to track down, particularly if you are only reading the JSON error messages in Python. 
+These errors can be challenging to track down, particularly if you are only reading the JSON error messages in Python.
 A visual editor is encouraged for debugging JSON files such as `JSONLint`_.
 A quick reference to the format can be found at `Learn JSON in Y minutes <https://learnxinyminutes.com/docs/json/>`_.
 
@@ -105,41 +104,34 @@ Units
 - Temperatures are in Kelvin
 - Pressures in Pascal
 
-Single-phase Data
-=================
+.. _non_equilibrium_thermochemical_data:
 
-Two example of ESPEI input file for single-phase data follow.
-The first dataset has some data for the formation heat capacity for BCC_B2.
+Non-equilibrium Thermochemical Data
+===================================
 
-The ``components`` and ``phases`` keys simply describe those found in this entry.
-Use the ``reference`` key for bookkeeping the source of the data.
-In ``solver`` the sublattice configuration and site ratios are described for the phase.
+Non-equilibrium thermochemical data is used where the internal degrees of freedom for a phase are known. This type of data is the only data that can be used for parameter generation, but it can also be used in Bayesian parameter estimation.
 
-``sublattice_configurations`` is a list of different configurations, that should correspond to the sublattices for the phase descriptions.
-Non-mixing sublattices are represented as a string, while mixing sublattices are represented as a lists.
-Thus an endmember for ``BCC_B2`` (as in this example) is ``["AL", "NI", VA"]`` and if there were mixing (as in the next example) it might be ``["AL", ["AL", "NI"], "VA"]``.
-Mixing also means that the ``sublattice_occupancies`` key must be specified, but that is not the case in this example.
-It is important to note that any mixing configurations must have any ideal mixing contributions removed.
-Regardless of whether there is mixing or not, the length of this list should always equal the number of sublattices in the phase, though the sub-lists can have mixing up to the number of components in that sublattice.
-Note that the ``sublattice_configurations`` is a *list* of these lists.
-That is, there can be multiple sublattice configurations in a single dataset.
-See the second example in this section for such an example.
+Two examples follow. The first dataset has some data for the formation heat capacity for BCC_B2.
 
-The ``conditions`` describe temperatures (``T``) and pressures (``P``) as either scalars or one-dimensional lists.
-Most important to describing data are the ``output`` and ``values`` keys.
-The type of quantity is expressed using the ``output`` key.
-This can in principle be any thermodynamic quantity, but currently only ``CPM*``, ``SM*``, and ``HM*`` (where ``*`` is either nothing, ``_MIX`` or ``_FORM``) are supported.
-Support for changing reference states planned but not yet implemented, so all thermodynamic quantities must be formation quantities (e.g. ``HM_FORM`` or ``HM_MIX``, etc.).
+* The ``components`` and ``phases`` keys simply describe those found in this entry.
+* Use the ``reference`` key for bookkeeping the source of the data.
+* The ``comment`` key and value can be used anywhere in the data to keep notes for your reference. It takes no effect.
+* The ``solver`` the internal degrees of freedom and and site ratios are described for the phase.
 
-The ``values`` key is the most complicated and care must be taken to avoid mistakes.
-``values`` is a 3-dimensional array where each value is the ``output`` for a specific condition of pressure, temperature, and sublattice configurations from outside to inside.
-Alternatively, the size of the array must be ``(len(P), len(T), len(subl_config))``.
-In the example below, the shape of the ``values`` array is (1, 12, 1) as there is one pressure scalar, one sublattice configuration, and 12 temperatures.
+   ``sublattice_configurations`` is a list of different configurations, that should correspond to the sublattices for the phase descriptions.
+   Non-mixing sublattices are represented as a string, while mixing sublattices are represented as a lists.
+   Thus an endmember for ``BCC_B2`` (as in this example) is ``["AL", "NI", VA"]`` and if there were mixing (as in the next example) it might be ``["AL", ["AL", "NI"], "VA"]``.
+   Mixing also means that the ``sublattice_occupancies`` key must be specified, but that is not the case in this example.
+   It is important to note that any mixing configurations must have any ideal mixing contributions removed.
+   Regardless of whether there is mixing or not, the length of this list should always equal the number of sublattices in the phase, though the sub-lists can have mixing up to the number of components in that sublattice.
+   Note that the ``sublattice_configurations`` is a *list* of these lists.
+   That is, there can be multiple sublattice configurations in a single dataset.
+   See the second example in this section for such an example.
 
-There is also a key to ``"excluded_model_contributions"``, which will make those contributions of pycalphad's ``Model`` not be fit to when doing parameter selection or MCMC.
-This is useful for cases where the type of data used does not include some specific ``Model`` contributions that parameters may already exist for.
-For example, DFT formation energies do not include ideal mixing or (CALPHAD-type) magnetic model contributions, but formation energies from experiments would include these contributions so experimental formation energies should not be excluded.
-In MCMC, this only takes effect for calculating single phase error (multiphase and activity error do not exclude any model contributions).
+* The ``conditions`` describe temperatures (``T``) and pressures (``P``) as either scalars or one-dimensional lists.
+* The type of quantity is expressed using the ``output`` key. This can in principle be any thermodynamic quantity, but currently only ``CPM*``, ``SM*``, and ``HM*`` (where ``*`` is either nothing, ``_MIX`` or ``_FORM``) are supported. Support for changing reference states is planned but not yet implemented, so all thermodynamic quantities must be formation quantities (e.g. ``HM_FORM`` or ``HM_MIX``, etc.). This issue is tracked by `ESPEI #85 on GitHub <https://github.com/PhasesResearchLab/ESPEI/issues/85>`_
+* ``values`` is a 3-dimensional array where each value is the ``output`` for a specific condition of pressure, temperature, and sublattice configurations from outside to inside. Alternatively, the size of the array must be ``(len(P), len(T), len(subl_config))``. In the example below, the shape of the ``values`` array is (1, 12, 1) as there is one pressure scalar, one sublattice configuration, and 12 temperatures.
+* There is also a key, ``excluded_model_contributions``, which will make those contributions of pycalphad's ``Model`` not be fit to when doing parameter selection or MCMC. This is useful for cases where the type of data used does not include some specific ``Model`` contributions that parameters may already exist for. For example, DFT formation energies do not include ideal mixing or (CALPHAD-type) magnetic model contributions, but formation energies from experiments would include these contributions so experimental formation energies should not be excluded.
 
 .. code-block:: JSON
 
@@ -148,6 +140,7 @@ In MCMC, this only takes effect for calculating single phase error (multiphase a
       "components": ["AL", "NI", "VA"],
       "phases": ["BCC_B2"],
       "solver": {
+        "mode": "manual",
 	      "sublattice_site_ratios": [0.5, 0.5, 1],
 	      "sublattice_configurations": [["AL", "NI", "VA"]],
 	      "comment": "NiAl sublattice configuration (2SL)"
@@ -156,23 +149,23 @@ In MCMC, this only takes effect for calculating single phase error (multiphase a
 	      "P": 101325,
 	      "T": [  0,  10,  20,  30,  40,  50,  60,  70,  80,  90, 100, 110]
       },
-      "excluded_model_contributions": ["idmix", "mag"]
+      "excluded_model_contributions": ["idmix", "mag"],
       "output": "CPM_FORM",
       "values":   [[[ 0      ],
-		    [-0.0173 ],
-		    [-0.01205],
-		    [ 0.12915],
-		    [ 0.24355],
-		    [ 0.13305],
-		    [-0.1617 ],
-		    [-0.51625],
-		    [-0.841  ],
-		    [-1.0975 ],
-		    [-1.28045],
-		    [-1.3997 ]]]
+                    [-0.0173 ],
+                    [-0.01205],
+                    [ 0.12915],
+                    [ 0.24355],
+                    [ 0.13305],
+                    [-0.1617 ],
+                    [-0.51625],
+                    [-0.841  ],
+                    [-1.0975 ],
+                    [-1.28045],
+                    [-1.3997 ]]]
     }
-    
-    
+
+
 In the second example below, there is formation enthalpy data for multiple sublattice configurations.
 All of the keys and values are conceptually similar.
 Here, instead of describing how the ``output`` quantity changes with temperature or pressure, we are instead only comparing ``HM_FORM`` values for different sublattice configurations.
@@ -228,12 +221,59 @@ Here there is one pressure, one temperature, and 9 sublattice configurations to 
 	             -15183.13371]]]
     }
 
+Equilibrium Thermochemical Data
+===============================
+
+Equilibrium thermochemical data is used when the internal degrees of freedom are not known. This is typically true for experimental thermochemical data. Some cases where this type of data is useful, compared to non-equilibrium thermochemical data are:
+
+1. Activity data
+#. Enthalpy of formation data in region with two or more phases in equilibrium
+#. Enthalpy of formation for a phase with multiple sublattice, e.g. the σ phase
 
 
-Multi-phase Data
-================
+This type of data can not be used in parameter selection, because a core assumption of parameter selection is that the site fractions are known.
 
-The difference between single- and multi-phase is data is in the absence of the ``solver`` key, since we are no longer concerned with individual site configurations, and the ``values`` key where we need to represent phase equilibria rather than thermodynamic quantities.
+
+.. note::
+
+  Only activity data is supported at the moment. Support for other data types is tracked by `ESPEI #104 on GitHub <https://github.com/PhasesResearchLab/ESPEI/issues/104>`_.
+
+Activity data is similar to non-equilibrium thermochemical data, except we must enter a reference state and the ``solver`` key is no longer required, since we do not know the internal degrees of freedom. A key detail is that the ``phases`` key must specify all phases that are possible to form.
+
+An example for Mg activties in Cu-Mg follows, with data digitized from S.P. Garg, Y.J. Bhatt, C. V. Sundaram, Thermodynamic study of liquid Cu-Mg alloys by vapor pressure measurements, Metall. Trans. 4 (1973) 283–289. doi:10.1007/BF02649628.
+
+.. code-block:: JSON
+
+    {
+      "components": ["CU", "MG", "VA"],
+      "phases": ["LIQUID", "FCC_A1", "HCP_A3"],
+      "reference_state": {
+        "phases": ["LIQUID"],
+        "conditions": {
+          "P": 101325,
+          "T": 1200,
+          "X_MG": 1.0
+        }
+      },
+      "conditions": {
+        "P": 101325,
+        "T": 1200,
+        "X_CU": [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0]
+      },
+
+      "output": "ACR_MG",
+        "values":   [[[0.0057,0.0264,0.0825,0.1812,0.2645,0.4374,0.5852,0.7296,0.882,1.0]]],
+      "reference": "garg1973thermodynamic",
+      "comment": "Digitized Figure 3 and converted from activity coefficients."
+    }
+
+.. _phase_boundary_data:
+
+Phase Boundary Data
+===================
+
+The phase boundary data JSON input files are similar to other types of input, but instead of scalar ``values`` for the property of interest, the ``values`` key represents the phase regions active in a single phase equilbrium.
+
 Notice that the type of data we are entering in the ``output`` key is ``ZPF`` (zero-phase fraction) rather than ``CP_FORM`` or ``H_MIX``.
 Each entry in the ZPF list is a list of all phases in equilibrium, here ``[["AL3NI2", ["NI"], [0.4083]], ["BCC_B2", ["NI"], [0.4340]]]`` where each phase entry has the name of the phase, the composition element, and the composition of the tie line point.
 If there is no corresponding tie line point, such as on a liquidus line, then one of the compositions will be ``null``: ``[["LIQUID", ["NI"], [0.6992]], ["BCC_B2", ["NI"],  [null]]]``.
@@ -259,42 +299,6 @@ Note that for higher-order systems the component names and compositions are list
       "reference": "37ALE"
     }
 
-Activity Data
-=============
-
-Activity data is very similar to thermochemical data, except we must enter a reference state.
-Another minor detail is that that non-endmember compositions must be represented by composition conditions rather than as sublattice occupancies because it's the result of equilibrium calculations where we cannot know the sublattice occupancies.
-An example for Cu-Mg activties follows, with data digitized from S.P. Garg, Y.J. Bhatt, C. V. Sundaram, Thermodynamic study of liquid Cu-Mg alloys by vapor pressure measurements, Metall. Trans. 4 (1973) 283–289. doi:10.1007/BF02649628.
-
-.. code-block:: JSON
-
-    {
-      "components": ["CU", "MG", "VA"],
-      "phases": ["LIQUID"],
-      "solver": {
-        "mode": "manual",
-        "sublattice_site_ratios": [1],
-        "sublattice_configurations": [["CU", "MG"]]
-      },
-      "reference_state": {
-        "phases": ["LIQUID"],
-        "conditions": {
-          "P": 101325,
-          "T": 1200,
-          "X_CU": 0.0
-        }
-      },
-      "conditions": {
-        "P": 101325,
-        "T": 1200,
-        "X_CU": [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0]
-      },
-
-      "output": "ACR_MG",
-        "values":   [[[0.0057,0.0264,0.0825,0.1812,0.2645,0.4374,0.5852,0.7296,0.882,1.0]]],
-      "reference": "garg1973thermodynamic",
-      "comment": "Digitized Figure 3 and converted from activity coefficients."
-    }
 
 .. _Tags:
 

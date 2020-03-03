@@ -191,8 +191,7 @@ We can see that the phase diagram is already very reasonable compared to the
 experimental points. The liquidus temperatures and the solubilities of the fcc
 and Laves phases are the key differences between the equilibrium data and our
 first-principles phase diagram. The next section will discuss using ESPEI to
-optimize the parameters selected and calculated based on the single-phase data
-to these multi-phase equilibria.
+optimize the parameters selected and calculated based on all the data.
 
 MCMC optimization
 =================
@@ -249,7 +248,7 @@ Finally, we can use the newly optimized database to plot the phase diagram
 
 .. code-block:: python
 
-    # Optimized phase diagram from ESPEI's multi-phase fitting
+    # Optimized phase diagram from ESPEI's MCMC fitting
     from pycalphad import Database, variables as v
     from espei.datasets import load_datasets, recursive_glob
     from espei.plot import multiplot
@@ -273,7 +272,7 @@ Finally, we can use the newly optimized database to plot the phase diagram
     :alt: Cu-Mg phase diagram after 1000 MCMC iterations
     :scale: 100%
 
-    Optimized Cu-Mg phase diagram from the multi-phase fitting in ESPEI
+    Optimized Cu-Mg phase diagram from the MCMC fitting in ESPEI
 
 
 Analyzing ESPEI Results

@@ -26,7 +26,7 @@
 ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for thermodynamic database development within the CALPHAD method. It uses `pycalphad`_ for calculating Gibbs free energies of thermodynamic models.
 
 
-.. topic:: Upcoming Workshops
+.. admonition:: Upcoming Workshops
 
     * May 24, 2020 - `CALPHAD XLIX <https://calphad.org/calphad-2020>`_: A pre-conference workshop on using `pyiron <https://pyiron.github.io/index.html>`_, `pycalphad`_ and ESPEI will be given at the 2020 CALPHAD meeting.
     * September 16, 2020 - `IMAT 2020 <https://www.asminternational.org/web/imat>`_: A workshop on using `pycalphad`_ and ESPEI will be given at the IMAT 2020 meeting as part of a one day workshop series on Python-based tools for materials modeling.
@@ -55,12 +55,8 @@ Goals
 2. Enable development of CALPHAD-type models for Gibbs energy, thermodynamic or kinetic properties
 3. Provide a platform to build and apply novel model selection, optimization, and uncertainty quantification methods
 
-The implementation for ESPEI involves first fitting single-phase data by calculating parameters in thermodynamic models that are linearly described by the single-phase input data.
-Then Markov Chain Monte Carlo (MCMC) is used to optimize the candidate models from the single-phase fitting to multi-phase zero-phase fraction data.
-More details on
-
-The benefit of this approach is the automated, simultaneous fitting for many parameters that yields uncertainty quantification, as shown in Otis and Liu High-Throughput Thermodynamic Modeling and Uncertainty Quantification for ICME. `Jom 69, (2017)`_.
-Single-phase and multi-phase fitting methods are described in Chapter 3 of `Richard Otis's thesis`_.
+The implementation for ESPEI involves first performing parameter generation by calculating parameters in thermodynamic models that are linearly described by :ref:`non-equilibrium thermochemical data <non_equilibrium_thermochemical_data>`.
+Then Markov Chain Monte Carlo (MCMC) is used to optimize the candidate models from the parameter generation to :ref:`phase boundary data <phase_boundary_data>`.
 
 
 .. figure:: _static/cu-mg-mcmc-phase-diagram.png

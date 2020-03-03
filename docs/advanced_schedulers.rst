@@ -94,7 +94,7 @@ After starting the scheduler on the cluster, you run ESPEI like normal.
 
 For the most part, this ESPEI input file is the same as you use locally, except the ``scheduler`` parameter is set to the name of your scheduler file.
 
-Here is an example for multiphase fitting starting from a generated TDB with a scheduler file named ``my-scheduler.json``:
+Here is an example for Bayesian parameter estimation using MCMC starting from a generated TDB with a scheduler file named ``my-scheduler.json``:
 
 .. code-block:: YAML
 
