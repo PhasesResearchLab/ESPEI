@@ -453,6 +453,8 @@ used to modify the initial standard deviation of each data type by
     :alt: Data weight equation
     :scale: 100%
 
+.. _input_mcmc_symbols:
+
 symbols
 -------
 

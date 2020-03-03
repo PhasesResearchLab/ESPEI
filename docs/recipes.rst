@@ -2,6 +2,8 @@
 
    \chapter{Recipes}
 
+.. _Recipes:
+
 =======
 Recipes
 =======
