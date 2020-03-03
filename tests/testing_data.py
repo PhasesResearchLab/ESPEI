@@ -624,7 +624,7 @@ CR_NI_LIQUID_DATA = {
 
 CR_NI_ZPF_DATA = {
     "components": ["CR", "NI", "VA"],
-    "phases": ["A2", "A1"],
+    "phases": ["BCC_A2", "FCC_A1"],
     "broadcast_conditions": False,
     "conditions": {
         "T": [1073, 1173, 1273, 1373, 1548],
@@ -632,11 +632,11 @@ CR_NI_ZPF_DATA = {
     },
     "output": "ZPF",
     "values": [
-        [["A1", ["CR"], [0.3866]], ["A2", ["NI"], [None]]],
-        [["A1", ["CR"], [0.3975]], ["A2", ["NI"], [None]]],
-        [["A1", ["CR"], [0.4480]], ["A2", ["NI"], [None]]],
-        [["A1", ["CR"], [0.4643]], ["A2", ["NI"], [None]]],
-        [["A1", ["CR"], [0.4984]], ["A2", ["NI"], [None]]]
+        [["FCC_A1", ["CR"], [0.3866]], ["BCC_A2", ["NI"], [None]]],
+        [["FCC_A1", ["CR"], [0.3975]], ["BCC_A2", ["NI"], [None]]],
+        [["FCC_A1", ["CR"], [0.4480]], ["BCC_A2", ["NI"], [None]]],
+        [["FCC_A1", ["CR"], [0.4643]], ["BCC_A2", ["NI"], [None]]],
+        [["FCC_A1", ["CR"], [0.4984]], ["BCC_A2", ["NI"], [None]]]
     ],
     "reference": "zpf test", "comment": ""
 }
@@ -783,6 +783,12 @@ Constituent FCC_A1 : CR,FE,NI : VA : !
  PARAMETER G(FCC_A1,CR,FE,NI:VA;1) 300 -6500;               6000 N !
  PARAMETER G(FCC_A1,CR,FE,NI:VA;2) 300 +48000;              6000 N !
 
+$ Designed to only stabilize in the ternary Cr-Fe-Ni
+Phase FEONLY % 2  1  1  !
+Constituent FEONLY : FE : VA : !
+
+ PARAMETER G(FEONLY,FE:VA;0) 300  -100000000; 6000 N !
+
 
 """
 
@@ -859,7 +865,6 @@ Constituent FCC_A1 : CR,NI : VA : !
 
  PARAMETER G(FCC_A1,CR,NI:VA;0)  300 +8030-12.8801*T;       6000 N !
  PARAMETER G(FCC_A1,CR,NI:VA;1)  300 +33080-16.0362*T;      6000 N !
-
 
 """
 

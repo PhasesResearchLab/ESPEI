@@ -32,7 +32,7 @@ def test_subsystem_activity_probability(datasets_db):
 
     dbf_bin = Database(CR_NI_TDB)
     dbf_tern = Database(CR_FE_NI_TDB)
-    phases = list(dbf_bin.phases.keys())
+    phases = list(dbf_tern.phases.keys())
 
     # Truth
     bin_prob = calculate_activity_error(dbf_bin, ['CR','NI','VA'], phases, datasets_db, {}, {}, {})
@@ -42,7 +42,7 @@ def test_subsystem_activity_probability(datasets_db):
     assert np.isclose(prob, bin_prob)
 
     # Getting binary subsystem from ternary input
-    prob = calculate_activity_error(dbf_tern, ['CR', 'FE', 'NI','VA'], phases, datasets_db, {}, {}, {})
+    prob = calculate_activity_error(dbf_tern, ['CR', 'FE', 'NI', 'VA'], phases, datasets_db, {}, {}, {})
     assert np.isclose(prob, bin_prob)
 
 
@@ -192,7 +192,7 @@ def test_subsystem_non_equilibrium_thermochemcial_probability(datasets_db):
 
     dbf_bin = Database(CR_NI_TDB)
     dbf_tern = Database(CR_FE_NI_TDB)
-    phases = list(dbf_bin.phases.keys())
+    phases = list(dbf_tern.phases.keys())
 
     # Truth
     thermochemical_data = get_thermochemical_data(dbf_bin, ['CR', 'NI', 'VA'], phases, datasets_db)
@@ -232,7 +232,7 @@ def test_subsystem_zpf_probability(datasets_db):
 
     dbf_bin = Database(CR_NI_TDB)
     dbf_tern = Database(CR_FE_NI_TDB)
-    phases = list(dbf_bin.phases.keys())
+    phases = list(dbf_tern.phases.keys())
 
     # Truth
     zpf_data = get_zpf_data(dbf_bin, ['CR', 'NI', 'VA'], phases, datasets_db, {})
