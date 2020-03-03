@@ -112,6 +112,7 @@ These are created from arrays via ``numpy.save()`` and can thus be loaded with `
 Note that the arrays are preallocated with zeros.
 These filenames and settings can be changed using in the input file.
 You can then use these chains and corresponding log-probabilities to make corner plots, calculate autocorrelations, find optimal parameters for databases, etc..
+Some examples are shown in the :ref:`Recipes` page.
 Finally, you can use py:mod:`espei.plot` functions such as ``multiplot`` to plot phase diagrams with your input equilibria data and ``plot_parameters`` to compare single-phase data (e.g. formation and mixing data) with the properties calculated with your database.
 
 Q: Can I run ESPEI on a supercomputer supporting MPI?
@@ -133,7 +134,6 @@ The total log probability is the sum of all log probabilities.
 
 Note that any probability density function always returns a positive value between 0 and 1, so the log probability density function should return negative numbers and the log probability reported by ESPEI should be negative.
 
-:ref:`Writing input files`
 
 Q: Why is the version of ESPEI '0+unknown'?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -141,6 +141,20 @@ Q: Why is the version of ESPEI '0+unknown'?
 A: A version number of ``'0+unknown'`` indicates that you do not have git installed.
 This can occur on Windows where git is not in the PATH (and the Python interpreter cannot see it).
 You can install git using ``conda install git`` on Windows.
+
+
+Q: I have a large database, can I use ESPEI to optimize parameters in only a subsystem?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A: Yes, if you have a multicomponent CALPHAD database, but want to optimize or
+determine the uncertainty for a constituent unary, binary or ternary subsystem
+that you have data for, you can do that without any extra effort.
+
+You may be interested in the :ref:`input_mcmc_symbols` input parameter to
+specify which parameter subset to optimize.
+
+Note that if you optimize parameters in a subsystem (e.g. Cu-Mg) that is used in a higher order description (e.g. Al-Cu-Mg), you may need to reoptimize the parameters for the higher order system as well.
+
 
 References
 ==========
