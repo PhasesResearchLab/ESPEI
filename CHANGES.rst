@@ -2,12 +2,22 @@
 What's New
 ==========
 
+0.7.5 (2020-03-09)
+==================
+
+This release includes performance optimizations, bugfixes and new features for MCMC simulations.
+
+* This version of ESPEI now requires pycalphad 0.8.2 or later for the features below.
+* Fitting subsystems of a large database is explictly supported and tested for all implemented MCMC data types. Fixes a bug in ZPF error and activity error where having phases in the database that are inactive in the subsystem would raise errors (`@bocklund`_ - :issue:`118`).
+* Computing thermochemical error and phase boundary (ZPF) error are now optimized to reduce overhead time in dependencies (`@bocklund`_ - :issue:`117`)
+* A new feature for calculating approximate driving force for phase boundary data is implemented, which can give performance improvements of 3x-10x, depending on the system (`@bocklund`_ - :issue:`115`)
+
 0.7.4 (2019-12-09)
 ==================
 
 This release includes small fixes for parameter generation.
 
-* Excluded model contributions are fixed for models with different sublattice site ratios and for data that are not endmembers (`@bocklund`_ - `#113 <https://github.com/PhasesResearchLab/ESPEI/pull/113>`_)
+* Excluded model contributions are fixed for models with different sublattice site ratios and for data that are not endmembers (`@bocklund`_ - :issue:`113`)
 
 0.7.3 (2019-12-02)
 ==================
