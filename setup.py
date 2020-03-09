@@ -23,7 +23,6 @@ setup(
         'numpy',
         'scipy',
         'sympy>=1.2',
-        'six',
         'dask[complete]>=2',
         'distributed>=2',
         'tinydb>=3.8',

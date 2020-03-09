@@ -17,7 +17,6 @@ from bibtexparser.bparser import BibTexParser
 from bibtexparser.customization import convert_to_unicode
 from distributed import Client
 from pycalphad import variables as v
-from six import string_types
 from sympy import Symbol
 from tinydb import TinyDB, where
 from tinydb.storages import MemoryStorage
@@ -146,7 +145,7 @@ def flexible_open_string(obj):
     -------
     str
     """
-    if isinstance(obj, string_types):
+    if isinstance(obj, str):
         # the obj is a string
         if '\n' in obj:
             # if the string has linebreaks, then we assume it's a raw string. Return it.
