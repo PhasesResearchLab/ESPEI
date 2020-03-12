@@ -29,7 +29,7 @@ from espei import generate_parameters
 from espei.utils import ImmediateClient, get_dask_config_paths, database_symbols_to_fit
 from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags, add_ideal_exclusions
 from espei.optimizers.opt_mcmc import EmceeOptimizer
-
+from espei import order_disorder_fit
 TRACE = 15  # TRACE logging level
 
 
@@ -180,8 +180,13 @@ def run_espei(run_settings):
         dbf = generate_parameters(phase_models, datasets, refdata, excess_model,
                                   ridge_alpha=ridge_alpha, dbf=input_dbf,
                                   aicc_penalty_factor=aicc_penalty,)
-        print(dbf)
+
         dbf.to_file(output_settings['output_db'], if_exists='overwrite')
+    for i in dbf.phases:
+        if 'ordered_phase' in dbf.phases[i].model_hints:
+            if dbf.phases[i].model_hints['ordered_phase']==i:
+                order_disorder_fit()
+         
 
     if mcmc_settings is not None:
         tracefile = output_settings['tracefile']
@@ -263,6 +268,7 @@ def run_espei(run_settings):
         if hasattr(client, 'close'):
                 client.close()
         return optimizer.dbf, optimizer.sampler
+
     return dbf
 
 

@@ -1,0 +1,16 @@
+{
+  "components": ["CU", "MG"],
+  "phases": ["CUMG2"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": [1, 2],
+    "sublattice_configurations": [["CU", "MG"]]
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 299
+  },
+  "output": "HM_FORM",
+  "values":   [[[-9800]]],
+  "reference": "Feufel1995"
+}

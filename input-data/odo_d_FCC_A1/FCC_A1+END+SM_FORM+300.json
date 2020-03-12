@@ -1,0 +1,22 @@
+{
+  "components": ["AL", "CO", "CR", "VA", "W"],
+  "phases": ["FCC_A1"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": 
+         [1.0, 1.0],
+    "sublattice_configurations":
+       [["AL", "VA"], ["CO", "VA"], ["CR", "VA"], ["W", "VA"]]
+  },
+  "conditions": {
+      "P": 101325,
+      "T": 300
+  },
+  "output": "SM_FORM",
+  "values": [[
+    [0.0, 0.0, 0.0, 0.0]
+  ]],
+  "excluded_model_contributions": ["idmix", "mag"],
+  "reference": "text 1 to write reference",
+  "comment": "test 2 to write comment"
+}

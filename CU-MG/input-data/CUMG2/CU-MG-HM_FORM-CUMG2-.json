@@ -1,0 +1,17 @@
+{
+  "components": ["CU", "MG"],
+  "phases": ["CUMG2"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": [1, 2],
+    "sublattice_configurations": [["CU", "MG"]]
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 298.15
+  },
+  "output": "HM_FORM",
+  "values":   [[[-10700]]],
+  "reference": "",
+  "comment": "DFT compiled by Aleksei"
+}

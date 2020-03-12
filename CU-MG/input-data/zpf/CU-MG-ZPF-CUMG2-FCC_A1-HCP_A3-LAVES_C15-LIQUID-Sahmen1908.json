@@ -1,0 +1,34 @@
+{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["LIQUID", "FCC_A1", "LAVES_C15", "CUMG2", "HCP_A3"],
+  "conditions": {
+	  "P": 101325,
+	  "T": [1337.97, 1262.238, 1170.215, 1009.008, 1060.684,
+		1070.972, 1072.518, 1065.141, 1063.229, 1048.453, 877.544, 838.242, 842.121,
+		844.463, 841.966, 833.645, 783.774, 823.756, 889.248]
+  },
+  "broadcast_conditions": false,
+  "output": "ZPF",
+  "values":   [
+      [["LIQUID", ["MG"], [0.0246992]], ["FCC_A1", ["MG"],  [null]]],
+      [["LIQUID", ["MG"], [0.0712664]], ["FCC_A1", ["MG"],  [null]]],
+      [["LIQUID", ["MG"], [0.128725]], ["FCC_A1", ["MG"],  [null]]],
+      [["LIQUID", ["MG"], [0.221676]], ["FCC_A1", ["MG"],  [null]]],
+      [["LIQUID", ["MG"], [0.280253]], ["LAVES_C15", ["MG"],  [null]]],
+      [["LIQUID", ["MG"], [0.334848]], ["LAVES_C15", ["MG"], [null]]],
+      [["LIQUID", ["MG"], [0.350877]], ["LAVES_C15", ["MG"], [null]]],
+      [["LIQUID", ["MG"], [0.365138]], ["LAVES_C15", ["MG"], [null]]],
+      [["LIQUID", ["MG"], [0.424301]], ["LAVES_C15", ["MG"], [null]]],
+      [["LIQUID", ["MG"], [0.457622]], ["LAVES_C15", ["MG"], [null]]],
+      [["LIQUID", ["MG"], [0.542388]], ["LAVES_C15", ["MG"], [null]]],
+      [["LIQUID", ["MG"], [0.610445]], ["CUMG2", ["MG"], [null]]],
+      [["LIQUID", ["MG"], [0.647318]], ["CUMG2", ["MG"], [null]]],
+      [["LIQUID", ["MG"], [0.666563]], ["CUMG2", ["MG"], [null]]],
+      [["LIQUID", ["MG"], [0.679315]], ["CUMG2", ["MG"], [null]]],
+      [["LIQUID", ["MG"], [0.720758]], ["CUMG2", ["MG"], [null]]],
+      [["LIQUID", ["MG"], [0.791814]], ["CUMG2", ["MG"], [null]]],
+      [["LIQUID", ["MG"], [0.917371]], ["HCP_A3", ["MG"], [null]]],
+      [["LIQUID", ["MG"], [0.97301]], ["HCP_A3", ["MG"], [null]]]
+              ],
+  "reference": "Sahmen1908"
+}

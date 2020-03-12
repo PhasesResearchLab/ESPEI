@@ -1,0 +1,37 @@
+{
+	"components": ["CU", "MG"],
+	"phases": ["LIQUID"],
+	"solver": {
+	"mode": "manual",
+	"sublattice_site_ratios": [1],
+	"sublattice_occupancies": [
+		[[0.075, 0.925]],
+		[[0.150, 0.850]],
+		[[0.210, 0.790]],
+		[[0.270, 0.730]],
+		[[0.330, 0.670]],
+		[[0.380, 0.620]],
+		[[0.425, 0.575]],
+		[[0.475, 0.525]],
+		[[0.520, 0.480]]
+	],
+	"sublattice_configurations": [
+		[["CU", "MG"]],
+		[["CU", "MG"]],
+		[["CU", "MG"]],
+		[["CU", "MG"]],
+		[["CU", "MG"]],
+		[["CU", "MG"]],
+		[["CU", "MG"]],
+		[["CU", "MG"]],
+		[["CU", "MG"]]]
+  },
+  "conditions": {
+	  "P": 101325,
+	  "T": 1125
+  },
+  "output": "HM_MIX",
+  "values":   [[[-1900, -3500, -4800, -5800, -6600, -7500, -7900, -8300, -8500]]],
+  "reference": "sommer1983calorimetric_investigations",
+  "comment": "Digitized from Table 1."
+}

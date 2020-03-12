@@ -1,0 +1,22 @@
+{
+  "components": ["AL", "CO"],
+  "phases": ["AL5CO2"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": 
+         [5.0, 2.0],
+    "sublattice_configurations":
+     [ ["AL", "CO"] ]
+  },
+  "conditions": {
+      "P": 101325,
+      "T": 300
+  },
+  "output": "HM_FORM",
+  "values": [[
+    [-46096.22857142857]
+  ]],
+  "excluded_model_contributions": ["idmix", "mag"],
+  "reference": "text 1 to write reference",
+  "comment": "test 2 to write comment"
+}

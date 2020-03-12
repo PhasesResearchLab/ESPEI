@@ -1,0 +1,36 @@
+{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["BCC_A2"],
+  "solver": {
+	  "mode": "manual",
+	  "sublattice_site_ratios": [1, 1],
+	  "sublattice_occupancies": [
+				[[0.962962, 0.037037], 1],
+				[[0.75, 0.25], 1],
+				[[0.5, 0.5], 1],
+				[[0.25, 0.75], 1],
+        [[0.037037, 0.962962], 1]
+		],
+	  "sublattice_configurations": [
+        [["CU", "MG"], "VA"],
+        [["CU", "MG"], "VA"],
+        [["CU", "MG"], "VA"],
+        [["CU", "MG"], "VA"],
+        [["CU", "MG"], "VA"]
+		]
+  },
+  "conditions": {
+	  "P": 101325,
+	  "T": 298.15
+  },
+  "output": "HM_MIX",
+    "values":   [[[
+        -755,
+        -5736,
+        -6844,
+        -2287,
+        164
+    ]]],
+  "reference": "Gao2014first",
+  "comment": "Fully relaxed DFT calculations from table 5"
+}

@@ -1,0 +1,32 @@
+{
+    "components": ["CU", "MG", "VA"],
+    "phases": ["LIQUID", "LAVES_C15"],
+    "conditions": {
+	"P": 101325,
+	"T": [
+            1056.11423,
+            1062.70164,
+            1066.7251,
+            1068.30283,
+            1069.057,
+            1065.55796,
+            1062.8919,
+            1058.5529,
+            1049.95383
+	]
+    },
+    "broadcast_conditions": false,
+    "output": "ZPF",
+    "values":   [
+        [["LIQUID", ["MG"], [0.29042]], ["LAVES_C15", ["MG"],  [null]]],
+        [["LIQUID", ["MG"], [0.30246]], ["LAVES_C15", ["MG"],  [null]]],
+        [["LIQUID", ["MG"], [0.31664]], ["LAVES_C15", ["MG"],  [null]]],
+        [["LIQUID", ["MG"], [0.32455]], ["LAVES_C15", ["MG"],  [null]]],
+        [["LIQUID", ["MG"], [0.33098]], ["LAVES_C15", ["MG"],  [null]]],
+        [["LIQUID", ["MG"], [0.33955]], ["LAVES_C15", ["MG"],  [null]]],
+        [["LIQUID", ["MG"], [0.34894]], ["LAVES_C15", ["MG"],  [null]]],
+        [["LIQUID", ["MG"], [0.35718]], ["LAVES_C15", ["MG"],  [null]]],
+        [["LIQUID", ["MG"], [0.36806]], ["LAVES_C15", ["MG"],  [null]]]
+    ],
+    "reference": "Bagnoud1978"
+}

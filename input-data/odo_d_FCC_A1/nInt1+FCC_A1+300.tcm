@@ -1,0 +1,800 @@
+ go data 
+sw user F:\pycode_shunli\2019-12-05-Al-Co-Cr-W-pyReTDB\55_AlCoCrW\case2_triple_interactions_LIQ_FCC_L12/ESPEIrun/1ESPEI_single_phase.tdb
+
+ 
+def-ele
+AL CO CR VA W 
+
+rej phase L12_FCC
+get
+
+go p-3
+change phases *
+sus
+change phases
+FCC_A1
+enter
+1
+
+adv
+global
+n
+n
+
+s-c p=1e5 n=1
+set-reference-state AL FCC_A1 ,,,,
+set-reference-state CO HCP_A3 ,,,,
+set-reference-state CR BCC_A2 ,,,,
+set-reference-state W BCC_A2 ,,,,
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.9
+0.0
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+1
+
+
+s-c T=300
+set-start-const FCC_A1
+0.30000000000000004
+0.7
+0.0
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+2
+
+
+s-c T=300
+set-start-const FCC_A1
+0.5000000000000001
+0.4999999999999999
+0.0
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+3
+
+
+s-c T=300
+set-start-const FCC_A1
+0.7000000000000001
+0.29999999999999993
+0.0
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+4
+
+
+s-c T=300
+set-start-const FCC_A1
+0.9000000000000001
+0.09999999999999987
+0.0
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+5
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.0
+0.9
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+6
+
+
+s-c T=300
+set-start-const FCC_A1
+0.30000000000000004
+0.0
+0.7
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+7
+
+
+s-c T=300
+set-start-const FCC_A1
+0.5000000000000001
+0.0
+0.4999999999999999
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+8
+
+
+s-c T=300
+set-start-const FCC_A1
+0.7000000000000001
+0.0
+0.29999999999999993
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+9
+
+
+s-c T=300
+set-start-const FCC_A1
+0.9000000000000001
+0.0
+0.09999999999999987
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+10
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.0
+0.0
+0.9
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+11
+
+
+s-c T=300
+set-start-const FCC_A1
+0.30000000000000004
+0.0
+0.0
+0.7
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+12
+
+
+s-c T=300
+set-start-const FCC_A1
+0.5000000000000001
+0.0
+0.0
+0.4999999999999999
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+13
+
+
+s-c T=300
+set-start-const FCC_A1
+0.7000000000000001
+0.0
+0.0
+0.29999999999999993
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+14
+
+
+s-c T=300
+set-start-const FCC_A1
+0.9000000000000001
+0.0
+0.0
+0.09999999999999987
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+15
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.1
+0.9
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+16
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.30000000000000004
+0.7
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+17
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.5000000000000001
+0.4999999999999999
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+18
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.7000000000000001
+0.29999999999999993
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+19
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.9000000000000001
+0.09999999999999987
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+20
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.1
+0.0
+0.9
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+21
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.30000000000000004
+0.0
+0.7
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+22
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.5000000000000001
+0.0
+0.4999999999999999
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+23
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.7000000000000001
+0.0
+0.29999999999999993
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+24
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.9000000000000001
+0.0
+0.09999999999999987
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+25
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.0
+0.1
+0.9
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+26
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.0
+0.30000000000000004
+0.7
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+27
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.0
+0.5000000000000001
+0.4999999999999999
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+28
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.0
+0.7000000000000001
+0.29999999999999993
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+29
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.0
+0.9000000000000001
+0.09999999999999987
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+30
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.1
+0.8
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+31
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.30000000000000004
+0.6
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+32
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.5000000000000001
+0.3999999999999999
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+33
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.7000000000000001
+0.19999999999999996
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+34
+
+
+s-c T=300
+set-start-const FCC_A1
+0.30000000000000004
+0.1
+0.6
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+35
+
+
+s-c T=300
+set-start-const FCC_A1
+0.30000000000000004
+0.30000000000000004
+0.3999999999999999
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+36
+
+
+s-c T=300
+set-start-const FCC_A1
+0.30000000000000004
+0.5000000000000001
+0.19999999999999984
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+37
+
+
+s-c T=300
+set-start-const FCC_A1
+0.5000000000000001
+0.1
+0.3999999999999999
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+38
+
+
+s-c T=300
+set-start-const FCC_A1
+0.5000000000000001
+0.30000000000000004
+0.19999999999999984
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+39
+
+
+s-c T=300
+set-start-const FCC_A1
+0.7000000000000001
+0.1
+0.19999999999999993
+0.0
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+40
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.1
+0.0
+0.8
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+41
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.30000000000000004
+0.0
+0.6
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+42
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.5000000000000001
+0.0
+0.3999999999999999
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+43
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.7000000000000001
+0.0
+0.19999999999999996
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+44
+
+
+s-c T=300
+set-start-const FCC_A1
+0.30000000000000004
+0.1
+0.0
+0.6
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+45
+
+
+s-c T=300
+set-start-const FCC_A1
+0.30000000000000004
+0.30000000000000004
+0.0
+0.3999999999999999
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+46
+
+
+s-c T=300
+set-start-const FCC_A1
+0.30000000000000004
+0.5000000000000001
+0.0
+0.19999999999999984
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+47
+
+
+s-c T=300
+set-start-const FCC_A1
+0.5000000000000001
+0.1
+0.0
+0.3999999999999999
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+48
+
+
+s-c T=300
+set-start-const FCC_A1
+0.5000000000000001
+0.30000000000000004
+0.0
+0.19999999999999984
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+49
+
+
+s-c T=300
+set-start-const FCC_A1
+0.7000000000000001
+0.1
+0.0
+0.19999999999999993
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+50
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.0
+0.1
+0.8
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+51
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.0
+0.30000000000000004
+0.6
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+52
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.0
+0.5000000000000001
+0.3999999999999999
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+53
+
+
+s-c T=300
+set-start-const FCC_A1
+0.1
+0.0
+0.7000000000000001
+0.19999999999999996
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+54
+
+
+s-c T=300
+set-start-const FCC_A1
+0.30000000000000004
+0.0
+0.1
+0.6
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+55
+
+
+s-c T=300
+set-start-const FCC_A1
+0.30000000000000004
+0.0
+0.30000000000000004
+0.3999999999999999
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+56
+
+
+s-c T=300
+set-start-const FCC_A1
+0.30000000000000004
+0.0
+0.5000000000000001
+0.19999999999999984
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+57
+
+
+s-c T=300
+set-start-const FCC_A1
+0.5000000000000001
+0.0
+0.1
+0.3999999999999999
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+58
+
+
+s-c T=300
+set-start-const FCC_A1
+0.5000000000000001
+0.0
+0.30000000000000004
+0.19999999999999984
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+59
+
+
+s-c T=300
+set-start-const FCC_A1
+0.7000000000000001
+0.0
+0.1
+0.19999999999999993
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+60
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.1
+0.1
+0.8
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+61
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.1
+0.30000000000000004
+0.6
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+62
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.1
+0.5000000000000001
+0.3999999999999999
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+63
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.1
+0.7000000000000001
+0.19999999999999996
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+64
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.30000000000000004
+0.1
+0.6
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+65
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.30000000000000004
+0.30000000000000004
+0.3999999999999999
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+66
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.30000000000000004
+0.5000000000000001
+0.19999999999999984
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+67
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.5000000000000001
+0.1
+0.3999999999999999
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+68
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.5000000000000001
+0.30000000000000004
+0.19999999999999984
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+69
+
+
+s-c T=300
+set-start-const FCC_A1
+0.0
+0.7000000000000001
+0.1
+0.19999999999999993
+show HMR(FCC_A1) SMR(FCC_A1)
+l-e
+Int1+FCC_A1+300+70
+
+
+set-inter

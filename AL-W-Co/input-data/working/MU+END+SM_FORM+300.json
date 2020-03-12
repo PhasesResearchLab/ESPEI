@@ -1,0 +1,22 @@
+{
+  "components": ["AL", "CO", "W"],
+  "phases": ["MU"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": 
+         [1.0, 4.0, 2.0, 6.0],
+    "sublattice_configurations":
+       [["CO", "AL", "AL", "CO"], ["CO", "AL", "AL", "W"], ["CO", "AL", "CO", "CO"], ["CO", "AL", "CO", "W"], ["CO", "AL", "W", "CO"], ["CO", "AL", "W", "W"], ["CO", "CO", "AL", "CO"], ["CO", "CO", "AL", "W"], ["CO", "CO", "CO", "CO"], ["CO", "CO", "CO", "W"], ["CO", "CO", "W", "CO"], ["CO", "CO", "W", "W"], ["CO", "W", "AL", "CO"], ["CO", "W", "AL", "W"], ["CO", "W", "CO", "CO"], ["CO", "W", "CO", "W"], ["CO", "W", "W", "CO"], ["CO", "W", "W", "W"], ["W", "AL", "AL", "CO"], ["W", "AL", "AL", "W"], ["W", "AL", "CO", "CO"], ["W", "AL", "CO", "W"], ["W", "AL", "W", "CO"], ["W", "AL", "W", "W"], ["W", "CO", "AL", "CO"], ["W", "CO", "AL", "W"], ["W", "CO", "CO", "CO"], ["W", "CO", "CO", "W"], ["W", "CO", "W", "CO"], ["W", "CO", "W", "W"], ["W", "W", "AL", "CO"], ["W", "W", "AL", "W"], ["W", "W", "CO", "CO"], ["W", "W", "CO", "W"], ["W", "W", "W", "CO"], ["W", "W", "W", "W"]]
+  },
+  "conditions": {
+      "P": 101325,
+      "T": 300
+  },
+  "output": "SM_FORM",
+  "values": [[
+    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.3798974358974374, 0.0, 0.0, 0.0, 0.0, 2.521435897435898, 0.0, -4.058384615384621, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0011282051281887107, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.9079230769230798, 0.0]
+  ]],
+  "excluded_model_contributions": ["idmix", "mag"],
+  "reference": "text 1 to write reference",
+  "comment": "test 2 to write comment"
+}

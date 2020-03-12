@@ -1,0 +1,950 @@
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  5.57379E+01
+ Total Gibbs energy -6.52298E+03,  Enthalpy  3.56747E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-01  4.8409E-02 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      9.0000E-01  9.5159E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  9.3287E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  3.2985E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 5.5738E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CO  9.51591E-01  AL  4.84087E-02  W   3.29847E-12  CR  9.32866E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  4.93477E+01
+ Total Gibbs energy -4.82735E+03,  Enthalpy  6.02956E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      3.0000E-01  1.6403E-01 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      7.0000E-01  8.3597E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  1.0537E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  3.7256E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 4.9348E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CO  8.35968E-01  AL  1.64032E-01  W   3.72560E-12  CR  1.05367E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  4.29575E+01
+ Total Gibbs energy -3.13850E+03,  Enthalpy  8.04392E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      5.0000E-01  3.1405E-01 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      5.0000E-01  6.8595E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  1.2104E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  4.2798E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 4.2958E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CO  6.85945E-01  AL  3.14055E-01  W   4.27981E-12  CR  1.21041E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  3.65673E+01
+ Total Gibbs energy -1.69252E+03,  Enthalpy  9.55757E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      7.0000E-01  5.1651E-01 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      3.0000E-01  4.8349E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  1.4219E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  5.0277E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 3.6567E+01, Volume fraction 0.0000E+00  Mass fractions:
+ AL  5.16511E-01  CO  4.83489E-01  W   5.02772E-12  CR  1.42193E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  3.01771E+01
+ Total Gibbs energy -6.65707E+02,  Enthalpy  1.02631E+04,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      9.0000E-01  8.0471E-01 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-01  1.9529E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  1.7230E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  6.0924E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 3.0177E+01, Volume fraction 0.0000E+00  Mass fractions:
+ AL  8.04710E-01  CO  1.95290E-01  W   6.09237E-12  CR  1.72303E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  4.94946E+01
+ Total Gibbs energy -7.26803E+03,  Enthalpy  7.99398E+02,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-01  5.4515E-02 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  1.1907E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      9.0000E-01  9.4548E-01 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  3.7145E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 4.9495E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CR  9.45485E-01  AL  5.45150E-02  W   3.71455E-12  CO  1.19070E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  4.44918E+01
+ Total Gibbs energy -6.86282E+03,  Enthalpy  2.31533E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      3.0000E-01  1.8193E-01 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  1.3246E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      7.0000E-01  8.1807E-01 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  4.1322E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 4.4492E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CR  8.18065E-01  AL  1.81935E-01  W   4.13222E-12  CO  1.32458E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  3.94890E+01
+ Total Gibbs energy -5.40367E+03,  Enthalpy  4.53609E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      5.0000E-01  3.4164E-01 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  1.4924E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      5.0000E-01  6.5836E-01 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  4.6557E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 3.9489E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CR  6.58361E-01  AL  3.41639E-01  W   4.65573E-12  CO  1.49239E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  3.44862E+01
+ Total Gibbs energy -3.79844E+03,  Enthalpy  6.54652E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      7.0000E-01  5.4768E-01 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  1.7089E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      3.0000E-01  4.5232E-01 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  5.3311E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 3.4486E+01, Volume fraction 0.0000E+00  Mass fractions:
+ AL  5.47680E-01  CR  4.52320E-01  W   5.33112E-12  CO  1.70889E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  2.94834E+01
+ Total Gibbs energy -1.42859E+03,  Enthalpy  8.96423E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      9.0000E-01  8.2364E-01 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  1.9989E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-01  1.7636E-01 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  6.2357E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 2.9483E+01, Volume fraction 0.0000E+00  Mass fractions:
+ AL  8.23643E-01  CR  1.76357E-01  W   6.23571E-12  CO  1.99885E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E-01,  Mass in grams  2.69820E+00
+ Total Gibbs energy -7.95976E+02,  Enthalpy  1.01280E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-01  1.0000E+00 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  2.1842E-11 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  1.9271E-11 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  6.8138E-11 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E-01, Mass 2.6982E+00, Volume fraction 0.0000E+00  Mass fractions:
+ AL  1.00000E+00  W   6.81380E-11  CO  2.18416E-11  CR  1.92706E-11
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  3.00000E-01,  Mass in grams  8.09460E+00
+ Total Gibbs energy -1.47902E+03,  Enthalpy  3.03839E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      3.0000E-01  1.0000E+00 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  7.2805E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  6.4235E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  2.2713E-11 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 3.0000E-01, Mass 8.0946E+00, Volume fraction 0.0000E+00  Mass fractions:
+ AL  1.00000E+00  W   2.27127E-11  CO  7.28053E-12  CR  6.42354E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  5.00000E-01,  Mass in grams  1.34910E+01
+ Total Gibbs energy -1.65447E+03,  Enthalpy  5.06398E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      5.0000E-01  1.0000E+00 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  4.3683E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  3.8541E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  1.3628E-11 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 5.0000E-01, Mass 1.3491E+01, Volume fraction 0.0000E+00  Mass fractions:
+ AL  1.00000E+00  W   1.36276E-11  CO  4.36832E-12  CR  3.85412E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  7.00000E-01,  Mass in grams  1.88874E+01
+ Total Gibbs energy -1.41944E+03,  Enthalpy  7.08958E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      7.0000E-01  1.0000E+00 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  3.1202E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  2.7529E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  9.7340E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 7.0000E-01, Mass 1.8887E+01, Volume fraction 0.0000E+00  Mass fractions:
+ AL  1.00000E+00  W   9.73400E-12  CO  3.12023E-12  CR  2.75295E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  9.00000E-01,  Mass in grams  2.42838E+01
+ Total Gibbs energy -6.76808E+02,  Enthalpy  9.11517E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      9.0000E-01  1.0000E+00 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  2.4268E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  2.1412E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  7.5709E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 9.0000E-01, Mass 2.4284E+01, Volume fraction 0.0000E+00  Mass fractions:
+ AL  1.00000E+00  W   7.57089E-12  CO  2.42684E-12  CR  2.14118E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  1.68163E+02
+ Total Gibbs energy -9.60284E+03,  Enthalpy  1.05304E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-01  1.6045E-02 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  3.5045E-13 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  3.0920E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       9.0000E-01  9.8395E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 1.6816E+02, Volume fraction 0.0000E+00  Mass fractions:
+ W   9.83955E-01  AL  1.60451E-02  CO  3.50451E-13  CR  3.09200E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  1.36790E+02
+ Total Gibbs energy -8.32881E+03,  Enthalpy  3.06969E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      3.0000E-01  5.9176E-02 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  4.3083E-13 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  3.8012E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       7.0000E-01  9.4082E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 1.3679E+02, Volume fraction 0.0000E+00  Mass fractions:
+ W   9.40824E-01  AL  5.91756E-02  CO  4.30830E-13  CR  3.80117E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  1.05416E+02
+ Total Gibbs energy -6.54718E+03,  Enthalpy  5.08634E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      5.0000E-01  1.2798E-01 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  5.5905E-13 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  4.9325E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       5.0000E-01  8.7202E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 1.0542E+02, Volume fraction 0.0000E+00  Mass fractions:
+ W   8.72021E-01  AL  1.27979E-01  CO  5.59052E-13  CR  4.93246E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  7.40424E+01
+ Total Gibbs energy -4.35506E+03,  Enthalpy  7.10299E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      7.0000E-01  2.5509E-01 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  7.9594E-13 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  7.0225E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       3.0000E-01  7.4491E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 7.4042E+01, Volume fraction 0.0000E+00  Mass fractions:
+ W   7.44911E-01  AL  2.55089E-01  CO  7.95936E-13  CR  7.02246E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  4.26688E+01
+ Total Gibbs energy -1.65535E+03,  Enthalpy  9.11964E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      9.0000E-01  5.6912E-01 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  1.3812E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  1.2186E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-01  4.3088E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 4.2669E+01, Volume fraction 0.0000E+00  Mass fractions:
+ AL  5.69123E-01  W   4.30877E-01  CO  1.38117E-12  CR  1.21860E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  5.26897E+01
+ Total Gibbs energy -7.15484E+03,  Enthalpy  1.19655E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  5.1209E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-01  1.1185E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      9.0000E-01  8.8815E-01 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  3.4893E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 5.2690E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CR  8.88151E-01  CO  1.11849E-01  W   3.48930E-12  AL  5.12092E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  5.40771E+01
+ Total Gibbs energy -6.44242E+03,  Enthalpy  3.43552E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  4.9895E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      3.0000E-01  3.2694E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      7.0000E-01  6.7306E-01 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  3.3998E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 5.4077E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CR  6.73061E-01  CO  3.26939E-01  W   3.39978E-12  AL  4.98954E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  5.54645E+01
+ Total Gibbs energy -6.14944E+03,  Enthalpy  3.66585E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  4.8647E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      5.0000E-01  5.3127E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      5.0000E-01  4.6873E-01 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  3.3147E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 5.5465E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CO  5.31268E-01  CR  4.68732E-01  W   3.31473E-12  AL  4.86473E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  5.68519E+01
+ Total Gibbs energy -6.51921E+03,  Enthalpy  3.49017E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  4.7460E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      7.0000E-01  7.2562E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      3.0000E-01  2.7438E-01 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  3.2338E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 5.6852E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CO  7.25624E-01  CR  2.74376E-01  W   3.23384E-12  AL  4.74602E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  5.82393E+01
+ Total Gibbs energy -7.05527E+03,  Enthalpy  2.75073E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  4.6330E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      9.0000E-01  9.1072E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-01  8.9280E-02 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  3.1568E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 5.8239E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CO  9.10720E-01  CR  8.92799E-02  W   3.15680E-12  AL  4.63295E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E-01,  Mass in grams  5.89330E+00
+ Total Gibbs energy -7.99771E+02,  Enthalpy  1.14791E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  4.5784E-12 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-01  1.0000E+00 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  8.8229E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  3.1196E-11 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E-01, Mass 5.8933E+00, Volume fraction 0.0000E+00  Mass fractions:
+ CO  1.00000E+00  W   3.11964E-11  CR  8.82290E-12  AL  4.57842E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  3.00000E-01,  Mass in grams  1.76799E+01
+ Total Gibbs energy -1.79679E+03,  Enthalpy  2.46799E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  1.5261E-12 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      3.0000E-01  1.0000E+00 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  2.9410E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  1.0399E-11 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 3.0000E-01, Mass 1.7680E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CO  1.00000E+00  W   1.03988E-11  CR  2.94097E-12  AL  1.52614E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  5.00000E-01,  Mass in grams  2.94665E+01
+ Total Gibbs energy -3.21298E+03,  Enthalpy  2.97994E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  9.1568E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      5.0000E-01  1.0000E+00 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  1.7646E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  6.2393E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 5.0000E-01, Mass 2.9467E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CO  1.00000E+00  W   6.23929E-12  CR  1.76458E-12  AL  9.15684E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  7.00000E-01,  Mass in grams  4.12531E+01
+ Total Gibbs energy -4.87204E+03,  Enthalpy  2.99116E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  6.5406E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      7.0000E-01  1.0000E+00 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  1.2604E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  4.4566E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 7.0000E-01, Mass 4.1253E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CO  1.00000E+00  W   4.45663E-12  CR  1.26041E-12  AL  6.54060E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  9.00000E-01,  Mass in grams  5.30397E+01
+ Total Gibbs energy -6.53788E+03,  Enthalpy  2.55467E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  5.0871E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      9.0000E-01  1.0000E+00 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  9.8032E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  3.4663E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 9.0000E-01, Mass 5.3040E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CO  1.00000E+00  W   3.46627E-12  CR  9.80322E-13  AL  5.08713E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  1.71358E+02
+ Total Gibbs energy -9.60703E+03,  Enthalpy  1.18619E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  1.5746E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-01  3.4392E-02 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  3.0343E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       9.0000E-01  9.6561E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 1.7136E+02, Volume fraction 0.0000E+00  Mass fractions:
+ W   9.65608E-01  CO  3.43917E-02  CR  3.03434E-13  AL  1.57460E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  1.46375E+02
+ Total Gibbs energy -8.36233E+03,  Enthalpy  3.36074E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  1.8433E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      3.0000E-01  1.2079E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  3.5522E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       7.0000E-01  8.7921E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 1.4637E+02, Volume fraction 0.0000E+00  Mass fractions:
+ W   8.79215E-01  CO  1.20785E-01  CR  3.55225E-13  AL  1.84335E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  1.21392E+02
+ Total Gibbs energy -6.56365E+03,  Enthalpy  5.77444E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  2.2227E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      5.0000E-01  2.4274E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  4.2833E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       5.0000E-01  7.5726E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 1.2139E+02, Volume fraction 0.0000E+00  Mass fractions:
+ W   7.57261E-01  CO  2.42739E-01  CR  4.28333E-13  AL  2.22273E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  9.64081E+01
+ Total Gibbs energy -4.42383E+03,  Enthalpy  7.80730E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  2.7987E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      7.0000E-01  4.2790E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  5.3933E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       3.0000E-01  5.7210E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 9.6408E+01, Volume fraction 0.0000E+00  Mass fractions:
+ W   5.72099E-01  CO  4.27901E-01  CR  5.39332E-13  AL  2.79873E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  7.14247E+01
+ Total Gibbs energy -5.00987E+03,  Enthalpy  5.41917E+03,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  3.7777E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      9.0000E-01  7.4260E-01 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  7.2798E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-01  2.5740E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 7.1425E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CO  7.42596E-01  W   2.57404E-01  CR  7.27983E-13  AL  3.77768E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E-01,  Mass in grams  5.19960E+00
+ Total Gibbs energy -1.51701E+03,  Enthalpy  5.30711E+00,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  5.1892E-12 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  1.1334E-11 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-01  1.0000E+00 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  3.5358E-11 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E-01, Mass 5.1996E+00, Volume fraction 0.0000E+00  Mass fractions:
+ CR  1.00000E+00  W   3.53585E-11  CO  1.13341E-11  AL  5.18925E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  3.00000E-01,  Mass in grams  1.55988E+01
+ Total Gibbs energy -3.64213E+03,  Enthalpy  1.59157E+01,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  1.7297E-12 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  3.7780E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      3.0000E-01  1.0000E+00 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  1.1786E-11 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 3.0000E-01, Mass 1.5599E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CR  1.00000E+00  W   1.17862E-11  CO  3.77805E-12  AL  1.72975E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  5.00000E-01,  Mass in grams  2.59980E+01
+ Total Gibbs energy -5.25967E+03,  Enthalpy  2.64151E+01,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  1.0378E-12 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  2.2668E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      5.0000E-01  1.0000E+00 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  7.0717E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 5.0000E-01, Mass 2.5998E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CR  1.00000E+00  W   7.07170E-12  CO  2.26683E-12  AL  1.03785E-12
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  7.00000E-01,  Mass in grams  3.63972E+01
+ Total Gibbs energy -6.46686E+03,  Enthalpy  3.62396E+01,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  7.4132E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  1.6192E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      7.0000E-01  1.0000E+00 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  5.0512E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 7.0000E-01, Mass 3.6397E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CR  1.00000E+00  W   5.05121E-12  CO  1.61916E-12  AL  7.41321E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  9.00000E-01,  Mass in grams  4.67964E+01
+ Total Gibbs energy -7.16695E+03,  Enthalpy  4.34388E+01,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  5.7658E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  1.2593E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      9.0000E-01  1.0000E+00 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-12  3.9287E-12 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 9.0000E-01, Mass 4.6796E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CR  1.00000E+00  W   3.92872E-12  CO  1.25935E-12  AL  5.76583E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  1.70665E+02
+ Total Gibbs energy -1.03239E+04,  Enthalpy  4.55487E+01,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  1.5810E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  3.4531E-13 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-01  3.0467E-02 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       9.0000E-01  9.6953E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 1.7066E+02, Volume fraction 0.0000E+00  Mass fractions:
+ W   9.69533E-01  CR  3.04668E-02  CO  3.45315E-13  AL  1.58100E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  1.44294E+02
+ Total Gibbs energy -1.04919E+04,  Enthalpy  4.72147E+01,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  1.8699E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  4.0842E-13 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      3.0000E-01  1.0810E-01 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       7.0000E-01  8.9190E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 1.4429E+02, Volume fraction 0.0000E+00  Mass fractions:
+ W   8.91896E-01  CR  1.08104E-01  CO  4.08424E-13  AL  1.86993E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  1.17923E+02
+ Total Gibbs energy -1.01524E+04,  Enthalpy  4.87715E+01,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  2.2881E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  4.9976E-13 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      5.0000E-01  2.2047E-01 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       5.0000E-01  7.7953E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 1.1792E+02, Volume fraction 0.0000E+00  Mass fractions:
+ W   7.79534E-01  CR  2.20466E-01  CO  4.99758E-13  AL  2.28810E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  9.15522E+01
+ Total Gibbs energy -9.40248E+03,  Enthalpy  4.96534E+01,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  2.9472E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  6.4371E-13 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      7.0000E-01  3.9756E-01 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       3.0000E-01  6.0244E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 9.1552E+01, Volume fraction 0.0000E+00  Mass fractions:
+ W   6.02443E-01  CR  3.97557E-01  CO  6.43709E-13  AL  2.94717E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E+00,  Mass in grams  6.51814E+01
+ Total Gibbs energy -8.14549E+03,  Enthalpy  4.79101E+01,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  4.1395E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  9.0414E-13 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      9.0000E-01  7.1794E-01 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-01  2.8206E-01 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E+00, Mass 6.5181E+01, Volume fraction 0.0000E+00  Mass fractions:
+ CR  7.17941E-01  W   2.82059E-01  CO  9.04138E-13  AL  4.13952E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  9.00000E-01,  Mass in grams  1.65465E+02
+ Total Gibbs energy -9.61774E+03,  Enthalpy  4.02416E+01,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  1.6307E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  3.5617E-13 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  3.1424E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       9.0000E-01  1.0000E+00 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 9.0000E-01, Mass 1.6547E+02, Volume fraction 0.0000E+00  Mass fractions:
+ W   1.00000E+00  CO  3.56166E-13  CR  3.14242E-13  AL  1.63068E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  7.00000E-01,  Mass in grams  1.28695E+02
+ Total Gibbs energy -8.37350E+03,  Enthalpy  3.12990E+01,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  2.0966E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  4.5793E-13 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  4.0403E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       7.0000E-01  1.0000E+00 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 7.0000E-01, Mass 1.2870E+02, Volume fraction 0.0000E+00  Mass fractions:
+ W   1.00000E+00  CO  4.57928E-13  CR  4.04025E-13  AL  2.09658E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  5.00000E-01,  Mass in grams  9.19250E+01
+ Total Gibbs energy -6.62166E+03,  Enthalpy  2.23564E+01,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  2.9352E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  6.4110E-13 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  5.6564E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       5.0000E-01  1.0000E+00 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 5.0000E-01, Mass 9.1925E+01, Volume fraction 0.0000E+00  Mass fractions:
+ W   1.00000E+00  CO  6.41099E-13  CR  5.65635E-13  AL  2.93522E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  3.00000E-01,  Mass in grams  5.51550E+01
+ Total Gibbs energy -4.45933E+03,  Enthalpy  1.34139E+01,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  4.8920E-13 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  1.0685E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  9.4273E-13 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       3.0000E-01  1.0000E+00 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 3.0000E-01, Mass 5.5155E+01, Volume fraction 0.0000E+00  Mass fractions:
+ W   1.00000E+00  CO  1.06850E-12  CR  9.42725E-13  AL  4.89203E-13
+ Output from POLY-3, equilibrium =     1, label A0  , database: USER    
+
+ Conditions:
+ P=1E5, N=1, T=300
+ DEGREES OF FREEDOM 3
+
+ Temperature    300.00 K (    26.85 C),  Pressure  1.000000E+05
+ Number of moles of components  1.00000E-01,  Mass in grams  1.83850E+01
+ Total Gibbs energy -1.78941E+03,  Enthalpy  4.47129E+00,  Volume  0.00000E+00
+
+ Component               Moles       W-Fraction  Activity   Potential  Ref.stat
+ AL                      1.0000E-12  1.4676E-12 3.0077E+01  8.4901E+03 FCC_A1  
+ CO                      1.0000E-12  3.2055E-12 3.7078E+01  9.0122E+03 HCP_A3  
+ CR                      1.0000E-12  2.8282E-12 1.6973E+01  7.0630E+03 BCC_A2  
+ W                       1.0000E-01  1.0000E+00 5.0553E+01  9.7854E+03 BCC_A2  
+
+ BCC_A2                      Status ENTERED     Driving force  0.0000E+00
+ Moles 1.0000E-01, Mass 1.8385E+01, Volume fraction 0.0000E+00  Mass fractions:
+ W   1.00000E+00  CO  3.20549E-12  CR  2.82818E-12  AL  1.46761E-12

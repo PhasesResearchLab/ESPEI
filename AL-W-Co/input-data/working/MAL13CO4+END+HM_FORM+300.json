@@ -1,0 +1,22 @@
+{
+  "components": ["AL", "CO"],
+  "phases": ["MAL13CO4"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": 
+         [0.755, 0.245],
+    "sublattice_configurations":
+     [ ["AL", "CO"] ]
+  },
+  "conditions": {
+      "P": 101325,
+      "T": 300
+  },
+  "output": "HM_FORM",
+  "values": [[
+    [-40739.98]
+  ]],
+  "excluded_model_contributions": ["idmix", "mag"],
+  "reference": "text 1 to write reference",
+  "comment": "test 2 to write comment"
+}

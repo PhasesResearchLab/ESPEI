@@ -1,0 +1,8 @@
+system:
+  phase_models: Cu-Mg-input.json
+  datasets: input-data
+generate_parameters:
+  excess_model: linear
+  ref_state: SGTE91
+output:
+  output_db: cu-mg_dft.tdb

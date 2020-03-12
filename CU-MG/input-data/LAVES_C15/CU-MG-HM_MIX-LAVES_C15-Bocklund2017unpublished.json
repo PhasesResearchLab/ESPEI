@@ -1,0 +1,33 @@
+{
+  "components": ["CU", "MG"],
+  "phases": ["LAVES_C15"],
+  "solver": {
+	  "mode": "manual",
+	  "sublattice_site_ratios": [1, 2],
+	    "sublattice_occupancies": [
+          [[0.5, 0.5], 1.0],
+          [[0.5, 0.5], 1.0],
+          [1.0, [0.5, 0.5]],
+          [1.0, [0.5, 0.5]]
+      ],
+	    "sublattice_configurations": [
+          [["CU", "MG"], "CU"],
+          [["CU", "MG"], "MG"],
+          ["CU", ["CU", "MG"]],
+          ["MG", ["CU", "MG"]]
+			]
+  },
+  "conditions": {
+	  "P": 101325,
+	  "T": 298.15
+  },
+  "output": "HM_MIX",
+    "values":   [[[
+        12527.081646015635,
+        1770.2513699509436,
+        1480.5372111789766,
+        17889.256552513136
+                ]]],
+  "reference": "Bocklund2017unpublished",
+  "comment": "Constrained DFT calculations"
+}

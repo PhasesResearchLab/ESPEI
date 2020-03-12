@@ -1,0 +1,22 @@
+{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["LIQUID", "FCC_A1", "LAVES_C15"],
+  "conditions": {
+      "P": 101325,
+      "T": [773.85, 872.75, 951.15, 973.15, 1001.35, 1088.45, 1174.25]
+  },
+  "broadcast_conditions": false,
+  "output": "ZPF",
+  "values":   [
+               [["FCC_A1", ["MG"], [0.0545706]], ["LAVES_C15", ["MG"], [null]]],
+               [["FCC_A1", ["MG"], [0.0551807]], ["LAVES_C15", ["MG"], [null]]],
+               [["FCC_A1", ["MG"], [0.0621264]], ["LAVES_C15", ["MG"], [null]]],
+               [["FCC_A1", ["MG"], [0.0666104]], ["LAVES_C15", ["MG"], [null]]],
+               [["FCC_A1", ["MG"], [0.0679314]], ["LIQUID", ["MG"], [null]]],
+               [["FCC_A1", ["MG"], [0.0459052]], ["LIQUID", ["MG"], [null]]],
+               [["FCC_A1", ["MG"], [0.0329389]], ["LIQUID", ["MG"], [null]]]
+              ],
+    "reference": "Jones1931",
+    "comment": "solubility lines from Fig A, converted to atomic percent"
+}
+

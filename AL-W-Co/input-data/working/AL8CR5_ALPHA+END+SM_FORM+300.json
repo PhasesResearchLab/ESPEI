@@ -1,0 +1,22 @@
+{
+  "components": ["AL", "CR"],
+  "phases": ["AL8CR5_ALPHA"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": 
+         [12.0, 5.0, 9.0],
+    "sublattice_configurations":
+       [["AL", "CR", "AL"], ["AL", "CR", "CR"]]
+  },
+  "conditions": {
+      "P": 101325,
+      "T": 300
+  },
+  "output": "SM_FORM",
+  "values": [[
+    [-0.7691935897435845, 5.769278205128212]
+  ]],
+  "excluded_model_contributions": ["idmix", "mag"],
+  "reference": "text 1 to write reference",
+  "comment": "test 2 to write comment"
+}

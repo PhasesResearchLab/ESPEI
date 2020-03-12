@@ -1,0 +1,27 @@
+{
+  "components": ["CU", "MG"],
+  "phases": ["LAVES_C15"],
+  "solver": {
+	  "mode": "manual",
+	  "sublattice_site_ratios": [2, 1],
+	    "sublattice_configurations": [
+          ["CU", "CU"],
+          ["MG", "MG"],
+          ["CU", "MG"],
+          ["MG", "CU"]
+			]
+  },
+  "conditions": {
+	  "P": 101325,
+	  "T": 298.15
+  },
+  "output": "HM_FORM",
+    "values":   [[[
+        15281.499646230135,
+        6824.198731731332,
+        -14221.083626654116,
+        36224.433089594124
+                ]]],
+  "reference": "Bocklund2017unpublished",
+  "comment": "Unconstrained DFT calculations"
+}

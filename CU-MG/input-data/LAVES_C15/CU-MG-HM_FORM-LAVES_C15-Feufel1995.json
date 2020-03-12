@@ -1,0 +1,16 @@
+{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["LAVES_C15"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": [2, 1],
+    "sublattice_configurations": [["CU", "MG"]]
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 299
+  },
+  "output": "HM_FORM",
+  "values":   [[[-12700]]],
+  "reference": "Feufel1995"
+}

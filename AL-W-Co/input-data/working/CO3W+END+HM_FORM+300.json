@@ -1,0 +1,22 @@
+{
+  "components": ["AL", "CO", "W"],
+  "phases": ["CO3W"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": 
+         [0.75, 0.25],
+    "sublattice_configurations":
+       [["CO", "AL"], ["CO", "CO"], ["CO", "W"], ["W", "AL"], ["W", "CO"], ["W", "W"]]
+  },
+  "conditions": {
+      "P": 101325,
+      "T": 300
+  },
+  "output": "HM_FORM",
+  "values": [[
+    [-23056.35, 18258.32, -14100.0, 36329.023, 20902.2, 18568.687100000003]
+  ]],
+  "excluded_model_contributions": ["idmix", "mag"],
+  "reference": "text 1 to write reference",
+  "comment": "test 2 to write comment"
+}

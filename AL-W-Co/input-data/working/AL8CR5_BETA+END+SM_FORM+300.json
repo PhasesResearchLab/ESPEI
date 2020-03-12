@@ -1,0 +1,22 @@
+{
+  "components": ["AL", "CR"],
+  "phases": ["AL8CR5_BETA"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": 
+         [2.0, 3.0, 2.0, 6.0],
+    "sublattice_configurations":
+       [["AL", "AL", "CR", "AL"], ["AL", "CR", "CR", "AL"], ["CR", "AL", "CR", "AL"], ["CR", "CR", "CR", "AL"]]
+  },
+  "conditions": {
+      "P": 101325,
+      "T": 300
+  },
+  "output": "SM_FORM",
+  "values": [[
+    [0.0, 5.615356153846151, 0.0, 8.615384615384615]
+  ]],
+  "excluded_model_contributions": ["idmix", "mag"],
+  "reference": "text 1 to write reference",
+  "comment": "test 2 to write comment"
+}

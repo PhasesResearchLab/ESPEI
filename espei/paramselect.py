@@ -512,13 +512,13 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
                 hints = phase_models['phases'][phase_name]["model_hints"]
                 if hints.get('ordered_phase') == phase_name:
                     ordered_phases_to_fit.append((phase_name, phase_obj))
-                    continue
+                    continue;
                 dbf.add_phase(phase_name, phase_models['phases'][phase_name]["model_hints"], site_ratios)
             else:
                 dbf.add_phase(phase_name, dict(), site_ratios)
             dbf.add_phase_constituents(phase_name, subl_model)
             dbf.add_structure_entry(phase_name, phase_name)
-        print(dbf)
+        # print(dbf)
         phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
     for phase_name,phase_obj in ordered_phases_to_fit:
         # Perform parameter selection and single-phase fitting based on input

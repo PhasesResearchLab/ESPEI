@@ -1,0 +1,20 @@
+{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["LAVES_C15"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": [2, 1],
+      "sublattice_configurations": [["CU", "MG"],
+                                    ["MG", "CU"],
+                                    ["MG", "MG"],
+                                    ["CU", "CU"]]
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 298.15
+  },
+  "output": "HM_FORM",
+    "values":   [[[-15720, 34720, 7000, 15500]]],
+  "reference": "Zhou2007",
+  "comment": "DFT reported in S. H. Zhou et al., J. Phase Equilibria Diffus. 28, 158-166 (2007)."
+}

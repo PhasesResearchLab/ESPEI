@@ -1,0 +1,42 @@
+{
+  "components": ["CU", "MG", "VA"],
+    "phases": ["CUMG2", "FCC_A1", "LAVES_C15", "LIQUID"],
+  "conditions": {
+      "P": 101325,
+      "T": [985.15564,
+            916.8051,
+            865.0073,
+            810.6847,
+            775.61176,
+            674.095,
+            574.1246,
+            985.2447,
+            913.24316,
+            865.56213,
+            811.0176,
+            774.3126,
+            674.9051,
+            574.9803]
+  },
+  "broadcast_conditions": false,
+  "output": "ZPF",
+  "values":   [
+               [["LAVES_C15", ["MG"], [0.31592]], ["FCC_A1", ["MG"], [null]]],
+               [["LAVES_C15", ["MG"], [0.31756]], ["FCC_A1", ["MG"], [null]]],
+               [["LAVES_C15", ["MG"], [0.31922]], ["FCC_A1", ["MG"], [null]]],
+               [["LAVES_C15", ["MG"], [0.32179]], ["FCC_A1", ["MG"], [null]]],
+               [["LAVES_C15", ["MG"], [0.32567]], ["FCC_A1", ["MG"], [null]]],
+               [["LAVES_C15", ["MG"], [0.32651]], ["FCC_A1", ["MG"], [null]]],
+               [["LAVES_C15", ["MG"], [0.32637]], ["FCC_A1", ["MG"], [null]]],
+               [["LAVES_C15", ["MG"], [0.33789]], ["LIQUID", ["MG"], [null]]],
+               [["LAVES_C15", ["MG"], [0.34683]], ["LIQUID", ["MG"], [null]]],
+               [["LAVES_C15", ["MG"], [0.34717]], ["LIQUID", ["MG"], [null]]],
+               [["LAVES_C15", ["MG"], [0.33857]], ["CUMG2", ["MG"], [null]]],
+               [["LAVES_C15", ["MG"], [0.33816]], ["CUMG2", ["MG"], [null]]],
+               [["LAVES_C15", ["MG"], [0.33691]], ["CUMG2", ["MG"], [null]]],
+               [["LAVES_C15", ["MG"], [0.33716]], ["CUMG2", ["MG"], [null]]]
+              ],
+    "reference": "Bagnoud1978",
+    "comment": "solubility lines from Fig 3"
+}
+

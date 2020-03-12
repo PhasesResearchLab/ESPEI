@@ -1,0 +1,18 @@
+{
+    "components": ["CU", "MG", "VA"],
+    "phases": ["HCP_A3", "CUMG2"],
+    "conditions": {
+	"P": 101325,
+	"T": [733.15, 743.15, 753.15]
+    },
+    "broadcast_conditions": false,
+    "output": "ZPF",
+    "values":   [
+	[["HCP_A3", ["CU"], [0.0001052]], ["CUMG2", ["MG"], [null]]],
+	[["HCP_A3", ["CU"], [0.0001052]], ["CUMG2", ["MG"], [null]]],
+	[["HCP_A3", ["CU"], [0.001134]], ["CUMG2", ["MG"], [null]]]
+    ],
+    "reference": "Jones1931",
+    "comment": "Interpolated composition from Table 6"
+}
+

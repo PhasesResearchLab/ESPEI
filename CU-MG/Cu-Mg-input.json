@@ -1,0 +1,31 @@
+ex{
+  "components": ["CU", "MG", "VA"],
+  "refdata": "SGTE91",
+  "phases": {
+	     "LIQUID" : {
+			"sublattice_model": [["CU", "MG"]],
+			"sublattice_site_ratios": [1]
+	     },
+	     "CUMG2": {
+			"sublattice_model": [["CU"], ["MG"]],
+			"sublattice_site_ratios": [1, 2]
+	     },
+	     "FCC_A1": {
+		    "sublattice_model": [["CU", "MG"], ["VA"]],
+			"sublattice_site_ratios": [1, 1],
+			"model_hints":{ "disordered_phase":"FCC_A1","ordered_phase":"HCP_A3"
+
+			}
+	     },
+	     "HCP_A3": {
+			"sublattice_site_ratios": [1, 0.5],
+			"sublattice_model": [["CU", "MG"], ["VA"]],
+			"model_hints":{"disordered_phase":"FCC_A1","ordered_phase":"HCP_A3"
+	      }
+	     },
+	     "LAVES_C15": {
+			"sublattice_site_ratios": [2, 1],
+			"sublattice_model": [["CU", "MG"], ["CU", "MG"]]
+	     }
+    }
+}

@@ -1,0 +1,17 @@
+{
+  "components": ["CU", "MG"],
+  "phases": ["LAVES_C15"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": [2, 1],
+    "sublattice_configurations": [["CU", "MG"]]
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 298.15
+  },
+  "output": "HM_FORM",
+  "values":   [[[-14369]]],
+  "reference": "Egorov2017unpublished",
+  "comment": "DFT (compiled by Aleksei)"
+}

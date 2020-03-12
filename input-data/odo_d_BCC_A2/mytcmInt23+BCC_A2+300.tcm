@@ -1,0 +1,629 @@
+go da 
+sw user 
+ 
+def-ele
+AL CO CR VA W 
+
+rej phase BCC_B2
+get
+
+go p-3
+change phases *
+sus
+change phases
+BCC_A2
+enter
+1
+
+adv
+global
+n
+n
+
+s-c p=1e5 n=1
+set-reference-state AL FCC_A1 ,,,,
+set-reference-state CO HCP_A3 ,,,,
+set-reference-state CR BCC_A2 ,,,,
+set-reference-state W BCC_A2 ,,,,
+
+s-c T=300
+set-start-const BCC_A2
+0.1
+0.9
+0.0
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+1
+
+
+s-c T=300
+set-start-const BCC_A2
+0.30000000000000004
+0.7
+0.0
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+2
+
+
+s-c T=300
+set-start-const BCC_A2
+0.5000000000000001
+0.4999999999999999
+0.0
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+3
+
+
+s-c T=300
+set-start-const BCC_A2
+0.7000000000000001
+0.29999999999999993
+0.0
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+4
+
+
+s-c T=300
+set-start-const BCC_A2
+0.9000000000000001
+0.09999999999999987
+0.0
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+5
+
+
+s-c T=300
+set-start-const BCC_A2
+0.1
+0.0
+0.9
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+6
+
+
+s-c T=300
+set-start-const BCC_A2
+0.30000000000000004
+0.0
+0.7
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+7
+
+
+s-c T=300
+set-start-const BCC_A2
+0.5000000000000001
+0.0
+0.4999999999999999
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+8
+
+
+s-c T=300
+set-start-const BCC_A2
+0.7000000000000001
+0.0
+0.29999999999999993
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+9
+
+
+s-c T=300
+set-start-const BCC_A2
+0.9000000000000001
+0.0
+0.09999999999999987
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+10
+
+
+s-c T=300
+set-start-const BCC_A2
+0.1
+0.0
+0.0
+0.9
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+11
+
+
+s-c T=300
+set-start-const BCC_A2
+0.30000000000000004
+0.0
+0.0
+0.7
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+12
+
+
+s-c T=300
+set-start-const BCC_A2
+0.5000000000000001
+0.0
+0.0
+0.4999999999999999
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+13
+
+
+s-c T=300
+set-start-const BCC_A2
+0.7000000000000001
+0.0
+0.0
+0.29999999999999993
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+14
+
+
+s-c T=300
+set-start-const BCC_A2
+0.9000000000000001
+0.0
+0.0
+0.09999999999999987
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+15
+
+
+s-c T=300
+set-start-const BCC_A2
+0.1
+0.0
+0.0
+0.0
+0.9
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+16
+
+
+s-c T=300
+set-start-const BCC_A2
+0.30000000000000004
+0.0
+0.0
+0.0
+0.7
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+17
+
+
+s-c T=300
+set-start-const BCC_A2
+0.5000000000000001
+0.0
+0.0
+0.0
+0.4999999999999999
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+18
+
+
+s-c T=300
+set-start-const BCC_A2
+0.7000000000000001
+0.0
+0.0
+0.0
+0.29999999999999993
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+19
+
+
+s-c T=300
+set-start-const BCC_A2
+0.9000000000000001
+0.0
+0.0
+0.0
+0.09999999999999987
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+20
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.1
+0.9
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+21
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.30000000000000004
+0.7
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+22
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.5000000000000001
+0.4999999999999999
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+23
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.7000000000000001
+0.29999999999999993
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+24
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.9000000000000001
+0.09999999999999987
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+25
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.1
+0.0
+0.9
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+26
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.30000000000000004
+0.0
+0.7
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+27
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.5000000000000001
+0.0
+0.4999999999999999
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+28
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.7000000000000001
+0.0
+0.29999999999999993
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+29
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.9000000000000001
+0.0
+0.09999999999999987
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+30
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.1
+0.0
+0.0
+0.9
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+31
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.30000000000000004
+0.0
+0.0
+0.7
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+32
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.5000000000000001
+0.0
+0.0
+0.4999999999999999
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+33
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.7000000000000001
+0.0
+0.0
+0.29999999999999993
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+34
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.9000000000000001
+0.0
+0.0
+0.09999999999999987
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+35
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.1
+0.9
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+36
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.30000000000000004
+0.7
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+37
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.5000000000000001
+0.4999999999999999
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+38
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.7000000000000001
+0.29999999999999993
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+39
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.9000000000000001
+0.09999999999999987
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+40
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.1
+0.0
+0.9
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+41
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.30000000000000004
+0.0
+0.7
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+42
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.5000000000000001
+0.0
+0.4999999999999999
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+43
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.7000000000000001
+0.0
+0.29999999999999993
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+44
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.9000000000000001
+0.0
+0.09999999999999987
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+45
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.0
+0.1
+0.9
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+46
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.0
+0.30000000000000004
+0.7
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+47
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.0
+0.5000000000000001
+0.4999999999999999
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+48
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.0
+0.7000000000000001
+0.29999999999999993
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+49
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.0
+0.9000000000000001
+0.09999999999999987
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+Int+BCC_A2+300+50
+
+
+set-inter

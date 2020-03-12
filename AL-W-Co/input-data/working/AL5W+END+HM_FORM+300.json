@@ -1,0 +1,22 @@
+{
+  "components": ["AL", "W"],
+  "phases": ["AL5W"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": 
+         [5.0, 1.0],
+    "sublattice_configurations":
+     [ ["AL", "W"] ]
+  },
+  "conditions": {
+      "P": 101325,
+      "T": 300
+  },
+  "output": "HM_FORM",
+  "values": [[
+    [-15720.676666666666]
+  ]],
+  "excluded_model_contributions": ["idmix", "mag"],
+  "reference": "text 1 to write reference",
+  "comment": "test 2 to write comment"
+}

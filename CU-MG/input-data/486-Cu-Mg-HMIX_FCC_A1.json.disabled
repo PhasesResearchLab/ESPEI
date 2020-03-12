@@ -1,0 +1,22 @@
+{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["FCC_A1"],
+  "solver": {
+	  "mode": "manual",
+	  "sublattice_site_ratios": [1, 1],
+	  "sublattice_occupancies": [
+				     [[0.5, 0.5], 1]
+				    ],
+	  "sublattice_configurations": [
+                                    [["CU", "MG"], "VA"]
+				                   ]
+  },
+  "conditions": {
+	  "P": 101325,
+	  "T": 298.15
+  },
+  "output": "HM_MIX",
+  "values":   [[[-2600]]],
+  "reference": "",
+  "comment": "unknown reference, previously marked 07Wol"
+}

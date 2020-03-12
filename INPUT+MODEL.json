@@ -1,0 +1,58 @@
+{
+  "components": ["AL", "CO", "CR", "VA", "W"],
+  "refdata": "SGTE91",
+  "phases": {
+    "AL11CR2": 
+       {"sublattice_model": [["AL"], ["AL", "CR"]], "sublattice_site_ratios": [10.0, 2.0]},
+    "AL11CR4": 
+       {"sublattice_model": [["AL"], ["AL", "CR"]], "sublattice_site_ratios": [11.0, 4.0]},
+    "AL12W": 
+       {"sublattice_model": [["AL"], ["W"]], "sublattice_site_ratios": [12.0, 1.0]},
+    "AL2W": 
+       {"sublattice_model": [["AL"], ["W"]], "sublattice_site_ratios": [2.0, 1.0]},
+    "AL3CO": 
+       {"sublattice_model": [["AL"], ["CO"]], "sublattice_site_ratios": [0.745, 0.255]},
+    "AL4CR": 
+       {"sublattice_model": [["AL"], ["AL", "CR"]], "sublattice_site_ratios": [4.0, 1.0]},
+    "AL4W": 
+       {"sublattice_model": [["AL"], ["W"]], "sublattice_site_ratios": [4.0, 1.0]},
+    "AL5CO2": 
+       {"sublattice_model": [["AL"], ["CO"]], "sublattice_site_ratios": [5.0, 2.0]},
+    "AL5W": 
+       {"sublattice_model": [["AL"], ["W"]], "sublattice_site_ratios": [5.0, 1.0]},
+    "AL7CR": 
+       {"sublattice_model": [["AL"], ["AL", "CR"]], "sublattice_site_ratios": [13.0, 2.0]},
+    "AL8CR5_ALPHA": 
+       {"sublattice_model": [["AL"], ["CR"], ["AL", "CR"]], "sublattice_site_ratios": [12.0, 5.0, 9.0]},
+    "AL8CR5_BETA": 
+       {"sublattice_model": [["AL", "CR"], ["AL", "CR"], ["CR"], ["AL"]], "sublattice_site_ratios": [2.0, 3.0, 2.0, 6.0]},
+    "AL8CR5_GAMMA": 
+       {"sublattice_model": [["AL", "CR"], ["AL", "CR"], ["CR"], ["AL"]], "sublattice_site_ratios": [2.0, 3.0, 2.0, 6.0]},
+    "AL9CO2": 
+       {"sublattice_model": [["AL"], ["CO"]], "sublattice_site_ratios": [9.0, 2.0]},
+    "ALCR2": 
+       {"sublattice_model": [["AL", "CR"], ["AL", "CR"]], "sublattice_site_ratios": [1.0, 2.0]},
+    "BCC_A2": 
+       {"sublattice_model": [["AL", "CO", "CR", "VA", "W"], ["VA"]], "sublattice_site_ratios": [1.0, 3.0],"model_hints":{"ordered_phase":"BCC_B2","disordered_phase":"BCC_A2"}},
+    "BCC_B2": 
+       {"sublattice_model": [["AL", "CO", "CR", "VA", "W"], ["AL", "CO", "CR", "VA", "W"], ["VA"]], "sublattice_site_ratios": [0.5, 0.5, 3.0],"model_hints":{"ordered_phase":"BCC_B2","disordered_phase":"BCC_A2"}},
+    "CO3W": 
+       {"sublattice_model": [["CO", "W"], ["AL", "CO", "W"]], "sublattice_site_ratios": [0.75, 0.25]},
+    "FCC_A1": 
+       {"sublattice_model": [["AL", "CO", "CR", "W"], ["VA"]], "sublattice_site_ratios": [1.0, 1.0],"model_hints":{"ordered_phase":"L12_FCC","disordered_phase":"FCC_A1"}},
+    "HCP_A3": 
+       {"sublattice_model": [["AL", "CO", "CR", "W"], ["VA"]], "sublattice_site_ratios": [1.0, 0.5]},
+    "L12_FCC": 
+       {"sublattice_model": [["AL", "CO", "CR", "W"], ["AL", "CO", "CR", "W"], ["VA"]], "sublattice_site_ratios": [0.75, 0.25, 1.0],"model_hints":{"ordered_phase":"L12_FCC","disordered_phase":"FCC_A1"}},
+    "LIQUID": 
+       {"sublattice_model": [["AL", "CO", "CR", "W"]], "sublattice_site_ratios": [1.0]},
+    "MAL13CO4": 
+       {"sublattice_model": [["AL"], ["CO"]], "sublattice_site_ratios": [0.755, 0.245]},
+    "MU": 
+       {"sublattice_model": [["CO", "W"], ["AL", "CO", "W"], ["AL", "CO", "W"], ["CO", "W"]], "sublattice_site_ratios": [1.0, 4.0, 2.0, 6.0]},
+    "OAL13CO4": 
+       {"sublattice_model": [["AL"], ["CO"]], "sublattice_site_ratios": [0.76, 0.24]},
+    "YAL13CO4": 
+       {"sublattice_model": [["AL"], ["CO"]], "sublattice_site_ratios": [0.755, 0.245]}
+  }
+}

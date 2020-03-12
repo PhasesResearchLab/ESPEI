@@ -1,0 +1,78 @@
+ go data 
+sw user F:\pycode_shunli\2019-12-05-Al-Co-Cr-W-pyReTDB\55_AlCoCrW\case1_pair_interactions/ESPEIrun/aaNIST_AlCoCrW_withMag.TDB
+
+ 
+def-ele
+AL CO CR VA W 
+
+rej phase BCC_B2
+get
+
+go p-3
+change phases *
+sus
+change phases
+BCC_A2
+enter
+1
+
+adv
+global
+n
+n
+
+s-c p=1e5 n=1
+set-reference-state AL FCC_A1 ,,,,
+set-reference-state CO HCP_A3 ,,,,
+set-reference-state CR BCC_A2 ,,,,
+set-reference-state W BCC_A2 ,,,,
+
+s-c T=300
+set-start-const BCC_A2
+1.0
+0.0
+0.0
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+End2+BCC_A2+300+1
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+1.0
+0.0
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+End2+BCC_A2+300+2
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+1.0
+0.0
+0.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+End2+BCC_A2+300+3
+
+
+s-c T=300
+set-start-const BCC_A2
+0.0
+0.0
+0.0
+0.0
+1.0
+show HMR(BCC_A2) SMR(BCC_A2)
+l-e
+End2+BCC_A2+300+4
+
+
+set-inter
