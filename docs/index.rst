@@ -28,7 +28,7 @@ ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool 
 
 .. admonition:: Upcoming Workshops
 
-    * May 24, 2020 - `CALPHAD XLIX <https://calphad.org/calphad-2020>`_: A pre-conference workshop on using `pyiron <https://pyiron.github.io/index.html>`_, `pycalphad`_ and ESPEI will be given at the 2020 CALPHAD meeting.
+    * CANCELLED - `CALPHAD XLIX <https://calphad.org/calphad-2020>`_: The CALPHAD 2020 meeting has been cancelled due to the COVID-19 pandemic. A pre-conference workshop on using `pyiron <https://pyiron.github.io/index.html>`_, `pycalphad`_ and ESPEI will be given at the 2020 CALPHAD meeting.
     * September 16, 2020 - `IMAT 2020 <https://www.asminternational.org/web/imat>`_: A workshop on using `pycalphad`_ and ESPEI will be given at the IMAT 2020 meeting as part of a one day workshop series on Python-based tools for materials modeling.
 
 
