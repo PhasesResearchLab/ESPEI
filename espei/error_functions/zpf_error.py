@@ -324,7 +324,6 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
                 prob_error += total_zero_prob
                 continue
             # Then calculate the driving force to that hyperplane for each individual vertex
-            #     # region_phases, comp_conds, phase_flags, phase_records
             for vertex_idx in range(len(phase_region.comp_conds)):
                 driving_force = driving_force_to_hyperplane(target_hyperplane, data_comps,
                                                             phase_region, vertex_idx, parameters,

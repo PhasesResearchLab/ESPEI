@@ -306,7 +306,7 @@ CU_MG_DATASET_ZPF_ZERO_ERROR = yaml.load("""{
 
 CU_MG_DATASET_ZPF_NAN_EQUILIBRIUM = yaml.load("""{
   "components": ["CU", "MG", "VA"],
-  "phases": ["FCC_A1", "LAVES_C15"],
+  "phases": ["FCC_A1", "LIQUID"],
   "conditions": {
     "P": 101325,
     "T": 2000
