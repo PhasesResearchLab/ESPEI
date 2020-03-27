@@ -247,3 +247,63 @@ def test_subsystem_zpf_probability(datasets_db):
     zpf_data = get_zpf_data(dbf_tern, ['CR', 'FE', 'NI', 'VA'], phases, datasets_db, {})
     prob = calculate_zpf_error(zpf_data, np.array([]))
     assert np.isclose(prob, bin_prob)
+
+
+def test_zpf_error_species(datasets_db):
+    """Tests that ZPF error works if a species is used."""
+
+    # Note that the liquid is stabilized by the species for the equilibrium
+    # used in the data. If the SPECIES is removed from the database (and LIQUID
+    # constituents), then the resulting likelihood will NOT match this (and be
+    # closer to 93, according to a test.)
+
+    datasets_db.insert(LI_SN_ZPF_DATA)
+
+    dbf = Database(LI_SN_TDB)
+    comps = ['LI', 'SN']
+    phases = list(dbf.phases.keys())
+
+    # ZPF weight = 1 kJ and there are two points in the tieline
+    zero_error_probability = 2 * scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0)
+
+    zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
+    exact_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=False)
+    assert np.isclose(exact_likelihood, zero_error_probability)
+    approx_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=True)
+    assert np.isclose(approx_likelihood, zero_error_probability)
+
+
+def test_zpf_error_equilibrium_failure(datasets_db):
+    """Test that a hyperplane that fails produce a driving force of zero."""
+    datasets_db.insert(CU_MG_DATASET_ZPF_NAN_EQUILIBRIUM)
+
+    dbf = Database(CU_MG_TDB)
+    comps = ['CU','MG','VA']
+    phases = list(dbf.phases.keys())
+
+    # ZPF weight = 1 kJ and there are two points in the tieline
+    zero_error_probability = 2 * scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0)
+
+    zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
+    exact_likelihood = calculate_zpf_error(zpf_data)
+    assert np.isclose(exact_likelihood, zero_error_probability, rtol=1e-6)
+    approx_likelihood = calculate_zpf_error(zpf_data)
+    assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-6)
+
+
+def test_zpf_error_works_for_stoichiometric_cmpd_tielines(datasets_db):
+    """A stochimetric compound with approximate composition can be in the datasets and work"""
+    datasets_db.insert(CU_MG_DATASET_ZPF_STOICH_COMPOUND)
+
+    dbf = Database(CU_MG_TDB)
+    comps = ['CU','MG']
+    phases = list(dbf.phases.keys())
+
+    # ZPF weight = 1 kJ and there are two points in the tieline
+    zero_error_probability = 2 * scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0)
+
+    zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
+    exact_likelihood = calculate_zpf_error(zpf_data)
+    assert np.isclose(exact_likelihood, zero_error_probability, rtol=1e-6)
+    approx_likelihood = calculate_zpf_error(zpf_data)
+    assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-6)

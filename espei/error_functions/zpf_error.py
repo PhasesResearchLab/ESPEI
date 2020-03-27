@@ -24,7 +24,7 @@ import tinydb
 
 from pycalphad import Database, Model, variables as v
 from pycalphad.codegen.callables import build_phase_records
-from pycalphad.core.utils import instantiate_models, filter_phases
+from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
 from pycalphad.core.phase_rec import PhaseRecord
 from espei.utils import PickleableTinyDB
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_
@@ -118,7 +118,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
     zpf_data = []  # 1:1 correspondence with each dataset
     for data in desired_data:
         data_comps = list(set(data['components']).union({'VA'}))
-        species = sorted(map(v.Species, data_comps), key=str)
+        species = sorted(unpack_components(dbf, data_comps), key=str)
         data_phases = filter_phases(dbf, species, candidate_phases=phases)
         models = instantiate_models(dbf, species, data_phases, parameters=parameters)
         all_regions = data['values']
@@ -318,13 +318,12 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
             eq_str = "conds: ({}), comps: ({})".format(phase_region.potential_conds, ', '.join(['{}: {}'.format(ph, c) for ph, c in zip(phase_region.region_phases, phase_region.comp_conds)]))
             target_hyperplane = estimate_hyperplane(phase_region, parameters, approximate_equilibrium=approximate_equilibrium)
             if np.any(np.isnan(target_hyperplane)):
-                zero_probs = norm.logpdf(np.zeros(len(phase_region.comp_conds), loc=0, scale=1000/data_weight/weight))
+                zero_probs = norm.logpdf(np.zeros(len(phase_region.comp_conds)), loc=0, scale=1000/data_weight/weight)
                 total_zero_prob = np.sum(zero_probs)
                 logging.debug('ZPF error - NaN target hyperplane. Equilibria: ({}), reference: {}. Treating all driving force: 0.0, probability: {}, probabilities: {}'.format(eq_str, dataset_ref, total_zero_prob, zero_probs))
                 prob_error += total_zero_prob
                 continue
             # Then calculate the driving force to that hyperplane for each individual vertex
-            #     # region_phases, comp_conds, phase_flags, phase_records
             for vertex_idx in range(len(phase_region.comp_conds)):
                 driving_force = driving_force_to_hyperplane(target_hyperplane, data_comps,
                                                             phase_region, vertex_idx, parameters,
