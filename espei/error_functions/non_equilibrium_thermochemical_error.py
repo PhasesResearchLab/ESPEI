@@ -204,7 +204,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
                 for contrib in exclusion:
                     mod.models[contrib] = sympy.S.Zero
                     mod.reference_model.models[contrib] = sympy.S.Zero
-                species = sorted(map(v.Species, comps))
+                species = sorted(unpack_components(dbf, comps), key=str)
                 data_dict['species'] = species
                 model = {phase_name: mod}
                 statevar_dict = {getattr(v, c, None): vals for c, vals in calculate_dict.items() if isinstance(getattr(v, c, None), v.StateVariable)}

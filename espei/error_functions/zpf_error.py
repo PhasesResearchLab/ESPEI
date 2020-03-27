@@ -24,7 +24,7 @@ import tinydb
 
 from pycalphad import Database, Model, variables as v
 from pycalphad.codegen.callables import build_phase_records
-from pycalphad.core.utils import instantiate_models, filter_phases
+from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
 from pycalphad.core.phase_rec import PhaseRecord
 from espei.utils import PickleableTinyDB
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_
@@ -118,7 +118,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
     zpf_data = []  # 1:1 correspondence with each dataset
     for data in desired_data:
         data_comps = list(set(data['components']).union({'VA'}))
-        species = sorted(map(v.Species, data_comps), key=str)
+        species = sorted(unpack_components(dbf, data_comps), key=str)
         data_phases = filter_phases(dbf, species, candidate_phases=phases)
         models = instantiate_models(dbf, species, data_phases, parameters=parameters)
         all_regions = data['values']
