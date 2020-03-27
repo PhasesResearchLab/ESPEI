@@ -2,6 +2,14 @@
 What's New
 ==========
 
+0.7.6 (2020-03-27)
+==================
+
+This is a minor bug fix release. 
+
+* Fixes a bug introduced in 0.7.5 for calculating likelihood for phase boundary data under equilibrium failures (`@bocklund`_ - :issue:`120`)
+* Since Python 2 was dropped, `six` has been removed as a dependency (`@bocklund`_ - :issue:`119`)
+
 0.7.5 (2020-03-09)
 ==================
 
