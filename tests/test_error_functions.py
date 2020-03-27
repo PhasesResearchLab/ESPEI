@@ -263,11 +263,14 @@ def test_zpf_error_species(datasets_db):
     comps = ['LI', 'SN']
     phases = list(dbf.phases.keys())
 
+    # ZPF weight = 1 kJ and there are two points in the tieline
+    zero_error_probability = 2 * scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0)
+
     zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
     exact_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=False)
-    assert np.isclose(exact_likelihood, -15.6533876)
+    assert np.isclose(exact_likelihood, zero_error_probability)
     approx_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=True)
-    assert np.isclose(approx_likelihood, -15.6533899)
+    assert np.isclose(approx_likelihood, zero_error_probability)
 
 
 def test_zpf_error_equilibrium_failure(datasets_db):
@@ -276,6 +279,24 @@ def test_zpf_error_equilibrium_failure(datasets_db):
 
     dbf = Database(CU_MG_TDB)
     comps = ['CU','MG','VA']
+    phases = list(dbf.phases.keys())
+
+    # ZPF weight = 1 kJ and there are two points in the tieline
+    zero_error_probability = 2 * scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0)
+
+    zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
+    exact_likelihood = calculate_zpf_error(zpf_data)
+    assert np.isclose(exact_likelihood, zero_error_probability, rtol=1e-6)
+    approx_likelihood = calculate_zpf_error(zpf_data)
+    assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-6)
+
+
+def test_zpf_error_works_for_stoichiometric_cmpd_tielines(datasets_db):
+    """A stochimetric compound with approximate composition can be in the datasets and work"""
+    datasets_db.insert(CU_MG_DATASET_ZPF_STOICH_COMPOUND)
+
+    dbf = Database(CU_MG_TDB)
+    comps = ['CU','MG']
     phases = list(dbf.phases.keys())
 
     # ZPF weight = 1 kJ and there are two points in the tieline

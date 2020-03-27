@@ -304,6 +304,23 @@ CU_MG_DATASET_ZPF_ZERO_ERROR = yaml.load("""{
 """, Loader=YAML_LOADER)
 
 
+CU_MG_DATASET_ZPF_STOICH_COMPOUND = yaml.load("""{
+  "components": ["CU", "MG"],
+  "phases": ["LIQUID", "CUMG2"],
+  "conditions": {
+    "P": 101325,
+    "T": 400
+  },
+  "output": "ZPF",
+    "values":   [
+    [["CUMG2", ["CU"], [0.3333333333]], ["LIQUID", ["CU"], [null]]]
+    ],
+  "reference": "testing",
+  "comment": "A stoichiometric compound is stable and the composition is approximate."
+}
+""", Loader=YAML_LOADER)
+
+
 CU_MG_DATASET_ZPF_NAN_EQUILIBRIUM = yaml.load("""{
   "components": ["CU", "MG", "VA"],
   "phases": ["FCC_A1", "LIQUID"],
