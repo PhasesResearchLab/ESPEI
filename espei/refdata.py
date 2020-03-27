@@ -7,6 +7,55 @@ from sympy import And, Piecewise, Symbol, log, exp
 from pycalphad.variables import T
 from collections import OrderedDict
 
+
+def find_and_insert_user_refstate(entry_point_plugin_name='espei.reference_states', namespace=globals()):
+  """Discover user reference states entered as a setuptools entry_point
+
+  Parameters
+  ----------
+  entry_point_plugin_name : str
+      Name of the key in the setuptools.setup entry_points dictionary.
+  namespace : dict
+      A dictionary that the stable reference state and lattice stabilities
+      will be added to. Defaults to ``globals()``, which is this module's
+      namespace.
+
+  Notes
+  -----
+  By default, it will enter the data into the ``globals()`` namespace, meaning
+  this module's namespace. Since ESPEI looks up reference states by something
+  like ``getattr(espei.refdata, 'SGTE91Stable')``, this is usually the desired
+  behavior.
+
+  Some helpful links on how this works:
+      * using package metadata entry_points: https://packaging.python.org/guides/creating-and-discovering-plugins/#using-package-metadata
+      * entry_points specification https://packaging.python.org/specifications/entry-points/
+      * how to find plugins with setuptools: https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
+
+  Packages wanting to hook into this should add the following keyword argument
+  to their setuptools.setup function call in their setup.py file:
+  ``entry_points={'espei.reference_states': 'BOCK2015 = refstate'}``,
+  where ``BOCK2015`` is the name of the reference state and ``refstate`` is the
+  name of the module containing the dictionaries for ``BOCK2015`` and
+  ``BOCK2015``, which define the reference states.
+
+  """
+  import pkg_resources
+  found_refstates = []
+  for entry_point in pkg_resources.iter_entry_points(entry_point_plugin_name):
+    user_module = entry_point.load()
+    refstate_name = entry_point.name
+    namespace[refstate_name] = getattr(user_module, refstate_name)
+    namespace[refstate_name+'Stable'] = getattr(user_module, refstate_name+'Stable')
+    found_refstates.append(refstate_name)
+  return found_refstates
+
+
+# Running this here means users cannot override the built-in reference states.
+# Users should choose another name.
+INSERTED_USER_REFERENCE_STATES = find_and_insert_user_refstate()
+
+
 # SGTE 1991 Pure Element Reference for the reference structures
 # Reference:
 # A.T. Dinsdale, SGTE data for pure elements, Calphad, Volume 15, Issue 4, 1991, Pages 317-425, ISSN 0364-5916,
