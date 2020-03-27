@@ -318,7 +318,7 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
             eq_str = "conds: ({}), comps: ({})".format(phase_region.potential_conds, ', '.join(['{}: {}'.format(ph, c) for ph, c in zip(phase_region.region_phases, phase_region.comp_conds)]))
             target_hyperplane = estimate_hyperplane(phase_region, parameters, approximate_equilibrium=approximate_equilibrium)
             if np.any(np.isnan(target_hyperplane)):
-                zero_probs = norm.logpdf(np.zeros(len(phase_region.comp_conds), loc=0, scale=1000/data_weight/weight))
+                zero_probs = norm.logpdf(np.zeros(len(phase_region.comp_conds)), loc=0, scale=1000/data_weight/weight)
                 total_zero_prob = np.sum(zero_probs)
                 logging.debug('ZPF error - NaN target hyperplane. Equilibria: ({}), reference: {}. Treating all driving force: 0.0, probability: {}, probabilities: {}'.format(eq_str, dataset_ref, total_zero_prob, zero_probs))
                 prob_error += total_zero_prob

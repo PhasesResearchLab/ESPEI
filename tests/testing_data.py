@@ -304,6 +304,23 @@ CU_MG_DATASET_ZPF_ZERO_ERROR = yaml.load("""{
 """, Loader=YAML_LOADER)
 
 
+CU_MG_DATASET_ZPF_NAN_EQUILIBRIUM = yaml.load("""{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["FCC_A1", "LAVES_C15"],
+  "conditions": {
+    "P": 101325,
+    "T": 2000
+  },
+  "output": "ZPF",
+    "values":   [
+    [["FCC_A1", ["CU"], [2.0]], ["LIQUID", ["CU"], [null]]]
+    ],
+  "reference": "testing",
+  "comment": "The composition is out of bounds X(CU)=2.0 and should produce an equilibrium failure with NaN GM/NP/MU..."
+}
+""", Loader=YAML_LOADER)
+
+
 CU_MG_DATASET_ZPF_WORKING = yaml.load("""{
     "components": ["CU", "MG", "VA"],
     "phases": ["LIQUID", "FCC_A1"],

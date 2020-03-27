@@ -268,3 +268,21 @@ def test_zpf_error_species(datasets_db):
     assert np.isclose(exact_likelihood, -15.6533876)
     approx_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=True)
     assert np.isclose(approx_likelihood, -15.6533899)
+
+
+def test_zpf_error_equilibrium_failure(datasets_db):
+    """Test that a hyperplane that fails produce a driving force of zero."""
+    datasets_db.insert(CU_MG_DATASET_ZPF_NAN_EQUILIBRIUM)
+
+    dbf = Database(CU_MG_TDB)
+    comps = ['CU','MG','VA']
+    phases = list(dbf.phases.keys())
+
+    # ZPF weight = 1 kJ and there are two points in the tieline
+    zero_error_probability = 2 * scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0)
+
+    zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
+    exact_likelihood = calculate_zpf_error(zpf_data)
+    assert np.isclose(exact_likelihood, zero_error_probability, rtol=1e-6)
+    approx_likelihood = calculate_zpf_error(zpf_data)
+    assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-6)
