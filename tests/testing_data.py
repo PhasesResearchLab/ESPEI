@@ -868,3 +868,178 @@ Constituent FCC_A1 : CR,NI : VA : !
 
 """
 
+LI_SN_TDB = """$ Li-Sn
+$--------1---------2---------3---------4---------5---------6---------7---------8
+$
+$ TDB-file for the thermodynamic assessment of the Li-Sn system
+$
+$-----------------------------------------------------------------------------
+$ 2015.1.15
+$
+$ TDB file created by T.Abe and S.Fujita
+$
+$ Thermodynamics Modeling Group, National Institute for
+$ Materials Science. 1-2-1 Sengen, Tsukuba, Ibaraki 305-0047, Japan
+$ e-mail: abe.taichi (at) nims.go.jp
+$ Copyright (C) NIMS 2015
+$
+$ ------------------------------------------------------------------------------
+$ PARAMETERS ARE TAKEN FROM
+$
+$ Thermodynamic assessment and experimental investigation of the Li-Sn system.
+$ D. Li, S. Furtauer, H. Flandorfer, D.M. Cupid
+$
+$ CALPHAD: Computer Coupling of Phase Diagrams and Thermochemistry
+$ 47 (2014) 181-195
+$ ------------------------------------------------------------------------------
+ ELEMENT /-   ELECTRON_GAS              0.0000E+00  0.0000E+00  0.0000E+00!
+ ELEMENT VA   VACUUM                    0.0000E+00  0.0000E+00  0.0000E+00!
+ ELEMENT LI   BCC_A2                    6.9410E+00  4.6233E+03  2.9095E+01 !
+ ELEMENT SN   BCT_A5                    1.1871E+02  6.3220E+03  5.1195E+01 !
+
+ SPECIES LI4SN                          LI4SN1 !
+$ ------------------------------------------------------------------------------
+ TYPE_DEFINITION % SEQ *!
+ DEFINE_SYSTEM_DEFAULT ELEMENT 2 !
+ DEFAULT_COMMAND DEF_SYS_ELEMENT VA /- !
+
+$ ------------------------------------------------------------------------------
+$ Li
+$ ------------------------------------------------------------------------------
+$ Unary 5.1
+ FUNCTION GHSERLI  200.00
+ -10583.817+217.637482*T-38.940488*T*LN(T)+35.466931E-3*T**2-19.869816E-6*T**3
+ +159994*T**(-1);   453.60 Y
+ -559579.123+10547.879893*T-1702.8886493*T*LN(T)+2258.329444E-3*T**2
+ -571.066077E-6*T**3+33885874*T**(-1);   500.00 Y
+ -9062.994+179.278285*T-31.2283718*T*LN(T)+2.633221E-3*T**2-0.438058E-6*T**3
+ -102387*T**(-1);  3000.00 N !
+
+ FUNCTION GLIQLI   200.00
+ -7883.612+211.841861*T-38.940488*T*LN(T)+35.466931E-3*T**2-19.869816E-6*T**3
+ +159994*T**(-1);   250.00 Y
+ 12015.027-362.187078*T+61.6104424*T*LN(T)-182.426463E-3*T**2+63.955671E-6*T**3
+ -559968*T**(-1);   453.60 Y
+ -6057.31+172.652183*T-31.2283718*T*LN(T)+2.633221E-3*T**2-0.438058E-6*T**3
+ -102387*T**(-1);  3000.00 N !
+
+ FUNCTION GFCCLI 200 -108+1.3*T+GHSERLI; 3000 N !
+
+ FUNCTION GHCPLI 200 -154+2*T+GHSERLI; 3000 N !
+$ ------------------------------------------------------------------------------
+$ Sn
+$ ------------------------------------------------------------------------------
+$ Unary 5.1
+ FUNCTION GHSERSN  100.00
+ -7958.517+122.765451*T-25.858*T*LN(T)+0.51185E-3*T**2-3.192767E-6*T**3
+ +18440*T**(-1);   250.00 Y
+ -5855.135+65.443315*T-15.961*T*LN(T)-18.8702E-3*T**2+3.121167E-6*T**3
+ -61960*T**(-1);   505.078 Y
+ 2524.724+4.005269*T-8.2590486*T*LN(T)-16.814429E-3*T**2+2.623131E-6*T**3
+ -1081244*T**(-1)-123.07E23*T**(-9);   800.00 Y
+ -8256.959+138.99688*T-28.4512*T*LN(T)-123.07E23*T**(-9);  3000.00 N !
+
+ FUNCTION GLIQSN 100 7103.092-14.087767*T+147.031E-20*T**7+GHSERSN; 505.078 Y
+ 9496.31-9.809114*T-8.2590486*T*LN(T)-16.814429E-3*T**2+2.623131E-6*T**3
+ -1081244*T**(-1);   800.00 Y
+ -1285.372+125.182498*T-28.4512*T*LN(T);  3000.00 N !
+
+ FUNCTION GFCCSN 100 5510-8.46*T+GHSERSN; 3000 N !
+
+ FUNCTION GHCPSN 100 3900-7.646*T+GHSERSN; 3000 N !
+
+ FUNCTION GBCCSN 100 4400-6*T+GHSERSN; 3000 N !
+
+ FUNCTION GDIASN 0  100
+ -9579.608+114.007785*T-22.972*T*LN(T)-8.13975E-3*T**2+2.7288E-6*T**3
+ +25615*T**(-1);   298.15 Y
+ -9063.001+104.84654*T-21.5750771*T*LN(T)-8.575282E-3*T**2+1.784447E-6*T**3
+ -2544*T**(-1);   800.00 Y
+ -10909.353+147.396537*T-28.4512*T*LN(T);  3000.00 N !
+$ ------------------------------------------------------------------------------
+$ PARAMETERS FOR LIQUID PHASE
+$ ------------------------------------------------------------------------------
+ PHASE LIQUID % 1 1 !
+ CONSTITUENT LIQUID : LI, LI4SN, SN : !
+ PARAMETER G(LIQUID,LI;0) 298.15 +GLIQLI;                              3000 N !
+ PARAMETER G(LIQUID,SN;0) 298.15 +GLIQSN;                              3000 N !
+ PARAMETER G(LIQUID,LI4SN;0) 298.15 -205264.343+187.457195*T-16.7055876*T*LN(T)
+ +4*GLIQLI+GLIQSN;                                                      3000 N !
+ PARAMETER G(LIQUID,LI,SN;0) 298.15 -64124.4038-15.9626763*T
+ +2.04164413*T*LN(T) ;                                                 3000 N !
+ PARAMETER G(LIQUID,LI,LI4SN,SN;0) 298.15 30074.1641-19.0031351*T
+ -1.46094182*T*LN(T) ;                                                 3000 N !
+ PARAMETER G(LIQUID,LI4SN,SN;0) 298.15 -24652.1452-259.57801*T
+ +28.4690441*T*LN(T) ;                                                 3000 N !
+$ ------------------------------------------------------------------------------
+$ PARAMETERS FOR BCC PHASE
+$ ------------------------------------------------------------------------------
+ PHASE BCC % 1 1 !
+ CONSTITUENT BCC : LI, SN : !
+ PARAMETER G(BCC,LI;0) 298.15 +GHSERLI;                                3000 N !
+ PARAMETER G(BCC,SN;0) 298.15 +GBCCSN;                                 3000 N !
+$ ------------------------------------------------------------------------------
+$ PARAMETERS FOR BCT PHASE
+$ ------------------------------------------------------------------------------
+ PHASE BCT % 1 1 !
+ CONSTITUENT BCT : SN : !
+ PARAMETER G(BCT,SN;0) 298.15 +GHSERSN;                                3000 N !
+$ ------------------------------------------------------------------------------
+$ PARAMETERS FOR DIAMOND PHASE
+$ ------------------------------------------------------------------------------
+ PHASE DIAMOND % 1 1 !
+ CONSTITUENT DIAMOND : SN : !
+ PARAMETER G(DIAMOND,SN;0) 298.15 +GDIASN;                         3000 N !
+$ ------------------------------------------------------------------------------
+$ PARAMETERS FOR STOICHIOMETRIC PHASE
+$ ------------------------------------------------------------------------------
+ PHASE LI17SN4 % 2 0.81 0.19 !
+ CONSTITUENT LI17SN4 : LI : SN : !
+ PARAMETER G(LI17SN4,LI:SN;0) 298.15
+ -47307.6838+168.904051*T-29*T*LN(T);                              3000 N !
+
+ PHASE LI7SN2 % 2 0.778 0.222 !
+ CONSTITUENT LI7SN2 : LI,SN : SN : !
+ PARAMETER G(LI7SN2,LI:SN;0) 298.15 -48940+167.201983*T-29*T*LN(T); 3000 N !
+ PARAMETER G(LI7SN2,SN:SN;0) 298.15 +5000;                  3000 N !
+ PARAMETER G(LI7SN2,LI,SN:SN;0) 298.15 0;                           3000 N !
+ PARAMETER G(LI7SN2,LI,SN:SN;1) 298.15 -130*T;                      3000 N !
+
+ PHASE LI13SN5 % 2 0.722 0.278 !
+ CONSTITUENT LI13SN5 : LI : SN : !
+ PARAMETER G(LI13SN5,LI:SN;0) 298.15 -51045+166.043371*T-29*T*LN(T); 3000 N !
+
+ PHASE LI5SN2 % 2 0.714 0.286 !
+ CONSTITUENT LI5SN2 : LI : SN : !
+ PARAMETER G(LI5SN2,LI:SN;0) 298.15 -50890+165.654838*T-29*T*LN(T);  3000 N !
+
+ PHASE LI7SN3 % 2 0.7 0.3 !
+ CONSTITUENT LI7SN3 : LI : SN : !
+ PARAMETER G(LI7SN3,LI:SN;0) 298.15 -50500+165.335224*T-29*T*LN(T); 3000 N !
+
+ PHASE LISN % 2 0.5 0.5 !
+ CONSTITUENT LISN : LI : SN : !
+ PARAMETER G(LISN,LI:SN;0) 298.15 -41200+156.993388*T-29*T*LN(T);  3000 N !
+
+ PHASE LI2SN5 % 2 0.286 0.714 !
+ CONSTITUENT LI2SN5 : LI : SN : !
+ PARAMETER G(LI2SN5,LI:SN;0) 298.15 -33000+158.281465*T-29*T*LN(T); 3000 N !
+$ ----------------------------------------------------------------- END OF LINE
+$
+"""
+
+
+LI_SN_ZPF_DATA = {
+    "components": ["LI", "SN"],
+    "phases": ["LIQUID", "LI7SN2"],
+    "broadcast_conditions": False,
+    "conditions": {
+        "T": [1040],
+        "P": [101325.0]
+    },
+    "output": "ZPF",
+    "values": [
+        [["LIQUID", ["SN"], [0.25864665]], ["LI7SN2", ["SN"], [0.24402028]]]
+    ],
+    "reference": "zpf test", "comment": "Exact tieline based on equilibrium calculation"
+}

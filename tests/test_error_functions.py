@@ -247,3 +247,24 @@ def test_subsystem_zpf_probability(datasets_db):
     zpf_data = get_zpf_data(dbf_tern, ['CR', 'FE', 'NI', 'VA'], phases, datasets_db, {})
     prob = calculate_zpf_error(zpf_data, np.array([]))
     assert np.isclose(prob, bin_prob)
+
+
+def test_zpf_error_species(datasets_db):
+    """Tests that ZPF error works if a species is used."""
+
+    # Note that the liquid is stabilized by the species for the equilibrium
+    # used in the data. If the SPECIES is removed from the database (and LIQUID
+    # constituents), then the resulting likelihood will NOT match this (and be
+    # closer to 93, according to a test.)
+
+    datasets_db.insert(LI_SN_ZPF_DATA)
+
+    dbf = Database(LI_SN_TDB)
+    comps = ['LI', 'SN']
+    phases = list(dbf.phases.keys())
+
+    zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
+    exact_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=False)
+    assert np.isclose(exact_likelihood, -15.6533876)
+    approx_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=True)
+    assert np.isclose(approx_likelihood, -15.6533899)
