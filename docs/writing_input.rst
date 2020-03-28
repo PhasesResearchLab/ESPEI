@@ -198,6 +198,8 @@ Currently only `linear` is supported.
 
 The `exponential` model is planned, as well as support for custom models.
 
+.. _input_yaml_generate_ref_state:
+
 ref_state
 ---------
 
