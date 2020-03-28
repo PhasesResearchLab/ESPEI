@@ -8,12 +8,13 @@
 Use a custom unary reference state
 ==================================
 
-By default, ESPEI uses the SGTE91
+By default, ESPEI uses the SGTE91 reference state using the functions defined
+by Dinsdale [#sgte91_paper]_.
 
 You may be interested in using custom unary reference states for parameter
-generation in ESPEI if you are developing unary descriptions of the Gibbs
-energy and/or lattice stability for pure elements. This is useful for any
-unary function developed outside of ESPEI, available in the literature.
+generation in ESPEI if you are developing descriptions of the Gibbs energy
+and/or lattice stability for pure elements. This is useful for any unary
+function developed outside of ESPEI, available in the literature.
 
 Instead of generating parameters with:
 
@@ -252,5 +253,6 @@ module. For more details on the implementation, see the
 References
 ==========
 
+.. [#sgte91_paper] A.T. Dinsdale, Calphad 15(4) (1991) 317-425, doi:`10.1016/0364-5916(91)90030-N <https://doi.org/10.1016/0364-5916(91)90030-N>`_
 .. [#espei_paper] B. Bocklund *et al.*, MRS Communications 9(2) (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_
 .. [#segmented_regression_paper] I. Roslyakova *et al.*, Calphad 55 (2016) 165–180. doi:`10.1016/j.calphad.2016.09.001 <https://doi.org/10.1016/j.calphad.2016.09.001>`_
