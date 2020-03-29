@@ -91,9 +91,18 @@ def optimal_parameters(trace_array, lnprob_array, kth=0):
     It is ok if the calculation did not finish and the arrays are padded with
     zeros. The number of chains and iterations in the trace and lnprob arrays
     must match.
+
+    Examples
+    --------
+    >>> from espei.utils import optimal_parameters
+    >>> trace = np.array([[[1, 0], [2, 0], [3, 0], [0, 0]], [[0, 2], [0, 4], [0, 6], [0, 0]]])  # 3 iterations of 4 allocated
+    >>> lnprob = np.array([[-6, -4, -2, 0], [-3, -1, -2, 0]])
+    >>> np.all(np.isclose(optimal_parameters(trace, lnprob), np.array([0, 4])))
+    True
+
     """
     # indicies of chains + iterations that have non-zero parameters (that step has run)
-    nz = np.nonzero(np.all(trace_array != 0, axis=-1))
+    nz = np.nonzero(np.any(trace_array != 0, axis=-1))
     # chain + iteration index with the highest likelihood
     unique_params = np.zeros(trace_array.shape[-1])
     unique_params_found = -1

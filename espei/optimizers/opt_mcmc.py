@@ -67,9 +67,25 @@ class EmceeOptimizer(OptimizerBase):
         Returns
         -------
         ndarray
+
+        Notes
+        -----
+        Parameters are sampled from ``normal(loc=param, scale=param*std_deviation)``.
+        A parameter of zero will produce a standard deviation of zero and
+        therefore only zeros will be sampled. This will break emcee's
+        StretchMove for this parameter and only zeros will be selected.
+
         """
         logging.log(TRACE, 'Initial parameters: {}'.format(params))
         params = np.array(params)
+        num_zero_params = np.nonzero(params == 0)[0].size
+        if num_zero_params > 0:
+            logging.warning(f"{num_zero_params} initial parameter{' is' if num_zero_params == 1 else 's are'} "
+                            "initialized to zero. The ensemble of chains for zero parameters will be all initialized "
+                            "to zero and all proposed values for these parameter will be zero. If possible, it's "
+                            "better to make a good guess at a reasonable parameter value to start with. "
+                            "Alternatively, you can start with a small value near zero and let the ensemble search "
+                            "parameter space.")
         nchains = params.size * chains_per_parameter
         logging.info('Initializing {} chains with {} chains per parameter.'.format(nchains, chains_per_parameter))
         if deterministic:
