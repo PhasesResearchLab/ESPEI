@@ -307,3 +307,17 @@ def test_zpf_error_works_for_stoichiometric_cmpd_tielines(datasets_db):
     assert np.isclose(exact_likelihood, zero_error_probability, rtol=1e-6)
     approx_likelihood = calculate_zpf_error(zpf_data)
     assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-6)
+
+
+def test_non_equilibrium_thermochemcial_species(datasets_db):
+    """Test species work for non-equilibrium thermochemical data."""
+
+    datasets_db.insert(LI_SN_LIQUID_DATA)
+
+    dbf = Database(LI_SN_TDB)
+    phases = ['LIQUID']
+
+    thermochemical_data = get_thermochemical_data(dbf, ['LI', 'SN'], phases, datasets_db)
+    prob = calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data)
+    # Near zero error and non-zero error
+    assert np.isclose(prob, (-7.13354663 + -22.43585011))
