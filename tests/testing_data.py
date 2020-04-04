@@ -1077,3 +1077,19 @@ LI_SN_ZPF_DATA = {
     ],
     "reference": "zpf test", "comment": "Exact tieline based on equilibrium calculation"
 }
+
+
+LI_SN_LIQUID_DATA = {
+    "components": ["LI", "SN"],
+    "phases": ["LIQUID"],
+    "solver": {
+        "mode": "manual",
+        "sublattice_site_ratios": [1],
+        "sublattice_configurations": [[["LI", "LI4SN"]], [["LI4SN", "SN"]]],
+        "sublattice_occupancies": [[[0.5, 0.5]], [[0.5, 0.5]]]
+    },
+    "conditions": {"P": 101325, "T": 300},
+    "output": "HM_MIX",
+    "values": [[[0, 0]]],
+    "reference": "non-equilibrium thermochemical tests", "comment": "Valid speices: LI, LI4SN, SN; No interaction for LI/LI4SN, but there is one for LI4SN/SN"
+}
