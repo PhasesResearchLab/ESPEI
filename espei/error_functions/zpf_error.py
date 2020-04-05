@@ -27,7 +27,7 @@ from pycalphad.codegen.callables import build_phase_records
 from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
 from pycalphad.core.phase_rec import PhaseRecord
 from espei.utils import PickleableTinyDB
-from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_
+from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
 
 def _safe_index(items, index):
     try:
@@ -35,10 +35,6 @@ def _safe_index(items, index):
     except IndexError:
         return None
 
-def update_phase_record_parameters(phase_records: Dict[str, PhaseRecord], parameters: np.ndarray) -> None:
-    if parameters.size > 0:
-        for phase_name, phase_record in phase_records.items():
-            phase_record.parameters[:] = parameters
 
 def extract_conditions(all_conditions: Dict[v.StateVariable, np.ndarray], idx: int) -> Dict[v.StateVariable, float]:
     """Conditions are either scalar or 1d arrays for the conditions in the entire dataset.
