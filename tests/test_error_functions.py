@@ -321,3 +321,17 @@ def test_non_equilibrium_thermochemcial_species(datasets_db):
     prob = calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data)
     # Near zero error and non-zero error
     assert np.isclose(prob, (-7.13354663 + -22.43585011))
+
+
+def test_equilibrium_thermochemcial_error_species(datasets_db):
+    """Test species work for equilibrium thermochemical data."""
+
+    datasets_db.insert(LI_SN_LIQUID_DATA)
+
+    dbf = Database(LI_SN_TDB)
+    phases = ['LIQUID']
+
+    thermochemical_data = get_thermochemical_data(dbf, ['LI', 'SN'], phases, datasets_db)
+    prob = calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data)
+    # Near zero error and non-zero error
+    assert np.isclose(prob, (-7.13354663 + -22.43585011))
