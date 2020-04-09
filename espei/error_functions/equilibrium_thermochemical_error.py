@@ -67,7 +67,7 @@ def build_eqpropdata(data, dbf, parameters=None):
     pot_conds = OrderedDict([(getattr(v, key), unpack_condition(data['conditions'][key])) for key in sorted(data['conditions'].keys()) if not key.startswith('X_')])
     comp_conds = OrderedDict([(v.X(key[2:]), unpack_condition(data['conditions'][key])) for key in sorted(data['conditions'].keys()) if key.startswith('X_')])
 
-    phase_records = build_phase_records(dbf, species, data_phases, {**pot_conds, **comp_conds}, models, parameters=parameters)
+    phase_records = build_phase_records(dbf, species, data_phases, {**pot_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
 
     # Now we need to unravel the composition conditions
     # (from Dict[v.X, List[float]] to List[Dict[v.X, float]]), since the
@@ -79,7 +79,7 @@ def build_eqpropdata(data, dbf, parameters=None):
 
     # Build weights, should be the same size as the values
     dataset_weights = np.array(data.get('weight', 1.0)) * np.ones(len(rav_comp_conds))
-    weights = property_std_deviation[property_output]/dataset_weights
+    weights = property_std_deviation.get(property_output, 1.0)/dataset_weights
 
     # 'dbf', 'species', 'phases', 'potential_conds', 'composition_conds', 'models', 'phase_records', 'output', 'samples', 'weights'
     return EqPropData(dbf, species, data_phases, pot_conds, rav_comp_conds, models, parameters, phase_records, output, samples, weights, reference)
