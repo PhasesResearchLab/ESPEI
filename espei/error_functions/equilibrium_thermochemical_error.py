@@ -78,7 +78,8 @@ def build_eqpropdata(data, dbf, parameters=None):
     rav_comp_conds = [OrderedDict(zip(comp_conds.keys(), pt_comps)) for pt_comps in zip(*comp_conds.values())]
 
     # Build weights, should be the same size as the values
-    dataset_weights = np.array(data.get('weight', 1.0)) * np.ones(len(rav_comp_conds))
+    total_num_calculations = len(rav_comp_conds)*np.prod([len(vals) for vals in pot_conds.values()])
+    dataset_weights = np.array(data.get('weight', 1.0)) * np.ones(total_num_calculations)
     weights = (property_std_deviation.get(property_output, 1.0)/dataset_weights).flatten()
 
     # 'dbf', 'species', 'phases', 'potential_conds', 'composition_conds', 'models', 'phase_records', 'output', 'samples', 'weights'
