@@ -134,7 +134,7 @@ def calc_prop_differences(eqpropdata: EqPropData,
     models = eqpropdata.models
     phase_records = eqpropdata.phase_records
     update_phase_record_parameters(phase_records, parameters)
-    params_dict = OrderedDict(zip(eqpropdata.params_keys, parameters))
+    params_dict = OrderedDict(zip(map(str, eqpropdata.params_keys), parameters))
     output = eqpropdata.output
     weights = np.array(eqpropdata.weight, dtype=np.float)
     samples = np.array(eqpropdata.samples, dtype=np.float)
@@ -162,7 +162,7 @@ def calc_prop_differences(eqpropdata: EqPropData,
     assert calculated_data.shape == samples.shape, f"Calculated data shape {calculated_data.shape} does not match samples shape {samples.shape}"
     assert calculated_data.shape == weights.shape, f"Calculated data shape {calculated_data.shape} does not match weights shape {weights.shape}"
     differences = calculated_data - samples
-    logging.debug('Equilibrium thermochemical error - differences: {}, weights: {}, reference: {}'.format(differences, weights, eqpropdata.reference))
+    logging.debug(f'Equilibrium thermochemical error - output: {output} differences: {differences}, weights: {weights}, reference: {eqpropdata.reference}')
     return differences, weights
 
 

@@ -71,7 +71,6 @@ def check_dataset(dataset):
             if 'phase' not in vals:
                 raise DatasetError(f'Reference state for element {el} must define the `phase` key with the reference phase name.')
 
-
     # check that the shape of conditions match the values
     num_pressure = np.atleast_1d(conditions['P']).size
     num_temperature = np.atleast_1d(conditions['T']).size
