@@ -1097,12 +1097,13 @@ LI_SN_LIQUID_DATA = {
 LI_SN_LIQUID_EQ_DATA = {
     "components": ["LI", "SN"],
     "phases": ["LIQUID"],
-    "conditions": {"P": 101325, "T": 300, "X_LI": [0.0, 0.5, 1.0]},
+    "conditions": {"P": 101325, "T": 300, "X_LI": [0.0, 0.5, 0.8, 1.0]},
     "reference_states": {
         "LI": {"phase": "LIQUID"},
         "SN": {"phase": "LIQUID"}
     },
     "output": "HMR",
-    "values": [[[0, 0]]],
-    "reference": "non-equilibrium thermochemical tests", "comment": "Valid speices: LI, LI4SN, SN; No interaction for LI/LI4SN, but there is one for LI4SN/SN"
+    "values": [[[0, 0, 0, 0]]],
+    "reference": "non-equilibrium thermochemical tests", "comment": "Valid speices: LI, LI4SN, SN; No interaction for LI/LI4SN, but there is one for LI4SN/SN. True values should be [0.0, -28133.588, -40049.995, 0.0]"
 }
+

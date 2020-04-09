@@ -165,8 +165,8 @@ def calc_prop_differences(eqpropdata: EqPropData,
 def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Sequence[EqPropData],
                                                      parameters: Optional[np.ndarray],
                                                      approximate_equilibrium: bool = False,
-                                                     data_weight=1.0,
-                                                     errors=False):
+                                                     data_weight: float = 1.0,
+                                                     errors: bool = False):
     """
     Return the sum of square error from activity data
 

@@ -8,7 +8,8 @@ from tinydb import where
 from pycalphad import Database
 
 from espei.paramselect import generate_parameters
-from espei.error_functions import calculate_activity_error, calculate_non_equilibrium_thermochemical_probability, calculate_zpf_error, get_thermochemical_data, get_zpf_data
+from espei.error_functions import *
+from espei.error_functions.equilibrium_thermochemical_error import calc_prop_differences
 import scipy.stats
 
 from .fixtures import datasets_db
@@ -326,12 +327,18 @@ def test_non_equilibrium_thermochemcial_species(datasets_db):
 def test_equilibrium_thermochemcial_error_species(datasets_db):
     """Test species work for equilibrium thermochemical data."""
 
-    datasets_db.insert(LI_SN_LIQUID_DATA)
+    datasets_db.insert(LI_SN_LIQUID_EQ_DATA)
 
     dbf = Database(LI_SN_TDB)
-    phases = ['LIQUID']
+    phases = list(dbf.phases.keys())
 
-    thermochemical_data = get_thermochemical_data(dbf, ['LI', 'SN'], phases, datasets_db)
-    prob = calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data)
-    # Near zero error and non-zero error
-    assert np.isclose(prob, (-7.13354663 + -22.43585011))
+    eqdata = get_equilibrium_thermochemical_data(dbf, ['LI', 'SN'], phases, datasets_db)
+    # Thermo-Calc
+    truth_values = np.array([0.0, -28133.588, -40049.995, 0.0])
+    # Approximate
+    errors_approximate, weights = calc_prop_differences(eqdata[0], np.array([]), True)
+    # Looser rtol because the equilibrium is approximate
+    assert np.all(np.isclose(errors_approximate, truth_values, atol=1e-6, rtol=1e-3))
+    # Exact
+    errors_exact, weights = calc_prop_differences(eqdata[0], np.array([]), False)
+    assert np.all(np.isclose(errors_exact, truth_values, atol=1e-6))
