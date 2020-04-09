@@ -79,7 +79,7 @@ def build_eqpropdata(data, dbf, parameters=None):
 
     # Build weights, should be the same size as the values
     dataset_weights = np.array(data.get('weight', 1.0)) * np.ones(len(rav_comp_conds))
-    weights = property_std_deviation.get(property_output, 1.0)/dataset_weights
+    weights = (property_std_deviation.get(property_output, 1.0)/dataset_weights).flatten()
 
     # 'dbf', 'species', 'phases', 'potential_conds', 'composition_conds', 'models', 'phase_records', 'output', 'samples', 'weights'
     return EqPropData(dbf, species, data_phases, pot_conds, rav_comp_conds, models, parameters, phase_records, output, samples, weights, reference)
@@ -155,8 +155,8 @@ def calc_prop_differences(eqpropdata: EqPropData,
 
     calculated_data = np.array(calculated_data, dtype=np.float)
 
-    assert calculated_data.shape == samples.shape
-    assert calculated_data.shape == weights.shape
+    assert calculated_data.shape == samples.shape, f"Calculated data shape {calculated_data.shape} does not match samples shape {samples.shape}"
+    assert calculated_data.shape == weights.shape, f"Calculated data shape {calculated_data.shape} does not match weights shape {weights.shape}"
     differences = calculated_data - samples
     logging.debug('Equilibrium thermochemical error - differences: {}, weights: {}, reference: {}'.format(differences, weights, eqpropdata.reference))
     return differences, weights
