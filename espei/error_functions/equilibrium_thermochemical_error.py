@@ -14,7 +14,7 @@ from scipy.stats import norm
 from pycalphad import Database, Model, ReferenceState, variables as v
 from pycalphad.core.equilibrium import _eqcalculate
 from pycalphad.codegen.callables import build_phase_records
-from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components, unpack_condition
+from pycalphad.core.utils import instantiate_models, filter_phases, extract_parameters, unpack_components, unpack_condition
 from pycalphad.core.phase_rec import PhaseRecord
 from espei.utils import PickleableTinyDB
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
@@ -27,7 +27,7 @@ EqPropData = NamedTuple('EqPropData', (('dbf', Database),
                                        ('potential_conds', Dict[v.StateVariable, float]),
                                        ('composition_conds', Sequence[Dict[v.X, float]]),
                                        ('models', Dict[str, Model]),
-                                       ('parameters', Dict[str, float]),
+                                       ('params_keys', Dict[str, float]),
                                        ('phase_records', Sequence[Dict[str, PhaseRecord]]),
                                        ('output', str),
                                        ('samples', np.ndarray),
@@ -37,20 +37,21 @@ EqPropData = NamedTuple('EqPropData', (('dbf', Database),
 
 
 def build_eqpropdata(data, dbf, parameters=None):
+    parameters = parameters if parameters is not None else {}
     property_std_deviation = {
         'HM': 500.0,  # J/mol
         'SM':   0.2,  # J/K-mol
         'CPM':  0.2,  # J/K-mol
     }
 
+    params_keys, _ = extract_parameters(parameters)
+
     data_comps = list(set(data['components']).union({'VA'}))
     species = sorted(unpack_components(dbf, data_comps), key=str)
     data_phases = filter_phases(dbf, species, candidate_phases=data['phases'])
     models = instantiate_models(dbf, species, data_phases, parameters=parameters)
     output = data['output']
-    property_output = output.split('_')[0] # property without _FORM, _MIX, etc.
-    all_regions = data['values']
-    conditions = data['conditions']
+    property_output = output.split('_')[0]  # property without _FORM, _MIX, etc.
     samples = np.array(data['values']).flatten()
     reference = data.get('reference', '')
 
@@ -82,8 +83,7 @@ def build_eqpropdata(data, dbf, parameters=None):
     dataset_weights = np.array(data.get('weight', 1.0)) * np.ones(total_num_calculations)
     weights = (property_std_deviation.get(property_output, 1.0)/dataset_weights).flatten()
 
-    # 'dbf', 'species', 'phases', 'potential_conds', 'composition_conds', 'models', 'phase_records', 'output', 'samples', 'weights'
-    return EqPropData(dbf, species, data_phases, pot_conds, rav_comp_conds, models, parameters, phase_records, output, samples, weights, reference)
+    return EqPropData(dbf, species, data_phases, pot_conds, rav_comp_conds, models, params_keys, phase_records, output, samples, weights, reference)
 
 
 def get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, parameters=None):
@@ -134,7 +134,7 @@ def calc_prop_differences(eqpropdata: EqPropData,
     models = eqpropdata.models
     phase_records = eqpropdata.phase_records
     update_phase_record_parameters(phase_records, parameters)
-    params_dict = eqpropdata.parameters
+    params_dict = OrderedDict(zip(eqpropdata.params_keys, parameters))
     output = eqpropdata.output
     weights = np.array(eqpropdata.weight, dtype=np.float)
     samples = np.array(eqpropdata.samples, dtype=np.float)

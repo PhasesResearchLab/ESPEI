@@ -356,3 +356,26 @@ def test_equilibrium_thermochemical_error_unsupported_property(datasets_db):
     eqdata = get_equilibrium_thermochemical_data(dbf, ['CR', 'NI'], phases, datasets_db)
     errors_exact, weights = calc_prop_differences(eqdata[0], np.array([]))
     assert np.all(np.isclose(errors_exact, EXPECTED_VALUES, atol=1e-3))
+
+
+def test_equilibrium_thermochemical_error_computes_correct_probability(datasets_db):
+    """Integration test for equilibrium thermochemical error."""
+    datasets_db.insert(CU_MG_EQ_HMR_LIQUID)
+    dbf = Database(CU_MG_TDB)
+    phases = list(dbf.phases.keys())
+
+    # Test that errors update in response to changing parameters
+    # no parameters
+    eqdata = get_equilibrium_thermochemical_data(dbf, ['CU', 'MG'], phases, datasets_db)
+    errors, weights = calc_prop_differences(eqdata[0], np.array([]))
+    expected_vals = [-31626.6*0.5*0.5]
+    assert np.all(np.isclose(errors, expected_vals))
+
+    # VV0017 (LIQUID, L0)
+    eqdata = get_equilibrium_thermochemical_data(dbf, ['CU', 'MG'], phases, datasets_db, {'VV0017': -31626.6})
+    # unchanged, should be the same as before
+    errors, weights = calc_prop_differences(eqdata[0], np.array([-31626.6]))
+    assert np.all(np.isclose(errors, [-31626.6*0.5*0.5]))
+    # change to -40000
+    errors, weights = calc_prop_differences(eqdata[0], np.array([-40000], np.float))
+    assert np.all(np.isclose(errors, [-40000*0.5*0.5]))

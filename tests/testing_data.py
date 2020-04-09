@@ -189,6 +189,20 @@ CU_MG_EXP_ACTIVITY = yaml.load("""{
 """, Loader=YAML_LOADER)
 
 
+CU_MG_EQ_HMR_LIQUID = {
+    "components": ["CU", "MG"],
+    "phases": ["LIQUID"],
+    "conditions": {"P": 101325, "T": [1400], "X_MG": [0.5]},
+    "reference_states": {
+        "CU": {"phase": "LIQUID"},
+        "MG": {"phase": "LIQUID"}
+    },
+    "output": "HMR",
+    "values": [[[0]]],
+    "reference": "equilibrium thermochemical tests", "comment": "True values depend on parameters."
+}
+
+
 CU_MG_HM_MIX_T_CUMG2 = yaml.load("""{
   "components": ["CU", "MG", "VA"],
   "phases": ["CUMG2"],
@@ -1115,5 +1129,5 @@ LI_SN_LIQUID_EQ_DATA = {
     },
     "output": "HMR",
     "values": [[[0, 0, 0, 0]]],
-    "reference": "non-equilibrium thermochemical tests", "comment": "Valid speices: LI, LI4SN, SN; No interaction for LI/LI4SN, but there is one for LI4SN/SN. True values should be [0.0, -28133.588, -40049.995, 0.0]"
+    "reference": "equilibrium thermochemical tests", "comment": "Valid speices: LI, LI4SN, SN; No interaction for LI/LI4SN, but there is one for LI4SN/SN. True values should be [0.0, -28133.588, -40049.995, 0.0]"
 }
