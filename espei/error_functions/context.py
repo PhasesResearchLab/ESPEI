@@ -6,7 +6,7 @@ import sympy
 from pycalphad import variables as v
 from pycalphad.codegen.callables import build_callables
 from pycalphad.core.utils import instantiate_models
-from espei.error_functions import get_zpf_data, get_thermochemical_data
+from espei.error_functions import get_zpf_data, get_thermochemical_data, get_equilibrium_thermochemical_data
 from espei.utils import database_symbols_to_fit
 
 TRACE = 15
@@ -73,6 +73,11 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=data_weights, symbols_to_fit=symbols_to_fit)
     t2 = time.time()
     logging.log(TRACE, 'Finished getting non-equilibrium thermochemical data ({:0.2f}s)'.format(t2-t1))
+    logging.log(TRACE, 'Getting equilibrium thermochemical data (this may take some time)')
+    t1 = time.time()
+    eq_thermochemical_data = get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, parameters)
+    t2 = time.time()
+    logging.log(TRACE, 'Finished getting equilibrium thermochemical data ({:0.2f}s)'.format(t2-t1))
     logging.log(TRACE, 'Getting ZPF data (this may take some time)')
     t1 = time.time()
     zpf_data = get_zpf_data(dbf, comps, phases, datasets, parameters)
@@ -87,6 +92,9 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
         'zpf_kwargs': {
             'zpf_data': zpf_data,
             'data_weight': data_weights.get('ZPF', 1.0),
+        },
+        'equilibrium_thermochemical_kwargs': {
+            'eq_thermochemical_data': eq_thermochemical_data,
         },
         'thermochemical_kwargs': {
             'dbf': dbf, 'thermochemical_data': thermochemical_data,

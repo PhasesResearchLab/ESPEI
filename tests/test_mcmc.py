@@ -3,15 +3,17 @@ import numpy as np
 import pytest
 
 from numpy.linalg import LinAlgError
+from scipy.stats import norm
 from pycalphad import Database, variables as v
 from pycalphad.codegen.callables import build_callables
 from pycalphad.core.utils import instantiate_models
 
+from espei.error_functions.context import setup_context
 from espei.optimizers.opt_mcmc import EmceeOptimizer
 from espei.error_functions import get_zpf_data, get_thermochemical_data
 from espei.priors import rv_zero
 from .fixtures import datasets_db
-from .testing_data import CU_MG_TDB, CU_MG_DATASET_ZPF_WORKING, CU_MG_TDB_FCC_ONLY, CU_MG_HM_MIX_SINGLE_FCC_A1
+from .testing_data import *
 
 
 def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
@@ -121,3 +123,21 @@ def test_emcee_opitmizer_can_restart(datasets_db):
     restart_tr = -4*np.ones((2, 10, 1))  # 2 chains, 10 iterations, 1 parameter
     opt.fit([param], datasets_db, iterations=1, chains_per_parameter=2, restart_trace=restart_tr)
     assert opt.sampler.chain.shape == (2, 1, 1)
+
+
+def test_equilibrium_thermochemical_correct_probability(datasets_db):
+    """Integration test for equilibrium thermochemical error."""
+    dbf = Database(CU_MG_TDB)
+    opt = EmceeOptimizer(dbf)
+    datasets_db.insert(CU_MG_EQ_HMR_LIQUID)
+    ctx = setup_context(dbf, datasets_db, ['VV0017'])
+    ctx.update(opt.get_priors(None, ['VV0017'], [0]))
+
+    prob = opt.predict(np.array([-31626.6]), **ctx)
+    expected_prob = norm(loc=0, scale=500).logpdf([-31626.6*0.5*0.5]).sum()
+    assert np.isclose(prob, expected_prob)
+
+    # change to -40000
+    prob = opt.predict(np.array([-40000], dtype=np.float), **ctx)
+    expected_prob = norm(loc=0, scale=500).logpdf([-40000*0.5*0.5]).sum()
+    assert np.isclose(prob, expected_prob)
