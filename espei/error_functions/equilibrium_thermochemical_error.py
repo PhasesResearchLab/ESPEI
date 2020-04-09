@@ -193,6 +193,9 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
         A single float of the sum of square errors
 
     """
+    if len(eq_thermochemical_data) == 0:
+        return 0.0
+
     differences = []
     weights = []
     for eqpropdata in eq_thermochemical_data:
