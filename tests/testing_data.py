@@ -689,6 +689,17 @@ CR_NI_ACTIVITY = {
     "reference": "activity test", "comment": "Example, nearly ideal"
 }
 
+
+CR_NI_LIQUID_EQ_TC_DATA = {
+    "components": ["CR", "NI"],
+    "phases": ["FCC_A1"],
+    "conditions": {"P": 101325, "T": [500, 600, 700], "X_NI": 0.95},
+    "output": "TC",
+    "values": [[[0.0], [374.6625], [374.6625]]],
+    "reference": "equilibrium thermochemical tests", "comment": "Data checked by pycalphad. Values should be temperature independent and both temperature calulcations should give the 374.6625 value. Note, there's a low temperature miscibility gap (below 453 K)"
+}
+
+
 CR_FE_NI_TDB = """
 Element VA                VACUUM         0         0         0  !
 ELEMENT CR                BCC_A2    51.996      4050    23.560  !
@@ -1106,4 +1117,3 @@ LI_SN_LIQUID_EQ_DATA = {
     "values": [[[0, 0, 0, 0]]],
     "reference": "non-equilibrium thermochemical tests", "comment": "Valid speices: LI, LI4SN, SN; No interaction for LI/LI4SN, but there is one for LI4SN/SN. True values should be [0.0, -28133.588, -40049.995, 0.0]"
 }
-

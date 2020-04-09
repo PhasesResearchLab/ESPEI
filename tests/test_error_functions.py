@@ -342,3 +342,17 @@ def test_equilibrium_thermochemcial_error_species(datasets_db):
     # Exact
     errors_exact, weights = calc_prop_differences(eqdata[0], np.array([]), False)
     assert np.all(np.isclose(errors_exact, truth_values, atol=1e-6))
+
+
+def test_equilibrium_thermochemical_error_unsupported_property(datasets_db):
+    """Test that an equilibrium property that is not explictly supported will work."""
+    # This test specifically tests Curie temperature
+    datasets_db.insert(CR_NI_LIQUID_EQ_TC_DATA)
+    EXPECTED_VALUES = np.array([374.6625, 0.0, 0.0])  # the TC should be 374.6625 in both cases, but "values" are [0 and 382.0214], so the differences should be flipped.
+
+    dbf = Database(CR_NI_TDB)
+    phases = list(dbf.phases.keys())
+
+    eqdata = get_equilibrium_thermochemical_data(dbf, ['CR', 'NI'], phases, datasets_db)
+    errors_exact, weights = calc_prop_differences(eqdata[0], np.array([]))
+    assert np.all(np.isclose(errors_exact, EXPECTED_VALUES, atol=1e-3))
