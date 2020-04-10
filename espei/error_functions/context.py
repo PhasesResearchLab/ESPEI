@@ -84,7 +84,6 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
     t2 = time.time()
     logging.log(TRACE, 'Finished getting ZPF data ({:0.2f}s)'.format(t2-t1))
 
-
     # context for the log probability function
     # for all cases, parameters argument addressed in MCMC loop
     error_context = {
