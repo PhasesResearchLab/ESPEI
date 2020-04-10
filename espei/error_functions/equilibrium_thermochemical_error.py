@@ -200,6 +200,10 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
     weights = []
     for eqpropdata in eq_thermochemical_data:
         diffs, wts = calc_prop_differences(eqpropdata, parameters, approximate_equilibrium)
+        if not errors and np.any(np.isinf(diffs) | np.isnan(diffs)):
+            # NaN or infinity are assumed calculation failures. If we are
+            # calculating log-probability, just bail out and return -infinity.
+            return -np.inf
         differences.append(diffs)
         weights.append(wts)
 
