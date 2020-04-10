@@ -336,6 +336,7 @@ def test_equilibrium_thermochemcial_error_species(datasets_db):
     # Thermo-Calc
     truth_values = np.array([0.0, -28133.588, -40049.995, 0.0])
     # Approximate
+    print(eqdata[0])
     errors_approximate, weights = calc_prop_differences(eqdata[0], np.array([]), True)
     # Looser rtol because the equilibrium is approximate
     assert np.all(np.isclose(errors_approximate, truth_values, atol=1e-6, rtol=1e-3))
