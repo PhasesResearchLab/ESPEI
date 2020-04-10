@@ -164,9 +164,6 @@ PARAMETER L(FCC_A1,CU,MG:VA;2) 1 VV0001#; 10000 N !
 CU_MG_EXP_ACTIVITY = yaml.load("""{
   "components": ["CU", "MG", "VA"],
   "phases": ["LIQUID"],
-  "solver": {
-    "mode": "manual",
-  },
   "reference_state": {
     "phases": ["LIQUID"],
     "conditions": {

@@ -45,6 +45,8 @@ def check_dataset(dataset):
     is_activity = dataset['output'].startswith('ACR')
     is_zpf = dataset['output'] == 'ZPF'
     is_single_phase = 'solver' in dataset.keys()
+    if not any((is_equilibrium, is_single_phase, is_zpf)):
+        raise DatasetError("Cannot determine type of dataset")
     components = dataset['components']
     conditions = dataset['conditions']
     values = dataset['values']
