@@ -36,8 +36,9 @@ EqPropData = NamedTuple('EqPropData', (('dbf', Database),
                                        ))
 
 
-def build_eqpropdata(data, dbf, parameters=None):
+def build_eqpropdata(data, dbf, parameters=None, data_weight_dict=None):
     parameters = parameters if parameters is not None else {}
+    data_weight_dict = data_weight_dict if data_weight_dict is not None else {}
     property_std_deviation = {
         'HM': 500.0,  # J/mol
         'SM':   0.2,  # J/K-mol
@@ -81,12 +82,12 @@ def build_eqpropdata(data, dbf, parameters=None):
     # Build weights, should be the same size as the values
     total_num_calculations = len(rav_comp_conds)*np.prod([len(vals) for vals in pot_conds.values()])
     dataset_weights = np.array(data.get('weight', 1.0)) * np.ones(total_num_calculations)
-    weights = (property_std_deviation.get(property_output, 1.0)/dataset_weights).flatten()
+    weights = (property_std_deviation.get(property_output, 1.0)/data_weight_dict.get(property_output, 1.0)/dataset_weights).flatten()
 
     return EqPropData(dbf, species, data_phases, pot_conds, rav_comp_conds, models, params_keys, phase_records, output, samples, weights, reference)
 
 
-def get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, parameters=None):
+def get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, parameters=None, data_weight_dict=None):
     """
 
     Parameters
@@ -112,7 +113,7 @@ def get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, parameters
 
     eq_thermochemical_data = []  # 1:1 correspondence with each dataset
     for data in desired_data:
-        eq_thermochemical_data.append(build_eqpropdata(data, dbf, parameters=parameters))
+        eq_thermochemical_data.append(build_eqpropdata(data, dbf, parameters=parameters, data_weight_dict=data_weight_dict))
     return eq_thermochemical_data
 
 
@@ -169,7 +170,6 @@ def calc_prop_differences(eqpropdata: EqPropData,
 def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Sequence[EqPropData],
                                                      parameters: Optional[np.ndarray],
                                                      approximate_equilibrium: bool = False,
-                                                     data_weight: float = 1.0,
                                                      errors: bool = False):
     """
     Return the sum of square error from activity data
@@ -208,5 +208,5 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
         return differences
     else:
         weights = np.concatenate(weights, axis=0)
-        probs = norm(loc=0.0, scale=weights/data_weight).logpdf(differences)
+        probs = norm(loc=0.0, scale=weights).logpdf(differences)
         return np.sum(probs)

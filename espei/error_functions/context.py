@@ -75,7 +75,7 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
     logging.log(TRACE, 'Finished getting non-equilibrium thermochemical data ({:0.2f}s)'.format(t2-t1))
     logging.log(TRACE, 'Getting equilibrium thermochemical data (this may take some time)')
     t1 = time.time()
-    eq_thermochemical_data = get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, parameters)
+    eq_thermochemical_data = get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, parameters, data_weight_dict=data_weights)
     t2 = time.time()
     logging.log(TRACE, 'Finished getting equilibrium thermochemical data ({:0.2f}s)'.format(t2-t1))
     logging.log(TRACE, 'Getting ZPF data (this may take some time)')
