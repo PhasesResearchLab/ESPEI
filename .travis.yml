@@ -39,12 +39,12 @@ install:
   - if [[ $PYCALPHAD_DEVELOP ]]; then conda remove --force --yes pycalphad; fi
   - if [[ $PYCALPHAD_DEVELOP ]]; then git clone https://github.com/pycalphad/pycalphad pycalphad-dev; fi
   - if [[ $PYCALPHAD_DEVELOP ]]; then cd pycalphad-dev; fi
-  - if [[ $PYCALPHAD_DEVELOP ]]; then pip install -e . ; fi
+  - if [[ $PYCALPHAD_DEVELOP ]]; then pip install --no-deps -e . ; fi
   - if [[ $PYCALPHAD_DEVELOP ]]; then cd .. ; fi
 
 before_script:
   - source activate espei-env
-  - pip install -e '.[dev]'
+  - pip install --no-deps -e '.[dev]'
   - echo '!!! Installed packages'
   - conda list
   - echo '!!! Local directory'
