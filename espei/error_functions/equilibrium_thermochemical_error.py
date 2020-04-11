@@ -7,6 +7,7 @@ from collections import OrderedDict
 from typing import NamedTuple, Sequence, Dict, Optional
 
 import numpy as np
+import tinydb
 from tinydb import where
 
 from pycalphad.plot.eqplot import _map_coord_to_variable
@@ -33,7 +34,29 @@ EqPropData = NamedTuple('EqPropData', (('dbf', Database),
                                        ))
 
 
-def build_eqpropdata(data, dbf, parameters=None, data_weight_dict=None):
+def build_eqpropdata(data: tinydb.database.Document,
+                     dbf: Database,
+                     parameters: Optional(Dict[str, float]) = None,
+                     data_weight_dict: Optional(Dict[str, float]) = None
+                     ) -> EqPropData:
+    """
+    Build EqPropData for the calculations corresponding to a single dataset.
+
+    Parameters
+    ----------
+    data : tinydb.database.Document
+        Document corresponding to a single ESPEI dataset.
+    dbf : Database
+        Database that should be used to construct the `Model` and `PhaseRecord` objects.
+    parameters : Optional(Dict[str, float])
+        Mapping of parameter symbols to values.
+    data_weight_dict : Optional(Dict[str, float])
+        Mapping of a data type (e.g. `HM` or `SM`) to a weight.
+
+    Returns
+    -------
+    EqPropData
+    """
     parameters = parameters if parameters is not None else {}
     data_weight_dict = data_weight_dict if data_weight_dict is not None else {}
     property_std_deviation = {
