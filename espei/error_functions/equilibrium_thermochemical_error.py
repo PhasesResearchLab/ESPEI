@@ -4,7 +4,7 @@ Calculate error due to equilibrium thermochemical properties.
 
 import logging
 from collections import OrderedDict
-from typing import NamedTuple, Sequence, Dict, Optional
+from typing import NamedTuple, Sequence, Dict, Optional, Tuple
 
 import numpy as np
 import tinydb
@@ -38,8 +38,8 @@ EqPropData = NamedTuple('EqPropData', (('dbf', Database),
 
 def build_eqpropdata(data: tinydb.database.Document,
                      dbf: Database,
-                     parameters: Optional(Dict[str, float]) = None,
-                     data_weight_dict: Optional(Dict[str, float]) = None
+                     parameters: Optional[Dict[str, float]] = None,
+                     data_weight_dict: Optional[Dict[str, float]] = None
                      ) -> EqPropData:
     """
     Build EqPropData for the calculations corresponding to a single dataset.
@@ -50,9 +50,9 @@ def build_eqpropdata(data: tinydb.database.Document,
         Document corresponding to a single ESPEI dataset.
     dbf : Database
         Database that should be used to construct the `Model` and `PhaseRecord` objects.
-    parameters : Optional(Dict[str, float])
+    parameters : Optional[Dict[str, float]]
         Mapping of parameter symbols to values.
-    data_weight_dict : Optional(Dict[str, float])
+    data_weight_dict : Optional[Dict[str, float]]
         Mapping of a data type (e.g. `HM` or `SM`) to a weight.
 
     Returns
@@ -112,8 +112,8 @@ def build_eqpropdata(data: tinydb.database.Document,
 def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
                                         phases: Sequence[str],
                                         datasets: PickleableTinyDB,
-                                        parameters: Optional(Dict[str, float]) = None,
-                                        data_weight_dict: Optional(Dict[str, float]) = None,
+                                        parameters: Optional[Dict[str, float]] = None,
+                                        data_weight_dict: Optional[Dict[str, float]] = None,
                                         ) -> Sequence[EqPropData]:
     """
     Get all the EqPropData for each matching equilibrium thermochemical dataset in the datasets
@@ -128,9 +128,9 @@ def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
         List of phases used to search for matching datasets.
     datasets : PickleableTinyDB
         Datasets that contain single phase data
-    parameters : Optional(Dict[str, float])
+    parameters : Optional[Dict[str, float]]
         Mapping of parameter symbols to values.
-    data_weight_dict : Optional(Dict[str, float])
+    data_weight_dict : Optional[Dict[str, float]]
         Mapping of a data type (e.g. `HM` or `SM`) to a weight.
 
     Notes
@@ -161,9 +161,29 @@ def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
 
 def calc_prop_differences(eqpropdata: EqPropData,
                           parameters: np.ndarray,
-                          approximate_equilibrium: bool = False,
-                          ) -> np.ndarray:
+                          approximate_equilibrium: Optional[bool] = False,
+                          ) -> Tuple[np.ndarray, np.ndarray]:
     """
+    Calculate differences between the expected and calculated values for a property
+
+    Parameters
+    ----------
+    eqpropdata : EqPropData
+        Data corresponding to equilibrium calculations for a single datasets.
+    parameters : np.ndarray
+        Array of parameters to fit. Must be sorted in the same symbol sorted
+        order used to create the PhaseRecords.
+    approximate_equilibrium : Optional[bool]
+        Whether or not to use an approximate version of equilibrium that does
+        not refine the solution and uses ``starting_point`` instead.
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        Pair of
+        * differences between the calculated property and expected property
+        * weights for this dataset
+
     """
     if approximate_equilibrium:
         _equilibrium = no_op_equilibrium_
