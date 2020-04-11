@@ -16,10 +16,7 @@ from pycalphad.core.equilibrium import _eqcalculate
 from pycalphad.codegen.callables import build_phase_records
 from pycalphad.core.utils import instantiate_models, filter_phases, extract_parameters, unpack_components, unpack_condition
 from pycalphad.core.phase_rec import PhaseRecord
-from espei.utils import PickleableTinyDB
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
-
-from espei.core_utils import ravel_conditions
 
 EqPropData = NamedTuple('EqPropData', (('dbf', Database),
                                        ('species', Sequence[v.Species]),
@@ -101,7 +98,6 @@ def get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, parameters
     datasets : espei.utils.PickleableTinyDB
         Datasets that contain single phase data
     """
-    # From non_equilibrium_thermochemical_error
 
     desired_data = datasets.search(
         # data that isn't ZPF or non-equilibrium thermochemical
@@ -143,8 +139,6 @@ def calc_prop_differences(eqpropdata: EqPropData,
     calculated_data = []
     for comp_conds in eqpropdata.composition_conds:
         cond_dict = OrderedDict(**pot_conds, **comp_conds)
-        # Extract chemical potential hyperplane from multi-phase calculation
-        # Note that we consider all phases in the system, not just ones in this tie region
         # str_statevar_dict must be sorted, assumes that pot_conds are.
         str_statevar_dict = OrderedDict([(str(key), vals) for key, vals in pot_conds.items()])
         grid = calculate_(dbf, species, phases, str_statevar_dict, models, phase_records, pdens=500, fake_points=True)
@@ -153,7 +147,7 @@ def calc_prop_differences(eqpropdata: EqPropData,
         propdata = _eqcalculate(dbf, species, phases, cond_dict, output, data=multi_eqdata, per_phase=False, callables=None, parameters=params_dict, model=models)
 
         if 'vertex' in propdata.data_vars[output][0]:
-            raise ValueError("Property {output} cannot be used to calculate equilibrium thermochemical error because each phase has a unique value for this property.")
+            raise ValueError(f"Property {output} cannot be used to calculate equilibrium thermochemical error because each phase has a unique value for this property.")
 
         vals = getattr(propdata, output).flatten().tolist()
         calculated_data.extend(vals)
