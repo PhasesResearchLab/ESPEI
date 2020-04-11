@@ -134,7 +134,7 @@ logfile
 :default: null
 
 Name of the file that the logs (controlled by ``verbosity``) will be output to.
-The default is ``None`` (in Python, ``null`` in JSON), meaning the logging will
+The default is ``None`` (in Python, ``null`` in YAML), meaning the logging will
 be output to stdout and stderr.
 
 output_db
@@ -159,7 +159,7 @@ The array is preallocated and padded with zeros, so if you selected to take 2000
 
 You must choose a unique file name.
 An error will be raised if file specified by ``tracefile`` already exists.
-If you don't want a file to be output (e.g. for debugging), you can enter ``None``.
+If you don't want a file to be output (e.g. for debugging), you can enter ``null``.
 
 probfile
 --------
@@ -174,7 +174,7 @@ The array is preallocated and padded with zeros, so if you selected to take 2000
 
 You must choose a unique file name.
 An error will be raised if file specified by ``probfile`` already exists.
-If you don't want a file to be output (e.g. for debugging), you can enter ``None``.
+If you don't want a file to be output (e.g. for debugging), you can enter ``null``.
 
 
 generate_parameters
@@ -326,14 +326,14 @@ scheduler
 
 :type: string
 :default: dask
-:options: dask | None | JSON file
+:options: dask | null | JSON file
 
 Which scheduler to use for parallelization.
-You can choose from either `dask`, `None`, or pass the path to a JSON scheduler file created by dask-distributed.
+You can choose from either ``dask``, ``null``, or pass the path to a JSON scheduler file created by dask-distributed.
 
-Choosing dask allows for the choice of cores used through the cores key.
+Choosing ``dask`` allows for the choice of cores used through the cores key.
 
-Choosing None will result in no parallel scheduler being used. This is useful for debugging.
+Choosing ``null`` will result in no parallel scheduler being used. This is useful for debugging.
 
 Passing the path to a JSON scheduler file will use the resources set up by the scheduler.
 JSON file schedulers are most useful because schedulers can be started on MPI clusters using ``dask-mpi`` command.

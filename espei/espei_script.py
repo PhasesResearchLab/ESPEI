@@ -217,7 +217,7 @@ def run_espei(run_settings):
                 logging.info("bokeh server for dask scheduler at localhost:{}".format(bokeh_server_info))
             except KeyError:
                 logging.info("Install bokeh to use the dask bokeh server.")
-        elif mcmc_settings['scheduler'] == 'None':
+        elif mcmc_settings['scheduler'] == 'None' or mcmc_settings['scheduler'] is None:
             client = None
             logging.info("Not using a parallel scheduler. ESPEI is running MCMC on a single core.")
         else: # we were passed a scheduler file name
