@@ -164,9 +164,6 @@ PARAMETER L(FCC_A1,CU,MG:VA;2) 1 VV0001#; 10000 N !
 CU_MG_EXP_ACTIVITY = yaml.load("""{
   "components": ["CU", "MG", "VA"],
   "phases": ["LIQUID"],
-  "solver": {
-    "mode": "manual",
-  },
   "reference_state": {
     "phases": ["LIQUID"],
     "conditions": {
@@ -187,6 +184,20 @@ CU_MG_EXP_ACTIVITY = yaml.load("""{
   "comment": "Digitized Figure "
 }
 """, Loader=YAML_LOADER)
+
+
+CU_MG_EQ_HMR_LIQUID = {
+    "components": ["CU", "MG"],
+    "phases": ["LIQUID"],
+    "conditions": {"P": 101325, "T": [1400], "X_MG": [0.5]},
+    "reference_states": {
+        "CU": {"phase": "LIQUID"},
+        "MG": {"phase": "LIQUID"}
+    },
+    "output": "HMR",
+    "values": [[[0]]],
+    "reference": "equilibrium thermochemical tests", "comment": "True values depend on parameters."
+}
 
 
 CU_MG_HM_MIX_T_CUMG2 = yaml.load("""{
@@ -689,6 +700,17 @@ CR_NI_ACTIVITY = {
     "reference": "activity test", "comment": "Example, nearly ideal"
 }
 
+
+CR_NI_LIQUID_EQ_TC_DATA = {
+    "components": ["CR", "NI"],
+    "phases": ["FCC_A1"],
+    "conditions": {"P": 101325, "T": [500, 600, 700], "X_NI": 0.95},
+    "output": "TC",
+    "values": [[[0.0], [374.6625], [374.6625]]],
+    "reference": "equilibrium thermochemical tests", "comment": "Data checked by pycalphad. Values should be temperature independent and both temperature calulcations should give the 374.6625 value. Note, there's a low temperature miscibility gap (below 453 K)"
+}
+
+
 CR_FE_NI_TDB = """
 Element VA                VACUUM         0         0         0  !
 ELEMENT CR                BCC_A2    51.996      4050    23.560  !
@@ -1076,4 +1098,33 @@ LI_SN_ZPF_DATA = {
         [["LIQUID", ["SN"], [0.25864665]], ["LI7SN2", ["SN"], [0.24402028]]]
     ],
     "reference": "zpf test", "comment": "Exact tieline based on equilibrium calculation"
+}
+
+
+LI_SN_LIQUID_DATA = {
+    "components": ["LI", "SN"],
+    "phases": ["LIQUID"],
+    "solver": {
+        "mode": "manual",
+        "sublattice_site_ratios": [1],
+        "sublattice_configurations": [[["LI", "LI4SN"]], [["LI4SN", "SN"]]],
+        "sublattice_occupancies": [[[0.5, 0.5]], [[0.5, 0.5]]]
+    },
+    "conditions": {"P": 101325, "T": 300},
+    "output": "HM_MIX",
+    "values": [[[0, 0]]],
+    "reference": "non-equilibrium thermochemical tests", "comment": "Valid speices: LI, LI4SN, SN; No interaction for LI/LI4SN, but there is one for LI4SN/SN"
+}
+
+LI_SN_LIQUID_EQ_DATA = {
+    "components": ["LI", "SN"],
+    "phases": ["LIQUID"],
+    "conditions": {"P": 101325, "T": 300, "X_LI": [0.0, 0.5, 0.8, 1.0]},
+    "reference_states": {
+        "LI": {"phase": "LIQUID"},
+        "SN": {"phase": "LIQUID"}
+    },
+    "output": "HMR",
+    "values": [[[0, 0, 0, 0]]],
+    "reference": "equilibrium thermochemical tests", "comment": "Valid speices: LI, LI4SN, SN; No interaction for LI/LI4SN, but there is one for LI4SN/SN. True values should be [0.0, -28133.588, -40049.995, 0.0]"
 }

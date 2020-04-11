@@ -3,7 +3,8 @@ import time
 import numpy as np
 import emcee
 from espei.error_functions import calculate_zpf_error, calculate_activity_error, \
-    calculate_non_equilibrium_thermochemical_probability
+    calculate_non_equilibrium_thermochemical_probability, \
+    calculate_equilibrium_thermochemical_probability
 from espei.priors import PriorSpec, build_prior_specs
 from espei.utils import unpack_piecewise, optimal_parameters
 from espei.error_functions.context import setup_context
@@ -231,6 +232,7 @@ class EmceeOptimizer(OptimizerBase):
         prior_dict = self.get_priors(prior, symbols_to_fit, initial_guess)
         ctx.update(prior_dict)
         ctx['zpf_kwargs']['approximate_equilibrium'] = approximate_equilibrium
+        ctx['equilibrium_thermochemical_kwargs']['approximate_equilibrium'] = approximate_equilibrium
         # Run the initial parameters for guessing purposes:
         logging.log(TRACE, "Probability for initial parameters")
         self.predict(initial_guess, **ctx)
@@ -279,7 +281,8 @@ class EmceeOptimizer(OptimizerBase):
         parameters = {param_name: param for param_name, param in zip(ctx['symbols_to_fit'], params)}
         zpf_kwargs = ctx.get('zpf_kwargs')
         activity_kwargs = ctx.get('activity_kwargs')
-        thermochemical_kwargs = ctx.get('thermochemical_kwargs')
+        non_equilibrium_thermochemical_kwargs = ctx.get('thermochemical_kwargs')
+        equilibrium_thermochemical_kwargs = ctx.get('equilibrium_thermochemical_kwargs')
         starttime = time.time()
         if zpf_kwargs is not None:
             try:
@@ -290,16 +293,20 @@ class EmceeOptimizer(OptimizerBase):
                 multi_phase_error = -np.inf
         else:
             multi_phase_error = 0
+        if equilibrium_thermochemical_kwargs is not None:
+            eq_thermochemical_prob = calculate_equilibrium_thermochemical_probability(parameters=np.array(params), **equilibrium_thermochemical_kwargs)
+        else:
+            eq_thermochemical_prob = 0
         if activity_kwargs is not None:
             actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
         else:
             actvity_error = 0
-        if thermochemical_kwargs is not None:
-            single_phase_error = calculate_non_equilibrium_thermochemical_probability(parameters=np.array(params), **thermochemical_kwargs)
+        if non_equilibrium_thermochemical_kwargs is not None:
+            non_eq_thermochemical_prob = calculate_non_equilibrium_thermochemical_probability(parameters=np.array(params), **non_equilibrium_thermochemical_kwargs)
         else:
-            single_phase_error = 0
-        total_error = multi_phase_error + single_phase_error + actvity_error
-        logging.log(TRACE, 'Likelihood - {:0.2f}s - Thermochemical: {:0.3f}. ZPF: {:0.3f}. Activity: {:0.3f}. Total: {:0.3f}.'.format(time.time() - starttime, single_phase_error, multi_phase_error, actvity_error, total_error))
+            non_eq_thermochemical_prob = 0
+        total_error = multi_phase_error + eq_thermochemical_prob + non_eq_thermochemical_prob + actvity_error
+        logging.log(TRACE, f'Likelihood - {time.time() - starttime:0.2f}s - Non-equilibrium thermochemical: {non_eq_thermochemical_prob:0.3f}. Equilibrium thermochemical: {eq_thermochemical_prob:0.3f}. ZPF: {multi_phase_error:0.3f}. Activity: {actvity_error:0.3f}. Total: {total_error:0.3f}.')
         lnlike = np.array(total_error, dtype=np.float64)
 
         lnprob = lnprior + lnlike

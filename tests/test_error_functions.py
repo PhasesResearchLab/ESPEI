@@ -8,7 +8,8 @@ from tinydb import where
 from pycalphad import Database
 
 from espei.paramselect import generate_parameters
-from espei.error_functions import calculate_activity_error, calculate_non_equilibrium_thermochemical_probability, calculate_zpf_error, get_thermochemical_data, get_zpf_data
+from espei.error_functions import *
+from espei.error_functions.equilibrium_thermochemical_error import calc_prop_differences
 import scipy.stats
 
 from .fixtures import datasets_db
@@ -307,3 +308,74 @@ def test_zpf_error_works_for_stoichiometric_cmpd_tielines(datasets_db):
     assert np.isclose(exact_likelihood, zero_error_probability, rtol=1e-6)
     approx_likelihood = calculate_zpf_error(zpf_data)
     assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-6)
+
+
+def test_non_equilibrium_thermochemcial_species(datasets_db):
+    """Test species work for non-equilibrium thermochemical data."""
+
+    datasets_db.insert(LI_SN_LIQUID_DATA)
+
+    dbf = Database(LI_SN_TDB)
+    phases = ['LIQUID']
+
+    thermochemical_data = get_thermochemical_data(dbf, ['LI', 'SN'], phases, datasets_db)
+    prob = calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data)
+    # Near zero error and non-zero error
+    assert np.isclose(prob, (-7.13354663 + -22.43585011))
+
+
+def test_equilibrium_thermochemcial_error_species(datasets_db):
+    """Test species work for equilibrium thermochemical data."""
+
+    datasets_db.insert(LI_SN_LIQUID_EQ_DATA)
+
+    dbf = Database(LI_SN_TDB)
+    phases = list(dbf.phases.keys())
+
+    eqdata = get_equilibrium_thermochemical_data(dbf, ['LI', 'SN'], phases, datasets_db)
+    # Thermo-Calc
+    truth_values = np.array([0.0, -28133.588, -40049.995, 0.0])
+    # Approximate
+    errors_approximate, weights = calc_prop_differences(eqdata[0], np.array([]), True)
+    # Looser rtol because the equilibrium is approximate
+    assert np.all(np.isclose(errors_approximate, truth_values, atol=1e-6, rtol=1e-3))
+    # Exact
+    errors_exact, weights = calc_prop_differences(eqdata[0], np.array([]), False)
+    assert np.all(np.isclose(errors_exact, truth_values, atol=1e-6))
+
+
+def test_equilibrium_thermochemical_error_unsupported_property(datasets_db):
+    """Test that an equilibrium property that is not explictly supported will work."""
+    # This test specifically tests Curie temperature
+    datasets_db.insert(CR_NI_LIQUID_EQ_TC_DATA)
+    EXPECTED_VALUES = np.array([374.6625, 0.0, 0.0])  # the TC should be 374.6625 in both cases, but "values" are [0 and 382.0214], so the differences should be flipped.
+
+    dbf = Database(CR_NI_TDB)
+    phases = list(dbf.phases.keys())
+
+    eqdata = get_equilibrium_thermochemical_data(dbf, ['CR', 'NI'], phases, datasets_db)
+    errors_exact, weights = calc_prop_differences(eqdata[0], np.array([]))
+    assert np.all(np.isclose(errors_exact, EXPECTED_VALUES, atol=1e-3))
+
+
+def test_equilibrium_thermochemical_error_computes_correct_probability(datasets_db):
+    """Integration test for equilibrium thermochemical error."""
+    datasets_db.insert(CU_MG_EQ_HMR_LIQUID)
+    dbf = Database(CU_MG_TDB)
+    phases = list(dbf.phases.keys())
+
+    # Test that errors update in response to changing parameters
+    # no parameters
+    eqdata = get_equilibrium_thermochemical_data(dbf, ['CU', 'MG'], phases, datasets_db)
+    errors, weights = calc_prop_differences(eqdata[0], np.array([]))
+    expected_vals = [-31626.6*0.5*0.5]
+    assert np.all(np.isclose(errors, expected_vals))
+
+    # VV0017 (LIQUID, L0)
+    eqdata = get_equilibrium_thermochemical_data(dbf, ['CU', 'MG'], phases, datasets_db, {'VV0017': -31626.6})
+    # unchanged, should be the same as before
+    errors, weights = calc_prop_differences(eqdata[0], np.array([-31626.6]))
+    assert np.all(np.isclose(errors, [-31626.6*0.5*0.5]))
+    # change to -40000
+    errors, weights = calc_prop_differences(eqdata[0], np.array([-40000], np.float))
+    assert np.all(np.isclose(errors, [-40000*0.5*0.5]))

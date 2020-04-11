@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from espei.datasets import DatasetError, check_dataset, clean_dataset
 
-from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES
+from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, LI_SN_LIQUID_DATA
 from .fixtures import datasets_db
 
 dataset_single_valid = {
@@ -448,3 +448,11 @@ def test_check_datasets_raises_if_configs_occupancies_not_aligned(datasets_db):
     """Checking datasets that don't have the same number/shape of configurations/occupancies should raise."""
     with pytest.raises(DatasetError):
         check_dataset(dataset_mismatched_configs_occupancies)
+
+
+# Expected to fail, since the dataset checker cannot determine that species are used in the configurations and components should only contain pure elements.
+@pytest.mark.xfail
+def test_non_equilibrium_thermo_data_with_species_passes_checker():
+    """Non-equilibrium thermochemical data that use species in the configurations should pass the dataset checker.
+    """
+    check_dataset(LI_SN_LIQUID_DATA)

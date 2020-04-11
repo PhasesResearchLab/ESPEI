@@ -15,6 +15,13 @@ from pycalphad.core.utils import get_state_variables, unpack_kwarg, point_sample
 from pycalphad.core.light_dataset import LightDataset
 from pycalphad.core.calculate import _sample_phase_constitution, _compute_phase_values
 
+
+def update_phase_record_parameters(phase_records: Dict[str, PhaseRecord], parameters: np.ndarray) -> None:
+    if parameters.size > 0:
+        for phase_name, phase_record in phase_records.items():
+            phase_record.parameters[:] = parameters
+
+
 def calculate_(dbf: Database, species: Sequence[v.Species], phases: Sequence[str],
                str_statevar_dict: Dict[str, np.ndarray], models: Dict[str, Model],
                phase_records: Dict[str, PhaseRecord], output: Optional[str] = 'GM',

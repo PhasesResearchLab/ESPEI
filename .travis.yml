@@ -34,17 +34,17 @@ install:
   - conda info -a
   - conda create -q -n espei-env python=$TRAVIS_PYTHON_VERSION
   - source activate espei-env
-  - conda install -c conda-forge -c pycalphad 'pycalphad>=0.8.1' numpy scipy 'sympy' six 'dask>=2' 'distributed>=2' 'tinydb>=3.8' scikit-learn 'emcee<3' pyyaml cerberus bibtexparser sphinx sphinx_rtd_theme pytest nose mock twine
+  - conda install -c conda-forge -c pycalphad 'pycalphad>=0.8.1' numpy scipy 'sympy' six 'dask>=2' 'distributed>=2' 'tinydb>=3.8' scikit-learn 'emcee<3' pyyaml cerberus bibtexparser sphinx sphinx_rtd_theme pytest nose mock twine 'ipopt<3.13'
   # If pycalphad develop is defined, uninstall the release and install the development version from github
   - if [[ $PYCALPHAD_DEVELOP ]]; then conda remove --force --yes pycalphad; fi
   - if [[ $PYCALPHAD_DEVELOP ]]; then git clone https://github.com/pycalphad/pycalphad pycalphad-dev; fi
   - if [[ $PYCALPHAD_DEVELOP ]]; then cd pycalphad-dev; fi
-  - if [[ $PYCALPHAD_DEVELOP ]]; then pip install -e . ; fi
+  - if [[ $PYCALPHAD_DEVELOP ]]; then pip install --no-deps -e . ; fi
   - if [[ $PYCALPHAD_DEVELOP ]]; then cd .. ; fi
 
 before_script:
   - source activate espei-env
-  - pip install -e '.[dev]'
+  - pip install --no-deps -e '.[dev]'
   - echo '!!! Installed packages'
   - conda list
   - echo '!!! Local directory'

@@ -41,9 +41,12 @@ def check_dataset(dataset):
     DatasetError
         If an error is found in the dataset
     """
+    is_equilibrium = 'solver' not in dataset.keys() and dataset['output'] != 'ZPF'
     is_activity = dataset['output'].startswith('ACR')
     is_zpf = dataset['output'] == 'ZPF'
-    is_single_phase = (not is_zpf) and (not is_activity)
+    is_single_phase = 'solver' in dataset.keys()
+    if not any((is_equilibrium, is_single_phase, is_zpf)):
+        raise DatasetError("Cannot determine type of dataset")
     components = dataset['components']
     conditions = dataset['conditions']
     values = dataset['values']
@@ -60,16 +63,20 @@ def check_dataset(dataset):
             sublattice_occupancies = [None]*len(sublattice_configurations)
         elif sublattice_occupancies is None:
             raise DatasetError('At least one sublattice in the following sublattice configurations is mixing, but the "sublattice_occupancies" key is empty: {}'.format(sublattice_configurations))
-    if is_activity:
+    if is_equilibrium:
         conditions = dataset['conditions']
-        ref_state = dataset['reference_state']
         comp_conditions = {k: v for k, v in conditions.items() if k.startswith('X_')}
-
+    if is_activity:
+        ref_state = dataset['reference_state']
+    elif is_equilibrium:
+        for el, vals in dataset.get('reference_states', {}).items():
+            if 'phase' not in vals:
+                raise DatasetError(f'Reference state for element {el} must define the `phase` key with the reference phase name.')
 
     # check that the shape of conditions match the values
     num_pressure = np.atleast_1d(conditions['P']).size
     num_temperature = np.atleast_1d(conditions['T']).size
-    if is_activity:
+    if is_equilibrium:
         values_shape = np.array(values).shape
         # check each composition condition is the same shape
         num_x_conds = [len(v) for _, v in comp_conditions.items()]
@@ -111,7 +118,7 @@ def check_dataset(dataset):
                 else:
                     components_used.add(sl)
         comp_dof = 0
-    elif is_activity:
+    elif is_equilibrium:
         components_used.update({c.split('_')[1] for c in comp_conditions.keys()})
         # mass balance of components
         comp_dof = len(comp_conditions.keys())
