@@ -9,14 +9,16 @@ from typing import NamedTuple, Sequence, Dict, Optional
 import numpy as np
 import tinydb
 from tinydb import where
+from scipy.stats import norm
 
 from pycalphad.plot.eqplot import _map_coord_to_variable
-from scipy.stats import norm
 from pycalphad import Database, Model, ReferenceState, variables as v
 from pycalphad.core.equilibrium import _eqcalculate
 from pycalphad.codegen.callables import build_phase_records
 from pycalphad.core.utils import instantiate_models, filter_phases, extract_parameters, unpack_components, unpack_condition
 from pycalphad.core.phase_rec import PhaseRecord
+
+from espei.utils import PickleableTinyDB
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
 
 EqPropData = NamedTuple('EqPropData', (('dbf', Database),
@@ -92,7 +94,7 @@ def build_eqpropdata(data: tinydb.database.Document,
     phase_records = build_phase_records(dbf, species, data_phases, {**pot_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
 
     # Now we need to unravel the composition conditions
-    # (from Dict[v.X, List[float]] to List[Dict[v.X, float]]), since the
+    # (from Dict[v.X, Sequence[float]] to Sequence[Dict[v.X, float]]), since the
     # composition conditions are only broadcast against the potentials, not
     # each other. Each individual composition needs to be computed
     # independently, since broadcasting over composition cannot be turned off
@@ -107,19 +109,40 @@ def build_eqpropdata(data: tinydb.database.Document,
     return EqPropData(dbf, species, data_phases, pot_conds, rav_comp_conds, models, params_keys, phase_records, output, samples, weights, reference)
 
 
-def get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, parameters=None, data_weight_dict=None):
+def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
+                                        phases: Sequence[str],
+                                        datasets: PickleableTinyDB,
+                                        parameters: Optional(Dict[str, float]) = None,
+                                        data_weight_dict: Optional(Dict[str, float]) = None,
+                                        ) -> Sequence[EqPropData]:
     """
+    Get all the EqPropData for each matching equilibrium thermochemical dataset in the datasets
 
     Parameters
     ----------
-    dbf : pycalphad.Database
-        Database to consider
-    comps : list
-        List of active component names
-    phases : list
-        List of phases to consider
-    datasets : espei.utils.PickleableTinyDB
+    dbf : Database
+        Database with parameters to fit
+    comps : Sequence[str]
+        List of pure element components used to find matching datasets.
+    phases : Sequence[str]
+        List of phases used to search for matching datasets.
+    datasets : PickleableTinyDB
         Datasets that contain single phase data
+    parameters : Optional(Dict[str, float])
+        Mapping of parameter symbols to values.
+    data_weight_dict : Optional(Dict[str, float])
+        Mapping of a data type (e.g. `HM` or `SM`) to a weight.
+
+    Notes
+    -----
+    Found datasets will be subsets of the components and phases. Equilibrium
+    thermochemical data is assumed to be any data that does not have the
+    `solver` key, and does not have an output of `ZPF` or `ACR` (which
+    correspond to different data types than can be calculated here.)
+
+    Returns
+    -------
+    Sequence[EqPropData]
     """
 
     desired_data = datasets.search(
