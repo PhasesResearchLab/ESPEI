@@ -228,29 +228,26 @@ def calc_prop_differences(eqpropdata: EqPropData,
 
 
 def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Sequence[EqPropData],
-                                                     parameters: Optional[np.ndarray],
-                                                     approximate_equilibrium: bool = False,
-                                                     errors: bool = False):
+                                                     parameters: np.ndarray,
+                                                     approximate_equilibrium: Optional[bool] = False,
+                                                     ) -> float:
     """
-    Return the sum of square error from activity data
+    Calculate the total equilibrium thermochemical probability for all EqPropData
 
     Parameters
     ----------
     eq_thermochemical_data : Sequence[EqPropData]
-    parameters : Optional[np.ndarray]
+        List of equilibrium thermochemical data corresponding to the datasets.
+    parameters : np.ndarray
         Values of parameters for this iteration to be updated in PhaseRecords.
-    data_weight : float
-        Weight for standard deviation for the data, dimensionless.
-    errors : bool
-        If True, a list of differences between data and calculated values are
-        returned, otherwise (the default) sum of all probabilities are
-        returned. This is useful for tests, where probabilities and default
-        standard deviations may change.
+    approximate_equilibrium : Optional[bool], optional
+
+    eq_thermochemical_data : Sequence[EqPropData]
 
     Returns
     -------
     float
-        A single float of the sum of square errors
+        Sum of log-probability for all thermochemical data.
 
     """
     if len(eq_thermochemical_data) == 0:
@@ -260,7 +257,7 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
     weights = []
     for eqpropdata in eq_thermochemical_data:
         diffs, wts = calc_prop_differences(eqpropdata, parameters, approximate_equilibrium)
-        if not errors and np.any(np.isinf(diffs) | np.isnan(diffs)):
+        if np.any(np.isinf(diffs) | np.isnan(diffs)):
             # NaN or infinity are assumed calculation failures. If we are
             # calculating log-probability, just bail out and return -infinity.
             return -np.inf
@@ -268,9 +265,6 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
         weights.append(wts)
 
     differences = np.concatenate(differences, axis=0)
-    if errors:
-        return differences
-    else:
-        weights = np.concatenate(weights, axis=0)
-        probs = norm(loc=0.0, scale=weights).logpdf(differences)
-        return np.sum(probs)
+    weights = np.concatenate(weights, axis=0)
+    probs = norm(loc=0.0, scale=weights).logpdf(differences)
+    return np.sum(probs)
