@@ -167,9 +167,7 @@ log-probability changes for all of the chains as a function of iterations.
     ax.set_yscale('log')
     ax.set_xlabel('Iterations')
     ax.set_ylabel('- lnprob')
-    num_chains = lnprob.shape[0]
-    for i in range(num_chains):
-        ax.plot(-lnprob[i,:])
+    ax.plot(-lnprob.T)
     plt.show()
 
 
@@ -205,8 +203,7 @@ are relative to each other.
         ax = plt.figure().gca()
         ax.set_xlabel('Iterations')
         ax.set_ylabel('Parameter value')
-        for chain in range(num_chains):
-            ax.plot(trace[chain, :, parameter])
+        ax.plot(trace[..., parameter].T)
     plt.show()
 
 
