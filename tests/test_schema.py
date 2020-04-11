@@ -3,6 +3,7 @@ Tests for input file validation
 """
 
 import pytest
+import yaml
 from espei.espei_script import get_run_settings
 
 FULL_RUN_DICT = {
@@ -91,9 +92,26 @@ MCMC_OVERSPECIFIED_INPUT_DICT = {
 }
 
 
+NULL_OUTPUTS_YAML = """
+system:
+  phase_models: phases.json
+  datasets: ds-path
+output:
+  output_db:  mcmc.tdb
+  verbosity:  0
+  tracefile:  null
+  probfile:   null
+  logfile:    null
+mcmc:
+  iterations: 100
+  scheduler: null
+  input_db: dft.tdb
+"""
+
+
 def test_input_yaml_valid_for_full_run():
     """A minimal full run input file should validate"""
-    d = get_run_settings(FULL_RUN_DICT)
+    get_run_settings(FULL_RUN_DICT)
 
 
 def test_input_yaml_valid_for_generate_parameters_only():
@@ -134,19 +152,19 @@ def test_correct_defaults_are_applied_from_minimal_specification():
     assert d.get('output') is not None
     assert d['output'].pop('verbosity') == 0
     assert d['output'].pop('output_db') == 'out.tdb'
-    assert d['output'].pop('logfile') == None
+    assert d['output'].pop('logfile') is None
     assert d['output'].pop('tracefile') == 'trace.npy'
     assert d['output'].pop('probfile') == 'lnprob.npy'
     assert len(d['output']) == 0
-    assert d['generate_parameters'].pop('ridge_alpha') == None
-    assert d['generate_parameters'].pop('aicc_penalty_factor') == None
+    assert d['generate_parameters'].pop('ridge_alpha') is None
+    assert d['generate_parameters'].pop('aicc_penalty_factor') is None
     assert len(d['generate_parameters']) == 2
     assert d['mcmc'].pop('save_interval') == 1
     assert d['mcmc'].pop('scheduler') == 'dask'
     assert d['mcmc'].pop('chains_per_parameter') == 2
     assert d['mcmc'].pop('chain_std_deviation') == 0.1
-    assert d['mcmc'].pop('deterministic') == True
-    assert d['mcmc'].pop('approximate_equilibrium') == False
+    assert d['mcmc'].pop('deterministic') is True
+    assert d['mcmc'].pop('approximate_equilibrium') is False
     assert d['mcmc'].pop('data_weights') == {'ACR': 1.0, 'CPM': 1.0, 'HM': 1.0, 'SM': 1.0, 'ZPF': 1.0}
     assert d['mcmc'].pop('prior') == {'name': 'zero'}
     assert len(d['mcmc']) == 1
@@ -154,7 +172,7 @@ def test_correct_defaults_are_applied_from_minimal_specification():
 
 def test_chains_per_parameter_read_correctly():
     """The chains per parameter option should take effect when passed."""
-    d = {k: v for k,v in MCMC_RUN_DICT.items()}
+    d = {k: v for k, v in MCMC_RUN_DICT.items()}
     d['mcmc']['chains_per_parameter'] = 6
     parsed_settings = get_run_settings(d)
     assert parsed_settings['mcmc']['chains_per_parameter'] == 6
@@ -163,8 +181,18 @@ def test_chains_per_parameter_read_correctly():
     with pytest.raises(ValueError):
         get_run_settings(d)
 
+
 def test_SR2016_refdata():
-    d = {k: v for k,v in GEN_PARAMS_DICT.items()}
+    d = {k: v for k, v in GEN_PARAMS_DICT.items()}
     d['generate_parameters']['ref_state'] = 'SR2016'
     parsed_settings = get_run_settings(d)
     assert parsed_settings['generate_parameters']['ref_state'] == 'SR2016'
+
+
+def test_nullable_arguments_are_all_nullable():
+    nullable_dict = yaml.safe_load(NULL_OUTPUTS_YAML)
+    null_settings = get_run_settings(nullable_dict)
+    assert null_settings['output']['tracefile'] is None
+    assert null_settings['output']['logfile'] is None
+    assert null_settings['output']['probfile'] is None
+    assert null_settings['mcmc']['scheduler'] is None
