@@ -2,10 +2,20 @@
 What's New
 ==========
 
+0.7.7 (2020-04-11)
+==================
+
+This is a minor feature and bug fix release with backwards compatible changes.
+
+* Preliminary support for thermochemical error for arbitrary properties (`@bocklund`_ - :issue:`124`)
+* Update the preferred method for disabling tracefile, probfile, logfile, and no scheduler in YAML to use ``null`` instead of ``"None"`` (`@bocklund`_ - :issue:`125`)
+* Fix a bug in ``truncate_arrays`` and ``optimal_parameters`` to allow some zeros (`@bocklund`_ - :issue:`122`)
+* Enable custom unary reference states for parameter  generation with `entry_points` plugin system (`@bocklund`_ - :issue:`121`)
+
 0.7.6 (2020-03-27)
 ==================
 
-This is a minor bug fix release. 
+This is a minor bug fix release.
 
 * Fixes a bug introduced in 0.7.5 for calculating likelihood for phase boundary data under equilibrium failures (`@bocklund`_ - :issue:`120`)
 * Since Python 2 was dropped, `six` has been removed as a dependency (`@bocklund`_ - :issue:`119`)
