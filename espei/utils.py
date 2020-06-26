@@ -45,7 +45,8 @@ class PickleableTinyDB(TinyDB):
 
     def __setstate__(self, state):
         self.__init__(storage=MemoryStorage)
-        self.insert_multiple(state['_table'])
+        print(state)
+        self.insert_multiple(state['_tables']['_default'])
 
 
 class ImmediateClient(Client):
