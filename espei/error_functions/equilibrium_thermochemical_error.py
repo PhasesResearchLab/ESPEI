@@ -147,7 +147,7 @@ def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
 
     desired_data = datasets.search(
         # data that isn't ZPF or non-equilibrium thermochemical
-        (where('output') != 'ZPF') & (~where('solver')) &
+        (where('output') != 'ZPF') & (~where('solver').exists()) &
         (where('output').test(lambda x: 'ACR' not in x)) &  # activity data not supported yet
         (where('components').test(lambda x: set(x).issubset(comps))) &
         (where('phases').test(lambda x: set(x).issubset(set(phases))))
