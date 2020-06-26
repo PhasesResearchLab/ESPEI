@@ -279,7 +279,7 @@ def apply_tags(datasets, tags):
                     match[newkey] = d
                 else:
                     match[newkey] = newval
-        datasets.write_back(matching_datasets)
+                datasets.update(match, doc_ids=[match.doc_id])
 
 
 def add_ideal_exclusions(datasets):
