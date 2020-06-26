@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from espei.datasets import DatasetError, check_dataset, clean_dataset
+from espei.datasets import DatasetError, check_dataset, clean_dataset, apply_tags
 
 from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, LI_SN_LIQUID_DATA
 from .fixtures import datasets_db
@@ -456,3 +456,17 @@ def test_non_equilibrium_thermo_data_with_species_passes_checker():
     """Non-equilibrium thermochemical data that use species in the configurations should pass the dataset checker.
     """
     check_dataset(LI_SN_LIQUID_DATA)
+
+
+def test_applying_tags(datasets_db):
+    """Test that applying tags updates the appropriate values"""
+    dataset = clean_dataset(CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES)
+    # overwrite tags for this test
+    dataset["tags"] = ["testtag"]
+    datasets_db.insert(dataset)
+    assert len(datasets_db.all()) == 1
+    assert "newkey_from_tag" not in datasets_db.all()[0]
+    apply_tags(datasets_db, {"testtag": {"newkey_from_tag": ["tag", "values"]}})
+    assert len(datasets_db.all()) == 1
+    assert "newkey_from_tag" in datasets_db.all()[0]
+    assert datasets_db.all()[0]["newkey_from_tag"] == ["tag", "values"]
