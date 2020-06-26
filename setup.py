@@ -25,7 +25,7 @@ setup(
         'sympy>=1.2',
         'dask[complete]>=2',
         'distributed>=2',
-        'tinydb>=3.8',
+        'tinydb>=4',
         'scikit-learn',
         'emcee<3',
         'pycalphad>=0.8.2',
