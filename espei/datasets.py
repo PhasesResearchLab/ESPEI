@@ -310,8 +310,9 @@ def add_ideal_exclusions(datasets):
             raise ValueError("ESPEI developer: remove the automatic addition of ideal mixing exclusions")
         for ds in all_single_phase:
             ds['excluded_model_contributions'] = ['idmix']
-    datasets.write_back(all_single_phase)
+            datasets.update(ds, doc_ids=[ds.doc_id])
     return datasets
+
 
 def load_datasets(dataset_filenames):
     """
