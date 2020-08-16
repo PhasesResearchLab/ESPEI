@@ -70,10 +70,10 @@ def _build_feature_matrix(prop, features, desired_data):
         An MxN matrix of M samples (from desired data) and N features.
 
     """
-    transformed_features = sympy.Matrix([feature_transforms[prop](i) for i in features])
+    transformed_features = [feature_transforms[prop](i) for i in features]
     all_samples = get_samples(desired_data)
     feature_matrix = np.empty((len(all_samples), len(transformed_features)), dtype=np.float)
-    feature_matrix[:, :] = [transformed_features.subs({v.T: temp, 'YS': compf[0], 'Z': compf[1]}).evalf() for temp, compf in all_samples]
+    feature_matrix[:, :] = [[trans_feat.subs({v.T: temp, 'YS': compf[0], 'Z': compf[1]}).evalf() for trans_feat in transformed_features] for temp, compf in all_samples]
     return feature_matrix
 
 
