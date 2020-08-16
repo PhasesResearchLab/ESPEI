@@ -20,7 +20,7 @@ setup(
     long_description=readme('README.rst'),
     url='https://espei.org/',
     install_requires=[
-        'numpy',
+        'numpy<1.19',
         'scipy',
         'sympy>=1.2',
         'dask[complete]>=2',
