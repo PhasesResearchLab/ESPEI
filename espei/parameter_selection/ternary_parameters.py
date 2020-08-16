@@ -28,8 +28,8 @@ def build_ternary_feature_matrix(prop, candidate_models, desired_data):
         An MxN matrix of M samples (from desired data) and N features.
 
     """
-    transformed_features = sympy.Matrix([feature_transforms[prop](i) for i in candidate_models])
+    transformed_features = [feature_transforms[prop](i) for i in candidate_models]
     all_samples = get_samples(desired_data)
     feature_matrix = np.empty((len(all_samples), len(transformed_features)), dtype=np.float)
-    feature_matrix[:, :] = [transformed_features.subs({v.T: temp, 'YS': ys, 'V_I': v_i, 'V_J': v_j, 'V_K': v_k}).evalf() for temp, (ys, (v_i, v_j, v_k)) in all_samples]
+    feature_matrix[:, :] = [[trans_feat.subs({v.T: temp, 'YS': ys, 'V_I': v_i, 'V_J': v_j, 'V_K': v_k}).evalf() for trans_feat in transformed_features] for temp, (ys, (v_i, v_j, v_k)) in all_samples]
     return feature_matrix
