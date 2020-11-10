@@ -52,7 +52,8 @@ def calculate_(dbf: Database, species: Sequence[v.Species], phases: Sequence[str
         phase_ds = _compute_phase_values(nonvacant_components, str_statevar_dict,
                                          points, phase_record, output,
                                          maximum_internal_dof, broadcast=broadcast,
-                                         largest_energy=float(1e10), fake_points=fp)
+                                         largest_energy=float(1e10), fake_points=fp,
+                                         parameters={})
         all_phase_data.append(phase_ds)
 
     if len(all_phase_data) > 1:
