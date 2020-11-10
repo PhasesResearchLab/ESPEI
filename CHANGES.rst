@@ -2,6 +2,15 @@
 What's New
 ==========
 
+0.7.8 (2020-11-10)
+==================
+
+This is a  bug fix release with backwards compatible changes.
+
+* Fix a bug trigged by pycalphad 0.8.4 where the new parameter extraction behavior could break the MCMC sampler (`@bocklund`_ - :issue:`132`)
+* Fix a bug where some feature matrices had incorrect shape, stemming from using SymPy.Matrix to symbolically manipulate the data (`@bocklund`_ - :issue:`130`)
+* Migrate to tinydb v4+ (`@bocklund`_ - :issue:`126`)
+
 0.7.7 (2020-04-11)
 ==================
 
