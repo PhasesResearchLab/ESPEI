@@ -450,7 +450,7 @@ def get_dask_config_paths():
     Examples
     --------
     >>> config_files = get_dask_config_paths()
-    >>> len(config_files) > 1
+    >>> len(config_files) >= 1
     True
 
     """
