@@ -11,10 +11,6 @@ Installing ESPEI from PyPI (by ``pip install espei``) is **not** supported. Plea
 
     conda install -c pycalphad -c conda-forge --yes espei
 
-After installation, you must turn off dask's work stealing.
-Change the work stealing setting to ``distributed.scheduler.work-stealing: False`` in dask's configuration.
-See configuration_ below for more details.
-
 
 Development versions
 --------------------
@@ -36,31 +32,3 @@ version of ESPEI and replace it with the latest version from GitHub:
     pip install --no-deps -e .
 
 Upgrading ESPEI later requires you to run ``git pull`` in this directory.
-
-After installation, you must turn off dask's work stealing.
-Change the work stealing setting to ``distributed.scheduler.work-stealing: False`` in dask's configuration.
-See configuration_ below for more details.
-
-
-.. _configuration:
-
-Configuration
--------------
-
-ESPEI uses dask-distributed to parallelize ESPEI.
-
-After installation, you must turn off dask's work stealing!
-Change the your dask configuration file to look something like:
-
-
-.. code-block:: YAML
-
-   distributed:
-     version: 2
-     scheduler:
-       work-stealing: False
-
-
-The configuration file paths can be found by running ``from espei.utils import get_dask_config_paths; get_dask_config_paths()`` in a Python interpreter.
-If multiple configurations are found, the latter configurations take precendence over the former, so check them from last to first.
-See the `dask-distributed documentation <https://distributed.readthedocs.io/en/latest/configuration.html>`_ for more.

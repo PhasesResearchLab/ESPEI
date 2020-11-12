@@ -31,7 +31,8 @@ from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_ta
 from espei.optimizers.opt_mcmc import EmceeOptimizer
 
 TRACE = 15  # TRACE logging level
-
+# Force distributed's work-stealing to be False
+dask.config.set({'distributed.scheduler.work-stealing': False})
 
 parser = argparse.ArgumentParser(description=__doc__)
 
@@ -62,20 +63,6 @@ def log_version_info():
     logging.debug('emcee version       ' + str(emcee.__version__))
     logging.info("If you use ESPEI for work presented in a publication, we ask that you cite the following paper:\n    {}".format(espei.__citation__))
 
-def get_dask_config_paths():
-    candidates = dask.config.paths
-    file_paths = []
-    for path in candidates:
-        if os.path.exists(path):
-            if os.path.isdir(path):
-                file_paths.extend(sorted([
-                    os.path.join(path, p)
-                    for p in os.listdir(path)
-                    if os.path.splitext(p)[1].lower() in ('.json', '.yaml', '.yml')
-                ]))
-            else:
-                file_paths.append(path)
-    return file_paths
 
 def _raise_dask_work_stealing():
     """
