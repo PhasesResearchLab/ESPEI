@@ -447,12 +447,6 @@ def get_dask_config_paths():
     -------
     list
 
-    Examples
-    --------
-    >>> config_files = get_dask_config_paths()
-    >>> len(config_files) >= 1
-    True
-
     """
     candidates = dask.config.paths
     file_paths = []
