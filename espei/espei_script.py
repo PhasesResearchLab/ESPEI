@@ -31,7 +31,8 @@ from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_ta
 from espei.optimizers.opt_mcmc import EmceeOptimizer
 
 TRACE = 15  # TRACE logging level
-
+# Force distributed's work-stealing to be False
+dask.config.set({'distributed.scheduler.work-stealing': False})
 
 parser = argparse.ArgumentParser(description=__doc__)
 
