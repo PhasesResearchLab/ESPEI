@@ -57,6 +57,6 @@ jobs:
       run: |
         conda install pytest mock
         conda list
-        python -c 'import pycalphad; print(f"pycalphad version: {pycalphad.__version__}")'
+        $CONDA/bin/python -c 'import pycalphad; print(f"pycalphad version: {pycalphad.__version__}")'
         $CONDA/bin/pytest -v --doctest-modules espei tests
 
