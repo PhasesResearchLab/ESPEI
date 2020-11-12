@@ -1,6 +1,7 @@
 name: espei_env
 channels:
   - conda-forge
+  - pycalphad
 dependencies:
   - cerberus
   - bibtexparser
