@@ -9,8 +9,7 @@ jobs:
       max-parallel: 6
       matrix:
         python-version: [3.6, 3.7, 3.8]
-        env:
-          pycalphad_develop: [true, false]
+        pycalphad_develop: [true, false]
     steps:
     - uses: actions/checkout@v2
       with:
