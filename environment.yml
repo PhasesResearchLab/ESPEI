@@ -1,4 +1,4 @@
-name: espei_env
+name: base
 channels:
   - conda-forge
   - pycalphad
