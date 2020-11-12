@@ -51,7 +51,7 @@ jobs:
         git clone https://github.com/pycalphad/pycalphad pycalphad-dev
         cd pycalphad-dev
         git checkout develop
-        $CONDA/bin/pip install install --no-deps -e .
+        $CONDA/bin/pip install --no-deps -e .
         cd ..
     - name: Test with pytest
       run: |
