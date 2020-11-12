@@ -47,16 +47,18 @@ jobs:
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
         $CONDA/bin/conda env update --file environment.yml --name base
+    - name: Install pycalphad development version
+      run: |
         $CONDA/bin/conda remove --force pycalphad
         git clone https://github.com/pycalphad/pycalphad pycalphad-dev
         cd pycalphad-dev
         git checkout develop
         $CONDA/bin/pip install --no-deps -e .
         cd ..
+        $CONDA/bin/python -c 'import pycalphad; print(f"pycalphad version: {pycalphad.__version__}")'
     - name: Test with pytest
       run: |
         conda install pytest mock
         conda list
-        $CONDA/bin/python -c 'import pycalphad; print(f"pycalphad version: {pycalphad.__version__}")'
         $CONDA/bin/pytest -v --doctest-modules espei tests
 
