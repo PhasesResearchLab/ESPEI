@@ -46,6 +46,7 @@ jobs:
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
         $CONDA/bin/conda env update --file environment.yml --name base
+        $CONDA/bin/conda install -c conda-forge cython  # needed to build pycalphad
         $CONDA/bin/conda remove --force pycalphad
         git clone https://github.com/pycalphad/pycalphad pycalphad-dev
         cd pycalphad-dev
