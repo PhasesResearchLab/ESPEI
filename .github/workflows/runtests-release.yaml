@@ -22,6 +22,6 @@ jobs:
         $CONDA/bin/conda env update --file environment.yml --name base
     - name: Test with pytest
       run: |
-        conda install pytest
+        conda install pytest mock
         $CONDA/bin/pytest -v --doctest-modules espei tests
 
