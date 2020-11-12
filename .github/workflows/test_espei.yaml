@@ -3,13 +3,13 @@ name: ESPEI tests
 on: [push]
 
 jobs:
-  Tests:
+  pycalphad-release:
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 6
       matrix:
         python-version: [3.6, 3.7, 3.8]
-        pycalphad_develop: [true, false]
+
     steps:
     - uses: actions/checkout@v2
       with:
@@ -22,18 +22,41 @@ jobs:
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
         $CONDA/bin/conda env update --file environment.yml --name base
-    - name: Install pycalphad development version
+    - name: Test with pytest
       run: |
+        conda install pytest mock
+        conda list
+        $CONDA/bin/pytest -v --doctest-modules espei tests
+
+  pycalphad-develop:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 6
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        $CONDA/bin/conda env update --file environment.yml --name base
         $CONDA/bin/conda remove --force pycalphad
         git clone https://github.com/pycalphad/pycalphad pycalphad-dev
         cd pycalphad-dev
         git checkout develop
         $CONDA/bin/pip install --no-deps -e .
         cd ..
-        $CONDA/bin/python -c 'import pycalphad; print(f"pycalphad version: {pycalphad.__version__}")'
-      if: pycalphad_deveop
     - name: Test with pytest
       run: |
         conda install pytest mock
         conda list
+        $CONDA/bin/python -c 'import pycalphad; print(f"pycalphad version: {pycalphad.__version__}")'
         $CONDA/bin/pytest -v --doctest-modules espei tests
+
