@@ -66,7 +66,7 @@ def log_version_info():
 
 def _raise_dask_work_stealing():
     """
-    Raise if work stealing is turn on in dask
+    Raise if work stealing is turned on in dask
 
     Raises
     -------

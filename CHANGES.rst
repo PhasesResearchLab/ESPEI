@@ -2,6 +2,11 @@
 What's New
 ==========
 
+0.7.10 (2020-11-14)
+==================
+
+This is a minor bugfix release that addresses a potential inconsistency with hyphen/underscore usage in dask configuration files (`@bocklund`_ - :issue:`136`).
+
 0.7.9 (2020-11-12)
 ==================
 
@@ -13,7 +18,7 @@ This is a minor maintenance release that automatically disables work stealing (u
 
 This is a bug fix release with backwards compatible changes.
 
-* Fix a bug trigged by pycalphad 0.8.4 where the new parameter extraction behavior could break the MCMC sampler (`@bocklund`_ - :issue:`132`)
+* Fix a bug triggered by pycalphad 0.8.4 where the new parameter extraction behavior could break the MCMC sampler (`@bocklund`_ - :issue:`132`)
 * Fix a bug where some feature matrices had incorrect shape, stemming from using SymPy.Matrix to symbolically manipulate the data (`@bocklund`_ - :issue:`130`)
 * Migrate to tinydb v4+ (`@bocklund`_ - :issue:`126`)
 
@@ -38,10 +43,10 @@ This is a minor bug fix release.
 0.7.5 (2020-03-09)
 ==================
 
-This release includes performance optimizations, bugfixes and new features for MCMC simulations.
+This release includes performance optimizations, bug fixes and new features for MCMC simulations.
 
 * This version of ESPEI now requires pycalphad 0.8.2 or later for the features below.
-* Fitting subsystems of a large database is explictly supported and tested for all implemented MCMC data types. Fixes a bug in ZPF error and activity error where having phases in the database that are inactive in the subsystem would raise errors (`@bocklund`_ - :issue:`118`).
+* Fitting subsystems of a large database is explicitly supported and tested for all implemented MCMC data types. Fixes a bug in ZPF error and activity error where having phases in the database that are inactive in the subsystem would raise errors (`@bocklund`_ - :issue:`118`).
 * Computing thermochemical error and phase boundary (ZPF) error are now optimized to reduce overhead time in dependencies (`@bocklund`_ - :issue:`117`)
 * A new feature for calculating approximate driving force for phase boundary data is implemented, which can give performance improvements of 3x-10x, depending on the system (`@bocklund`_ - :issue:`115`)
 
@@ -59,7 +64,7 @@ This change includes several new features and performance improvements.
 
 * Drop Python 2 support (Python 2 is no longer supported on January 1, 2020).
 * Update dask and distributed support to versions >=2. (`@bocklund`_)
-* Users can tweak the AICc penalty factor for each phase to nudge parameter selection towards adding more or fewer parameters based on user modeling intitution. (`@bocklund`_)
+* Users can tweak the AICc penalty factor for each phase to nudge parameter selection towards adding more or fewer parameters based on user modeling intuition. (`@bocklund`_)
 * Allow for tracefile and probfile to be set to None. (`@jwsiegel2510`_)
 * Weighting individual datasets in single phase fitting is now implemented via scikit-learn.  (`@bocklund`_)
 * Performance improvements by reducing overhead. (`@bocklund`_)
@@ -77,7 +82,7 @@ This is a small bugfix release that fixes the inability to provide the EmceeOpti
 0.7.1 (2019-06-03)
 ==================
 
-This is a significant update reflecting many internal improvements, new features, and bugfixes. Users using the YAML input or the ``run_espei`` Python API should see entirely backwards compatible changes with ESPEI 0.6.2.
+This is a significant update reflecting many internal improvements, new features, and bug fixes. Users using the YAML input or the ``run_espei`` Python API should see entirely backwards compatible changes with ESPEI 0.6.2.
 
 pycalphad 0.8, which introduced many `key features <https://pycalphad.org/docs/latest/CHANGES.html>`_ for these changes is now required.
 This should almost completely eliminate the time to build phases due to the symengine backend (phases will likely build in less time than to call the MCMC objective function).
