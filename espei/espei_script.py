@@ -72,6 +72,10 @@ def _raise_dask_work_stealing():
     -------
     ValueError
 
+    Examples
+    --------
+    >>> _raise_dask_work_stealing()  # should not raise if dask is set correctly
+
     """
     import distributed
     has_work_stealing = distributed.config['distributed']['scheduler']['work-stealing']
