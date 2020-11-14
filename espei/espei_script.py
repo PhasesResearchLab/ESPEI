@@ -26,7 +26,7 @@ from pycalphad import Database
 import espei
 from espei.validation import schema
 from espei import generate_parameters
-from espei.utils import ImmediateClient, get_dask_config_paths, database_symbols_to_fit
+from espei.utils import ImmediateClient, database_symbols_to_fit
 from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags, add_ideal_exclusions
 from espei.optimizers.opt_mcmc import EmceeOptimizer
 
@@ -72,14 +72,18 @@ def _raise_dask_work_stealing():
     -------
     ValueError
 
+    Examples
+    --------
+    >>> _raise_dask_work_stealing()  # should not raise if dask is set correctly
+
     """
-    import distributed
-    has_work_stealing = distributed.config['distributed']['scheduler']['work-stealing']
+    import dask, distributed
+    has_work_stealing = dask.config.get('distributed.scheduler.work_stealing')
     if has_work_stealing:
-        raise ValueError("The parameter 'work-stealing' is on in dask. Enabling this parameter causes some instability. "
-            "Set 'distributed.scheduler.work-stealing: False' in your dask configuration. "
-            "Configuration files on this machine are:\n{} (latter files have priority).\n"
-            "See the example at http://espei.org/en/latest/installation.html#configuration for more.".format(get_dask_config_paths()))
+        raise ValueError("The parameter 'distributed.scheduler.work-stealing' is on in dask. "
+                         "This parameter causes some instability for long-running processes. "
+                         "As of ESPEI v0.7.9, 'work-stealing' should be disabled automatically. "
+                         "If you are seeing this error, please contact a developer.")
 
 
 def get_run_settings(input_dict):

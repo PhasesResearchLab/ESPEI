@@ -435,29 +435,3 @@ def popget(d, key, default=None):
         return d.pop(key)
     except KeyError:
         return default
-
-
-def get_dask_config_paths():
-    """
-    Return a list of configuration file paths for dask.
-
-    The last path in the list has the highest precedence.
-
-    Returns
-    -------
-    list
-
-    """
-    candidates = dask.config.paths
-    file_paths = []
-    for path in candidates:
-        if os.path.exists(path):
-            if os.path.isdir(path):
-                file_paths.extend(sorted([
-                    os.path.join(path, p)
-                    for p in os.listdir(path)
-                    if os.path.splitext(p)[1].lower() in ('.json', '.yaml', '.yml')
-                ]))
-            else:
-                file_paths.append(path)
-    return file_paths
