@@ -13,7 +13,7 @@ This is a minor bugfix release that addresses a potential inconsistency with hyp
 This is a minor maintenance release that automatically disables work stealing (users are no longer required to configure this themselves) (`@bocklund`_ - :issue:`134`). 
 
 
-*0.7.8 (2020-11-10)
+0.7.8 (2020-11-10)
 ==================
 
 This is a bug fix release with backwards compatible changes.
