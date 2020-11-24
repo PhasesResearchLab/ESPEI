@@ -7,6 +7,7 @@ jobs:
     name: Test Python ${{ matrix.python-version }} - pycalphad dev version ${{ matrix.pycalphad_develop_version }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       max-parallel: 6
       matrix:
         python-version: [3.6, 3.7, 3.8]
