@@ -1,0 +1,23 @@
+name: base
+channels:
+  - conda-forge
+  - pycalphad
+dependencies:
+  - cerberus
+  - bibtexparser
+  - emcee<3
+  - dask>=0.18
+  - distributed
+  - numpy
+  - pycalphad>=0.8.2
+  - pyyaml
+  - scikit-learn
+  - scipy
+  - sympy>=1.5.1
+  - tinydb>=4
+  # developer dependencies
+  # tests
+  - mock
+  - pytest
+  # PyPI
+  - twine
