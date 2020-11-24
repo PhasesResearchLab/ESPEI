@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   Tests:
-    name: Test Python ${{ matrix.python-version }} - pycalphad dev version ${{ matrix.pycalphad_develop_version }}
+    name: Test Python ${{ matrix.python-version }} - ${{ "pycalphad develop" if matrix.pycalphad_develop_version else "pycalphad release"}}
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 6
