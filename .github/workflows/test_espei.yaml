@@ -4,8 +4,10 @@ on: [push]
 
 jobs:
   Tests:
+    name: Test Python ${{ matrix.python-version }} - pycalphad dev version ${{ matrix.pycalphad_develop_version }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       max-parallel: 6
       matrix:
         python-version: [3.6, 3.7, 3.8]
@@ -15,26 +17,29 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
-    - name: Set up Python
-      uses: actions/setup-python@v2
+    - uses: conda-incubator/setup-miniconda@v2
       with:
+        auto-update-conda: true
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        $CONDA/bin/conda env update --file environment.yml --name base
+        environment-file: environment-dev.yml
+    - name: Conda info
+      # login shell should be used so conda activate runs
+      shell: bash -l {0}
+      run: conda info
+    - name: Conda list
+      shell: bash -l {0}
+      run: conda list
     - name: Install pycalphad development version
+      shell: bash -l {0}
       if: matrix.pycalphad_develop_version
       run: |
-        $CONDA/bin/conda remove --force pycalphad
+        conda remove --force pycalphad
         git clone https://github.com/pycalphad/pycalphad pycalphad-dev
         cd pycalphad-dev
         git checkout develop
-        $CONDA/bin/pip install --no-deps -e .
+        pip install --no-deps -e .
         cd ..
-        $CONDA/bin/python -c 'import pycalphad; print(f"pycalphad version: {pycalphad.__version__}")'
+        python -c 'import pycalphad; print(f"pycalphad version: {pycalphad.__version__}")'
     - name: Test with pytest
-      run: |
-        conda install pytest mock
-        conda list
-        $CONDA/bin/pytest -v --doctest-modules espei tests
+      shell: bash -l {0}
+      run: pytest -v --doctest-modules espei tests
