@@ -54,6 +54,10 @@ class ImmediateClient(Client):
     returned by map.
     """
     def map(self, f, *iterators, **kwargs):
+        """Map a function on a sequence of arguments.
+
+        Any keyword arguments are passed to distributed.Client.map
+        """
         _client = super(ImmediateClient, self)
         result = _client.gather(_client.map(f, *[list(it) for it in iterators], **kwargs))
         return result
