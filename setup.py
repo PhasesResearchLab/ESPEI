@@ -18,6 +18,7 @@ setup(
     },
     license='MIT',
     long_description=readme('README.rst'),
+    long_description_content_type='text/x-rst',
     url='https://espei.org/',
     install_requires=[
         'cerberus',
@@ -38,7 +39,6 @@ setup(
             'sphinx',
             'sphinx_rtd_theme',
             'pytest',
-            'nose', # required only until matplotlib switches to pytest
             'mock',
             'twine',
         ],
