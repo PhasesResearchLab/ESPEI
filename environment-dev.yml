@@ -17,6 +17,7 @@ dependencies:
   # Developer dependencies
   # Tests
   - pytest
+  - mock
   # PyPI
   - twine
   # Documentation
