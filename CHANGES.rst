@@ -3,14 +3,14 @@ What's New
 ==========
 
 0.7.10 (2020-11-14)
-==================
+===================
 
 This is a minor bugfix release that addresses a potential inconsistency with hyphen/underscore usage in dask configuration files (`@bocklund`_ - :issue:`136`).
 
 0.7.9 (2020-11-12)
 ==================
 
-This is a minor maintenance release that automatically disables work stealing (users are no longer required to configure this themselves) (`@bocklund`_ - :issue:`134`). 
+This is a minor maintenance release that automatically disables work stealing (users are no longer required to configure this themselves) (`@bocklund`_ - :issue:`134`).
 
 
 0.7.8 (2020-11-10)

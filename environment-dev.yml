@@ -14,9 +14,13 @@ dependencies:
   - scipy
   - sympy>=1.5.1
   - tinydb>=4
-  # developer dependencies
-  # tests
-  - mock
+  # Developer dependencies
+  # Tests
   - pytest
+  - mock
   # PyPI
   - twine
+  # Documentation
+  - ipython  # for pygments syntax highlighting
+  - sphinx
+  - sphinx_rtd_theme

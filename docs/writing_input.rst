@@ -352,7 +352,7 @@ For a parameter to be fit, it must be a symbol where the name starts with ``VV``
 For a ``TDB`` formatted database, this means that the free parameters must be functions of a single value that are used in your parameters.
 For example, the following is a valid symbol to fit:
 
-.. code-block:: none
+::
 
    FUNCTION VV0000  298.15  10000; 6000 N !
 

@@ -19,59 +19,8 @@
 #
 import os
 import sys
-from unittest.mock import Mock
 sys.path.insert(0, os.path.abspath('..'))
 
-MOCK_MODULES = [
-    'bibtexparser',
-    'bibtexparser.bparser',
-    'bibtexparser.customization',
-    'cerberus',
-    'cycler',
-    'dask',
-    'distributed',
-    'emcee',
-    'emcee.utils',
-    'espei.refdata',
-    'matplotlib',
-    'matplotlib.lines',
-    'matplotlib.pyplot',
-    'matplotlib.testing.decorators',
-    'mock',
-    'numpy',
-    'numpy.linalg',
-    'pycalphad',
-    'pycalphad.codegen',
-    'pycalphad.codegen.callables',
-    'pycalphad.core',
-    'pycalphad.core.calculate',
-    'pycalphad.core.eqsolver',
-    'pycalphad.core.equilibrium',
-    'pycalphad.core.light_dataset',
-    'pycalphad.core.phase_rec',
-    'pycalphad.core.starting_point',
-    'pycalphad.core.sympydiff_utils',
-    'pycalphad.core.utils',
-    'pycalphad.io',
-    'pycalphad.io.database',
-    'pycalphad.plot.eqplot',
-    'pycalphad.plot.utils',
-    'pycalphad.variables',
-    'pytest',
-    'scipy',
-    'scipy.optimize',
-    'scipy.stats',
-    'sklearn',
-    'sklearn.linear_model',
-    'symengine',
-    'sympy',
-    'tinydb',
-    'tinydb.storages',
-    'yaml',
-    ]
-
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = Mock()
 
 # -- General configuration ------------------------------------------------
 

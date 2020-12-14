@@ -26,12 +26,6 @@
 ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for thermodynamic database development within the CALPHAD method. It uses `pycalphad`_ for calculating Gibbs free energies of thermodynamic models.
 
 
-.. admonition:: Upcoming Workshops
-
-    * `Software Tools from Atomistics to Phase Diagrams (November 10 and 11, 2020) <https://workshop.materialsgenomefoundation.org>`_: REGISTRATION CLOSED
-    * `Software Tools from Atomistics to Phase Diagrams (December 8 and 9, 2020) <https://workshop.materialsgenomefoundation.org>`_: REGISTRATION COMING SOON
-
-
 What is ESPEI?
 --------------
 
@@ -163,7 +157,7 @@ License
 
 ESPEI is MIT licensed.
 
-.. code-block:: none
+::
 
    The MIT License (MIT)
 
@@ -197,7 +191,7 @@ If you use ESPEI for work presented in a publication, we ask that you cite the f
 
 B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg, MRS Commun. (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_.
 
-.. code-block:: none
+::
 
    @article{Bocklund2019ESPEI,
             archivePrefix = {arXiv},

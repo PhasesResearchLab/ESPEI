@@ -88,7 +88,7 @@ If it was successful, you should have ran the YAML file:
 
 and generated a database, ``out.tdb``, containing our custom ``GHSERAG`` function (among others):
 
-.. code-block:: none
+::
 
    FUNCTION GHSERAG 298.15 118.202013*T - 7209.512; 1234.93 Y 190.266404*T -
       15095.252; 3000.0 N !
