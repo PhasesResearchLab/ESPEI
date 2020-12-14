@@ -157,7 +157,7 @@ License
 
 ESPEI is MIT licensed.
 
-.. code-block:: none
+::
 
    The MIT License (MIT)
 
@@ -191,7 +191,7 @@ If you use ESPEI for work presented in a publication, we ask that you cite the f
 
 B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg, MRS Commun. (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_.
 
-.. code-block:: none
+::
 
    @article{Bocklund2019ESPEI,
             archivePrefix = {arXiv},
