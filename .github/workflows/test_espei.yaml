@@ -27,7 +27,7 @@ jobs:
         with:
           auto-update-conda: true
           environment-file: environment-dev.yml
-      - run: cd espei/docs
+      - run: cd docs
       # Build HTML and LaTeX docs
       # Treat all warnings as errors and "keep-going" to collect all warnings
       - run: make SPHINXOPTS="-W --keep-going" html
