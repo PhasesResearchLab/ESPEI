@@ -1,9 +1,24 @@
 name: ESPEI tests
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
-  Tests:
+
+# twine-check: to determine that the source distribution would be valid on PyPI
+  twine-check:
+    name: Run twine check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+      - run: pip install twine
+      - run: python setup.py sdist
+      - run: twine check dist/*
+
+# PyTest: Run automated tests with PyTest using both release and development versions of pycalphad
+  PyTest:
     name: Test Python ${{ matrix.python-version }} - pycalphad dev version ${{ matrix.pycalphad_develop_version }}
     runs-on: ubuntu-latest
     strategy:
