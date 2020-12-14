@@ -20,3 +20,7 @@ dependencies:
   - pytest
   # PyPI
   - twine
+  # Documentation dependences
+  - ipython  # for pygments syntax highlighting
+  - sphinx
+  - sphinx_rtd_theme
