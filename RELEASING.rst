@@ -34,7 +34,7 @@ Uploading to PyPI
 1. ``rm -R dist/*`` on Linux/OSX or ``del dist/*`` on Windows.
 #. ``python setup.py sdist`` to create a source distribution.
 #. Make sure that the script correctly detected the new version exactly and not a
-   dirty or revised state of the repo.
+   dirty or revised state of the repository.
 #. ``twine upload -r pypi -u bocklund dist/*`` to upload to PyPI.
 
 
@@ -43,7 +43,7 @@ Updating the conda-forge feedstock
 
 conda-forge is a community-developed platform for distributing packages to the
 `conda-forge channel on Anaconda Cloud`_. Metadata for the packages are hosted
-in *feedstocks* and built using `conda-build`_ in a continous integration
+in *feedstocks* and built using `conda-build`_ in a continuous integration
 pipeline.
 
 `conda-build`_ is driven by a ``recipe/meta.yaml`` configuration file, which
@@ -68,7 +68,7 @@ conda-forge autotick bot (preferred)
    will automatically open a pull request in the `conda-forge/espei-feedstock`_
    repository. This usually happens in less than 10 minutes after the PyPI
    release.
-#. Verify that the ``recipe/meta.yaml`` requirements match the dependencies in ``environment-dev.yaml``.
+#. Verify that the ``recipe/meta.yaml`` requirements match the dependencies in ``environment-dev.yml``.
 #. Once all the checks pass, merge the pull request.
 
 
@@ -84,7 +84,7 @@ request that updates the ``recipe/meta.yaml`` file.
 #. Fork the `conda-forge/espei-feedstock`_ repository.
 #. Update the version number and hash in the ``recipe/meta.yaml`` file and set
    the build number to zero if the version number changed.
-#. Verify that the ``recipe/meta.yaml`` requirements match the dependencies in ``environment-dev.yaml``.
+#. Verify that the ``recipe/meta.yaml`` requirements match the dependencies in ``environment-dev.yml``.
 #. Open a PR against the `conda-forge/espei-feedstock`_ repository
 #. Once all the checks pass, merge the pull request.
 
