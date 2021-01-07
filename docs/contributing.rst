@@ -7,7 +7,7 @@ Contributing to ESPEI
 =====================
 
 This is the place to start as a new ESPEI contributor. This guide assumes you have
-`installed a development version of ESPEI <installing-development-versions>`_.
+:ref:`installed a development version of ESPEI <installing-development-versions>`.
 
 The next sections lay out the basics of getting an ESPEI development set up and the development standards.
 Then the :ref:`Software design` sections walk through the key parts of the codebase.
@@ -18,10 +18,7 @@ Tests
 
 Even though much of ESPEI is devoted to being a multi-core, stochastic user tool, we strive to test all logic and functionality.
 We are continuously maintaining tests and writing tests for previously untested code.
-
 As a general rule, any time you write a new function or modify an existing function you should write or maintain a test for that function.
-
-ESPEI uses `pytest <https://pytest.org>`_ as a test runner.
 
 Some tips for testing:
 
@@ -32,7 +29,7 @@ Some tips for testing:
 Running Tests
 -------------
 
-The tests can be run from the root directory of the cloned repository:
+ESPEI uses `pytest <https://pytest.org>`_ as a test runner. The tests can be run from the root directory of the cloned repository:
 
 .. code-block:: bash
 
