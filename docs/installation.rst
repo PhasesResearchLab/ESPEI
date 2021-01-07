@@ -12,6 +12,8 @@ Installing ESPEI from PyPI (by ``pip install espei``) is **not** supported. Plea
     conda install -c conda-forge espei
 
 
+.. _installing-development-versions:
+
 Development versions
 --------------------
 
