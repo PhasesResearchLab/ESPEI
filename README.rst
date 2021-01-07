@@ -46,7 +46,7 @@ Goals
 2. Enable development of CALPHAD-type models for Gibbs energy, thermodynamic or kinetic properties
 3. Provide a platform to build and apply novel model selection, optimization, and uncertainty quantification methods
 
-The implementation for ESPEI involves first performing parameter generation by calculating parameters in thermodynamic models that are linearly described by `non-equilibrium thermochemical data <https://espei.org/en/latest/input_data.html#non-equilibrium-thermochemical-data`_.
+The implementation for ESPEI involves first performing parameter generation by calculating parameters in thermodynamic models that are linearly described by `non-equilibrium thermochemical data <https://espei.org/en/latest/input_data.html#non-equilibrium-thermochemical-data>`_.
 Then Markov Chain Monte Carlo (MCMC) is used to optimize the candidate models from the parameter generation to `phase boundary data <https://espei.org/en/latest/input_data.html#phase-boundary-data>_`.
 
 
