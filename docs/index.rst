@@ -1,8 +1,3 @@
-.. ESPEI documentation master file, created by
-   sphinx-quickstart on Sat Jun 24 22:30:49 2017.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 .. |logo| image:: _static/ESPEI-logo.png
           :height: 30pt
           :width: 30pt
