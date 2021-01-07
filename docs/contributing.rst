@@ -6,49 +6,11 @@
 Contributing to ESPEI
 =====================
 
-This is the place to start as a new ESPEI contributor.
+This is the place to start as a new ESPEI contributor. This guide assumes you have
+:ref:`installed a development version of ESPEI <installing-development-versions>`.
 
 The next sections lay out the basics of getting an ESPEI development set up and the development standards.
 Then the :ref:`Software design` sections walk through the key parts of the codebase.
-
-Installing in develop mode
-==========================
-
-It is suggested to use ESPEI in development mode if you will be contributing features to the source code.
-As usual, you should install ESPEI into a virtual environment.
-
-All of the dependencies can be installed either by conda or pip.
-
-Then clone the source and install ESPEI in development mode with pip:
-
-.. code-block:: bash
-
-    git clone https://github.com/PhasesResearchLab/espei.git
-    pip install --editable espei
-
-Even if you use Anaconda, it is recommended that you use either ``pip`` or ``python setup.py develop`` to install ESPEI in development mode.
-This is because the ``conda-build`` tool, which would typically be used for this, is not well maintained at the time of writing.
-
-Develop mode on Windows
------------------------
-
-Because of compiler issues, ESPEI's dependencies are challenging to install on Windows.
-As mentioned above, ideally the ``conda-build`` tool could be used, but it is not able to be used.
-Therefore the recommended way to install ESPEI is to
-
-1. Install ESPEI into a virtual environment from Anaconda, pulling all of the packages with it
-#. Remove ESPEI without removing the other packages
-#. Install ESPEI in develop mode with pip or setuptools from the source repository
-
-The steps to do this on the command line are as follows
-
-.. code-block:: bash
-
-    conda create -n espei_dev espei
-    activate espei_dev
-    conda remove --force espei
-    git clone https://github.com/PhasesResearchLab/espei.git
-    pip install --editable espei
 
 
 Tests
@@ -56,34 +18,22 @@ Tests
 
 Even though much of ESPEI is devoted to being a multi-core, stochastic user tool, we strive to test all logic and functionality.
 We are continuously maintaining tests and writing tests for previously untested code.
-
 As a general rule, any time you write a new function or modify an existing function you should write or maintain a test for that function.
-
-ESPEI uses `pytest <https://pytest.org>`_ as a test runner.
 
 Some tips for testing:
 
 * Ideally you would practicing test driven development by writing tests of your intended results before you write the function.
-* If possible, keep the tests small and fast. If you do have a long running tests (longer than ~15 second run time) mark the test with the ``@pytest.mark.slow`` decorator.
-* See the `NumPy/SciPy testing guidelines <https://github.com/numpy/numpy/blob/master/doc/TESTS.rst.txt>`_ for more tips
+* If possible, keep the tests small and fast.
+* See the `NumPy/SciPy testing guidelines <https://github.com/numpy/numpy/blob/master/doc/TESTS.rst.txt>`_ for more tips.
 
 Running Tests
 -------------
 
-If you will be developing in ESPEI, it is likely that you'll want to run the
-test suite or build the documentation. The tests require the addition of the
-pytest, nose, and mock packages, while building the docs requires sphinx and
-sphinx_rtd_theme. These can be installed by running
+ESPEI uses `pytest <https://pytest.org>`_ as a test runner. The tests can be run from the root directory of the cloned repository:
 
 .. code-block:: bash
 
-   conda install mock pytest nose sphinx sphinx_rtd_theme
-
-The tests can be run from the root directory of the cloned repository:
-
-.. code-block:: bash
-
-   pytest --doctest-modules tests espei
+   pytest -v --doctest-modules espei tests
 
 
 Style
