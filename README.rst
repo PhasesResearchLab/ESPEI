@@ -55,7 +55,7 @@ Then Markov Chain Monte Carlo (MCMC) is used to optimize the candidate models fr
     :scale: 100%
 
     Cu-Mg phase diagram from a database created with and optimized by ESPEI.
-    See the :ref:`Cu-Mg Example`.
+    See the `Cu-Mg Example <https://espei.org/en/latest/cu-mg-example.html>`_.
 
 
 History
