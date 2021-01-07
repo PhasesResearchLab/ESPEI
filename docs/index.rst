@@ -129,7 +129,7 @@ See `what's new <CHANGES.html>`_!
 
    contributing
    design
-
+   RELEASING
 
 .. raw:: latex
 
