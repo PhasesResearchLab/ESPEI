@@ -1,23 +1,53 @@
-=====
-ESPEI
-=====
+.. |logo| image:: docs/_static/ESPEI-logo.png
+          :height: 30pt
+          :width: 30pt
+          :alt: Logo
 
-ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for automated thermodynamic database development within the CALPHAD method.
+============
+|logo| ESPEI
+============
 
-The ESPEI package is based on a fork of `pycalphad-fitting`_ and uses `pycalphad`_ for calculating Gibbs free energies of thermodynamic models.
-The implementation for ESPEI involves first fitting single-phase data by calculating parameters in thermodynamic models that are linearly described by the single-phase input data.
-Then Markov Chain Monte Carlo (MCMC) is used to optimize the candidate models from the single-phase fitting to multi-phase zero-phase fraction data.
-Single-phase and multi-phase fitting methods are described in Chapter 3 of `Richard Otis's thesis`_.
 
-The benefit of this approach is the automated, simultaneous fitting for many parameters that yields uncertainty quantification, as shown in Otis and Liu High-Throughput Thermodynamic Modeling and Uncertainty Quantification for ICME. `Jom 69, (2017)`_.
+ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for thermodynamic database development within the CALPHAD method. It uses `pycalphad`_ for calculating Gibbs free energies of thermodynamic models.
 
-The name and idea of ESPEI are originally based off of Shang, Wang, and Liu, ESPEI: Extensible, Self-optimizing Phase Equilibrium Infrastructure for Magnesium Alloys `Magnes. Technol. 2010 617-622 (2010)`_.
+Read the documentation at `espei.org <https://espei.org>`_.
 
-.. _pycalphad-fitting: https://github.com/richardotis/pycalphad-fitting
-.. _pycalphad: http://pycalphad.org
-.. _Richard Otis's thesis: https://etda.libraries.psu.edu/catalog/s1784k73d
-.. _Jom 69, (2017): http://dx.doi.org/10.1007/s11837-017-2318-6
-.. _Magnes. Technol. 2010 617-622 (2010): http://www.phases.psu.edu/wp-content/uploads/2010-Shang-Shunli-MagTech-ESPEI-0617-1.pdf
+Installation Anaconda (recommended)
+-----------------------------------
+
+ESPEI does not require any special compiler, but several dependencies do.
+Therefore it is suggested to install ESPEI from conda-forge.
+
+.. code-block:: bash
+
+    conda install -c conda-forge espei
+
+
+What is ESPEI?
+--------------
+
+1. ESPEI parameterizes CALPHAD models with enthalpy, entropy, and heat capacity data using the corrected Akiake Information Criterion (AICc). This parameter generation step augments the CALPHAD modeler by providing tools for data-driven model selection, rather than relying on a modeler's intuition alone.
+2. ESPEI optimizes CALPHAD model parameters to thermochemical and phase boundary data and quantifies the uncertainty of the model parameters using Markov Chain Monte Carlo (MCMC). This is similar to the PARROT module of Thermo-Calc, but goes beyond by adjusting all parameters simultaneously and evaluating parameter uncertainty.
+
+Details on the implementation of ESPEI can be found in the publication: B. Bocklund *et al.*, MRS Communications 9(2) (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_.
+
+What ESPEI can do?
+------------------
+
+ESPEI can be used to generate model parameters for CALPHAD models of the Gibbs energy that follow the temperature-dependent polynomial by Dinsdale (CALPHAD 15(4) 1991 317-425) within the compound energy formalism (CEF) for endmembers and Redlich-Kister-Mugganu excess mixing parameters in unary, binary and ternary systems.
+
+All thermodynamic quantities are computed by pycalphad. The MCMC-based Bayesian parameter estimation can optimize data for any model that is supported by pycalphad, including models beyond the endmember Gibbs energies Redlich-Kister-Mugganiu excess terms, such as parameters in the ionic liquid model, magnetic, or two-state models. Performing Bayesian parameter estimation for arbitrary multicomponent thermodynamic data is supported.
+
+
+Goals
+-----
+
+1. Offer a free and open-source tool for users to develop multicomponent databases with quantified uncertainty
+2. Enable development of CALPHAD-type models for Gibbs energy, thermodynamic or kinetic properties
+3. Provide a platform to build and apply novel model selection, optimization, and uncertainty quantification methods
+
+The implementation for ESPEI involves first performing parameter generation by calculating parameters in thermodynamic models that are linearly described by `non-equilibrium thermochemical data <https://espei.org/en/latest/input_data.html#non-equilibrium-thermochemical-data`_.
+Then Markov Chain Monte Carlo (MCMC) is used to optimize the candidate models from the parameter generation to `phase boundary data <https://espei.org/en/latest/input_data.html#phase-boundary-data>_`.
 
 
 .. figure:: docs/_static/cu-mg-mcmc-phase-diagram.png
@@ -25,178 +55,20 @@ The name and idea of ESPEI are originally based off of Shang, Wang, and Liu, ESP
     :scale: 100%
 
     Cu-Mg phase diagram from a database created with and optimized by ESPEI.
-    See the `Cu-Mg Example <http://espei.org/en/latest/cu-mg-example.html>`_.
+    See the :ref:`Cu-Mg Example`.
 
 
-Installation
-============
+History
+-------
 
+The ESPEI package is based on a fork of `pycalphad-fitting`_. The name and idea of ESPEI are originally based off of Shang, Wang, and Liu, ESPEI: Extensible, Self-optimizing Phase Equilibrium Infrastructure for Magnesium Alloys `Magnes. Technol. 2010 617-622 (2010)`_.
 
-Anaconda (recommended)
-----------------------
+Implementation details for ESPEI have been described in the following publications:
 
-ESPEI does not require any special compiler, but several dependencies do.
-Therefore it is suggested to install ESPEI from conda-forge.
+- B. Bocklund *et al.*, MRS Communications 9(2) (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_
+- R. Otis *et al.*, JOM 69 (2017) doi:`10.1007/s11837-017-2318-6 <http://doi.org/10.1007/s11837-017-2318-6>`_
+- Richard Otis's `thesis <https://etda.libraries.psu.edu/catalog/s1784k73d>`_
 
-.. code-block:: bash
-
-    conda install -c pycalphad -c msys2 -c conda-forge --yes espei
-
-
-PyPI
-----
-
-Before you install ESPEI via PyPI, be aware that pycalphad and
-emcee must be compiled and pycalphad requires an external
-dependency of `Ipopt <https://projects.coin-or.org/Ipopt>`_.
-
-.. code-block:: bash
-
-    pip install espei
-
-
-Development versions
---------------------
-
-You may install ESPEI however you like, but here we suggest using
-Anaconda to download all of the required dependencies. This
-method installs ESPEI with Anaconda, removes specifically the
-ESPEI package, and replaces it with the package from GitHub.
-
-.. code-block:: bash
-
-    git clone https://github.com/phasesresearchlab/espei.git
-    cd espei
-    conda install espei
-    conda remove --force espei
-    pip install -e .
-
-Upgrading ESPEI later requires you to run ``git pull`` in this directory.
-
-
-Usage
-=====
-
-ESPEI has two different fitting modes: single-phase and multi-phase fitting.
-You can run either of these modes or both of them sequentially.
-
-To run either of the modes, you need to have a phase models file that describes the phases in the system using the standard CALPHAD approach within the compound energy formalism.
-You also need to describe the data that ESPEI should fit to.
-You will need single-phase and multi-phase data for a full run.
-Fit settings and all datasets are stored as JSON files and described in detail at the `Gathering input data <http://espei.org/en/latest/input_data.html>`_ page.
-All of your input datasets should be validated by running ``espei --check-datasets my-input-datasets``, where ``my-input-datasets`` is a folder of all your JSON files.
-
-The main output result is going to be a database (defaults to ``out.tdb``), an array of the steps in the MCMC chain (defaults to ``chain.npy``), and the an array of the log-probabilities for each iteration and chain (defaults to ``lnprob.npy``).
-
-Single-phase only
------------------
-
-If you have only heat capacity, entropy and enthalpy data and mixing data (e.g. from first-principles),
-you may want to see the starting point for your MCMC calculation.
-
-Create an input file called ``espei-in.yaml``.
-
-.. code-block:: yaml
-
-    system:
-      phase_models: my-phases.json
-      datasets: my-input-datasets
-    generate_parameters:
-      excess_model: linear
-      ref_state: SGTE91
-
-Then ESPEI can be run by running
-
-.. code-block:: bash
-
-    espei --input espei-in.yaml
-
-
-Multi-phase only
-----------------
-
-If you have a database already and just want to do a multi-phase fitting, you can specify a starting TDB file (named ``my-tdb.tdb``) with
-
-.. code-block:: YAML
-
-    system:
-      phase_models: my-phases.json
-      datasets: my-input-data
-    mcmc:
-      mcmc_steps: 1000
-      input_db: my-tdb.tdb                
-
-The TDB file you input must have all of the degrees of freedom you want as FUNCTIONs with names beginning with ``VV``.
-
-Restart from previous run-phase only
-------------------------------------
-
-If you've run an MCMC fitting already in ESPEI and have a chain file called ``my-previous-chain.npy`` , then you can resume the calculation with the following input file
-
-.. code-block:: yaml
-
-    system:
-      phase_models: my-phases.json
-      datasets: my-input-data
-    mcmc:
-      mcmc_steps: 1000
-      input_db: my-tdb.tdb
-      restart_chain: my-previous-chain.npy
-
-
-Full run
---------
-
-A minimal full run of ESPEI with single phase fitting and MCMC fitting is done by the following
-
-.. code-block:: yaml
-
-    system:
-      phase_models: my-phases.json
-      datasets: my-input-data
-    generate_parameters:
-      excess_model: linear
-      ref_state: SGTE91
-    mcmc:
-      mcmc_steps: 1000
-
-
-Input Customization
--------------------
-
-ESPEI lets you control many aspects of your calculations with the input files shown above.
-See `Writing input files <http://espei.org/en/latest/writing_input.html>`_ for a full description of all possible inputs.
-
-
-FAQ
----
-
-Q: There is an error in my JSON files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-A: Common mistakes are using single quotes instead of the double quotes required by JSON files.
-Another common source of errors is misaligned open/closing brackets.
-
-Many mistakes are found with ESPEI's ``check-datasets`` utility.
-Run ``espei check-datasets my-input-datasets`` on your directory ``my-input-datasets``. 
-
-Q: How do I analyze my results?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-A: By default, ESPEI will create ``chain.npy`` and ``lnprob.npy`` for the MCMC chain at the end of your run and according to the save interval (defaults to every 20 iterations).
-These are created from arrays via ``numpy.save()`` and can thus be loaded with ``numpy.load()``.
-Note that the arrays are preallocated with zeros.
-These filenames and settings can be changed using in the input file.
-You can then use these chains and corresponding log-probabilities to make corner plots, calculate autocorrelations, find optimal parameters for databases, etc..
-Finally, you can use py:mod:`espei.plot` functions such as ``multiplot`` to plot phase diagrams with your input equilibria data and ``plot_parameters`` to compare single-phase data (e.g. formation and mixing data) with the properties calculated with your database.
-
-Q: Can I run ESPEI on a supercomputer supporting MPI?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-A: Yes! ESPEI has MPI support.
-To use ESPEI with MPI, you simply call ESPEI in the same way as above with `mpirun` or whichever MPI software you use.
-You also must indicate to ESPEI that it should create an MPI scheduler by setting the input option ``scheduler: MPIPool`` in the ``mcmc`` heading.
-Be aware that ``mpi4py`` must be compiled with an MPI-enabled compiler, see the `mpi4py installation instructions <https://mpi4py.readthedocs.io/en/stable/install.html>`_.
 
 Getting Help
 ============
@@ -205,17 +77,66 @@ For help on installing and using ESPEI, please join the `PhasesResearchLab/ESPEI
 
 Bugs and software issues should be reported on `GitHub <https://github.com/PhasesResearchLab/ESPEI/issues>`_.
 
-Module Hierarchy
-================
-
-* ``fit.py`` is the main entry point
-* ``paramselect.py`` is where all of the fitting happens. This is the core.
-* ``core_utils.py`` contains specialized utilities for ESPEI.
-* ``utils.py`` are utilities with reuse potential outside of ESPEI.
-* ``plot.py`` holds plotting functions
 
 License
 =======
 
-ESPEI is MIT licensed. See LICENSE.
+ESPEI is MIT licensed.
+
+::
+
+   The MIT License (MIT)
+
+   Copyright (c) 2015-2018 Richard Otis
+   Copyright (c) 2017-2018 Brandon Bocklund
+   Copyright (c) 2018-2019 Materials Genome Foundation
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+
+Citing ESPEI
+============
+
+If you use ESPEI for work presented in a publication, we ask that you cite the following publication:
+
+B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg, MRS Commun. (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_.
+
+::
+
+   @article{Bocklund2019ESPEI,
+            archivePrefix = {arXiv},
+            arxivId = {1902.01269},
+            author = {Bocklund, Brandon and Otis, Richard and Egorov, Aleksei and Obaied, Abdulmonem and Roslyakova, Irina and Liu, Zi-Kui},
+            doi = {10.1557/mrc.2019.59},
+            eprint = {1902.01269},
+            issn = {2159-6859},
+            journal = {MRS Communications},
+            month = {jun},
+            pages = {1--10},
+            title = {{ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg}},
+            year = {2019}
+   }
+
+
+.. _pycalphad-fitting: https://github.com/richardotis/pycalphad-fitting
+.. _pycalphad: http://pycalphad.org
+.. _Richard Otis's thesis: https://etda.libraries.psu.edu/catalog/s1784k73d
+.. _Jom 69, (2017): http://dx.doi.org/10.1007/s11837-017-2318-6
+.. _Magnes. Technol. 2010 617-622 (2010): http://www.phases.psu.edu/wp-content/uploads/2010-Shang-Shunli-MagTech-ESPEI-0617-1.pdf
 
