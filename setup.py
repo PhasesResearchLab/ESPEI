@@ -21,11 +21,11 @@ setup(
     long_description_content_type='text/x-rst',
     url='https://espei.org/',
     install_requires=[
-        'cerberus',
         'bibtexparser',
-        'emcee<3',
+        'cerberus',
         'dask[complete]>=2',
         'distributed>=2',
+        'emcee<3',
         'numpy',
         'pycalphad>=0.8.2',
         'pyyaml',
@@ -36,10 +36,11 @@ setup(
     ],
     extras_require={
         'dev': [
+            'ipython',  # for pygments syntax highlighting
+            'mock',
+            'pytest',
             'sphinx',
             'sphinx_rtd_theme',
-            'pytest',
-            'mock',
             'twine',
         ],
         'mpi': [

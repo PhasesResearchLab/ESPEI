@@ -1,12 +1,11 @@
 channels:
   - conda-forge
-  - pycalphad
 dependencies:
-  - cerberus
   - bibtexparser
-  - emcee<3
+  - cerberus
   - dask>=0.18
   - distributed
+  - emcee<3
   - numpy
   - pycalphad>=0.8.2
   - pyyaml
@@ -16,8 +15,8 @@ dependencies:
   - tinydb>=4
   # Developer dependencies
   # Tests
-  - pytest
   - mock
+  - pytest
   # PyPI
   - twine
   # Documentation
