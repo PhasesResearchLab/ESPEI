@@ -64,10 +64,10 @@ running ``conda search -c conda-forge --override-channels espei``.
 conda-forge autotick bot (preferred)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. After the package has been uploaded to PyPI The `conda-forge autotick bot`_
-   will automatically open a pull request in the `conda-forge/espei-feedstock`_
-   repository. This usually happens in less than 10 minutes after the PyPI
-   release.
+1. The `conda-forge autotick bot`_ will automatically open a pull request in
+   the `conda-forge/espei-feedstock`_ repository after the package has been
+   uploaded to PyPI. This usually happens in less than 10 minutes after the
+   PyPI release.
 #. Verify that the ``recipe/meta.yaml`` requirements match the dependencies in ``environment-dev.yml``.
 #. Once all the checks pass, merge the pull request.
 
