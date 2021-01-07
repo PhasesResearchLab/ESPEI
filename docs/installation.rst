@@ -9,7 +9,7 @@ Installing ESPEI from PyPI (by ``pip install espei``) is **not** supported. Plea
 
 .. code-block:: bash
 
-    conda install -c pycalphad -c conda-forge --yes espei
+    conda install -c conda-forge espei
 
 
 Development versions
