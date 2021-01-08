@@ -1,11 +1,6 @@
-.. |logo| image:: docs/_static/ESPEI-logo.png
-          :height: 30pt
-          :width: 30pt
-          :alt: Logo
-
-============
-|logo| ESPEI
-============
+=====
+ESPEI
+=====
 
 
 ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for thermodynamic database development within the CALPHAD method. It uses `pycalphad`_ for calculating Gibbs free energies of thermodynamic models.
@@ -47,7 +42,7 @@ Goals
 3. Provide a platform to build and apply novel model selection, optimization, and uncertainty quantification methods
 
 The implementation for ESPEI involves first performing parameter generation by calculating parameters in thermodynamic models that are linearly described by `non-equilibrium thermochemical data <https://espei.org/en/latest/input_data.html#non-equilibrium-thermochemical-data>`_.
-Then Markov Chain Monte Carlo (MCMC) is used to optimize the candidate models from the parameter generation to `phase boundary data <https://espei.org/en/latest/input_data.html#phase-boundary-data>_`.
+Then Markov Chain Monte Carlo (MCMC) is used to optimize the candidate models from the parameter generation to `phase boundary data <https://espei.org/en/latest/input_data.html#phase-boundary-data>`_.
 
 
 .. figure:: docs/_static/cu-mg-mcmc-phase-diagram.png
