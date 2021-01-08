@@ -1,6 +1,6 @@
 .. raw:: html
 
-   <img src="docs/_static/ESPEI-logo.png" height="50pt" width="50pt">
+   <img src="docs/_static/ESPEI-logo.png" height="80pt">
 
 =====
 ESPEI
