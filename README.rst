@@ -1,7 +1,3 @@
-.. raw:: html
-
-   <img src="docs/_static/ESPEI-logo-withtext.png" height="80pt">
-
 =====
 ESPEI
 =====
