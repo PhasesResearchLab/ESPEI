@@ -3,11 +3,11 @@ channels:
 dependencies:
   - bibtexparser
   - cerberus
-  - dask>=0.18
-  - distributed
+  - dask>=2
+  - distributed>=2
   - emcee<3
   - numpy
-  - pycalphad>=0.8.2
+  - pycalphad>=0.8.4
   - pyyaml
   - scikit-learn
   - scipy
