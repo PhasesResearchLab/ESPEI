@@ -27,11 +27,11 @@ setup(
         'distributed>=2',
         'emcee<3',
         'numpy',
-        'pycalphad>=0.8.2',
+        'pycalphad>=0.8.4',
         'pyyaml',
         'scikit-learn',
         'scipy',
-        'sympy>=1.2',
+        'sympy>=1.5.1',
         'tinydb>=4',
     ],
     extras_require={
