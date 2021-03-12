@@ -208,8 +208,9 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs
     output = 'ZPF'
     # TODO: used to include VA. Should this be added by default. Can't determine presence of VA in eq.
     # Techincally, VA should not be present in any phase equilibria.
+    # For now, don't get datasets that are a subset of the current system because this breaks mass balance assumptions in ravel_zpf_values
     desired_data = datasets.search((tinydb.where('output') == output) &
-                                   (tinydb.where('components').test(lambda x: set(x).issubset(comps + ['VA']))) &
+                                   (tinydb.where('components').test(lambda x: (set(x).issubset(comps + ['VA'])) and (len(set(x) - {'VA'}) == (len(indep_comps) + 1)))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
 
     # get all the possible references from the data and create the bibliography map
