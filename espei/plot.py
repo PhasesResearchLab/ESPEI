@@ -119,7 +119,7 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
             ax = _compare_data_to_parameters(dbf, comps, phase_name, data, mod, configuration, x_val, y_val, ax=ax)
 
 
-def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_plot_kwargs=None):
+def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs=None, tieline_plot_kwargs=None):
     """
     Plot datapoints corresponding to the components, phases, and conditions.
 
@@ -133,6 +133,8 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
     conds : dict
         Maps StateVariables to values and/or iterables of values.
     datasets : PickleableTinyDB
+    tielines : bool
+        If True (default), plot the tie-lines from the data
     ax : matplotlib.Axes
         Default axes used if not specified.
     plot_kwargs : dict
@@ -267,9 +269,10 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
                 x_points.append(x_val)
                 y_points.append(y_val)
 
-            # plot the tielines
-            if all([xx is not None and yy is not None for xx, yy in zip(x_points, y_points)]):
-                ax.plot(x_points, y_points, **updated_tieline_plot_kwargs)
+            if tielines:
+                # plot the tielines
+                if all([xx is not None and yy is not None for xx, yy in zip(x_points, y_points)]):
+                    ax.plot(x_points, y_points, **updated_tieline_plot_kwargs)
 
     elif projection == 'triangular':
         scatter_kwargs = {'markersize': 4, 'markeredgewidth': 0.4}
@@ -303,9 +306,10 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
                 x_points.append(x_val)
                 y_points.append(y_val)
 
-            # plot the tielines
-            if all([xx is not None and yy is not None for xx, yy in zip(x_points, y_points)]):
-                ax.plot(x_points, y_points, **updated_tieline_plot_kwargs)
+            if tielines:
+                # plot the tielines
+                if all([xx is not None and yy is not None for xx, yy in zip(x_points, y_points)]):
+                    ax.plot(x_points, y_points, **updated_tieline_plot_kwargs)
 
 
         # three phase
