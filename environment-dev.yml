@@ -7,8 +7,10 @@ dependencies:
   - dask>=2
   - distributed>=2
   - emcee<3
+  - matplotlib
   - numpy
   - pycalphad>=0.8.4
+  - python-symengine
   - pyyaml
   - scikit-learn
   - scipy
