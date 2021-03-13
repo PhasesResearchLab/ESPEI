@@ -1,8 +1,10 @@
+name: base
 channels:
   - conda-forge
 dependencies:
   - bibtexparser
   - cerberus
+  - corner
   - dask>=2
   - distributed>=2
   - emcee<3

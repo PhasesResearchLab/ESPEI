@@ -1,10 +1,10 @@
 name: base
 channels:
   - conda-forge
-  - pycalphad
 dependencies:
   - bibtexparser
   - cerberus
+  - corner
   - dask>=2
   - distributed>=2
   - emcee<3

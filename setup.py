@@ -23,6 +23,7 @@ setup(
     install_requires=[
         'bibtexparser',
         'cerberus',
+        'corner',
         'dask[complete]>=2',
         'distributed>=2',
         'emcee<3',
