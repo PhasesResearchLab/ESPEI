@@ -2,10 +2,21 @@
 What's New
 ==========
 
+0.7.11 (2021-03-12)
+===================
+
+This is a minor bugfix release with backwards compatible changes.
+
+* Fix numpy v1.20 deprecations (`@bocklund`_ - :issue:`147`)
+* Add dataplot tie-line flag (`@bocklund`_ - :issue:`145`)
+* Add ``corner`` package to dependencies so the recipes now work without installing extra packages
+
+
 0.7.10 (2020-11-14)
 ===================
 
 This is a minor bugfix release that addresses a potential inconsistency with hyphen/underscore usage in dask configuration files (`@bocklund`_ - :issue:`136`).
+
 
 0.7.9 (2020-11-12)
 ==================
