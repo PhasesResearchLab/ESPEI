@@ -5,6 +5,7 @@ Subpackages
 -----------
 
 .. toctree::
+   :maxdepth: 4
 
    espei.error_functions
    espei.optimizers
@@ -132,7 +133,6 @@ espei.validation module
    :members:
    :undoc-members:
    :show-inheritance:
-
 
 Module contents
 ---------------
