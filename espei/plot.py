@@ -478,7 +478,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
     matplotlib.Axes
 
     """
-    all_samples = np.array(get_samples(desired_data), dtype=np.object)
+    all_samples = np.array(get_samples(desired_data), dtype=np.object_)
     endpoints = endmembers_from_interaction(configuration)
     interacting_subls = [c for c in recursive_tuplify(configuration) if isinstance(c, tuple)]
     disordered_config = False
@@ -500,7 +500,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         yattr = y
     if len(endpoints) == 1:
         # This is an endmember so we can just compute T-dependent stuff
-        temperatures = np.array([i[0] for i in all_samples], dtype=np.float)
+        temperatures = np.array([i[0] for i in all_samples], dtype=np.float_)
         if temperatures.min() != temperatures.max():
             temperatures = np.linspace(temperatures.min(), temperatures.max(), num=100)
         else:
@@ -561,9 +561,9 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
 
     for data in desired_data:
         indep_var_data = None
-        response_data = np.zeros_like(data['values'], dtype=np.float)
+        response_data = np.zeros_like(data['values'], dtype=np.float_)
         if x == 'T' or x == 'P':
-            indep_var_data = np.array(data['conditions'][x], dtype=np.float).flatten()
+            indep_var_data = np.array(data['conditions'][x], dtype=np.float_).flatten()
         elif x == 'Z':
             if disordered_config:
                 # Take the second element of the first interacting sublattice as the coordinate
@@ -577,7 +577,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
                     subl_idx = int(subl_idx)
                 indep_var_data = [c[subl_idx][1] for c in occ]
             else:
-                interactions = np.array([i[1][1] for i in get_samples([data])], dtype=np.float)
+                interactions = np.array([i[1][1] for i in get_samples([data])], dtype=np.float_)
                 indep_var_data = 1 - (interactions+1)/2
             if y.endswith('_MIX') and data['output'].endswith('_FORM'):
                 # All the _FORM data we have still has the lattice stability contribution
@@ -595,7 +595,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
                     points[point_idx].update({key: 0 for key in missing_variables})
                     # Change entry to a sorted array of site fractions
                     points[point_idx] = list(OrderedDict(sorted(points[point_idx].items(), key=str)).values())
-                points = np.array(points, dtype=np.float)
+                points = np.array(points, dtype=np.float_)
                 # TODO: Real temperature support
                 points = points[None, None]
                 stability = calculate(dbf, comps, [phase_name], output=data['output'][:-5],
@@ -603,7 +603,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
                                       model=mod_latticeonly, mode='numpy')
                 response_data -= stability[data['output'][:-5]].values.squeeze()
 
-        response_data += np.array(data['values'], dtype=np.float)
+        response_data += np.array(data['values'], dtype=np.float_)
         response_data = response_data.flatten()
         if not bar_chart:
             extra_kwargs = {}

@@ -138,6 +138,6 @@ def test_equilibrium_thermochemical_correct_probability(datasets_db):
     assert np.isclose(prob, expected_prob)
 
     # change to -40000
-    prob = opt.predict(np.array([-40000], dtype=np.float), **ctx)
+    prob = opt.predict(np.array([-40000], dtype=np.float_), **ctx)
     expected_prob = norm(loc=0, scale=500).logpdf([-40000*0.5*0.5]).sum()
     assert np.isclose(prob, expected_prob)

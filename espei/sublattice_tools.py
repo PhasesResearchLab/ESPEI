@@ -96,7 +96,7 @@ def generate_symmetric_group(configuration, symmetry):
 
     """
     configurations = [recursive_tuplify(configuration)]
-    permutation = np.array(symmetry, dtype=np.object)
+    permutation = np.array(symmetry, dtype=np.object_)
 
     def permute(x):
         if len(x) == 0:
@@ -106,8 +106,8 @@ def generate_symmetric_group(configuration, symmetry):
         return x
 
     if symmetry is not None:
-        while np.any(np.array(symmetry, dtype=np.object) != permute(permutation)):
-            new_conf = np.array(configurations[0], dtype=np.object)
+        while np.any(np.array(symmetry, dtype=np.object_) != permute(permutation)):
+            new_conf = np.array(configurations[0], dtype=np.object_)
             subgroups = []
             # There is probably a more efficient way to do this
             for subl in permutation:

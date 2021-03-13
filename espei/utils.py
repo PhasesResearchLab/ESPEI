@@ -66,7 +66,7 @@ class ImmediateClient(Client):
 def sigfigs(x, n):
     """Round x to n significant digits"""
     if x != 0:
-        return np.around(x, -(np.floor(np.log10(np.abs(x)))).astype(np.int) + (n - 1))
+        return np.around(x, -(np.floor(np.log10(np.abs(x)))).astype(np.int_) + (n - 1))
     else:
         return x
 
