@@ -72,7 +72,7 @@ def _build_feature_matrix(prop, features, desired_data):
     """
     transformed_features = [feature_transforms[prop](i) for i in features]
     all_samples = get_samples(desired_data)
-    feature_matrix = np.empty((len(all_samples), len(transformed_features)), dtype=np.float)
+    feature_matrix = np.empty((len(all_samples), len(transformed_features)), dtype=np.float_)
     feature_matrix[:, :] = [[trans_feat.subs({v.T: temp, 'YS': compf[0], 'Z': compf[1]}).evalf() for trans_feat in transformed_features] for temp, compf in all_samples]
     return feature_matrix
 
@@ -177,7 +177,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
             selected_features, selected_values = selected_model
             parameters.update(zip(*(selected_features, selected_values)))
             # Add these parameters to be fixed for the next fitting step
-            fixed_portion = np.array(selected_features, dtype=np.object)
+            fixed_portion = np.array(selected_features, dtype=np.object_)
             fixed_portion = np.dot(fixed_portion, selected_values)
             fixed_portions.append(fixed_portion)
     return parameters
@@ -243,7 +243,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
             logging.log(TRACE, 'INTERACTION: {}'.format(ixx))
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
         # Organize parameters by polynomial degree
-        degree_polys = np.zeros(3, dtype=np.object)
+        degree_polys = np.zeros(3, dtype=np.object_)
         YS = sympy.Symbol('YS')
         # asymmetric parameters should have Mugiannu V_I/V_J/V_K, while symmetric just has YS
         is_asymmetric = any([(k.has(sympy.Symbol('V_I'))) and (v != 0) for k, v in parameters.items()])
@@ -402,7 +402,7 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
             logging.log(TRACE, 'INTERACTION: {}'.format(ixx))
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
         # Organize parameters by polynomial degree
-        degree_polys = np.zeros(10, dtype=np.object)
+        degree_polys = np.zeros(10, dtype=np.object_)
         for degree in reversed(range(10)):
             check_symbol = sympy.Symbol('YS') * sympy.Symbol('Z')**degree
             keys_to_remove = []

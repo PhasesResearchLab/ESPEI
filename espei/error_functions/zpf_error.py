@@ -196,7 +196,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
                 target_hyperplane_chempots.append(np.full_like(MU_values, np.nan))
             else:
                 target_hyperplane_chempots.append(MU_values)
-    target_hyperplane_mean_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float)
+    target_hyperplane_mean_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float_)
     return target_hyperplane_mean_chempots
 
 
@@ -233,14 +233,14 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
         # Compute residual driving force
         # TODO: Check that it actually makes sense to declare this phase 'disordered'
         num_dof = sum([len(set(c).intersection(species)) for c in dbf.phases[current_phase].constituents])
-        desired_sitefracs = np.ones(num_dof, dtype=np.float)
+        desired_sitefracs = np.ones(num_dof, dtype=np.float_)
         dof_idx = 0
         for c in dbf.phases[current_phase].constituents:
             dof = sorted(set(c).intersection(comps))
             if (len(dof) == 1) and (dof[0] == 'VA'):
                 return 0
             # If it's disordered config of BCC_B2 with VA, disordered config is tiny vacancy count
-            sitefracs_to_add = np.array([cond_dict.get(v.X(d)) for d in dof], dtype=np.float)
+            sitefracs_to_add = np.array([cond_dict.get(v.X(d)) for d in dof], dtype=np.float_)
             # Fix composition of dependent component
             sitefracs_to_add[np.isnan(sitefracs_to_add)] = 1 - np.nansum(sitefracs_to_add)
             desired_sitefracs[dof_idx:dof_idx + len(dof)] = sitefracs_to_add

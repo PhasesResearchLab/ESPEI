@@ -54,12 +54,12 @@ def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
                                      for sblconf in data['solver']['sublattice_configurations']])
         matching_configs = np.arange(len(data['solver']['sublattice_configurations']))[matching_configs]
         # Rewrite output values with filtered data
-        desired_data[idx]['values'] = np.array(data['values'], dtype=np.float)[..., matching_configs]
+        desired_data[idx]['values'] = np.array(data['values'], dtype=np.float_)[..., matching_configs]
         desired_data[idx]['solver']['sublattice_configurations'] = recursive_tuplify(np.array(data['solver']['sublattice_configurations'],
-                                                                                              dtype=np.object)[matching_configs].tolist())
+                                                                                              dtype=np.object_)[matching_configs].tolist())
         try:
             desired_data[idx]['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'],
-                                                                             dtype=np.object)[matching_configs].tolist()
+                                                                             dtype=np.object_)[matching_configs].tolist()
         except KeyError:
             pass
         # Filter out temperatures below 298.15 K (for now, until better refstates exist)
@@ -95,7 +95,7 @@ def get_samples(desired_data):
     all_samples = []
     for data in desired_data:
         temperatures = np.atleast_1d(data['conditions']['T'])
-        num_configs = np.array(data['solver'].get('sublattice_configurations'), dtype=np.object).shape[0]
+        num_configs = np.array(data['solver'].get('sublattice_configurations'), dtype=np.object_).shape[0]
         site_fractions = data['solver'].get('sublattice_occupancies', [[1]] * num_configs)
         site_fraction_product = calc_site_fraction_product(site_fractions)
         # TODO: Subtle sorting bug here, if the interactions aren't already in sorted order...

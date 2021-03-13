@@ -56,7 +56,7 @@ def shift_reference_state(desired_data, feature_transform, fixed_model, mole_ato
     """
     total_response = []
     for dataset in desired_data:
-        values = np.asarray(dataset['values'], dtype=np.object)*mole_atoms_per_mole_formula_unit
+        values = np.asarray(dataset['values'], dtype=np.object_)*mole_atoms_per_mole_formula_unit
         for config_idx in range(len(dataset['solver']['sublattice_configurations'])):
             occupancy = dataset['solver'].get('sublattice_occupancies', None)
             if dataset['output'].endswith('_FORM'):
@@ -115,7 +115,7 @@ def get_data_quantities(desired_property, fixed_model, fixed_portions, data):
     site_fractions = []
     for ds in data:
         for _ in ds['conditions']['T']:
-            sf = build_sitefractions(phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies', np.ones((len(ds['solver']['sublattice_configurations']), len(ds['solver']['sublattice_configurations'][0])), dtype=np.float)))
+            sf = build_sitefractions(phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies', np.ones((len(ds['solver']['sublattice_configurations']), len(ds['solver']['sublattice_configurations'][0])), dtype=np.float_)))
             site_fractions.append(sf)
     site_fractions = list(itertools.chain(*site_fractions))
 
@@ -138,5 +138,5 @@ def get_data_quantities(desired_property, fixed_model, fixed_portions, data):
             sf.update({YS: sf_product, Z: inter_product})
     data_qtys = [sympy.S(i).xreplace(sf).xreplace({v.T: ixx[0]}).evalf()
                  for i, sf, ixx in zip(data_qtys, site_fractions, samples)]
-    data_qtys = np.asarray(data_qtys, dtype=np.float)
+    data_qtys = np.asarray(data_qtys, dtype=np.float_)
     return data_qtys

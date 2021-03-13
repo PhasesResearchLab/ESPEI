@@ -76,7 +76,7 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     """
     factor = aicc_factor if aicc_factor is not None else 1.0
     num_params = len(feature_list)
-    rss = np.square(np.dot(feature_matrix, model_coefficients) - data_quantities.astype(np.float)*np.array(weights)).sum()
+    rss = np.square(np.dot(feature_matrix, model_coefficients) - data_quantities.astype(np.float_)*np.array(weights)).sum()
     if np.abs(rss) < rss_numerical_limit:
         rss = rss_numerical_limit
     # Compute the corrected Akaike Information Criterion
