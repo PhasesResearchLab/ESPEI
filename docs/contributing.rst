@@ -2,6 +2,8 @@
 
    \chapter{Contributing to ESPEI}
 
+.. _Contributing guide:
+
 =====================
 Contributing to ESPEI
 =====================
