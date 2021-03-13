@@ -119,7 +119,7 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
             ax = _compare_data_to_parameters(dbf, comps, phase_name, data, mod, configuration, x_val, y_val, ax=ax)
 
 
-def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_plot_kwargs=None):
+def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs=None, tieline_plot_kwargs=None):
     """
     Plot datapoints corresponding to the components, phases, and conditions.
 
@@ -133,6 +133,8 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
     conds : dict
         Maps StateVariables to values and/or iterables of values.
     datasets : PickleableTinyDB
+    tielines : bool
+        If True (default), plot the tie-lines from the data
     ax : matplotlib.Axes
         Default axes used if not specified.
     plot_kwargs : dict
@@ -206,8 +208,9 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
     output = 'ZPF'
     # TODO: used to include VA. Should this be added by default. Can't determine presence of VA in eq.
     # Techincally, VA should not be present in any phase equilibria.
+    # For now, don't get datasets that are a subset of the current system because this breaks mass balance assumptions in ravel_zpf_values
     desired_data = datasets.search((tinydb.where('output') == output) &
-                                   (tinydb.where('components').test(lambda x: set(x).issubset(comps + ['VA']))) &
+                                   (tinydb.where('components').test(lambda x: (set(x).issubset(comps + ['VA'])) and (len(set(x) - {'VA'}) == (len(indep_comps) + 1)))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
 
     # get all the possible references from the data and create the bibliography map
@@ -267,9 +270,10 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
                 x_points.append(x_val)
                 y_points.append(y_val)
 
-            # plot the tielines
-            if all([xx is not None and yy is not None for xx, yy in zip(x_points, y_points)]):
-                ax.plot(x_points, y_points, **updated_tieline_plot_kwargs)
+            if tielines:
+                # plot the tielines
+                if all([xx is not None and yy is not None for xx, yy in zip(x_points, y_points)]):
+                    ax.plot(x_points, y_points, **updated_tieline_plot_kwargs)
 
     elif projection == 'triangular':
         scatter_kwargs = {'markersize': 4, 'markeredgewidth': 0.4}
@@ -303,9 +307,10 @@ def dataplot(comps, phases, conds, datasets, ax=None, plot_kwargs=None, tieline_
                 x_points.append(x_val)
                 y_points.append(y_val)
 
-            # plot the tielines
-            if all([xx is not None and yy is not None for xx, yy in zip(x_points, y_points)]):
-                ax.plot(x_points, y_points, **updated_tieline_plot_kwargs)
+            if tielines:
+                # plot the tielines
+                if all([xx is not None and yy is not None for xx, yy in zip(x_points, y_points)]):
+                    ax.plot(x_points, y_points, **updated_tieline_plot_kwargs)
 
 
         # three phase
