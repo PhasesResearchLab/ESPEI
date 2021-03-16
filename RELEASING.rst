@@ -31,6 +31,13 @@ Now the public package must be built and distributed.
 Uploading to PyPI
 -----------------
 
+All tagged GitHub commits should be uploaded to PyPI automatically by the
+``deploy.yaml`` GitHub Action. If ESPEI needs to be released to PyPI manually,
+follow the steps below.
+
+Manually uploading to PyPI
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 1. ``rm -R dist/*`` on Linux/OSX or ``del dist/*`` on Windows.
 #. ``python setup.py sdist`` to create a source distribution.
 #. Make sure that the script correctly detected the new version exactly and not a

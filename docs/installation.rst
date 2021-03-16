@@ -29,6 +29,8 @@ We recommend that users interested in developing packages work in a
 The steps below will create an environment called ``espei-dev``, which can be
 entered using ``conda activate espei-dev``.
 The environment name is arbitrary - you can use whatever name you prefer.
+If you already have an environment, use ``conda env update ...`` instead of
+``conda env create ...`` when following the steps below.
 
 ESPEI uses `Git <https://git-scm.com/book/en/v2>`_ and
 `GitHub <https://github.com/PhasesResearchLab/ESPEI>`_ for version control.
