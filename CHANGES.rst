@@ -2,6 +2,14 @@
 What's New
 ==========
 
+0.7.12 (2021-03-16)
+===================
+
+This is a minor bugfix release that updates the SGTE reference state data for
+carbon and more strictly specifies dependences. No changes to the code were
+made since 0.7.11.
+
+
 0.7.11 (2021-03-12)
 ===================
 
