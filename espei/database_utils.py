@@ -92,10 +92,12 @@ def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="S
 
     # Add the phases
     for phase_name, phase_data in phase_models['phases'].items():
-        # TODO: Need to support model hints for: magnetic, order-disorder, etc.
-        site_ratios = phase_data['sublattice_site_ratios']
-        subl_model = phase_data['sublattice_model']
         if phase_name not in dbf.phases.keys():  # Do not clobber user phases
+            # TODO: Need to support model hints for: magnetic, order-disorder, etc.
+            site_ratios = phase_data['sublattice_site_ratios']
+            subl_model = phase_data['sublattice_model']
+            # Only generate the sublattice model for active components
+            subl_model = [sorted(set(subl).intersection(dbf.elements)) for subl in subl_model]
             dbf.add_phase(phase_name, dict(), site_ratios)
             dbf.add_phase_constituents(phase_name, subl_model)
     
