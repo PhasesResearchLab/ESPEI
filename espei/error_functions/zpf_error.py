@@ -106,7 +106,11 @@ def _get_soln_points(mod: Model, soln: Dict[v.Y, Union[sympy.Expr, v.Y]], pdens=
     indep_dep_dict = dict()
     indep_dep_dict.update(soln)
     indep_dep_dict.update(indep_site_frac_dict)
-    npts = grids_1d[0].shape[0]
+    if len(indep_site_frac_dict) > 0:
+        npts = grids_1d[0].shape[0]
+    else:
+        # No independent degrees of freedom
+        npts = 1
     points = np.empty((npts, len(mod.site_fractions)))
     # Enumerating over site fractions ensures that the array must be filled correctly
     for idof, sf in enumerate(mod.site_fractions):
