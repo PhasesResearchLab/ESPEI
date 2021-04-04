@@ -3,6 +3,8 @@ Test different error functions as isolated units.
 """
 
 import numpy as np
+import pytest
+import scipy.stats
 from tinydb import where
 
 from pycalphad import Database
@@ -10,7 +12,6 @@ from pycalphad import Database
 from espei.paramselect import generate_parameters
 from espei.error_functions import *
 from espei.error_functions.equilibrium_thermochemical_error import calc_prop_differences
-import scipy.stats
 
 from .fixtures import datasets_db
 from .testing_data import *
@@ -273,7 +274,9 @@ def test_zpf_error_species(datasets_db):
     approx_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=True)
     assert np.isclose(approx_likelihood, zero_error_probability)
 
-
+# TODO: trigger a NaN equilibrium without using an invalid phase composition
+@pytest.mark.xfail(reason="ESPEI gives a better error message for the invalid "
+    "phase composition that was used to trigger this behavior.")
 def test_zpf_error_equilibrium_failure(datasets_db):
     """Test that a hyperplane that fails produce a driving force of zero."""
     datasets_db.insert(CU_MG_DATASET_ZPF_NAN_EQUILIBRIUM)

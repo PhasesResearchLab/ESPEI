@@ -228,6 +228,10 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
             # Construct single-phase points satisfying the conditions for each phase in the region
             region_phase_points = []
             for phase_name, comp_conds in zip(region_phases, region_comp_conds):
+                if any(val is None for val in comp_conds.values()):
+                    # We can't construct points because we don't have a known composition
+                    region_phase_points.append(None)
+                    continue
                 mod = models[phase_name]
                 sitefrac_soln = _solve_site_fractions(mod, comp_conds)
                 phase_points = _get_soln_points(mod, sitefrac_soln)
@@ -325,7 +329,7 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
             cond_dict[key] = np.nan
     if np.any(np.isnan(list(cond_dict.values()))):
         # We don't actually know the phase composition here, so we estimate it
-        single_eqdata = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, points=phase_points, pdens=500)
+        single_eqdata = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, pdens=500)
         df = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(df.max())
     elif phase_flag == 'disordered':
