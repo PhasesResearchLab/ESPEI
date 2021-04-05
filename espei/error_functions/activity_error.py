@@ -9,7 +9,7 @@ import tinydb
 
 from pycalphad import equilibrium, variables as v
 from pycalphad.plot.eqplot import _map_coord_to_variable
-from pycalphad.core.utils import filter_phases
+from pycalphad.core.utils import filter_phases, unpack_components
 from scipy.stats import norm
 
 from espei.core_utils import ravel_conditions
@@ -125,8 +125,7 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
         # data_comps and data_phases ensures that we only do calculations on
         # the subsystem of the system defining the data.
         data_comps = ds['components']
-        species = list(map(v.Species, data_comps))
-        data_phases = filter_phases(dbf, species, candidate_phases=phases)
+        data_phases = filter_phases(dbf, unpack_components(dbf, data_comps), candidate_phases=phases)
         ref_conditions = {_map_coord_to_variable(coord): val for coord, val in ref['conditions'].items()}
         ref_result = equilibrium(dbf, data_comps, ref['phases'], ref_conditions,
                                  model=phase_models, parameters=parameters,
