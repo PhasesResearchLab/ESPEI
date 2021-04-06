@@ -3,6 +3,7 @@
 Test different error functions as isolated units.
 """
 
+from unittest import mock
 import numpy as np
 import pytest
 import scipy.stats
@@ -275,11 +276,9 @@ def test_zpf_error_species(datasets_db):
     approx_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=True)
     assert np.isclose(approx_likelihood, zero_error_probability)
 
-# TODO: trigger a NaN equilibrium without using an invalid phase composition
-@pytest.mark.xfail(reason="ESPEI gives a better error message for the invalid "
-    "phase composition that was used to trigger this behavior.")
+
 def test_zpf_error_equilibrium_failure(datasets_db):
-    """Test that a hyperplane that fails produce a driving force of zero."""
+    """Test that a target hyperplane producing NaN chemical potentials gives a driving force of zero."""
     datasets_db.insert(CU_MG_DATASET_ZPF_NAN_EQUILIBRIUM)
 
     dbf = Database(CU_MG_TDB)
@@ -288,12 +287,13 @@ def test_zpf_error_equilibrium_failure(datasets_db):
 
     # ZPF weight = 1 kJ and there are two points in the tieline
     zero_error_probability = 2 * scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0)
-
     zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
-    exact_likelihood = calculate_zpf_error(zpf_data)
-    assert np.isclose(exact_likelihood, zero_error_probability, rtol=1e-6)
-    approx_likelihood = calculate_zpf_error(zpf_data)
-    assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-6)
+
+    with mock.patch('espei.error_functions.zpf_error.estimate_hyperplane', return_value=np.array([np.nan, np.nan])):
+        exact_likelihood = calculate_zpf_error(zpf_data)
+        assert np.isclose(exact_likelihood, zero_error_probability, rtol=1e-6)
+        approx_likelihood = calculate_zpf_error(zpf_data)
+        assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-6)
 
 
 def test_zpf_error_works_for_stoichiometric_cmpd_tielines(datasets_db):
