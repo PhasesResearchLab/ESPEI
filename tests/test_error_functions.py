@@ -1,3 +1,4 @@
+# pylint: disable=redefined-outer-name
 """
 Test different error functions as isolated units.
 """
@@ -382,3 +383,35 @@ def test_equilibrium_thermochemical_error_computes_correct_probability(datasets_
     # change to -40000
     errors, weights = calc_prop_differences(eqdata[0], np.array([-40000], np.float_))
     assert np.all(np.isclose(errors, [-40000*0.5*0.5]))
+
+
+def test_driving_force_miscibility_gap(datasets_db):
+    datasets_db.insert(A_B_DATASET_ALPHA)
+    dbf = Database(A_B_REGULAR_SOLUTION_TDB)
+    parameters = {"L_ALPHA": None}
+    zpf_data = get_zpf_data(dbf, ["A", "B"], ["ALPHA"], datasets_db, parameters)
+
+    # probability for zero error error with ZPF weight = 1000.0
+    zero_error_prob = scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0)
+
+    # Ideal solution case
+    params = np.array([0.0])
+    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=False)
+    assert np.isclose(prob, zero_error_prob)
+    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=True)
+    assert np.isclose(prob, zero_error_prob)
+
+    # Negative interaction case
+    params = np.array([-10000.0])
+    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=False)
+    assert np.isclose(prob, zero_error_prob)
+    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=True)
+    assert np.isclose(prob, zero_error_prob)
+
+    # Miscibility gap case
+    params = np.array([10000.0])
+    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=False)
+    # Remember these are log probabilities, so more negative means smaller probability and larger error
+    assert prob < zero_error_prob
+    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=True)
+    assert prob < zero_error_prob

@@ -4,6 +4,28 @@ import yaml
 
 YAML_LOADER = yaml.FullLoader
 
+
+A_B_REGULAR_SOLUTION_TDB = """
+ELEMENT A ALPHA 0.0 0.0 0.0 !
+ELEMENT B ALPHA 0.0 0.0 0.0 !
+
+TYPE_DEFINITION % SEQ *!    
+
+PHASE ALPHA % 1 1 !
+CONSTITUENT ALPHA : A B : !
+
+$ Default the lattice stability and regular solution parameter to zero
+FUNCTION G_ALPHA_A 1 0.0; 10000 N !
+FUNCTION G_ALPHA_B 1 0.0; 10000 N !
+FUNCTION L_ALPHA 1 0.0; 10000 N !
+
+$ Set the ALPHA lattice stability to zero
+PARAMETER G(ALPHA,A;0) 1 G_ALPHA_A; 10000 N !
+PARAMETER G(ALPHA,B;0) 1 G_ALPHA_B; 10000 N !
+PARAMETER L(ALPHA,A,B;0) 1 L_ALPHA; 10000 N !
+"""
+
+
 CU_MG_TDB = """$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 $ Date: 2017-09-27 21:10
 $ Components: CU, MG, VA
@@ -382,6 +404,23 @@ A_B_DATASET_BINARY_PHASE_EQUILIBRIA = yaml.load("""{
    ],
   "reference": "testing",
   "comment": "Examples for 1. one side of tieline, 2. a full tieline, 3. a 3 phase equilibria. For MPL visual checking that plot is correct"
+}
+""", Loader=YAML_LOADER)
+
+
+A_B_DATASET_ALPHA = yaml.load("""{
+  "components": ["A", "B"],
+  "phases": ["ALPHA"],
+  "conditions": {
+    "P": 101325,
+    "T": [300.0]
+  },
+  "output": "ZPF",
+    "values":   [
+    [["ALPHA", ["B"], [0.5]]]
+   ],
+  "reference": "testing",
+  "comment": "Single phase case"
 }
 """, Loader=YAML_LOADER)
 
