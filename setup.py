@@ -40,7 +40,6 @@ setup(
     extras_require={
         'dev': [
             'ipython',  # for pygments syntax highlighting
-            'mock',
             'pytest',
             'sphinx',
             'sphinx_rtd_theme',
