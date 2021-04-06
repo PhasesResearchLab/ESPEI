@@ -217,9 +217,6 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         # e.g. [["ALPHA", ["B"], [0.25]], ["BETA", ["B"], [0.5]]]
         for idx, phase_region in enumerate(all_regions):
             # We need to construct a PhaseRegion by matching up phases/compositions to the conditions
-            if len(phase_region) < 2:
-                # Skip single-phase regions for fitting purposes
-                continue
             # Extract the conditions for entire phase region
             region_potential_conds = extract_conditions(conditions, idx)
             region_potential_conds[v.N] = region_potential_conds.get(v.N) or 1.0  # Add v.N condition, if missing
