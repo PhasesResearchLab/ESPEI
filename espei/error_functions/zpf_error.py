@@ -39,8 +39,8 @@ def _safe_index(items, index):
         return None
 
 
-def _solve_site_fractions(mod: Model, comp_conds: Dict[v.X, float]) -> Dict[v.Y, Union[sympy.Expr, v.Y]]:
-    """Return a dictionary of site fraction expressions that satisfy the composition conditions
+def _solve_sitefracs_composition(mod: Model, comp_conds: Dict[v.X, float]) -> Dict[v.Y, Union[sympy.Expr, v.Y]]:
+    """Return a dictionary of site fraction expressions that solves the prescribed composition
     
     Given a Model and global composition conditions, solve for site fractions
     (dependent and independent) that can produce points (internal degrees of
@@ -72,12 +72,12 @@ def _solve_site_fractions(mod: Model, comp_conds: Dict[v.X, float]) -> Dict[v.Y,
     return soln_dict
 
 
-def _get_soln_points(mod: Model, soln: Dict[v.Y, Union[sympy.Expr, v.Y]], pdens=101) -> ArrayLike:
-    """Return an array of discrete points sampling a Model at the the site fraction solution
+def _sample_solution_constitution(mod: Model, soln: Dict[v.Y, Union[sympy.Expr, v.Y]], pdens=101) -> ArrayLike:
+    """Return an array of discrete points sampling the independent degrees of freedom of a solution
 
-    The solution is responsible to guarantee that all points are valid under
-    the desired constraints. The only validation/pruning performed here is to
-    remove any points which have negative site fractions. It is the
+    The solution is responsible for guaranteeing that all points are valid
+    under the desired constraints. The only validation/pruning performed here
+    is to remove any points which have negative site fractions. It is the
     responsibility of the caller to enforce that the sum of positive site
     fractions is unity (which will prevent any site fractions > 1).
 
@@ -230,8 +230,8 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                     region_phase_points.append(None)
                     continue
                 mod = models[phase_name]
-                sitefrac_soln = _solve_site_fractions(mod, comp_conds)
-                phase_points = _get_soln_points(mod, sitefrac_soln)
+                sitefrac_soln = _solve_sitefracs_composition(mod, comp_conds)
+                phase_points = _sample_solution_constitution(mod, sitefrac_soln)
                 region_phase_points.append(phase_points)
             region_phase_records = [build_phase_records(dbf, species, data_phases, {**region_potential_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
                                     for comp_conds in region_comp_conds]
