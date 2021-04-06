@@ -314,7 +314,7 @@ def add_ideal_exclusions(datasets):
     return datasets
 
 
-def load_datasets(dataset_filenames):
+def load_datasets(dataset_filenames, include_disabled=False):
     """
     Create a PickelableTinyDB with the data from a list of filenames.
 
@@ -332,6 +332,9 @@ def load_datasets(dataset_filenames):
         with open(fname) as file_:
             try:
                 d = json.load(file_)
+                if not include_disabled and d.get('disabled', False):
+                    # The dataset is disabled and not included
+                    continue
                 check_dataset(d)
                 ds_database.insert(clean_dataset(d))
             except ValueError as e:
