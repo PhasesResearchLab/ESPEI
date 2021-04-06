@@ -56,8 +56,6 @@ All functions and classes should be documented with at least a description, para
 Using ``Examples`` in the documentation is especially encouraged for utilities that are likely to be run by users.
 See :py:func:`espei.plot.multiplot` for an example.
 
-If you add any new external (non-ESPEI) imports in any code, they must be added to the ``MOCK_MODULES`` list in ``docs/conf.py``.
-
 Web documention
 ---------------
 
