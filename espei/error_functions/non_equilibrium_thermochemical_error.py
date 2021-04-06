@@ -110,6 +110,10 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         configurations = datum['solver']['sublattice_configurations']
         occupancies = datum['solver'].get('sublattice_occupancies')
         values = np.array(datum['values'])
+        # Broadcast the weights to the shape of the values. This ensures that
+        # the sizes of the weights and values are the same, which is important
+        # because they are flattened later (so the shape information is lost).
+        weights = np.broadcast_to(np.asarray(datum.get('weight', 1.0)), values.shape)
 
         # broadcast and flatten the conditions arrays
         P, T = ravel_conditions(values, datum_P, datum_T)
@@ -124,7 +128,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         calculate_dict['T'] = np.concatenate([calculate_dict['T'], T])
         calculate_dict['points'] = np.concatenate([calculate_dict['points'], np.repeat(points, len(T)/points.shape[0], axis=0)], axis=0)
         calculate_dict['values'] = np.concatenate([calculate_dict['values'], values.flatten()])
-        calculate_dict['weights'].extend(np.array([datum.get('weight', 1.0) for _ in range(values.flatten().size)]).flatten())
+        calculate_dict['weights'].extend(weights.flatten())
         calculate_dict['references'].extend([datum.get('reference', "") for _ in range(values.flatten().size)])
 
     return calculate_dict
