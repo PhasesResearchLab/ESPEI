@@ -35,7 +35,7 @@ ESPEI uses `pytest <https://pytest.org>`_ as a test runner. The tests can be run
 
 .. code-block:: bash
 
-   pytest -v --doctest-modules espei tests
+   pytest
 
 
 Style
