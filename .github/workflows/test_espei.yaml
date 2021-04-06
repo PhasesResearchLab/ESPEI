@@ -75,4 +75,4 @@ jobs:
         python -c 'import pycalphad; print(f"pycalphad version: {pycalphad.__version__}")'
     - name: Test with pytest
       shell: bash -l {0}
-      run: pytest -v --doctest-modules espei tests
+      run: pytest -v
