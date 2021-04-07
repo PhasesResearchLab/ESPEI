@@ -426,6 +426,7 @@ def test_driving_force_miscibility_gap(datasets_db):
         ([["A"], ["A"]], [1, 1], {v.X('B'): 0}, 0),
         ([["A", "B"]], [1], {v.X('B'): 1.0}, 0),
         ([["A", "B"]], [1], {v.X('B'): 0.25}, 0),
+        ([["LI", "LI1SN1", "SN"]], [1], {v.X('LI'): 0.5}, 1),
         ([["A"], ["A", "B"]], [1, 1], {v.X('B'): 0.75}, None),
         ([["A"], ["A", "B"]], [1, 1], {v.X('B'): 0.25}, 0),
         ([["A"], ["B"]], [1, 3], {v.X('B'): 0.76}, None),
@@ -437,7 +438,6 @@ def test_driving_force_miscibility_gap(datasets_db):
         ([["A", "B", "C"]], [1], {v.X('A'): 0.5, v.X('B'): 0.5}, 0),
         ([["A", "B", "C"]], [1], {v.X('A'): 0.5, v.X('B'): 0.25}, 0),
         ([["A", "B", "C"]], [1], {v.X('A'): 0.51, v.X('B'): 0.51}, None),
-
     ]
 )
 def test_site_fraction_solutions(constituents, site_ratios, comp_conds, expected_num_independent_symbols):
