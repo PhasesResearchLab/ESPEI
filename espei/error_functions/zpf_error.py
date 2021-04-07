@@ -120,11 +120,12 @@ def _sample_solution_constitution(mod: Model, soln: Dict[v.Y, Union[sympy.Expr, 
         # the indepedent or dependent site fractions
         points[:, idof] = sympy.lambdify(lambdify_syms, indep_dep_dict[sf])(*x)
 
-    # Remove any rows (points) where any site fractions are negative
+    # Remove any rows (points) where any site fractions are negative.
+    # As long as the internal constraints were used to find the solution,
+    # this should also ensure that any site fractions >1 are not possible.
     valid_site_frac_rows = np.nonzero(~np.any(points < 0, axis=1))[0]
     points = points[valid_site_frac_rows, :]
 
-    # TODO: Assert that every row should sum to one within a sublattice (enforced by the constraints in the solution)
     return points
 
 
