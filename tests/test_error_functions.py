@@ -9,11 +9,12 @@ import pytest
 import scipy.stats
 from tinydb import where
 
-from pycalphad import Database
+from pycalphad import Database, Model, variables as v
 
 from espei.paramselect import generate_parameters
 from espei.error_functions import *
 from espei.error_functions.equilibrium_thermochemical_error import calc_prop_differences
+from espei.error_functions.zpf_error import _solve_sitefracs_composition
 
 from .fixtures import datasets_db
 from .testing_data import *
@@ -415,3 +416,60 @@ def test_driving_force_miscibility_gap(datasets_db):
     assert prob < zero_error_prob
     prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=True)
     assert prob < zero_error_prob
+
+
+
+@pytest.mark.parametrize("constituents, site_ratios, comp_conds, expected_num_independent_symbols",
+    [
+        ([["A"]], [1], {v.X('B'): 0}, 0),
+        ([["A"]], [1], {v.X('B'): 0.01}, None),
+        ([["A"], ["A"]], [1, 1], {v.X('B'): 0}, 0),
+        ([["A", "B"]], [1], {v.X('B'): 1.0}, 0),
+        ([["A", "B"]], [1], {v.X('B'): 0.25}, 0),
+        ([["A"], ["A", "B"]], [1, 1], {v.X('B'): 0.75}, None),
+        ([["A"], ["A", "B"]], [1, 1], {v.X('B'): 0.25}, 0),
+        ([["A"], ["B"]], [1, 3], {v.X('B'): 0.76}, None),
+        ([["A"], ["B"]], [1, 3], {v.X('B'): 0.75}, 0),
+        ([["A", "B"], ["A", "B"]], [1, 1], {v.X('B'): 0.5}, 1),
+        ([["A", "B"], ["A", "B"]], [1, 1], {}, 2),
+        ([["A", "B", "C"]], [1], {}, 2),
+        ([["A", "B", "C"]], [1], {v.X('A'): 0.5}, 1),
+        ([["A", "B", "C"]], [1], {v.X('A'): 0.5, v.X('B'): 0.5}, 0),
+        ([["A", "B", "C"]], [1], {v.X('A'): 0.5, v.X('B'): 0.25}, 0),
+        ([["A", "B", "C"]], [1], {v.X('A'): 0.51, v.X('B'): 0.51}, None),
+
+    ]
+)
+def test_site_fraction_solutions(constituents, site_ratios, comp_conds, expected_num_independent_symbols):
+    """Test that """
+    total_num_symbols = sum(len(subl) for subl in constituents)
+    dbf = Database()
+    if site_ratios is None:
+        site_ratios = [1 for _ in range(len(constituents))]
+    species = {v.Species(sp) for subl in constituents for sp in subl}
+    dbf.species |= species
+    dbf.add_phase('ALPHA_PHASE', {}, site_ratios)
+    dbf.add_phase_constituents('ALPHA_PHASE', constituents)
+    pure_comps = set()
+    for sp in species:
+        pure_comps |= sp.constituents.keys()
+    mod = Model(dbf, pure_comps, 'ALPHA_PHASE')
+
+    if expected_num_independent_symbols is not None:
+        soln = _solve_sitefracs_composition(mod, comp_conds)
+        print(soln)
+    else:
+        with pytest.raises(ValueError, match='ALPHA_PHASE'):
+            soln = _solve_sitefracs_composition(mod, comp_conds)
+            print(soln)
+        return
+    
+    expected_num_dependent_symbols = total_num_symbols - expected_num_independent_symbols
+    num_dependent_symbols = len(soln.keys())
+    assert num_dependent_symbols == expected_num_dependent_symbols
+
+    indepdent_symbols = set()
+    for val in soln.values():
+        indepdent_symbols |= val.free_symbols
+    num_independent_symbols = len(indepdent_symbols)
+    assert expected_num_independent_symbols == num_independent_symbols
