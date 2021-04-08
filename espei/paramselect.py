@@ -24,7 +24,6 @@ import numpy as np
 import sympy
 from tinydb import where
 from pycalphad import Database, Model, variables as v
-from pycalphad.io.database import Species
 
 import espei.refdata
 from espei.database_utils import initialize_database
@@ -278,7 +277,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
                     dbf.add_parameter('L', phase_name, tuple(map(tuplify, syminter)), degree, degree_polys[degree])
 
 
-def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aicc_penalty=None, aliases=None):
+def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=None, aliases=None):
     """Generate an initial CALPHAD model for a given phase and sublattice model.
 
     Parameters
@@ -289,10 +288,6 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         Name of the phase.
     symmetry : [[int]]
         Sublattice model symmetry.
-    subl_model : [[str]]
-        Sublattice model for the phase of interest.
-    site_ratios : [float]
-        Number of sites in each sublattice, normalized to one atom.
     datasets : PickleableTinyDB
         All datasets to consider for the calculation.
     refdata : dict
@@ -316,6 +311,10 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
     aicc_phase_penalty = aicc_penalty.get(phase_name, {})
     if not hasattr(dbf, 'varcounter'):
         dbf.varcounter = 0
+    phase_obj = dbf.phases[phase_name]
+    # TODO: assumed pure elements - add proper support for Species objects
+    subl_model = [sorted([sp.name for sp in subl]) for subl in phase_obj.constituents]
+    site_ratios = phase_obj.sublattices
     # First fit endmembers
     all_em_count = len(generate_endmembers(subl_model))  # number of total endmembers
     endmembers = generate_endmembers(subl_model, symmetry)
@@ -472,10 +471,8 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     aliases = extract_aliases(phase_models)
     dbf = initialize_database(phase_models, ref_state, dbf)
     # Fit phases in alphabetic order so the VV#### counter is constistent between runs
-    for phase_name, phase_obj in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
-        symmetry = phase_obj.get('equivalent_sublattices', None)
-        site_ratios = phase_obj['sublattice_site_ratios']
-        subl_model = phase_obj['sublattice_model']
-        phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
+    for phase_name, phase_data in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
+        symmetry = phase_data.get('equivalent_sublattices', None)
+        phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
     logging.info('Finished generating parameters.')
     return dbf
