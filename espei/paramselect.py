@@ -35,7 +35,7 @@ from espei.parameter_selection.ternary_parameters import build_ternary_feature_m
 from espei.parameter_selection.utils import get_data_quantities, feature_transforms
 from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
     tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
-from espei.utils import PickleableTinyDB, sigfigs
+from espei.utils import PickleableTinyDB, sigfigs, extract_aliases
 
 
 TRACE = 15  # TRACE logging level
@@ -303,9 +303,8 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         with ordinary least squares regression. For now, the parameter is applied to all features.
     aicc_penalty : dict
         Map of phase name to feature to a multiplication factor for the AICc's parameter penalty.
-    aliases : [str]
-        Alternative phase names. Useful for matching against
-        reference data or other datasets. (Default value = None)
+    aliases : Dict[str, str]
+        Mapping of possible aliases to the Database phase names.
 
     Returns
     -------
@@ -323,8 +322,12 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
     # Number of significant figures in parameters, might cause rounding errors
     numdigits = 6
     em_dict = {}
-    aliases = [] if aliases is None else aliases
-    aliases = sorted(set(aliases + [phase_name]))
+    # TODO: use the global aliases dictionary passed in as-is instead of converting it to a phase-local dict
+    # TODO: use the aliases dictionary in dataset queries to find relevant data
+    if aliases is None:
+        aliases = [phase_name]
+    else:
+        aliases = sorted([alias for alias, database_phase in aliases.items() if database_phase == phase_name])
     logging.info('FITTING: {}'.format(phase_name))
     logging.log(TRACE, '{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
 
@@ -466,11 +469,11 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     logging.info('Generating parameters.')
     logging.log(TRACE, f'Found the following user reference states: {espei.refdata.INSERTED_USER_REFERENCE_STATES}')
     refdata = getattr(espei.refdata, ref_state)
+    aliases = extract_aliases(phase_models)
     dbf = initialize_database(phase_models, ref_state, dbf)
     # Fit phases in alphabetic order so the VV#### counter is constistent between runs
     for phase_name, phase_obj in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
         symmetry = phase_obj.get('equivalent_sublattices', None)
-        aliases = phase_obj.get('aliases', None)  # TODO: use aliases dict from extract_aliases
         site_ratios = phase_obj['sublattice_site_ratios']
         subl_model = phase_obj['sublattice_model']
         phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
