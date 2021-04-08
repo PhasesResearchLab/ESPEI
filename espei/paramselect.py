@@ -471,13 +471,8 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     for phase_name, phase_obj in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
         symmetry = phase_obj.get('equivalent_sublattices', None)
         aliases = phase_obj.get('aliases', None)  # TODO: use aliases dict from extract_aliases
-        # TODO: More advanced phase data searching
         site_ratios = phase_obj['sublattice_site_ratios']
         subl_model = phase_obj['sublattice_model']
-        if phase_name not in dbf.phases.keys():
-            dbf.add_phase(phase_name, dict(), site_ratios)
-            dbf.add_phase_constituents(phase_name, subl_model)
-            dbf.add_structure_entry(phase_name, phase_name)
         phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
     logging.info('Finished generating parameters.')
     return dbf
