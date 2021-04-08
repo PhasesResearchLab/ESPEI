@@ -467,10 +467,8 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     logging.log(TRACE, f'Found the following user reference states: {espei.refdata.INSERTED_USER_REFERENCE_STATES}')
     refdata = getattr(espei.refdata, ref_state)
     dbf = initialize_database(phase_models, ref_state, dbf)
-    # Fit phases in alphabetic order for consisent counter variable
+    # Fit phases in alphabetic order so the VV#### counter is constistent between runs
     for phase_name, phase_obj in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
-        # Perform parameter selection and single-phase fitting based on input
-        # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
         symmetry = phase_obj.get('equivalent_sublattices', None)
         aliases = phase_obj.get('aliases', None)  # TODO: use aliases dict from extract_aliases
         # TODO: More advanced phase data searching
