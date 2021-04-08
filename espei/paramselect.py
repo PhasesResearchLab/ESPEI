@@ -27,6 +27,7 @@ from pycalphad import Database, Model, variables as v
 from pycalphad.io.database import Species
 
 import espei.refdata
+from espei.database_utils import initialize_database
 from espei.core_utils import get_data, get_samples, get_weights
 from espei.parameter_selection.model_building import build_candidate_models
 from espei.parameter_selection.selection import select_model
@@ -464,46 +465,14 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     """
     logging.info('Generating parameters.')
     logging.log(TRACE, f'Found the following user reference states: {espei.refdata.INSERTED_USER_REFERENCE_STATES}')
-    phases = sorted(map(lambda x: x.upper(), phase_models['phases'].keys()))
-    dbf = dbf or Database()
-    dbf.elements.update(set(phase_models['components']))
-    for el in dbf.elements:
-        dbf.species.add(Species(el, {el: 1}, 0))
-        # Add the SER reference data
-        dbf.refstates[el] = espei.refdata.ser_dict[el]
-        # update the refdata for this element with the reference phase
-        if el not in espei.refdata.pure_element_phases.keys():
-            # Probably VA, /- or something else
-            continue
-        refdata_phase = espei.refdata.pure_element_phases[el]
-        if refdata_phase in phases:
-            dbf.refstates[el]['phase'] = refdata_phase
-        else:
-            # Check all the aliases and set the one that matches
-            for phase_name, phase_obj in phase_models['phases'].items():
-                for alias in phase_obj.get('aliases', []):
-                    if alias == refdata_phase:
-                        dbf.refstates[el]['phase'] = phase_name
-    # Write reference state to Database
     refdata = getattr(espei.refdata, ref_state)
-    stabledata = getattr(espei.refdata, ref_state + 'Stable')
-    for key, element in refdata.items():
-        if isinstance(element, sympy.Piecewise):
-            newargs = element.args + ((0, True),)
-            refdata[key] = sympy.Piecewise(*newargs)
-    for key, element in stabledata.items():
-        if isinstance(element, sympy.Piecewise):
-            newargs = element.args + ((0, True),)
-            stabledata[key] = sympy.Piecewise(*newargs)
-    comp_refs = {c.upper(): stabledata[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
-    comp_refs['VA'] = 0
-    # note that the `c.upper()*2)[:2]` returns 'AL' for c.upper()=='AL' and 'VV' for c.upper()=='V'
-    dbf.symbols.update({'GHSER' + (c.upper()*2)[:2]: data for c, data in comp_refs.items()})
+    dbf = initialize_database(phase_models, ref_state, dbf)
+    # Fit phases in alphabetic order for consisent counter variable
     for phase_name, phase_obj in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
         # Perform parameter selection and single-phase fitting based on input
         # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
         symmetry = phase_obj.get('equivalent_sublattices', None)
-        aliases = phase_obj.get('aliases', None)
+        aliases = phase_obj.get('aliases', None)  # TODO: use aliases dict from extract_aliases
         # TODO: More advanced phase data searching
         site_ratios = phase_obj['sublattice_site_ratios']
         subl_model = phase_obj['sublattice_model']
