@@ -186,6 +186,15 @@ pycalphad does not automatically extrapolate the piecewise expressions outside
 of thier valid ranges, this condition will allow the solver to be numerically
 stable, returning zero instead of `NaN`.
 
+For ``<NAME>`` lattice stability data, all `GHSER` symbols will have a two
+letter element name, regardless of how many letters the element name has. This
+is to prevent abbreviation name clashes in commercial software. For example,
+`GHSERC` could represent the Gibbs energy for carbon (`C`), but also be a
+valid abbreviation for calcium (`CA`). Using `GHSERCC` automatically fixes this
+issue, but be aware to use `Symbol("GHSERCC")` in the case of single letter
+phase names.
+
+
 Detailed Information
 ====================
 
