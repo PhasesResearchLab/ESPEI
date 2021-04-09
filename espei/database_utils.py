@@ -17,7 +17,8 @@ def _get_ser_data(element, ref_state, fallback_ref_state="SGTE91") -> Dict[str, 
     If no SER data is found, returns an empty dictionary.
     """
     ser_ref_state = ref_state + "SER"
-    ser_dict = getattr(espei.refdata, ser_ref_state)
+    # Return an empty dict for backwards compatibility, since the SER data may not exist
+    ser_dict = getattr(espei.refdata, ser_ref_state, {})
     fallback_ser_ref_state = fallback_ref_state + "SER"
     fallback_ser_dict = getattr(espei.refdata, fallback_ser_ref_state)
     el_ser_data = ser_dict.get(element)
@@ -29,11 +30,11 @@ def _get_ser_data(element, ref_state, fallback_ref_state="SGTE91") -> Dict[str, 
         el_ser_data = fallback_ser_dict.get(element)
         if el_ser_data is None:
             # No data found in the fallback
-            logging.warning("%s has no entry in the %s reference data nor in the %s fallback reference data. Fitting formation energies will not be possible.", element, ser_dict + "SER", fallback_ser_ref_state)
+            logging.warning("%s has no entry in the %s reference data nor in the %s fallback reference data. Fitting formation energies will not be possible.", element, ser_ref_state + "SER", fallback_ser_ref_state)
             return {}
         else:
             # Data found in the fallback
-            logging.log(TRACE, "%s has no entry in the %s reference data, but was available in the %s fallback reference data.", element, ser_dict + "SER", fallback_ser_ref_state)
+            logging.log(TRACE, "%s has no entry in the %s reference data, but was available in the %s fallback reference data.", element, ser_ref_state + "SER", fallback_ser_ref_state)
     if el_ser_data is not None:
         return el_ser_data
     else:

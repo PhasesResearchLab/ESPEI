@@ -1128,3 +1128,13 @@ LI_SN_LIQUID_EQ_DATA = {
     "values": [[[0, 0, 0, 0]]],
     "reference": "equilibrium thermochemical tests", "comment": "Valid speices: LI, LI4SN, SN; No interaction for LI/LI4SN, but there is one for LI4SN/SN. True values should be [0.0, -28133.588, -40049.995, 0.0]"
 }
+
+SGTE91_PURE_ELEMENTS = (
+    '/-', 'VA', 'AG', 'AL', 'AM', 'AS', 'AU', 'B', 'BA', 'BE', 'BI', 'C', 'CA',
+     'CD', 'CE', 'CO', 'CR', 'CS', 'CU', 'DY', 'ER', 'EU', 'FE', 'GA', 'GD',
+     'GE', 'HF', 'HG', 'HO', 'IN', 'IR', 'K', 'LA', 'LI', 'LU', 'MG', 'MN',
+     'MO', 'N', 'NA', 'NB', 'ND', 'NI', 'NP', 'O', 'OS', 'P', 'PA', 'PB', 'PD',
+      'PR', 'PT', 'PU', 'RB', 'RE', 'RH', 'RU', 'S', 'SB', 'SC', 'SE', 'SI',
+      'SM', 'SN', 'SR', 'TA', 'TB', 'TC', 'TE', 'TH', 'TI', 'TL', 'TM', 'U',
+      'V', 'W', 'Y', 'YB', 'ZN', 'ZR',
+)
