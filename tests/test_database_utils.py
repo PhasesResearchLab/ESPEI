@@ -4,7 +4,10 @@ Tests in here are heavily parameterized and represent a large fraction of the
 number of tests, but a small amount of coverage.
 """
 
+from pycalphad import variables as v
 import pytest
+import sympy
+from sympy import Piecewise, Symbol
 
 import espei.refdata
 from espei.database_utils import initialize_database, _get_ser_data
@@ -32,3 +35,55 @@ def test_get_ser_data_is_successful_without_refdata():
     """Test that an element not in reference data or fallback data returns an empty dict"""
     assert _get_ser_data("FAKE ELEMENT", "SGTE91") == {}
     assert _get_ser_data("FAKE ELEMENT", "FAKE REF DATA") == {}
+
+
+def test_database_initialization_custom_refstate():
+    """Test that a custom reference state with ficticious pure elements can be used to construct a Database"""
+    refdata_stable = {
+        "Q": Piecewise((sympy.oo, True)),
+        "ZX": Piecewise((sympy.oo, True)),
+    }
+    refdata = {
+        ("Q", "ALPHA"): Symbol("GHSERQQ"),
+        ("Q", "BETA"): Symbol("GHSERQQ") + 10000.0,
+        ("ZX", "BETA"): Symbol("GHSERZX"),
+    }
+    refdata_ser = {
+        'Q': {'phase': 'ALPHA', 'mass': 8.0, 'H298': 80.0, 'S298': 0.80},
+        'ZX': {'phase': 'BETA', 'mass': 52.0, 'H298': 520.0, 'S298': 5.20},
+    }
+
+    # Setup refdata
+    CUSTOM_REFDATA_NAME = "CUSTOM"
+    setattr(espei.refdata, CUSTOM_REFDATA_NAME + "Stable", refdata_stable)
+    setattr(espei.refdata, CUSTOM_REFDATA_NAME, refdata)
+    setattr(espei.refdata, CUSTOM_REFDATA_NAME + "SER", refdata_ser)
+
+    # Test
+    phase_models = {
+        "components": ["Q", "ZX"],
+        "phases": {
+            "ALPHA": {
+                "sublattice_model": [["Q"]],
+                "sublattice_site_ratios": [1],
+            },
+            "BCC": {
+                "aliases": ["BETA"],
+                "sublattice_model": [["Q", "ZX"]],
+                "sublattice_site_ratios": [1.0],
+            },
+        }
+    }
+    dbf = initialize_database(phase_models, CUSTOM_REFDATA_NAME)
+    assert set(dbf.phases.keys()) == {"ALPHA", "BCC"}
+    assert dbf.elements == {"Q", "ZX"}
+    assert dbf.species == {v.Species("Q"), v.Species("ZX")}
+    assert 'GHSERQQ' in dbf.symbols
+    assert 'GHSERZX' in dbf.symbols
+    assert dbf.refstates["Q"]["phase"] == "ALPHA"
+    assert dbf.refstates["ZX"]["phase"] == "BCC"
+
+    # Teardown refdata
+    delattr(espei.refdata, CUSTOM_REFDATA_NAME + "Stable")
+    delattr(espei.refdata, CUSTOM_REFDATA_NAME)
+    delattr(espei.refdata, CUSTOM_REFDATA_NAME + "SER")
