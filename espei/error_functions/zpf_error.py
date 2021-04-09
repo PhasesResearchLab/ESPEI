@@ -39,6 +39,29 @@ def _safe_index(items, index):
         return None
 
 
+def _extract_symbols(soln):
+    """Return dependent and independent symbols in the solution dictionary"""
+    dependent_symbols = set(soln.keys())
+    independent_symbols = set()
+    for expr in soln.values():
+        independent_symbols |= expr.free_symbols
+    return dependent_symbols, independent_symbols
+
+
+def _solve(equations, desired_syms, phase_name, comp_conds):
+    """Return a unique solution dictionary to the desired equations.
+
+    Phases and composition conditions are only used for error reporting.
+    Will raise a ValueError if no solutions are possible.
+    """
+    soln_dicts = sympy.solve(equations, desired_syms, dict=True)
+    if len(soln_dicts) == 0:
+        raise ValueError(f'No possible solutions for phase "{phase_name}" to satisfy the composition conditions: {comp_conds}. Check whether these compositions are valid.')
+    elif len(soln_dicts) > 1:
+        warnings.warn(f'Multiple solutions possible for phase "{phase_name}" to satisfy the composition conditions: {comp_conds}. Taking the first solution')
+    return soln_dicts[0] # take the first solution even if multiple
+
+
 def _solve_sitefracs_composition(mod: Model, comp_conds: Dict[v.X, float]) -> Dict[v.Y, Union[sympy.Expr, v.Y]]:
     """Return a dictionary of site fraction expressions that solves the prescribed composition
     
@@ -51,6 +74,14 @@ def _solve_sitefracs_composition(mod: Model, comp_conds: Dict[v.X, float]) -> Di
     -------
     Dict[v.Y, Union[sympy.Expr, v.Y]]
         Mapping of dependent site fractions to independent site fractions (possibly in expressions)
+
+    Notes
+    -----
+    The symbols in the solution dictionary may not seem like they are
+    independent variables and that they would invalidate the site fraction sum
+    condition if replaced with arrays. Instead, the dependent site fraction
+    would become negative if the condition were invalidated and those points
+    can be filtered out in a later step.
     """
     # populate equations list with the site fraction contraints
     eqns = list(mod.get_internal_constraints()) # assumes only sublattice constraints
@@ -62,14 +93,19 @@ def _solve_sitefracs_composition(mod: Model, comp_conds: Dict[v.X, float]) -> Di
         eqn = X_el - comp_cond_val  # = 0
         eqns.append(eqn)
 
-    # Note: the symbols in the solution dict may not seem like they are independent variables and that they would invalidate the site fraction sum condition if replaced with arrays. You don't have to worry about this because the dependent site fraction would become negative if the condition were invalidated and those points will be filtered out in a later step.
-    soln_dicts = sympy.solve(eqns, mod.site_fractions, dict=True)
-    if len(soln_dicts) == 0:
-        raise ValueError(f'No possible solutions for phase "{mod.phase_name}" to satisfy the composition conditions: {comp_conds}. Check whether these compositions are valid.')
-    elif len(soln_dicts) > 1:
-        warnings.warn(f'Multiple solutions possible for phase "{mod.phase_name}" to satisfy the composition conditions: {comp_conds}. Taking the first solution')
-    soln_dict = soln_dicts[0] # assumes one unique soln
-    return soln_dict
+    # Try to make vacancy-like species independent so we can sample their dilute constitutions effectively
+    desired_dependent_sfs = [sf for sf in mod.site_fractions if sf.species.number_of_atoms != 0]
+    soln = _solve(eqns, desired_dependent_sfs, mod.phase_name, comp_conds)
+
+    # Verify that the solution has all the site fractions
+    dep_sfs, indep_sfs = _extract_symbols(soln)
+    missing_sfs = set(mod.site_fractions).difference(dep_sfs | indep_sfs)
+    if len(missing_sfs) > 0:
+        # The solution is missing some site fractions. They may be independent
+        # variables. Add them and solve again.
+        soln = _solve(eqns, list(set(desired_dependent_sfs) | missing_sfs), mod.phase_name, comp_conds)
+
+    return soln
 
 
 def _sample_solution_constitution(mod: Model, soln: Dict[v.Y, Union[sympy.Expr, v.Y]], pdens=101) -> ArrayLike:
