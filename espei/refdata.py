@@ -36,8 +36,8 @@ def find_and_insert_user_refstate(entry_point_plugin_name='espei.reference_state
   to their setuptools.setup function call in their setup.py file:
   ``entry_points={'espei.reference_states': 'BOCK2015 = refstate'}``,
   where ``BOCK2015`` is the name of the reference state and ``refstate`` is the
-  name of the module containing the dictionaries for ``BOCK2015`` and
-  ``BOCK2015``, which define the reference states.
+  name of the module containing the dictionaries for ``BOCK2015Stable``, 
+  ``BOCK2015`` and  ``BOCK2015SER``, which define the reference states.
 
   """
   import pkg_resources
@@ -47,6 +47,7 @@ def find_and_insert_user_refstate(entry_point_plugin_name='espei.reference_state
     refstate_name = entry_point.name
     namespace[refstate_name] = getattr(user_module, refstate_name)
     namespace[refstate_name+'Stable'] = getattr(user_module, refstate_name+'Stable')
+    namespace[refstate_name+'SER'] = getattr(user_module, refstate_name+'SER', {})
     found_refstates.append(refstate_name)
   return found_refstates
 
