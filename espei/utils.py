@@ -456,16 +456,6 @@ def extract_aliases(phase_models):
     -------
     Dict[str, str]
 
-    Examples
-    --------
-    >>> phase_models = {"phases": {}}
-    >>> extract_aliases(phase_models) == {}
-    True
-    >>> phase_models = {"phases": {"GAMMA": {"aliases": ["FCC_A1"]}}}
-    >>> expected_aliases = {"GAMMA": "GAMMA", "FCC_A1": "GAMMA"}
-    >>> extract_aliases(phase_models) == expected_aliases
-    True
-
     """
     aliases = {}
     # Add identity aliases for each phase first for better errors later
