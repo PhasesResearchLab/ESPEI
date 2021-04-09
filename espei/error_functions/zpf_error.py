@@ -27,6 +27,7 @@ import tinydb
 
 from pycalphad import Database, Model, variables as v
 from pycalphad.codegen.callables import build_phase_records
+from pycalphad.core.constants import MIN_SITE_FRACTION
 from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
 from pycalphad.core.phase_rec import PhaseRecord
 from espei.utils import PickleableTinyDB
@@ -116,7 +117,13 @@ def _sample_solution_constitution(mod: Model, soln: Dict[v.Y, Union[sympy.Expr, 
     is to remove any points which have negative site fractions. It is the
     responsibility of the caller to enforce that the sum of positive site
     fractions is unity (which will prevent any site fractions > 1).
+    
+    Each degree of freedom will have
 
+    * ``pdens`` points sampled linearly on the interval ``[0, 1]``    
+    * ``pdens`` points sampled in logspace on the intervals
+       ``[MIN_SITE_FRACTION, 0.01]`` and ``[0.99, 1.0]``.
+    
     Returns
     -------
     ArrayLike
@@ -128,8 +135,14 @@ def _sample_solution_constitution(mod: Model, soln: Dict[v.Y, Union[sympy.Expr, 
         indep_site_fracs |= expr.free_symbols
     indep_site_fracs = sorted(indep_site_fracs, key=str)
 
+    # Sample dilute edges in logspace and linearly in the middle
+    grid_1d = np.concatenate([
+        np.logspace(np.log10(MIN_SITE_FRACTION), -2, pdens//2),  # [~0, 0.01]
+        np.linspace(0, 1, pdens),
+        np.logspace(np.log10(0.99), 0, pdens//2),  # [0.99, 1.0]
+    ])
     # Create 1D arrays from 0 to 1 for each independent variable
-    indep_site_frac_arrays = [np.linspace(0, 1, pdens) for _ in indep_site_fracs]
+    indep_site_frac_arrays = [grid_1d for _ in indep_site_fracs]
 
     # Broadcast the 1D arrays against each other and flatten them
     grids_Nd = np.meshgrid(*indep_site_frac_arrays)
