@@ -141,7 +141,7 @@ Assuming that you are fresh (without the skeleton downloaded yet):
 
          Bocklund2019 = OrderedDict([
              (('CU', 'HCP_A3'), Piecewise((-3.38438862938597e-7*T**3 - 0.00121182291077191*T**2 + 8.7685671186*T*log(exp(155.1404/T) - 1.0) + 16.1968683846*T*log(exp(290.9421/T) - 1.0) - 0.321147237334052*T - 10441.4393392344, And(T >= 0.01, T < 298.15)), (1.29223e-7*T**3 - 0.00265684*T**2 - 24.112392*T*log(T) + 130.685235*T - 7170.458 + 52478/T, And(T >= 298.15, T < 1357.77)), (-31.38*T*log(T) + 184.003828*T - 12942.0252504739 + 3.64167e+29/T**9, And(T >= 1357.77, T < 3200.0)), (0, True))),
-             (('CU', 'FCC_A1'), Piecewise((Symbol('GHSERCU'), And(T < 10000.0, T >= 1.0)))),
+             (('CU', 'FCC_A1'), Piecewise((Symbol('GHSERCU'), And(T < 10000.0, T >= 1.0)), (0, True))),
              (('CU', 'LIQUID'), Piecewise((-3.40056501515466e-7*T**3 - 0.00121066539331185*T**2 + 8.7685671186*T*log(exp(155.1404/T) - 1.0) + 16.1968683846*T*log(exp(290.9421/T) - 1.0) - 10.033338832193*T + 2379.36422209194, And(T >= 0.01, T < 298.15)), (-5.8489e-21*T**7 + 1.29223e-7*T**3 - 0.00265684*T**2 - 24.112392*T*log(T) + 120.973331*T + 5650.32106235287 + 52478/T, And(T >= 298.15, T < 1357.77)), (-31.38*T*log(T) + 173.881484*T + 409.498458129716, And(T >= 1357.77, T < 3200.0)), (0, True))),
          ])
 
@@ -180,6 +180,11 @@ non-integer powers). Any expression supported by pycalphad ``Model`` objects
 can be used, but note that the TDB files that ESPEI writes using these 
 expressions may not be compatible with commercial software.
 
+It's important to note that the users probably want to add a ``(0, True)``
+expression/condition pair to the end of any Piecewise expressions used. Since
+pycalphad does not automatically extrapolate the piecewise expressions outside
+of thier valid ranges, this condition will allow the solver to be numerically
+stable, returning zero instead of `NaN`.
 
 Detailed Information
 ====================
