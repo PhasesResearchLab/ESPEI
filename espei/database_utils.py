@@ -66,9 +66,11 @@ def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="S
     lattice_stabilities = getattr(espei.refdata, ref_state)
     ser_stability = getattr(espei.refdata, ref_state + "Stable")
     aliases = extract_aliases(phase_models)
-    phases = sorted(map(lambda x: x.upper(), phase_models["phases"].keys()))
-    dbf.elements.update(set(phase_models["components"]))
-    dbf.species.update({v.Species(el, {el: 1}, 0) for el in phase_models["components"]})
+    phases = sorted({ph.upper() for ph in phase_models["phases"].keys()})
+    elements = {el.upper() for el in phase_models["components"]}
+    dbf.elements.update(elements)
+    dbf.species.update({v.Species(el, {el: 1}, 0) for el in elements})
+    
     # Add SER reference data for this element
     for element in dbf.elements:
         if element in dbf.refstates:
@@ -96,18 +98,16 @@ def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="S
         if phase_name not in dbf.phases.keys():  # Do not clobber user phases
             dbf.add_phase(phase_name, dict(), site_ratios)
             dbf.add_phase_constituents(phase_name, subl_model)
-
-    # Write Gibbs energy data to Database
-    for key, element in lattice_stabilities.items():
-        if isinstance(element, sympy.Piecewise):
-            newargs = element.args + ((0, True),)
-            lattice_stabilities[key] = sympy.Piecewise(*newargs)
-    for key, element in ser_stability.items():
-        if isinstance(element, sympy.Piecewise):
-            newargs = element.args + ((0, True),)
-            ser_stability[key] = sympy.Piecewise(*newargs)
-    comp_refs = {c.upper(): ser_stability[c.upper()] for c in dbf.elements if c.upper() != "VA"}
-    comp_refs["VA"] = 0
-    # note that the `c.upper()*2)[:2]` returns "AL" for c.upper()=="AL" and "VV" for c.upper()=="V"
-    dbf.symbols.update({"GHSER" + (c.upper()*2)[:2]: data for c, data in comp_refs.items()})
+    
+    # Add the GHSER functions to the Database
+    for element in dbf.elements:
+        # Use setdefault here to not clobber user-provided functions
+        if element == "VA":
+            dbf.symbols.setdefault("GHSERVA", 0)
+        else:
+            # note that `c.upper()*2)[:2]` returns "AL" for "Al" and "BB" for "B"
+            # Using this ensures that GHSER functions will be unique, e.g.
+            # GHSERC would be an abbreviation for GHSERCA.
+            sym_name = "GHSER" + (element.upper()*2)[:2]
+            dbf.symbols.setdefault(sym_name, 0)
     return dbf
