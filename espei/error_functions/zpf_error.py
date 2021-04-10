@@ -503,7 +503,7 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
     """
     Calculate the likelihood due to phase equilibria data.
 
-    For detailed documentation, see :ref:`calculate_zpf_driving_forces`
+    For detailed documentation, see ``calculate_zpf_driving_forces``
 
     Returns
     -------
