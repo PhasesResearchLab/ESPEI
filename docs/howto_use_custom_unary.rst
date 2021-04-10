@@ -8,14 +8,22 @@
 Use a custom unary reference state
 ==================================
 
+Unary reference state data provides three pieces of information about pure elements to ESPEI:
+
+#. Stable element reference (SER) data, giving the stable phase, atomic mass, :math:`H298` and :math:`S298` of each element
+#. Gibbs energy of each element in its SER phase
+#. Optional lattice stability functions for selected phases, often relative to the stable element reference energy
+
 By default, ESPEI uses the SGTE91 reference state using the functions defined
 by Dinsdale [#sgte91_paper]_.
 
-You may be interested in using custom unary reference states for parameter
-generation in ESPEI if you are developing descriptions of the Gibbs energy
-and/or lattice stability for pure elements. This is useful for any unary
-function developed outside of ESPEI, available in the literature.
+ESPEI can be provided custom unary reference states for parameter generation.
+Some common use cases for custom reference states are:
 
+* Testing new unary descriptions in an assessment
+* Using ESPEI to model systems with ficticious components, like a pseudo-binary
+
+Using a custom reference state is very easy once it is created or installed.
 Instead of generating parameters with:
 
 .. code-block:: yaml
@@ -27,8 +35,7 @@ Instead of generating parameters with:
       excess_model: linear
       ref_state: SGTE91
 
-You can create a small Python package that provides a reference state called
-``MyCustomReferenceState``, which can be used as follows:
+A custom reference state called ``MyCustomReferenceState`` could be used by:
 
 .. code-block:: yaml
 
@@ -38,12 +45,10 @@ You can create a small Python package that provides a reference state called
     generate_parameters:
       excess_model: linear
       ref_state: MyCustomReferenceState
-
-Here ``MyCustomReferenceState`` provides the Gibbs energy for the pure
-elements, i.e. the ``GHSERXX`` function for some element ``XX``.
-``MyCustomReferenceState`` can also provide lattice stabilities if the lattice
-stability will not be fit using your input data.
-
+ 
+Using the template package below, you can create a Python package of custom
+reference data to install for yourself, and optionally to distribute to others.
+   
 .. _quickstart_unary_skeleton:
 
 Quickstart: Skeleton package
@@ -58,8 +63,8 @@ Running the example
 -------------------
 
 Following these steps will give you a working unary reference state for Al and
-Ag named ``CustomRefstate2020``. Starting from a command line, with ``git``
-installed:
+Ag named ``CustomRefstate2020``. Assuming you have ``git`` and a working Python
+environment, starting from the command line:
 
 #. Clone the skeleton repository: ``git clone https://github.com/PhasesResearchLab/ESPEI-unary-refstate-skeleton``
 #. Enter the downloaded repository: ``cd ESPEI-unary-refstate-skeleton``
@@ -114,11 +119,14 @@ Assuming that you are fresh (without the skeleton downloaded yet):
 #. Clone the skeleton repository: ``git clone https://github.com/PhasesResearchLab/ESPEI-unary-refstate-skeleton``
 #. Enter the downloaded repository: ``cd ESPEI-unary-refstate-skeleton``
 #. Update the ``NAME = 'CustomRefstate2020'`` parameter in ``setup.py`` to ``NAME = 'Bocklund2019'``
-#. In the ``refstate.py`` module, create the ``Bockund2019Stable`` and ``Bockund2019`` dictionaries (see :ref:`creating_refstate_dicts` for more details)
+#. In the ``refstate.py`` module, create the ``Bockund2019Stable``, ``Bockund2019``, and (optionally) ``Bocklund2019SER`` dictionaries (see :ref:`creating_refstate_dicts` for more details)
 
 
    #. Delete the ``CustomRefstate2020Stable`` and ``CustomRefstate2020`` variables
-   #. Add the stable phase Gibbs energy for Cu to the ``Bockund2019Stable`` variable
+   #. Add the stable phase Gibbs energy for Cu to the ``Bockund2019Stable``
+      variable. Note that ``OrderedDict`` is defined in the ``collections``
+      module in the Python standard library.
+   
 
       .. code-block:: python
 
@@ -133,13 +141,21 @@ Assuming that you are fresh (without the skeleton downloaded yet):
 
          Bocklund2019 = OrderedDict([
              (('CU', 'HCP_A3'), Piecewise((-3.38438862938597e-7*T**3 - 0.00121182291077191*T**2 + 8.7685671186*T*log(exp(155.1404/T) - 1.0) + 16.1968683846*T*log(exp(290.9421/T) - 1.0) - 0.321147237334052*T - 10441.4393392344, And(T >= 0.01, T < 298.15)), (1.29223e-7*T**3 - 0.00265684*T**2 - 24.112392*T*log(T) + 130.685235*T - 7170.458 + 52478/T, And(T >= 298.15, T < 1357.77)), (-31.38*T*log(T) + 184.003828*T - 12942.0252504739 + 3.64167e+29/T**9, And(T >= 1357.77, T < 3200.0)), (0, True))),
-             (('CU', 'FCC_A1'), Piecewise((Symbol('GHSERCU'), And(T < 10000.0, T >= 1.0)))),
+             (('CU', 'FCC_A1'), Piecewise((Symbol('GHSERCU'), And(T < 10000.0, T >= 1.0)), (0, True))),
              (('CU', 'LIQUID'), Piecewise((-3.40056501515466e-7*T**3 - 0.00121066539331185*T**2 + 8.7685671186*T*log(exp(155.1404/T) - 1.0) + 16.1968683846*T*log(exp(290.9421/T) - 1.0) - 10.033338832193*T + 2379.36422209194, And(T >= 0.01, T < 298.15)), (-5.8489e-21*T**7 + 1.29223e-7*T**3 - 0.00265684*T**2 - 24.112392*T*log(T) + 120.973331*T + 5650.32106235287 + 52478/T, And(T >= 298.15, T < 1357.77)), (-31.38*T*log(T) + 173.881484*T + 409.498458129716, And(T >= 1357.77, T < 3200.0)), (0, True))),
          ])
 
-#. Install the package using ``pip``: ``pip install -e .``
-#. You can now use your reference state in ESPEI, and even change the definitions on the fly.
+   #. (Optional) Add the SER data. If you don't add this data, the SGTE91 data will be used as a fallback
 
+      .. code-block:: python
+
+         Bocklund2019SER = OrderedDict([
+            ('CU', {'phase': 'FCC_A1', 'mass': 63.546, 'H298': 5004.1, 'S298': 33.15}),
+         ])
+
+
+#. Install the package as editable using ``pip``: ``pip install -e .``
+#. You can now use your reference state in ESPEI, and even change the definitions on the fly.
 
 
 .. _creating_refstate_dicts:
@@ -147,54 +163,36 @@ Assuming that you are fresh (without the skeleton downloaded yet):
 Creating the reference state dictionaries
 =========================================
 
-To define the reference state and lattice stabilities, you must define two
-ordered dictionaries, one ``<NAME>Stable`` and one ``<NAME>`` with the Gibbs
-energies of the stable phase at 298.15 K and the lattice stabilities,
-respectively. Note that ``OrderedDict`` is defined in the ``collections``
-module in the Python standard library.
+To define the reference Gibbs energy, lattice stabilities, and SER data you
+must define three ordered dictionaries:
 
-The Gibbs energy functions defined here must be defined as valid symbolic
-expressions using SymPy ``Symbol`` objects and pycalphad ``StateVariable``
-objects (e.g. ``pycalphad.variables.T``, ``pycalphad.variables.P``), which can
-be (but are not required to be) piecewise in temperature. Any SymPy functions
-can be used (``exp``, ``log``, ``Piecewise``, ...) and syntax/functions can be
-used which are not available in commercial software (for example, direct
-exponentiation to non-integer powers). Anything supported by pycalphad
-``Model`` objects can be written, but note that the TDB objects that ESPEI
-writes using these expressions may not be compatible with commercial software.
+* ``<NAME>SER``, mapping element names to dictionaries of SER data
+* ``<NAME>Stable``, mapping element names to Gibbs energy expressions for the stable phase
+* ``<NAME>``, mapping pairs of ``(element name, phase name)`` to lattice stability expressions
 
-The ``<NAME>Stable`` dictionary defines the function corresponding to the
-``GHSERXX`` function, you should interpret this function as defining a
-``Symbol(GHSERXX)`` (a SymPy ``Symbol`` object). The ``<NAME>Stable``
-dictionary directly maps pure element names to SymPy functions (note that
-``OrderedDict`` syntax means construction a dict from a list of tuples).
+The Gibbs energy expressions must be defined as valid symbolic expressions
+using SymPy ``Symbol`` objects and pycalphad ``StateVariable`` objects (e.g.
+``v.T``, ``v.P``), which can be (but are not required to be) piecewise in
+temperature. Any SymPy functions can be used (``exp``, ``log``, ``Piecewise``,
+...). Any valid Python syntax or functions can be used, including those not
+available in commercial software (for example, direct exponentiation with
+non-integer powers). Any expression supported by pycalphad ``Model`` objects
+can be used, but note that the TDB files that ESPEI writes using these 
+expressions may not be compatible with commercial software.
 
-The ``<NAME>`` dictionary maps tuples of ``("XX", "PHASE_NAME")`` to lattice
-stability Gibbs energy functions, where ``XX`` is a pure element string. The
-stable phase at 298.15 K should be defined by setting the energy to
-``Symbol(GHSERXX)`` is the implictly defined ``GHSER`` function, again for
-element ``XX``. The lattice stabilities, if desired, can be referenced to
-the ``Symbol(GHSERXX)`` function, although they are not here except for the
-stable ``FCC_A1``.
+It's important to note that the users probably want to add a ``(0, True)``
+expression/condition pair to the end of any Piecewise expressions used. Since
+pycalphad does not automatically extrapolate the piecewise expressions outside
+of thier valid ranges, this condition will allow the solver to be numerically
+stable, returning zero instead of `NaN`.
 
-
-   .. code-block:: python
-
-      from collections import OrderedDict
-      from sympy import *
-      from pycalphad.variables import P, T
-
-      Bocklund2019Stable = OrderedDict([
-          ('CU',
-          Piecewise((-0.0010514335*T**2 + 8.7685671186*T*log(exp(155.1404/T) - 1.0) + 16.1968683846*T*log(exp(290.9421/T) - 1.0) - 11038.0904080745, And(T >= 0.01, T < 103.57591)), (-2.15621953171362e-6*T**3 + 0.000288560900942072*T**2 - 0.13879113947248*T*log(T) + 8.7685671186*T*log(exp(155.1404/T) - 1.0) + 16.1968683846*T*log(exp(290.9421/T) - 1.0) + 0.574637617323048*T - 11042.8822142647, And(T >= 103.57591, T < 210.33309)), (-0.002432585*T**2 + 0.4335558862135*T*log(T) + 8.7685671186*T*log(exp(155.1404/T) - 1.0) + 16.1968683846*T*log(exp(290.9421/T) - 1.0) - 2.20049706600083*T - 11002.7543747764, And(T >= 210.33309, T < 1357.77)), (-31.38*T*log(T) + 183.555483717662*T - 12730.2995781851 + 7.42232714807953e+28/T**9, And(T >= 1357.77, T < 3200.0)), (0, True))),
-      ])
-
-      Bocklund2019 = OrderedDict([
-          (('CU', 'HCP_A3'), Piecewise((-3.38438862938597e-7*T**3 - 0.00121182291077191*T**2 + 8.7685671186*T*log(exp(155.1404/T) - 1.0) + 16.1968683846*T*log(exp(290.9421/T) - 1.0) - 0.321147237334052*T - 10441.4393392344, And(T >= 0.01, T < 298.15)), (1.29223e-7*T**3 - 0.00265684*T**2 - 24.112392*T*log(T) + 130.685235*T - 7170.458 + 52478/T, And(T >= 298.15, T < 1357.77)), (-31.38*T*log(T) + 184.003828*T - 12942.0252504739 + 3.64167e+29/T**9, And(T >= 1357.77, T < 3200.0)), (0, True))),
-          (('CU', 'FCC_A1'), Piecewise((Symbol('GHSERCU'), And(T < 10000.0, T >= 1.0)))),
-          (('CU', 'LIQUID'), Piecewise((-3.40056501515466e-7*T**3 - 0.00121066539331185*T**2 + 8.7685671186*T*log(exp(155.1404/T) - 1.0) + 16.1968683846*T*log(exp(290.9421/T) - 1.0) - 10.033338832193*T + 2379.36422209194, And(T >= 0.01, T < 298.15)), (-5.8489e-21*T**7 + 1.29223e-7*T**3 - 0.00265684*T**2 - 24.112392*T*log(T) + 120.973331*T + 5650.32106235287 + 52478/T, And(T >= 298.15, T < 1357.77)), (-31.38*T*log(T) + 173.881484*T + 409.498458129716, And(T >= 1357.77, T < 3200.0)), (0, True))),
-      ])
-
+For ``<NAME>`` lattice stability data, all `GHSER` symbols will have a two
+letter element name, regardless of how many letters the element name has. This
+is to prevent abbreviation name clashes in commercial software. For example,
+`GHSERC` could represent the Gibbs energy for carbon (`C`), but also be a
+valid abbreviation for calcium (`CA`). Using `GHSERCC` automatically fixes this
+issue, but be aware to use `Symbol("GHSERCC")` in the case of single letter
+phase names.
 
 
 Detailed Information
@@ -203,17 +201,16 @@ Detailed Information
 Setting up setup.py
 -------------------
 
-If you're comfortable creaing your own package or want to go dig deeper into
-how the skeleton works, ESPEI uses the
+If you want to go dig deeper into how the skeleton works, ESPEI uses the
 `entry_points <https://packaging.python.org/guides/creating-and-discovering-plugins/#using-package-metadata>`_
 feature of ``setuptools`` to treat additional reference states as plugins.
 
 A package providing a reference state to ESPEI should provide a module that has
-two ``OrderedDict`` objects named ``<NAME>Stable`` and ``<NAME>``, according to
-the :ref:`creating_refstate_dicts` section above. The module can have any name,
-``<MODULE>``, (the skeleton has ``refstate.py``). ESPEI looks for the
-``entry_point`` called ``espei.reference_states`` following the example from
-the `setuptools documentation <https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins>`_.
+three  dictionaries: ``<NAME>Stable``, ``<NAME>``, and (optional) ``<NAME>SER``,
+according to the :ref:`creating_refstate_dicts` section above. The module can
+have any name, ``<MODULE>``, (the skeleton uses ``refstate.py``). ESPEI looks
+for the ``entry_point`` called ``espei.reference_states`` following the example
+from the `setuptools documentation <https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins>`_.
 Concretely, the ``entry_point`` should be described by:
 
 .. code-block:: python
@@ -255,4 +252,4 @@ References
 
 .. [#sgte91_paper] A.T. Dinsdale, Calphad 15(4) (1991) 317-425, doi:`10.1016/0364-5916(91)90030-N <https://doi.org/10.1016/0364-5916(91)90030-N>`_
 .. [#espei_paper] B. Bocklund *et al.*, MRS Communications 9(2) (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_
-.. [#segmented_regression_paper] I. Roslyakova *et al.*, Calphad 55 (2016) 165–180. doi:`10.1016/j.calphad.2016.09.001 <https://doi.org/10.1016/j.calphad.2016.09.001>`_
+.. [#segmented_regression_paper] I\. Roslyakova *et al.*, Calphad 55 (2016) 165–180. doi:`10.1016/j.calphad.2016.09.001 <https://doi.org/10.1016/j.calphad.2016.09.001>`_

@@ -24,9 +24,9 @@ import numpy as np
 import sympy
 from tinydb import where
 from pycalphad import Database, Model, variables as v
-from pycalphad.io.database import Species
 
 import espei.refdata
+from espei.database_utils import initialize_database
 from espei.core_utils import get_data, get_samples, get_weights
 from espei.parameter_selection.model_building import build_candidate_models
 from espei.parameter_selection.selection import select_model
@@ -34,7 +34,7 @@ from espei.parameter_selection.ternary_parameters import build_ternary_feature_m
 from espei.parameter_selection.utils import get_data_quantities, feature_transforms
 from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
     tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
-from espei.utils import PickleableTinyDB, sigfigs
+from espei.utils import PickleableTinyDB, sigfigs, extract_aliases
 
 
 TRACE = 15  # TRACE logging level
@@ -277,7 +277,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
                     dbf.add_parameter('L', phase_name, tuple(map(tuplify, syminter)), degree, degree_polys[degree])
 
 
-def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aicc_penalty=None, aliases=None):
+def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=None, aliases=None):
     """Generate an initial CALPHAD model for a given phase and sublattice model.
 
     Parameters
@@ -288,10 +288,6 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         Name of the phase.
     symmetry : [[int]]
         Sublattice model symmetry.
-    subl_model : [[str]]
-        Sublattice model for the phase of interest.
-    site_ratios : [float]
-        Number of sites in each sublattice, normalized to one atom.
     datasets : PickleableTinyDB
         All datasets to consider for the calculation.
     refdata : dict
@@ -302,9 +298,8 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
         with ordinary least squares regression. For now, the parameter is applied to all features.
     aicc_penalty : dict
         Map of phase name to feature to a multiplication factor for the AICc's parameter penalty.
-    aliases : [str]
-        Alternative phase names. Useful for matching against
-        reference data or other datasets. (Default value = None)
+    aliases : Dict[str, str]
+        Mapping of possible aliases to the Database phase names.
 
     Returns
     -------
@@ -316,14 +311,22 @@ def phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refd
     aicc_phase_penalty = aicc_penalty.get(phase_name, {})
     if not hasattr(dbf, 'varcounter'):
         dbf.varcounter = 0
+    phase_obj = dbf.phases[phase_name]
+    # TODO: assumed pure elements - add proper support for Species objects
+    subl_model = [sorted([sp.name for sp in subl]) for subl in phase_obj.constituents]
+    site_ratios = phase_obj.sublattices
     # First fit endmembers
     all_em_count = len(generate_endmembers(subl_model))  # number of total endmembers
     endmembers = generate_endmembers(subl_model, symmetry)
     # Number of significant figures in parameters, might cause rounding errors
     numdigits = 6
     em_dict = {}
-    aliases = [] if aliases is None else aliases
-    aliases = sorted(set(aliases + [phase_name]))
+    # TODO: use the global aliases dictionary passed in as-is instead of converting it to a phase-local dict
+    # TODO: use the aliases dictionary in dataset queries to find relevant data
+    if aliases is None:
+        aliases = [phase_name]
+    else:
+        aliases = sorted([alias for alias, database_phase in aliases.items() if database_phase == phase_name])
     logging.info('FITTING: {}'.format(phase_name))
     logging.log(TRACE, '{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
 
@@ -464,53 +467,12 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     """
     logging.info('Generating parameters.')
     logging.log(TRACE, f'Found the following user reference states: {espei.refdata.INSERTED_USER_REFERENCE_STATES}')
-    phases = sorted(map(lambda x: x.upper(), phase_models['phases'].keys()))
-    dbf = dbf or Database()
-    dbf.elements.update(set(phase_models['components']))
-    for el in dbf.elements:
-        dbf.species.add(Species(el, {el: 1}, 0))
-        # Add the SER reference data
-        dbf.refstates[el] = espei.refdata.ser_dict[el]
-        # update the refdata for this element with the reference phase
-        if el not in espei.refdata.pure_element_phases.keys():
-            # Probably VA, /- or something else
-            continue
-        refdata_phase = espei.refdata.pure_element_phases[el]
-        if refdata_phase in phases:
-            dbf.refstates[el]['phase'] = refdata_phase
-        else:
-            # Check all the aliases and set the one that matches
-            for phase_name, phase_obj in phase_models['phases'].items():
-                for alias in phase_obj.get('aliases', []):
-                    if alias == refdata_phase:
-                        dbf.refstates[el]['phase'] = phase_name
-    # Write reference state to Database
     refdata = getattr(espei.refdata, ref_state)
-    stabledata = getattr(espei.refdata, ref_state + 'Stable')
-    for key, element in refdata.items():
-        if isinstance(element, sympy.Piecewise):
-            newargs = element.args + ((0, True),)
-            refdata[key] = sympy.Piecewise(*newargs)
-    for key, element in stabledata.items():
-        if isinstance(element, sympy.Piecewise):
-            newargs = element.args + ((0, True),)
-            stabledata[key] = sympy.Piecewise(*newargs)
-    comp_refs = {c.upper(): stabledata[c.upper()] for c in dbf.elements if c.upper() != 'VA'}
-    comp_refs['VA'] = 0
-    # note that the `c.upper()*2)[:2]` returns 'AL' for c.upper()=='AL' and 'VV' for c.upper()=='V'
-    dbf.symbols.update({'GHSER' + (c.upper()*2)[:2]: data for c, data in comp_refs.items()})
-    for phase_name, phase_obj in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
-        # Perform parameter selection and single-phase fitting based on input
-        # TODO: Need to pass particular models to include: magnetic, order-disorder, etc.
-        symmetry = phase_obj.get('equivalent_sublattices', None)
-        aliases = phase_obj.get('aliases', None)
-        # TODO: More advanced phase data searching
-        site_ratios = phase_obj['sublattice_site_ratios']
-        subl_model = phase_obj['sublattice_model']
-        if phase_name not in dbf.phases.keys():
-            dbf.add_phase(phase_name, dict(), site_ratios)
-            dbf.add_phase_constituents(phase_name, subl_model)
-            dbf.add_structure_entry(phase_name, phase_name)
-        phase_fit(dbf, phase_name, symmetry, subl_model, site_ratios, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
+    aliases = extract_aliases(phase_models)
+    dbf = initialize_database(phase_models, ref_state, dbf)
+    # Fit phases in alphabetic order so the VV#### counter is constistent between runs
+    for phase_name, phase_data in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
+        symmetry = phase_data.get('equivalent_sublattices', None)
+        phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
     logging.info('Finished generating parameters.')
     return dbf
