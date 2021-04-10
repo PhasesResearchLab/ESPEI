@@ -17,7 +17,7 @@ composition conditions to calculate chemical potentials at.
 import logging
 import warnings
 from collections import OrderedDict
-from typing import Sequence, Dict, NamedTuple, Any, Union
+from typing import Sequence, Dict, NamedTuple, Any, Union, List, Tuple
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -429,7 +429,7 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
                                  parameters: ArrayLike = None,
                                  approximate_equilibrium: bool = False,
                                  short_circuit: bool = False
-                                 ) -> tuple[list[list[float]], list[list[float]]]:
+                                 ) -> Tuple[List[List[float]], List[List[float]]]:
     """
     Calculate error due to phase equilibria data
 
@@ -447,7 +447,7 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
 
     Returns
     -------
-    tuple[list[list[float]], list[list[float]]]
+    Tuple[List[List[float]], List[List[float]]]
         Driving forces and weights as ragged 2D arrays with shape
         ``(len(zpf_data), len(vertices in each zpf_data))``
 
