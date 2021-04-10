@@ -2,6 +2,7 @@
 .smt/
 __pycache__
 build
+_build
 .cache
 dask-worker-space
 
