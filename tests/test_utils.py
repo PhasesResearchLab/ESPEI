@@ -3,9 +3,11 @@ Test espei.utils classes and functions.
 """
 import pickle
 
+import pytest
 from tinydb import where
 from espei.utils import ImmediateClient, PickleableTinyDB, MemoryStorage, \
-    flexible_open_string, add_bibtex_to_bib_database, bib_marker_map
+    flexible_open_string, add_bibtex_to_bib_database, bib_marker_map, \
+    extract_aliases
 
 from .fixtures import datasets_db, tmp_file
 from .testing_data import CU_MG_TDB
@@ -101,3 +103,59 @@ def test_bib_marker_map():
     }
     assert EXEMPLAR_DICT == marker_dict
 
+
+@pytest.mark.parametrize('reason, phase_models, expected_aliases', [
+    (
+        "No phases should give no aliases",
+        {"phases": {}},
+        {}
+    ),
+    (
+        "A phase has an alias for itself and works without given aliases",
+        {"phases": {"ALPHA": {}}},
+        {"ALPHA": "ALPHA"}
+    ),
+    (
+        "Empty aliases list works",
+        {"phases": {"ALPHA": {"aliases": []}}},
+        {"ALPHA": "ALPHA"}
+    ),
+    (
+        "Basic test for adding aliases correctly",
+        {"phases": {
+            "ALPHA": {"aliases": ["FCC_A1"]}
+        }},
+        {"ALPHA": "ALPHA", "FCC_A1": "ALPHA"}
+    ),
+    (
+        "A phase can have mulitple aliases",
+        {"phases": {
+            "ALPHA": {"aliases": ["FCC_A1", "A1", "FCC"]}
+        }},
+        {"ALPHA": "ALPHA", "FCC_A1": "ALPHA", "FCC": "ALPHA", "A1": "ALPHA"}
+    ),
+    (
+        "Cannot have two phases with the same alias",
+        {"phases": {
+            "ALPHA": {"aliases": ["FCC_A1"]},
+            "GAMMA": {"aliases": ["FCC_A1"]},
+        }},
+        None
+    ),
+    (
+        "Cannot have a prescribed phase as an alias",
+        {"phases": {
+            "ALPHA": {"aliases": ["BETA"]},
+            "BETA": {"aliases": []},
+        }},
+        None
+    ),
+]
+)
+def test_extract_aliases(reason, phase_models, expected_aliases):
+    if expected_aliases is None:
+        with pytest.raises(ValueError):
+            aliases = extract_aliases(phase_models)
+            print(aliases)
+    else:
+        assert extract_aliases(phase_models) == expected_aliases, reason

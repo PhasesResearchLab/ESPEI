@@ -6,13 +6,11 @@ Classes and functions defined here should have some reuse potential.
 
 import itertools
 import re
-import os
 from collections import namedtuple
 
 import bibtexparser
 import numpy as np
 import sympy
-import dask
 from bibtexparser.bparser import BibTexParser
 from bibtexparser.customization import convert_to_unicode
 from distributed import Client
@@ -439,3 +437,32 @@ def popget(d, key, default=None):
         return d.pop(key)
     except KeyError:
         return default
+
+
+def extract_aliases(phase_models):
+    """Map possible phase name aliases to the desired phase model phase name.
+    
+    This function enforces that each alias is only claimed by one phase.
+    Each phase name in the phase models is added as an alias for itself to
+    support an "identity" operation.
+
+    Parameters
+    ----------
+    phase_models
+        Phase models ESPEI uses to initialize databases. Must contain a mapping
+        of phase names to phase data (sublattices, site ratios, aliases)
+
+    Returns
+    -------
+    Dict[str, str]
+
+    """
+    # Intialize aliases with identity for each phase first
+    aliases = {phase_name: phase_name for phase_name in phase_models["phases"].keys()}
+    for phase_name, phase_dict in phase_models["phases"].items():        
+        for alias in phase_dict.get("aliases", []):
+            if alias not in aliases:
+                aliases[alias] = phase_name
+            else:
+                raise ValueError(f"Cannot add {alias} as an alias for {phase_name} because it is already used by {aliases[alias]}")
+    return aliases
