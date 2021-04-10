@@ -428,7 +428,8 @@ def _format_phase_compositions(phase_region):
 def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
                                  parameters: ArrayLike = None,
                                  approximate_equilibrium: bool = False,
-                                 short_circuit: bool = False) -> ArrayLike:
+                                 short_circuit: bool = False
+                                 ) -> tuple[list[list[float]], list[list[float]]]:
     """
     Calculate error due to phase equilibria data
 
@@ -446,8 +447,9 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
 
     Returns
     -------
-    tuple[ArrayLike, ArrayLike]
-        Log probability of ZPF error and dataset weights
+    tuple[list[list[float]], list[list[float]]]
+        Driving forces and weights as ragged 2D arrays with shape
+        ``(len(zpf_data), len(vertices in each zpf_data))``
 
     Notes
     -----
@@ -461,8 +463,9 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
         parameters = np.array([])
     driving_forces = []
     weights = []
-    short_circ_str = ' Short circuting.' if short_circuit else ''
     for data in zpf_data:
+        data_driving_forces = []
+        data_weights = []
         data_comps = data['data_comps']
         weight = data['weight']
         dataset_ref = data['dataset_reference']
@@ -472,14 +475,10 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
             eq_str = _format_phase_compositions(phase_region)
             target_hyperplane = estimate_hyperplane(phase_region, parameters, approximate_equilibrium=approximate_equilibrium)
             if np.any(np.isnan(target_hyperplane)):
-                logging.debug('ZPF error - NaN target hyperplane. Equilibria: (%s), reference: %s,%s', eq_str, dataset_ref, short_circ_str)
-                # TODO: determine whether to short circuit this. Behavior changes from previous code.
-                if short_circuit:
-                    return np.array([np.nan]), np.array([np.nan])
-                else:
-                    driving_forces.extend([0]*len(phase_region.comp_conds))
-                    weights.extend([0]*len(phase_region.comp_conds))
-                    continue
+                logging.debug('ZPF error - NaN target hyperplane. Equilibria: (%s), driving force: 0.0, reference: %s.', eq_str, dataset_ref)
+                data_driving_forces.extend([0]*len(phase_region.comp_conds))
+                data_weights.extend([weight]*len(phase_region.comp_conds))
+                continue
             # 2. Calculate the driving force to that hyperplane for each vertex
             for vertex_idx in range(len(phase_region.comp_conds)):
                 driving_force = driving_force_to_hyperplane(target_hyperplane, data_comps,
@@ -487,12 +486,14 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
                                                             approximate_equilibrium=approximate_equilibrium,
                                                             )
                 if np.isinf(driving_force) and short_circuit:
-                    logging.debug('ZPF error - Equilibria: (%s), current phase: %s, driving force: %s, reference: %s.%s', eq_str, phase_region.region_phases[vertex_idx], driving_force, dataset_ref)
-                    return np.array([np.inf]), np.array([np.inf])
-                driving_forces.append(driving_force)
-                weights.append(weight)
+                    logging.debug('ZPF error - Equilibria: (%s), current phase: %s, driving force: %s, reference: %s. Short circuiting.', eq_str, phase_region.region_phases[vertex_idx], driving_force, dataset_ref)
+                    return [[np.inf]], [[np.inf]]
+                data_driving_forces.append(driving_force)
+                data_weights.append(weight)
                 logging.debug('ZPF error - Equilibria: (%s), current phase: %s, driving force: %s, reference: %s', eq_str, phase_region.region_phases[vertex_idx], driving_force, dataset_ref)
-    return np.asarray(driving_forces), np.asarray(weights)
+        driving_forces.append(data_driving_forces)
+        weights.append(data_weights)
+    return driving_forces, weights
 
 
 def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
@@ -510,7 +511,12 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
         Log probability of ZPF driving forces
 
     """
+    if len(zpf_data) == 0:
+        return 0.0
     driving_forces, weights = calculate_zpf_driving_forces(zpf_data, parameters, approximate_equilibrium, short_circuit=True)
+    # Driving forces and weights are 2D ragged arrays with the shape (len(zpf_data), len(zpf_data['values']))
+    driving_forces = np.concatenate(driving_forces)
+    weights = np.concatenate(weights)
     if np.any(np.logical_or(np.isinf(driving_forces), np.isnan(driving_forces))):
         return -np.inf
     return np.sum(norm.logpdf(driving_forces, loc=0, scale=1000/data_weight/weights))
