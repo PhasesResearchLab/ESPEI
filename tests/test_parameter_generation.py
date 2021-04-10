@@ -459,3 +459,19 @@ def test_model_contributions_can_be_excluded_mixed_datasets(datasets_db):
     dbf = generate_parameters(CR_FE_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', dbf=Database(CR_FE_INITIAL_TDB_CONTRIBUTIONS))
     assert dbf.symbols['VV0000'] == 40000  # 4 mol-atom/mol-form * 10000 J/mol-atom, verified with no initial Database
 
+def test_parameters_can_be_generated_with_component_subsets(datasets_db):
+    CR_FE_PHASE_MODELS = {
+        "components": ["CR", "FE"],
+        "phases": {
+               "BCC_A2": {
+                  "sublattice_model": [["CR", "FE", "NI", "V"]],
+                  "sublattice_site_ratios": [1]
+               },
+               "INACTIVE": {
+                    "sublattice_model": [["NI", "V"]],
+                    "sublattice_site_ratios": [1]
+               }
+          }
+      }
+
+    generate_parameters(CR_FE_PHASE_MODELS, datasets_db, 'SGTE91', 'linear')
