@@ -457,9 +457,8 @@ def extract_aliases(phase_models):
     Dict[str, str]
 
     """
-    aliases = {}
-    # Add identity aliases for each phase first for better errors later
-    aliases.update({phase_name: phase_name for phase_name in phase_models["phases"].keys()})
+    # Intialize aliases with identity for each phase first
+    aliases = {phase_name: phase_name for phase_name in phase_models["phases"].keys()}
     for phase_name, phase_dict in phase_models["phases"].items():        
         for alias in phase_dict.get("aliases", []):
             if alias not in aliases:
