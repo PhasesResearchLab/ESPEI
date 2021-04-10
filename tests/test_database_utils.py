@@ -21,14 +21,24 @@ def test_get_ser_data_SGTE91(element_name):
     # Make a fake fallback dataset so we can confirm that it's pulling from the primary
     FAKE_FALLBACK = "FAKE_FALLBACK_"
     setattr(espei.refdata, FAKE_FALLBACK + "SER", {})
-    _get_ser_data(element_name, "SGTE91", fallback_ref_state=FAKE_FALLBACK)
+    data = _get_ser_data(element_name, "SGTE91", fallback_ref_state=FAKE_FALLBACK)
+    assert len(data) > 0
+    assert isinstance(data['phase'], str)
+    assert isinstance(data['H298'], float)
+    assert isinstance(data['S298'], float)
+    assert isinstance(data['mass'], float)
     delattr(espei.refdata, FAKE_FALLBACK + "SER")
 
 
 @pytest.mark.parametrize("element_name", SGTE91_PURE_ELEMENTS)
 def test_get_ser_data_falls_back_on_SGTE91(element_name):
     """Test that a reference dataset with no SER data falls back on SGTE91"""
-    _get_ser_data(element_name, "FAKE_REF_STATE")
+    data = _get_ser_data(element_name, "FAKE_REF_STATE")
+    assert len(data) > 0
+    assert isinstance(data['phase'], str)
+    assert isinstance(data['H298'], float)
+    assert isinstance(data['S298'], float)
+    assert isinstance(data['mass'], float)
 
 
 def test_get_ser_data_is_successful_without_refdata():
