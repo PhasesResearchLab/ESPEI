@@ -420,33 +420,29 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
     return driving_force
 
 
-def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
-                        parameters: np.ndarray = None,
-                        data_weight: int = 1.0,
-                        approximate_equilibrium: bool = False):
+def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
+                                 parameters: ArrayLike = None,
+                                 approximate_equilibrium: bool = False,
+                                 short_circuit: bool = False) -> ArrayLike:
     """
     Calculate error due to phase equilibria data
 
-    zpf_data : list
+    zpf_data : Sequence[Dict[str, Any]]
         Datasets that contain single phase data
-    phase_models : dict
-        Phase models to pass to pycalphad calculations
-    parameters : np.ndarray
+    parameters : ArrayLike
         Array of parameters to calculate the error with.
-    callables : dict
-        Callables to pass to pycalphad
-    data_weight : float
-        Scaling factor for the standard deviation of the measurement of a
-        tieline which has units J/mol. The standard deviation is 1000 J/mol
-        and the scaling factor defaults to 1.0.
     approximate_equilibrium : bool
         Whether or not to use an approximate version of equilibrium that does
         not refine the solution and uses ``starting_point`` instead.
+    short_circuit: bool
+        If True, immediately return a size 1 array with a driving force of
+        ``np.nan`` (failed hyperplane) or ``np.inf`` (failed driving force).
+        Can save computational time if the caller will aggregate driving forces.
 
     Returns
     -------
-    float
-        Log probability of ZPF error
+    tuple[ArrayLike, ArrayLike]
+        Log probability of ZPF error and dataset weights
 
     Notes
     -----
@@ -458,31 +454,59 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
     """
     if parameters is None:
         parameters = np.array([])
-    prob_error = 0.0
+    driving_forces = []
+    weights = []
+    short_circ_str = ' Short circuting.' if short_circuit else ''
     for data in zpf_data:
         data_comps = data['data_comps']
         weight = data['weight']
         dataset_ref = data['dataset_reference']
         # for the set of phases and corresponding tie-line verticies in equilibrium
         for phase_region in data['phase_regions']:
-            # Calculate the average multiphase hyperplane
+            # 1. Calculate the average multiphase hyperplane
             eq_str = "conds: ({}), comps: ({})".format(phase_region.potential_conds, ', '.join(['{}: {}'.format(ph, c) for ph, c in zip(phase_region.region_phases, phase_region.comp_conds)]))
             target_hyperplane = estimate_hyperplane(phase_region, parameters, approximate_equilibrium=approximate_equilibrium)
             if np.any(np.isnan(target_hyperplane)):
-                zero_probs = norm.logpdf(np.zeros(len(phase_region.comp_conds)), loc=0, scale=1000/data_weight/weight)
-                total_zero_prob = np.sum(zero_probs)
-                logging.debug('ZPF error - NaN target hyperplane. Equilibria: ({}), reference: {}. Treating all driving force: 0.0, probability: {}, probabilities: {}'.format(eq_str, dataset_ref, total_zero_prob, zero_probs))
-                prob_error += total_zero_prob
-                continue
-            # Then calculate the driving force to that hyperplane for each individual vertex
+                logging.debug('ZPF error - NaN target hyperplane. Equilibria: (%s), reference: %s,%s', eq_str, dataset_ref, short_circ_str)
+                # TODO: determine whether to short circuit this. Behavior changes from previous code.
+                if short_circuit:
+                    return np.array([np.nan]), np.array([np.nan])
+                else:
+                    driving_forces.extend([0]*len(phase_region.comp_conds))
+                    weights.extend([0]*len(phase_region.comp_conds))
+                    continue
+            # 2. Calculate the driving force to that hyperplane for each vertex
             for vertex_idx in range(len(phase_region.comp_conds)):
                 driving_force = driving_force_to_hyperplane(target_hyperplane, data_comps,
                                                             phase_region, vertex_idx, parameters,
                                                             approximate_equilibrium=approximate_equilibrium,
                                                             )
-                vertex_prob = norm.logpdf(driving_force, loc=0, scale=1000/data_weight/weight)
-                prob_error += vertex_prob
-                logging.debug('ZPF error - Equilibria: ({}), current phase: {}, driving force: {}, probability: {}, reference: {}'.format(eq_str, phase_region.region_phases[vertex_idx], driving_force, vertex_prob, dataset_ref))
-    if np.isnan(prob_error):
+                if np.isinf(driving_force) and short_circuit:
+                    logging.debug('ZPF error - Equilibria: (%s), current phase: %s, driving force: %s, reference: %s.%s', eq_str, phase_region.region_phases[vertex_idx], driving_force, dataset_ref)
+                    return np.array([np.inf]), np.array([np.inf])
+                driving_forces.append(driving_force)
+                weights.append(weight)
+                logging.debug('ZPF error - Equilibria: (%s), current phase: %s, driving force: %s, reference: %s', eq_str, phase_region.region_phases[vertex_idx], driving_force, dataset_ref)
+    return np.asarray(driving_forces), np.asarray(weights)
+
+
+def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
+                        parameters: np.ndarray = None,
+                        data_weight: int = 1.0,
+                        approximate_equilibrium: bool = False) -> float:
+    """
+    Calculate the likelihood due to phase equilibria data.
+
+    For detailed documentation, see :ref:`calculate_zpf_driving_forces`
+
+    Returns
+    -------
+    float
+        Log probability of ZPF driving forces
+
+    """
+    driving_forces, weights = calculate_zpf_driving_forces(zpf_data, parameters, approximate_equilibrium, short_circuit=True)
+    if np.any(np.logical_or(np.isinf(driving_forces), np.isnan(driving_forces))):
         return -np.inf
-    return prob_error
+    return np.sum(norm.logpdf(driving_forces, loc=0, scale=1000/data_weight/weights))
+
