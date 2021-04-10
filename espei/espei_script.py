@@ -19,6 +19,7 @@ import dask
 import distributed
 import sympy
 import symengine
+from tinydb import where
 import emcee
 import pycalphad
 from pycalphad import Database
@@ -152,11 +153,14 @@ def run_espei(run_settings):
     logging.log(TRACE, 'Loading and checking datasets.')
     dataset_path = system_settings['datasets']
     datasets = load_datasets(sorted(recursive_glob(dataset_path, '*.json')))
-    if len(datasets.all()) == 0:
-        logging.warning('No datasets were found in the path {}. This should be a directory containing dataset files ending in `.json`.'.format(dataset_path))
     apply_tags(datasets, system_settings.get('tags', dict()))
     add_ideal_exclusions(datasets)
     logging.log(TRACE, 'Finished checking datasets')
+    removed_ids = datasets.remove(where('disabled') == True)
+    if len(removed_ids) > 0:
+        logging.debug('Removed %d disabled datasets', len(removed_ids))
+    if len(datasets.all()) == 0:
+        logging.warning('No enabled datasets were found in the path %s. This should be a directory containing dataset files ending in `.json`.', dataset_path)
 
     with open(system_settings['phase_models']) as fp:
         phase_models = json.load(fp)
