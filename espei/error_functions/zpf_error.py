@@ -423,7 +423,7 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
 def _format_phase_compositions(phase_region):
     phase_comp_cond_pairs = zip(phase_region.region_phases, phase_region.comp_conds)
     phase_compositions = ', '.join(f'{ph}: {c}' for ph, c in phase_comp_cond_pairs)
-    "conds: ({}), comps: ({})".format(phase_region.potential_conds, phase_compositions)
+    return f"conds: ({phase_region.potential_conds}), comps: ({phase_compositions})"
 
 def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
                                  parameters: ArrayLike = None,
