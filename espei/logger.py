@@ -48,4 +48,5 @@ def config_logger(verbosity=0, filename=None, reset_handlers=True):
         handler = logging.StreamHandler()
     formatter = logging.Formatter("%(levelname)s:%(name)s - %(message)s")
     handler.setFormatter(formatter)
+    handler.addFilter(logging.Filter('espei'))
     root_logger.addHandler(handler)
