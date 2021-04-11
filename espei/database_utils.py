@@ -77,7 +77,9 @@ def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="S
         el_ser_data = _get_ser_data(element, ref_state, fallback_ref_state=fallback_ref_state)
         # Try to look up the alias that we are using in this fitting
         el_ser_data["phase"] = aliases.get(el_ser_data["phase"], el_ser_data["phase"])
-        if el_ser_data["phase"] not in phases:
+        # Don't warn if the element is a species with no atoms because per-atom 
+        # formation energies are not possible (e.g. VA (VACUUM) or /- (ELECTRON_GAS))
+        if el_ser_data["phase"] not in phases and v.Species(element).number_of_atoms != 0:
             # We have the Gibbs energy expression that we need in the reference
             # data, but this phase is not a candidate in the phase models. The
             # phase won't be added to the database, so looking up the phases's
