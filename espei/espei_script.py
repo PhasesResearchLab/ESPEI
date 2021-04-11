@@ -146,14 +146,10 @@ def run_espei(run_settings):
     generate_parameters_settings = run_settings.get('generate_parameters')
     mcmc_settings = run_settings.get('mcmc')
 
-    # handle verbosity
-    verbosity = {
-        0: logging.WARNING,
-        1: logging.INFO,
-        2: espei.logger.ESPEILogger.TRACE,
-        3: logging.DEBUG
-    }
-    logging.basicConfig(level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
+    # Configure logger
+    log_verbosity = output_settings['verbosity']
+    log_filename = output_settings['logfile']
+    espei.logger.config_logger(verbosity=log_verbosity, filename=log_filename)
 
     log_version_info()
 
@@ -222,6 +218,7 @@ def run_espei(run_settings):
                     _log.info("Install bokeh to use the dask bokeh server.")
             else: # we were passed a scheduler file name
                 client = ImmediateClient(scheduler_file=mcmc_settings['scheduler'])
+            client.run(espei.logger.config_logger, verbosity=log_verbosity, filename=log_filename)
             client.run(np.set_printoptions, linewidth=sys.maxsize)
             _log.info("Running with dask scheduler: %s [%s cores]" % (client.scheduler, sum(client.ncores().values())))
         else:
