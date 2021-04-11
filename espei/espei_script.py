@@ -12,6 +12,7 @@ import logging
 import multiprocessing
 import sys
 import json
+import warnings
 
 import numpy as np
 import yaml
@@ -113,9 +114,15 @@ def get_run_settings(input_dict):
     run_settings = schema.normalized(input_dict)
     # can't have chain_std_deviation and chains_per_parameter defaults with restart_trace
     if run_settings.get('mcmc') is not None:
-            if run_settings['mcmc'].get('restart_trace') is None:
-                run_settings['mcmc']['chains_per_parameter'] = run_settings['mcmc'].get('chains_per_parameter', 2)
-                run_settings['mcmc']['chain_std_deviation'] = run_settings['mcmc'].get('chain_std_deviation', 0.1)
+        if run_settings['mcmc'].get('restart_trace') is None:
+            run_settings['mcmc']['chains_per_parameter'] = run_settings['mcmc'].get('chains_per_parameter', 2)
+            run_settings['mcmc']['chain_std_deviation'] = run_settings['mcmc'].get('chain_std_deviation', 0.1)
+        if run_settings['mcmc']['scheduler'] == 'None':
+            warnings.warn(
+                "Setting scheduler to the string 'None' will be deprecated in ESPEI "
+                "0.10. Use `null` in YAML or `None` in Python.", DeprecationWarning
+            )
+            run_settings['mcmc']['scheduler'] = None
     if not schema.validate(run_settings):
         raise ValueError(schema.errors)
     return run_settings
@@ -195,32 +202,31 @@ def run_espei(run_settings):
             raise OSError('Probfile "%s" exists and would be overwritten by a new run. Use the ``output.probfile`` setting to set a different name.', probfile)
 
         # scheduler setup
-        if mcmc_settings['scheduler'] == 'dask':
+        if mcmc_settings['scheduler'] is not None:
             _raise_dask_work_stealing()  # check for work-stealing
-            from distributed import LocalCluster
-            cores = mcmc_settings.get('cores', multiprocessing.cpu_count())
-            if (cores > multiprocessing.cpu_count()):
-                cores = multiprocessing.cpu_count()
-                _log.warning("The number of cores chosen is larger than available. "
-                                "Defaulting to run on the %s available cores.", cores)
-            # TODO: make dask-scheduler-verbosity a YAML input so that users can debug. Should have the same log levels as verbosity
-            scheduler = LocalCluster(n_workers=cores, threads_per_worker=1, processes=True, memory_limit=0)
-            client = ImmediateClient(scheduler)
-            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
-            _log.info("Running with dask scheduler: %s [%s cores]" % (scheduler, sum(client.ncores().values())))
-            try:
-                bokeh_server_info = client.scheduler_info()['services']['bokeh']
-                _log.info("bokeh server for dask scheduler at localhost:%s", bokeh_server_info)
-            except KeyError:
-                _log.info("Install bokeh to use the dask bokeh server.")
-        elif mcmc_settings['scheduler'] == 'None' or mcmc_settings['scheduler'] is None:
+            if mcmc_settings['scheduler'] == 'dask':
+                _raise_dask_work_stealing()  # check for work-stealing
+                from distributed import LocalCluster
+                cores = mcmc_settings.get('cores', multiprocessing.cpu_count())
+                if (cores > multiprocessing.cpu_count()):
+                    cores = multiprocessing.cpu_count()
+                    _log.warning("The number of cores chosen is larger than available. "
+                                 "Defaulting to run on the %s available cores.", cores)
+                # TODO: make dask-scheduler-verbosity a YAML input so that users can debug. Should have the same log levels as verbosity
+                scheduler = LocalCluster(n_workers=cores, threads_per_worker=1, processes=True, memory_limit=0)
+                client = ImmediateClient(scheduler)
+                try:
+                    bokeh_server_info = client.scheduler_info()['services']['bokeh']
+                    _log.info("bokeh server for dask scheduler at localhost:%s", bokeh_server_info)
+                except KeyError:
+                    _log.info("Install bokeh to use the dask bokeh server.")
+            else: # we were passed a scheduler file name
+                client = ImmediateClient(scheduler_file=mcmc_settings['scheduler'])
+            client.run(np.set_printoptions, linewidth=sys.maxsize)
+            _log.info("Running with dask scheduler: %s [%s cores]" % (client.scheduler, sum(client.ncores().values())))
+        else:
             client = None
             _log.info("Not using a parallel scheduler. ESPEI is running MCMC on a single core.")
-        else: # we were passed a scheduler file name
-            _raise_dask_work_stealing()  # check for work-stealing
-            client = ImmediateClient(scheduler_file=mcmc_settings['scheduler'])
-            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
-            _log.info("Running with dask scheduler: %s [%s cores]" % (client.scheduler, sum(client.ncores().values())))
 
         # get a Database
         if mcmc_settings.get('input_db'):
