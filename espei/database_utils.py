@@ -8,8 +8,7 @@ from pycalphad import Database, variables as v
 import espei.refdata
 from espei.utils import extract_aliases
 
-TRACE = 15
-
+_log = logging.getLogger(__name__)
 
 def _get_ser_data(element, ref_state, fallback_ref_state="SGTE91") -> Dict[str, Union[str, float]]:
     """Return a dictionary of the stable element reference (SER) data.
@@ -24,17 +23,17 @@ def _get_ser_data(element, ref_state, fallback_ref_state="SGTE91") -> Dict[str, 
     el_ser_data = ser_dict.get(element)
     if el_ser_data is None and ref_state == fallback_ref_state:
         # No data found, no fallback alternative
-        logging.warning("%s has no entry in the %s reference data. Fitting formation energies will not be possible.", element, ser_ref_state)
+        _log.warning("%s has no entry in the %s reference data. Fitting formation energies will not be possible.", element, ser_ref_state)
     elif el_ser_data is None:
         # No data found, try the fallback
         el_ser_data = fallback_ser_dict.get(element)
         if el_ser_data is None:
             # No data found in the fallback
-            logging.warning("%s has no entry in the %s reference data nor in the %s fallback reference data. Fitting formation energies will not be possible.", element, ser_ref_state + "SER", fallback_ser_ref_state)
+            _log.warning("%s has no entry in the %s reference data nor in the %s fallback reference data. Fitting formation energies will not be possible.", element, ser_ref_state + "SER", fallback_ser_ref_state)
             return {}
         else:
             # Data found in the fallback
-            logging.log(TRACE, "%s has no entry in the %s reference data, but was available in the %s fallback reference data.", element, ser_ref_state + "SER", fallback_ser_ref_state)
+            _log.trace("%s has no entry in the %s reference data, but was available in the %s fallback reference data.", element, ser_ref_state + "SER", fallback_ser_ref_state)
     if el_ser_data is not None:
         return el_ser_data
     else:
@@ -83,10 +82,10 @@ def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="S
             # data, but this phase is not a candidate in the phase models. The
             # phase won't be added to the database, so looking up the phases's
             # energy won't work.
-            logging.warning(
-                "The reference phase for %s, %s, is not in the supplied phase models and won't be "
-                "added to the Database phases. Fitting formation energies will not be possible.",
-                element, el_ser_data["phase"]
+            _log.warning(
+                "The reference phase for %s, %s, is not in the supplied phase models "
+                "and won't be added to the Database phases. Fitting formation "
+                "energies will not be possible.", element, el_ser_data["phase"]
             )
         dbf.refstates[element] = el_ser_data
 
