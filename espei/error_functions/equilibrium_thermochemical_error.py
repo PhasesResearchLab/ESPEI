@@ -10,7 +10,6 @@ import numpy as np
 import tinydb
 from tinydb import where
 from scipy.stats import norm
-
 from pycalphad.plot.eqplot import _map_coord_to_variable
 from pycalphad import Database, Model, ReferenceState, variables as v
 from pycalphad.core.equilibrium import _eqcalculate
@@ -20,6 +19,9 @@ from pycalphad.core.phase_rec import PhaseRecord
 
 from espei.utils import PickleableTinyDB
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
+
+_log = logging.getLogger(__name__)
+
 
 EqPropData = NamedTuple('EqPropData', (('dbf', Database),
                                        ('species', Sequence[v.Species]),
@@ -220,10 +222,10 @@ def calc_prop_differences(eqpropdata: EqPropData,
 
     calculated_data = np.array(calculated_data, dtype=np.float_)
 
-    assert calculated_data.shape == samples.shape, f"Calculated data shape {calculated_data.shape} does not match samples shape {samples.shape}"
-    assert calculated_data.shape == weights.shape, f"Calculated data shape {calculated_data.shape} does not match weights shape {weights.shape}"
+    assert calculated_data.shape == samples.shape, "Calculated data shape {calculated_data.shape} does not match samples shape {samples.shape}"
+    assert calculated_data.shape == weights.shape, "Calculated data shape {calculated_data.shape} does not match weights shape {weights.shape}"
     differences = calculated_data - samples
-    logging.debug(f'Equilibrium thermochemical error - output: {output} differences: {differences}, weights: {weights}, reference: {eqpropdata.reference}')
+    _log.debug('Output: %s differences: %s, weights: %s, reference: %s', output, differences, weights, eqpropdata.reference)
     return differences, weights
 
 

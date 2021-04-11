@@ -16,6 +16,7 @@ Choose parameter set with best AICc score.
 
 """
 
+import sys
 import logging
 import operator
 from collections import OrderedDict
@@ -36,8 +37,7 @@ from espei.sublattice_tools import generate_symmetric_group, generate_interactio
     tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
 from espei.utils import PickleableTinyDB, sigfigs, extract_aliases
 
-
-TRACE = 15  # TRACE logging level
+_log = logging.getLogger(__name__)
 
 
 def _param_present_in_database(dbf, phase_name, configuration, param_type):
@@ -117,7 +117,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     """
     aicc_feature_factors = aicc_phase_penalty if aicc_phase_penalty is not None else {}
     if interaction_test(configuration):
-        logging.debug('ENDMEMBERS FROM INTERACTION: {}'.format(endmembers_from_interaction(configuration)))
+        _log.debug('ENDMEMBERS FROM INTERACTION: %s', endmembers_from_interaction(configuration))
         fitting_steps = (["CPM_FORM", "CPM_MIX"], ["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
 
     else:
@@ -152,7 +152,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         feature_type = desired_props[0].split('_')[0]  # HM_FORM -> HM
         aicc_factor = aicc_feature_factors.get(feature_type, 1.0)
         desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
-        logging.log(TRACE, '{}: datasets found: {}'.format(desired_props, len(desired_data)))
+        _log.trace('%s: datasets found: %s', desired_props, len(desired_data))
         if len(desired_data) > 0:
             # Ravelled weights for all data
             weights = get_weights(desired_data)
@@ -231,16 +231,15 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
     """
     numdigits = 6  # number of significant figures, might cause rounding errors
     interactions = generate_interactions(endmembers, order=3, symmetry=symmetry)
-    logging.log(TRACE, '{0} distinct ternary interactions'.format(len(interactions)))
+    _log.trace('%s distinct ternary interactions', len(interactions))
     for interaction in interactions:
         ixx = interaction
         config = tuple(map(tuplify, ixx))
         if _param_present_in_database(dbf, phase_name, config, 'L'):
-            logging.log(TRACE, 'INTERACTION: {} already in Database'.format(ixx))
-            print('INTERACTION: {} already in Database'.format(ixx))
+            _log.warning('INTERACTION: %s already in Database. Skipping.', ixx)
             continue
         else:
-            logging.log(TRACE, 'INTERACTION: {}'.format(ixx))
+            _log.trace('INTERACTION: %s', ixx)
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(3, dtype=np.object_)
@@ -268,7 +267,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
                     keys_to_remove.append(key)
             for key in keys_to_remove:
                 parameters.pop(key)
-        logging.log(TRACE, 'Polynomial coefs: {}'.format(degree_polys))
+        _log.trace('Polynomial coefs: %s', degree_polys)
         # Insert into database
         symmetric_interactions = generate_symmetric_group(interaction, symmetry)
         for degree in np.arange(degree_polys.shape[0]):
@@ -327,18 +326,18 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
         aliases = [phase_name]
     else:
         aliases = sorted([alias for alias, database_phase in aliases.items() if database_phase == phase_name])
-    logging.info('FITTING: {}'.format(phase_name))
-    logging.log(TRACE, '{0} endmembers ({1} distinct by symmetry)'.format(all_em_count, len(endmembers)))
+    _log.info('FITTING: %s', phase_name)
+    _log.trace('%s endmembers (%s distinct by symmetry)', all_em_count, len(endmembers))
 
     all_endmembers = []
     for endmember in endmembers:
         symmetric_endmembers = generate_symmetric_group(endmember, symmetry)
         all_endmembers.extend(symmetric_endmembers)
         if _param_present_in_database(dbf, phase_name, endmember, 'G'):
-            logging.log(TRACE, 'ENDMEMBER: {} already in Database'.format(endmember))
+            _log.trace('ENDMEMBER: %s already in Database. Skipping.', endmember)
             continue
         else:
-            logging.log(TRACE, 'ENDMEMBER: {}'.format(endmember))
+            _log.trace('ENDMEMBER: %s', endmember)
         # Some endmembers are fixed by our choice of standard lattice stabilities, e.g., SGTE91
         # If a (phase, pure component endmember) tuple is fixed, we should use that value instead of fitting
         endmember_comps = list(set(endmember))
@@ -381,14 +380,14 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                 subl = (subl.upper()*2)[:2]
                 ref = ref + ratio * sympy.Symbol('GHSER'+subl)
             fit_eq += ref
-        logging.log(TRACE, 'SYMMETRIC_ENDMEMBERS: {}'.format(symmetric_endmembers))
+        _log.trace('SYMMETRIC_ENDMEMBERS: %s', symmetric_endmembers)
         for em in symmetric_endmembers:
             em_dict[em] = fit_eq
             dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, fit_eq)
 
-    logging.log(TRACE, 'FITTING BINARY INTERACTIONS')
+    _log.trace('FITTING BINARY INTERACTIONS')
     bin_interactions = generate_interactions(all_endmembers, order=2, symmetry=symmetry)
-    logging.log(TRACE, '{0} distinct binary interactions'.format(len(bin_interactions)))
+    _log.trace('%s distinct binary interactions', len(bin_interactions))
     for interaction in bin_interactions:
         ixx = []
         for i in interaction:
@@ -399,10 +398,10 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
         ixx = tuple(ixx)
         config = tuple(map(tuplify, ixx))
         if _param_present_in_database(dbf, phase_name, config, 'L'):
-            logging.log(TRACE, 'INTERACTION: {} already in Database'.format(ixx))
+            _log.trace('INTERACTION: %s already in Database', ixx)
             continue
         else:
-            logging.log(TRACE, 'INTERACTION: {}'.format(ixx))
+            _log.trace('INTERACTION: %s', ixx)
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(10, dtype=np.object_)
@@ -424,7 +423,7 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                     keys_to_remove.append(key)
             for key in keys_to_remove:
                 parameters.pop(key)
-        logging.log(TRACE, 'Polynomial coefs: {}'.format(degree_polys))
+        _log.trace('Polynomial coefs: %s', degree_polys)
         # Insert into database
         symmetric_interactions = generate_symmetric_group(interaction, symmetry)
         for degree in np.arange(degree_polys.shape[0]):
@@ -432,7 +431,7 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                 for syminter in symmetric_interactions:
                     dbf.add_parameter('L', phase_name, tuple(map(tuplify, syminter)), degree, degree_polys[degree])
 
-    logging.log(TRACE, 'FITTING TERNARY INTERACTIONS')
+    _log.trace('FITTING TERNARY INTERACTIONS')
     fit_ternary_interactions(dbf, phase_name, symmetry, all_endmembers, datasets, aicc_phase_penalty=aicc_phase_penalty)
     if hasattr(dbf, 'varcounter'):
         del dbf.varcounter
@@ -465,8 +464,10 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     pycalphad.Database
 
     """
-    logging.info('Generating parameters.')
-    logging.log(TRACE, f'Found the following user reference states: {espei.refdata.INSERTED_USER_REFERENCE_STATES}')
+    # Set NumPy print options so logged arrays print on one line. Reset at the end.
+    np.set_printoptions(linewidth=sys.maxsize)
+    _log.info('Generating parameters.')
+    _log.trace('Found the following user reference states: %s', espei.refdata.INSERTED_USER_REFERENCE_STATES)
     refdata = getattr(espei.refdata, ref_state)
     aliases = extract_aliases(phase_models)
     dbf = initialize_database(phase_models, ref_state, dbf)
@@ -474,5 +475,6 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     for phase_name, phase_data in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
         symmetry = phase_data.get('equivalent_sublattices', None)
         phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
-    logging.info('Finished generating parameters.')
+    _log.info('Finished generating parameters.')
+    np.set_printoptions(linewidth=75)
     return dbf

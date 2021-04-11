@@ -1,4 +1,5 @@
 import logging
+import sys
 import time
 import numpy as np
 import emcee
@@ -11,8 +12,7 @@ from espei.error_functions.context import setup_context
 from .opt_base import OptimizerBase
 from .graph import OptNode
 
-
-TRACE = 15
+_log = logging.getLogger(__name__)
 
 
 class EmceeOptimizer(OptimizerBase):
@@ -77,18 +77,19 @@ class EmceeOptimizer(OptimizerBase):
         StretchMove for this parameter and only zeros will be selected.
 
         """
-        logging.log(TRACE, 'Initial parameters: {}'.format(params))
+        _log.trace('Initial parameters: %s', params)
         params = np.array(params)
         num_zero_params = np.nonzero(params == 0)[0].size
         if num_zero_params > 0:
-            logging.warning(f"{num_zero_params} initial parameter{' is' if num_zero_params == 1 else 's are'} "
-                            "initialized to zero. The ensemble of chains for zero parameters will be all initialized "
-                            "to zero and all proposed values for these parameter will be zero. If possible, it's "
-                            "better to make a good guess at a reasonable parameter value to start with. "
-                            "Alternatively, you can start with a small value near zero and let the ensemble search "
-                            "parameter space.")
+            _log.warning(
+                "%s initial parameters are initialized to zero. The ensemble of chains "
+                "for zero parameters will be all initialized to zero and all proposed "
+                "values for these parameter will be zero. If possible, it's better to "
+                "make a good guess at a reasonable parameter value to start with. "
+                "Alternatively, you can start with a small value near zero and let the "
+                "ensemble search parameter space.", num_zero_params)
         nchains = params.size * chains_per_parameter
-        logging.info('Initializing {} chains with {} chains per parameter.'.format(nchains, chains_per_parameter))
+        _log.info('Initializing %s chains with %s chains per parameter.', nchains, chains_per_parameter)
         if deterministic:
             rng = np.random.RandomState(1769)
         else:
@@ -105,9 +106,9 @@ class EmceeOptimizer(OptimizerBase):
         nchains = walkers.shape[0]
         ndim = walkers.shape[1]
         initial_parameters = walkers.mean(axis=0)
-        logging.info('Restarting from previous calculation with {} chains ({} per parameter).'.format(nchains, nchains / ndim))
-        logging.log(TRACE, 'Means of restarting parameters are {}'.format(initial_parameters))
-        logging.log(TRACE, 'Standard deviations of restarting parameters are {}'.format(walkers.std(axis=0)))
+        _log.info('Restarting from previous calculation with %s chains (%s per parameter).', nchains, nchains / ndim)
+        _log.trace('Means of restarting parameters are %s', initial_parameters)
+        _log.trace('Standard deviations of restarting parameters are %s', walkers.std(axis=0))
         return walkers
 
     @staticmethod
@@ -131,19 +132,19 @@ class EmceeOptimizer(OptimizerBase):
 
         """
         if isinstance(prior, dict):
-            logging.info('Initializing a {} prior for the parameters.'.format(prior['name']))
+            _log.info('Initializing a %s prior for the parameters.', prior['name'])
         elif isinstance(prior, PriorSpec):
-            logging.info('Initializing a {} prior for the parameters.'.format(prior.name))
+            _log.info('Initializing a %s prior for the parameters.', prior.name)
         elif prior is None:
             prior = {'name': 'zero'}
         prior_specs = build_prior_specs(prior, params)
         rv_priors = []
         for spec, param, fit_symbol in zip(prior_specs, params, symbols):
             if isinstance(spec, PriorSpec):
-                logging.debug('Initializing a {} prior for {} with parameters: {}.'.format(spec.name, fit_symbol, spec.parameters))
+                _log.debug('Initializing a %s prior for %s with parameters: %s.', spec.name, fit_symbol, spec.parameters)
                 rv_priors.append(spec.get_prior(param))
             elif hasattr(spec, "logpdf"):
-                logging.debug('Using a user-specified prior for {}.'.format(fit_symbol))
+                _log.debug('Using a user-specified prior for %s.', fit_symbol)
                 rv_priors.append(spec)
         return {'prior_rvs': rv_priors}
 
@@ -156,29 +157,29 @@ class EmceeOptimizer(OptimizerBase):
         """
         tr = self.tracefile
         if tr is not None:
-            logging.log(TRACE, 'Writing trace to {}'.format(tr))
+            _log.trace('Writing trace to %s', tr)
             np.save(tr, self.sampler.chain)
         prob = self.probfile
         if prob is not None:
-            logging.log(TRACE, 'Writing lnprob to {}'.format(prob))
+            _log.trace('Writing lnprob to %s', prob)
             np.save(prob, self.sampler.lnprobability)
 
     def do_sampling(self, chains, iterations):
         progbar_width = 30
-        logging.info('Running MCMC for {} iterations.'.format(iterations))
+        _log.info('Running MCMC for %s iterations.', iterations)
         try:
             for i, result in enumerate(self.sampler.sample(chains, iterations=iterations)):
                 # progress bar
                 if (i + 1) % self.save_interval == 0:
                     self.save_sampler_state()
-                    logging.log(TRACE, 'Acceptance ratios for parameters: {}'.format(self.sampler.acceptance_fraction))
+                    _log.trace('Acceptance ratios for parameters: %s', self.sampler.acceptance_fraction)
                 n = int((progbar_width + 1) * float(i) / iterations)
-                logging.info("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, iterations))
+                _log.info("\r[%s%s] (%d of %d)\n", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
             n = int((progbar_width + 1) * float(i + 1) / iterations)
-            logging.info("\r[{0}{1}] ({2} of {3})\n".format('#' * n, ' ' * (progbar_width - n), i + 1, iterations))
+            _log.info("\r[%s%s] (%d of %d)\n", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
         except KeyboardInterrupt:
             pass
-        logging.info('MCMC complete.')
+        _log.info('MCMC complete.')
         self.save_sampler_state()
 
     def _fit(self, symbols, ds, prior=None, iterations=1000,
@@ -224,6 +225,8 @@ class EmceeOptimizer(OptimizerBase):
         OptNode
 
         """
+        # Set NumPy print options so logged arrays print on one line. Reset at the end.
+        np.set_printoptions(linewidth=sys.maxsize)
         cbs = self.scheduler is None
         ctx = setup_context(self.dbf, ds, symbols, data_weights=mcmc_data_weights, make_callables=cbs)
         symbols_to_fit = ctx['symbols_to_fit']
@@ -234,7 +237,7 @@ class EmceeOptimizer(OptimizerBase):
         ctx['zpf_kwargs']['approximate_equilibrium'] = approximate_equilibrium
         ctx['equilibrium_thermochemical_kwargs']['approximate_equilibrium'] = approximate_equilibrium
         # Run the initial parameters for guessing purposes:
-        logging.log(TRACE, "Probability for initial parameters")
+        _log.trace("Probability for initial parameters")
         self.predict(initial_guess, **ctx)
         if restart_trace is not None:
             chains = self.initialize_chains_from_trace(restart_trace)
@@ -245,7 +248,7 @@ class EmceeOptimizer(OptimizerBase):
         if deterministic:
             from espei.rstate import numpy_rstate
             sampler.random_state = numpy_rstate
-            logging.info('Using a deterministic ensemble sampler.')
+            _log.info('Using a deterministic ensemble sampler.')
         self.sampler = sampler
         self.tracefile = tracefile
         self.probfile = probfile
@@ -254,10 +257,11 @@ class EmceeOptimizer(OptimizerBase):
 
         # Post process
         optimal_params = optimal_parameters(sampler.chain, sampler.lnprobability)
-        logging.log(TRACE, 'Initial parameters: {}'.format(initial_guess))
-        logging.log(TRACE, 'Optimal parameters: {}'.format(optimal_params))
-        logging.log(TRACE, 'Change in parameters: {}'.format(np.abs(initial_guess - optimal_params) / initial_guess))
+        _log.trace('Initial parameters: %s', initial_guess)
+        _log.trace('Optimal parameters: %s', optimal_params)
+        _log.trace('Change in parameters: %s', np.abs(initial_guess - optimal_params) / initial_guess)
         parameters = dict(zip(symbols_to_fit, optimal_params))
+        np.set_printoptions(linewidth=75)
         return OptNode(parameters, ds)
 
     @staticmethod
@@ -265,16 +269,16 @@ class EmceeOptimizer(OptimizerBase):
         """
         Calculate lnprob = lnlike + lnprior
         """
-        logging.debug('Parameters - {}'.format(params))
+        _log.debug('Parameters - %s', params)
 
         # lnprior
         prior_rvs = ctx['prior_rvs']
         lnprior_multivariate = [rv.logpdf(theta) for rv, theta in zip(prior_rvs, params)]
-        logging.debug('Priors: {}'.format(lnprior_multivariate))
+        _log.debug('Priors: %s', lnprior_multivariate)
         lnprior = np.sum(lnprior_multivariate)
         if np.isneginf(lnprior):
             # It doesn't matter what the likelihood is. We can skip calculating it to save time.
-            logging.log(TRACE, 'Proposal - lnprior: {:0.4f}, lnlike: {}, lnprob: {:0.4f}'.format(lnprior, np.nan, lnprior))
+            _log.trace('Proposal - lnprior: %0.4f, lnlike: %0.4f, lnprob: %0.4f', lnprior, np.nan, lnprior)
             return lnprior
 
         # lnlike
@@ -306,9 +310,9 @@ class EmceeOptimizer(OptimizerBase):
         else:
             non_eq_thermochemical_prob = 0
         total_error = multi_phase_error + eq_thermochemical_prob + non_eq_thermochemical_prob + actvity_error
-        logging.log(TRACE, f'Likelihood - {time.time() - starttime:0.2f}s - Non-equilibrium thermochemical: {non_eq_thermochemical_prob:0.3f}. Equilibrium thermochemical: {eq_thermochemical_prob:0.3f}. ZPF: {multi_phase_error:0.3f}. Activity: {actvity_error:0.3f}. Total: {total_error:0.3f}.')
+        _log.trace('Likelihood - %0.2fs - Non-equilibrium thermochemical: %0.3f. Equilibrium thermochemical: %0.3f. ZPF: %0.3f. Activity: %0.3f. Total: %0.3f.', time.time() - starttime, non_eq_thermochemical_prob, eq_thermochemical_prob, multi_phase_error, actvity_error, total_error)
         lnlike = np.array(total_error, dtype=np.float64)
 
         lnprob = lnprior + lnlike
-        logging.log(TRACE, 'Proposal - lnprior: {:0.4f}, lnlike: {:0.4f}, lnprob: {:0.4f}'.format(lnprior, lnlike, lnprob))
+        _log.trace('Proposal - lnprior: %0.4f, lnlike: %0.4f, lnprob: %0.4f', lnprior, lnlike, lnprob)
         return lnprob

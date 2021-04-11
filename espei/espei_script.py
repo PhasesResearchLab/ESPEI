@@ -31,7 +31,8 @@ from espei.utils import ImmediateClient, database_symbols_to_fit
 from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags, add_ideal_exclusions
 from espei.optimizers.opt_mcmc import EmceeOptimizer
 
-TRACE = 15  # TRACE logging level
+_log = logging.getLogger(__name__)
+
 # Force distributed's work-stealing to be False
 dask.config.set({'distributed.scheduler.work-stealing': False})
 
@@ -55,14 +56,14 @@ parser.add_argument("--version", "-v", action='version',
 
 def log_version_info():
     """Print version info to the log"""
-    logging.info('espei version       ' + str(espei.__version__))
-    logging.debug('pycalphad version   ' + str(pycalphad.__version__))
-    logging.debug('dask version        ' + str(dask.__version__))
-    logging.debug('distributed version ' + str(distributed.__version__))
-    logging.debug('sympy version       ' + str(sympy.__version__))
-    logging.debug('symengine version   ' + str(symengine.__version__))
-    logging.debug('emcee version       ' + str(emcee.__version__))
-    logging.info("If you use ESPEI for work presented in a publication, we ask that you cite the following paper:\n    {}".format(espei.__citation__))
+    _log.info('espei version       %s', espei.__version__)
+    _log.debug('pycalphad version   %s', pycalphad.__version__)
+    _log.debug('dask version        %s', dask.__version__)
+    _log.debug('distributed version %s', distributed.__version__)
+    _log.debug('sympy version       %s', sympy.__version__)
+    _log.debug('symengine version   %s', symengine.__version__)
+    _log.debug('emcee version       %s', emcee.__version__)
+    _log.info("If you use ESPEI for work presented in a publication, we ask that you cite the following paper:\n    %s", espei.__citation__)
 
 
 def _raise_dask_work_stealing():
@@ -142,7 +143,7 @@ def run_espei(run_settings):
     verbosity = {
         0: logging.WARNING,
         1: logging.INFO,
-        2: TRACE,
+        2: espei.logger.ESPEILogger.TRACE,
         3: logging.DEBUG
     }
     logging.basicConfig(level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
@@ -150,17 +151,17 @@ def run_espei(run_settings):
     log_version_info()
 
     # load datasets and handle i/o
-    logging.log(TRACE, 'Loading and checking datasets.')
+    _log.trace('Loading and checking datasets.')
     dataset_path = system_settings['datasets']
     datasets = load_datasets(sorted(recursive_glob(dataset_path, '*.json')))
     apply_tags(datasets, system_settings.get('tags', dict()))
     add_ideal_exclusions(datasets)
-    logging.log(TRACE, 'Finished checking datasets')
     removed_ids = datasets.remove(where('disabled') == True)
     if len(removed_ids) > 0:
-        logging.debug('Removed %d disabled datasets', len(removed_ids))
+        _log.debug('Removed %d disabled datasets', len(removed_ids))
     if len(datasets.all()) == 0:
-        logging.warning('No enabled datasets were found in the path %s. This should be a directory containing dataset files ending in `.json`.', dataset_path)
+        _log.warning('No datasets were found in the path %s. This should be a directory containing dataset files ending in `.json`.', dataset_path)
+    _log.trace('Finished checking datasets')
 
     with open(system_settings['phase_models']) as fp:
         phase_models = json.load(fp)
@@ -189,9 +190,9 @@ def run_espei(run_settings):
         # check that the MCMC output files do not already exist
         # only matters if we are actually running MCMC
         if tracefile is not None and os.path.exists(tracefile):
-            raise OSError('Tracefile "{}" exists and would be overwritten by a new run. Use the ``output.tracefile`` setting to set a different name.'.format(tracefile))
+            raise OSError('Tracefile "%s" exists and would be overwritten by a new run. Use the ``output.tracefile`` setting to set a different name.', tracefile)
         if probfile is not None and os.path.exists(probfile):
-            raise OSError('Probfile "{}" exists and would be overwritten by a new run. Use the ``output.probfile`` setting to set a different name.'.format(probfile))
+            raise OSError('Probfile "%s" exists and would be overwritten by a new run. Use the ``output.probfile`` setting to set a different name.', probfile)
 
         # scheduler setup
         if mcmc_settings['scheduler'] == 'dask':
@@ -200,26 +201,26 @@ def run_espei(run_settings):
             cores = mcmc_settings.get('cores', multiprocessing.cpu_count())
             if (cores > multiprocessing.cpu_count()):
                 cores = multiprocessing.cpu_count()
-                logging.warning("The number of cores chosen is larger than available. "
-                                "Defaulting to run on the {} available cores.".format(cores))
+                _log.warning("The number of cores chosen is larger than available. "
+                                "Defaulting to run on the %s available cores.", cores)
             # TODO: make dask-scheduler-verbosity a YAML input so that users can debug. Should have the same log levels as verbosity
             scheduler = LocalCluster(n_workers=cores, threads_per_worker=1, processes=True, memory_limit=0)
             client = ImmediateClient(scheduler)
             client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
-            logging.info("Running with dask scheduler: %s [%s cores]" % (scheduler, sum(client.ncores().values())))
+            _log.info("Running with dask scheduler: %s [%s cores]" % (scheduler, sum(client.ncores().values())))
             try:
                 bokeh_server_info = client.scheduler_info()['services']['bokeh']
-                logging.info("bokeh server for dask scheduler at localhost:{}".format(bokeh_server_info))
+                _log.info("bokeh server for dask scheduler at localhost:%s", bokeh_server_info)
             except KeyError:
-                logging.info("Install bokeh to use the dask bokeh server.")
+                _log.info("Install bokeh to use the dask bokeh server.")
         elif mcmc_settings['scheduler'] == 'None' or mcmc_settings['scheduler'] is None:
             client = None
-            logging.info("Not using a parallel scheduler. ESPEI is running MCMC on a single core.")
+            _log.info("Not using a parallel scheduler. ESPEI is running MCMC on a single core.")
         else: # we were passed a scheduler file name
             _raise_dask_work_stealing()  # check for work-stealing
             client = ImmediateClient(scheduler_file=mcmc_settings['scheduler'])
             client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
-            logging.info("Running with dask scheduler: %s [%s cores]" % (client.scheduler, sum(client.ncores().values())))
+            _log.info("Running with dask scheduler: %s [%s cores]" % (client.scheduler, sum(client.ncores().values())))
 
         # get a Database
         if mcmc_settings.get('input_db'):
@@ -301,7 +302,7 @@ def main():
         with open(input_file) as f:
             input_settings = json.load(f)
     else:
-        raise ValueError('Unknown file type {} for input file {}. YAML and JSON are supported'.format(ext, input_file))
+        raise ValueError('Unknown file type %s for input file %s. YAML and JSON are supported', ext, input_file)
 
     run_espei(input_settings)
 
