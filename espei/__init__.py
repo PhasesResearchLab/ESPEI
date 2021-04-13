@@ -15,7 +15,6 @@ __citation__ = ESPEI_CITATION
 __bibtex__ = ESPEI_BIBTEX
 
 from espei.paramselect import generate_parameters
-from espei.mcmc import mcmc_fit
 from espei.espei_script import run_espei
 
 # swallow warnings during MCMC runs

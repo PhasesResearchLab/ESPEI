@@ -38,6 +38,14 @@ espei.core\_utils module
    :undoc-members:
    :show-inheritance:
 
+espei.database\_utils module
+----------------------------
+
+.. automodule:: espei.database_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 espei.datasets module
 ---------------------
 
@@ -50,14 +58,6 @@ espei.espei\_script module
 --------------------------
 
 .. automodule:: espei.espei_script
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-espei.mcmc module
------------------
-
-.. automodule:: espei.mcmc
    :members:
    :undoc-members:
    :show-inheritance:
