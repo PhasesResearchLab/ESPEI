@@ -57,3 +57,26 @@ def test_recursive_map():
     assert recursive_map(float, ["1.0", ["0.5", "0.5"]]) == [1.0, [0.5, 0.5]]
 
 
+def test_get_prop_samples_ravels_correctly():
+    """get_prop_samples should ravel non-equilibrium thermochemical data correctly"""
+    desired_data = [{
+        "solver": {
+            "sublattice_site_ratios": [1],
+            "sublattice_occupancies": [[[0, 0]], [[1, 1]]],
+            "sublattice_configurations": [[["CU", "MG"]], [["CU", "MG"]]],
+            "mode": "manual"
+        },
+        "conditions": {
+            "P": [0, 1], "T": [0, 1, 2, 3]},
+        "values": [[[0, 1], [2, 3], [4, 5], [6, 7]], [[8, 9], [10, 11], [12, 13], [14, 15]]],
+        "weights": None  # SET ME!
+    }]
+
+    calculate_dict = get_prop_samples(desired_data, [['CU', 'MG']])
+    print(calculate_dict)
+    # Unravel by (P, T, configs), where the left-most dimensions unravel the slowest
+    assert np.all(calculate_dict['P'] == np.array([0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1]))
+    assert np.all(calculate_dict['T'] == np.array([0, 0, 1, 1, 2, 2, 3, 3, 0, 0, 1, 1, 2, 2, 3, 3]))
+    assert np.all(calculate_dict['points'] == np.array([[0, 0], [1, 1], [0, 0], [1, 1], [0, 0], [1, 1], [0, 0], [1, 1], [0, 0], [1, 1], [0, 0], [1, 1], [0, 0], [1, 1], [0, 0], [1, 1]]))
+    assert np.all(calculate_dict['values'] == np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]))
+

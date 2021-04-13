@@ -126,7 +126,7 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         # add everything to the calculate_dict
         calculate_dict['P'] = np.concatenate([calculate_dict['P'], P])
         calculate_dict['T'] = np.concatenate([calculate_dict['T'], T])
-        calculate_dict['points'] = np.concatenate([calculate_dict['points'], np.repeat(points, len(T)/points.shape[0], axis=0)], axis=0)
+        calculate_dict['points'] = np.concatenate([calculate_dict['points'], np.tile(points, (values.shape[0]*values.shape[1], 1))], axis=0)
         calculate_dict['values'] = np.concatenate([calculate_dict['values'], values.flatten()])
         calculate_dict['weights'].extend(weights.flatten())
         calculate_dict['references'].extend([datum.get('reference', "") for _ in range(values.flatten().size)])
