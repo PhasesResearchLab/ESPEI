@@ -2,6 +2,7 @@ import numpy as np
 
 from espei.core_utils import get_data, recursive_map
 from espei.utils import PickleableTinyDB, MemoryStorage
+from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
 
 
 def test_get_data_for_a_minimal_example():
@@ -44,6 +45,7 @@ def test_get_data_for_a_minimal_example():
     assert desired_data['output'] == 'HM_FORM'
     assert desired_data['values'] == np.array([[[34720.0]]])
 
+
 def test_recursive_map():
     """Test that recursive map function works"""
 
@@ -80,3 +82,62 @@ def test_get_prop_samples_ravels_correctly():
     assert np.all(calculate_dict['points'] == np.array([[0, 0], [1, 1], [0, 0], [1, 1], [0, 0], [1, 1], [0, 0], [1, 1], [0, 0], [1, 1], [0, 0], [1, 1], [0, 0], [1, 1], [0, 0], [1, 1]]))
     assert np.all(calculate_dict['values'] == np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]))
 
+
+def test_get_prop_samples_broadcasts_weights_correctly():
+    """get_prop_samples should broadcast weights to match the values"""
+    desired_data = [{
+        "solver": {
+            "sublattice_site_ratios": [1],
+            "sublattice_occupancies": [[[0, 0]], [[1, 1]]],
+            "sublattice_configurations": [[["CU", "MG"]], [["CU", "MG"]]],
+            "mode": "manual"
+        },
+        "conditions": {
+            "P": [0, 1], "T": [0, 1, 2, 3]},
+        "values": [[[0, 1], [2, 3], [4, 5], [6, 7]], [[8, 9], [10, 11], [12, 13], [14, 15]]],
+    }]
+
+    # No weight
+    calculate_dict = get_prop_samples(desired_data, [['CU', 'MG']])
+    assert calculate_dict["values"].shape == (16,)
+    assert calculate_dict["values"].size == len(calculate_dict["weights"])
+    assert np.all(np.isclose(np.asarray(calculate_dict["weights"]), 1.0))
+
+    # Scalar weight
+    desired_data[0]["weight"] = 5.0
+    calculate_dict = get_prop_samples(desired_data, [['CU', 'MG']])
+    assert calculate_dict["values"].shape == (16,)
+    assert calculate_dict["values"].size == len(calculate_dict["weights"])
+    assert np.all(np.isclose(np.asarray(calculate_dict["weights"]), 5.0))
+
+    # 1D weights aligned in...
+    # ... P
+    desired_data[0]["weight"] = [[[1]], [[2]]]
+    calculate_dict = get_prop_samples(desired_data, [['CU', 'MG']])
+    print("P",calculate_dict)
+    assert calculate_dict["values"].shape == (16,)
+    assert calculate_dict["values"].size == len(calculate_dict["weights"])
+
+    # ... T
+    desired_data[0]["weight"] = [[[1], [2], [3], [4]]]
+    calculate_dict = get_prop_samples(desired_data, [['CU', 'MG']])
+    print("T",calculate_dict)
+    assert calculate_dict["values"].shape == (16,)
+    assert calculate_dict["values"].size == len(calculate_dict["weights"])
+
+    # ... configs
+    desired_data[0]["weight"] = [[[3, 4]]]
+    calculate_dict = get_prop_samples(desired_data, [['CU', 'MG']])
+    print("CONFIGS", calculate_dict)
+    assert calculate_dict["values"].shape == (16,)
+    assert calculate_dict["values"].size == len(calculate_dict["weights"])
+
+    # 3D weights aligned
+    num_P = 2
+    num_T = 4
+    prescribed = [[(np.array([1, 2])*i*j).tolist() for j in range(1, num_T+1)] for i in range(1, num_P+1)]
+    desired_data[0]["weight"] = prescribed
+    calculate_dict = get_prop_samples(desired_data, [['CU', 'MG']])
+    print(calculate_dict)
+    assert calculate_dict["values"].shape == (16,)
+    assert calculate_dict["values"].size == len(calculate_dict["weights"])
