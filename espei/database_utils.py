@@ -111,5 +111,5 @@ def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="S
             # Using this ensures that GHSER functions will be unique, e.g.
             # GHSERC would be an abbreviation for GHSERCA.
             sym_name = "GHSER" + (element.upper()*2)[:2]
-            dbf.symbols.setdefault(sym_name, 0)
+            dbf.symbols.setdefault(sym_name, ser_stability[element])
     return dbf
