@@ -161,9 +161,9 @@ it to our data.
 .. code-block:: python
 
     # First-principles phase diagram
-    from pycalphad import Database, variables as v
+    from pycalphad import Database, binplot, variables as v
     from espei.datasets import load_datasets, recursive_glob
-    from espei.plot import multiplot
+    from espei.plot import dataplot
     import matplotlib.pyplot as plt
 
     # load the experimental and DFT datasets
@@ -176,8 +176,9 @@ it to our data.
     conds = {v.P: 101325, v.T: (300, 1500, 10), v.X('MG'): (0, 1, 0.01)}
 
     # plot the phase diagram and data
-    multiplot(dbf, comps, phases, conds, datasets)
-    plt.savefig('cu-mg_dft_phase_diagram.png')
+    ax = binplot(dbf, comps, phases, conds)
+    dataplot(comps, phases, conds, datasets, ax=ax)
+    ax.figure.savefig('cu-mg_dft_phase_diagram.png')
 
 Which should result in the following figure
 
@@ -249,9 +250,9 @@ Finally, we can use the newly optimized database to plot the phase diagram
 .. code-block:: python
 
     # Optimized phase diagram from ESPEI's MCMC fitting
-    from pycalphad import Database, variables as v
+    from pycalphad import Database, binplot, variables as v
     from espei.datasets import load_datasets, recursive_glob
-    from espei.plot import multiplot
+    from espei.plot import dataplot
     import matplotlib.pyplot as plt
 
     # load the experimental and DFT datasets
@@ -264,8 +265,9 @@ Finally, we can use the newly optimized database to plot the phase diagram
     conds = {v.P: 101325, v.T: (300, 1500, 10), v.X('MG'): (0, 1, 0.01)}
 
     # plot the phase diagram and data
-    multiplot(dbf, comps, phases, conds, datasets)
-    plt.savefig('cu-mg_mcmc_phase_diagram.png')
+    ax = binplot(dbf, comps, phases, conds)
+    dataplot(comps, phases, conds, datasets, ax=ax)
+    ax.figure.savefig('cu-mg_mcmc_phase_diagram.png')
 
 
 .. figure:: _static/cu-mg-mcmc-phase-diagram.png

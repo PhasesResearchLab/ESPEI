@@ -113,7 +113,10 @@ Note that the arrays are preallocated with zeros.
 These filenames and settings can be changed using in the input file.
 You can then use these chains and corresponding log-probabilities to make corner plots, calculate autocorrelations, find optimal parameters for databases, etc..
 Some examples are shown in the :ref:`Recipes` page.
-Finally, you can use py:mod:`espei.plot` functions such as ``multiplot`` to plot phase diagrams with your input equilibria data and ``plot_parameters`` to compare single-phase data (e.g. formation and mixing data) with the properties calculated with your database.
+Finally, you can use py:mod:`espei.plot` functions such as ``dataplot`` in
+concert with pycalphad to plot phase diagrams with your input equilibria data
+and ``plot_parameters`` to compare single-phase data (e.g. formation and
+mixing data) with the properties calculated from your database.
 
 Q: Can I run ESPEI on a supercomputer supporting MPI?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
