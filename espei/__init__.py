@@ -17,7 +17,6 @@ TRACE = 15  # TRACE logging level
 logging.addLevelName(TRACE, 'TRACE')
 
 from espei.paramselect import generate_parameters
-from espei.mcmc import mcmc_fit
 from espei.espei_script import run_espei
 
 # swallow warnings during MCMC runs
