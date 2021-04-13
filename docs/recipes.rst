@@ -90,7 +90,46 @@ The script gives the following output:
 
 .. figure:: _static/dataplot-recipe-cu-mg.png
     :alt: Cu-Mg dataplot recipe
-    :scale: 100%
+    :width: 500pt
+
+
+Plot phase diagram with data
+============================
+
+.. code-block:: python
+
+   %matplotlib inline
+   from pycalphad import Database, binplot, variables as v
+   from espei.datasets import load_datasets, recursive_glob
+   from espei.plot import dataplot
+   import matplotlib.pyplot as plt
+
+   # load the experimental and DFT datasets
+   dataset_dir = "input-data"
+   dataset_dir = "/Users/brandon/Projects/2020-workshop-material/ESPEI/input-data/run"
+   datasets = load_datasets(recursive_glob(dataset_dir, "*.json"))
+
+   # set up the pycalphad phase diagram calculation
+   dbf = Database("/Users/brandon/Projects/2020-workshop-material/ESPEI/mcmc-tmp.tdb")
+   comps = ["CR", "NI", "VA"]
+   phases = ["LIQUID", "FCC", "BCC"]
+   conds = {v.P: 101325, v.T: (700, 2200, 10), v.X("CR"): (0, 1, 0.01)}
+
+   # plot the phase diagram and data
+   fig = plt.figure(dpi=150)
+   ax = fig.gca()
+   binplot(dbf, comps, phases, conds, plot_kwargs={"ax": ax})
+   dataplot(comps, phases, conds, datasets, ax=ax)
+   ax.set_title("Cr-Ni\nParameter Generation")
+   ax.set_ylim(conds[v.T][0], conds[v.T][1])
+   ax.set_xlabel("X(CR)")
+   ax.set_ylabel("Temperature (K)")
+   fig.show()
+
+.. figure:: _static/phase-diagram-recipe-cr-ni.png
+   :alt: Cr-Ni phase diagram recipe
+   :width: 500pt
+
 
 Plot thermochemical properties parameters with data
 ===================================================
@@ -211,6 +250,7 @@ The example below is for *one* parameter. Running the snippet above will plot
 all of the parameters on separate plots.
 
 .. image:: _static/docs-analysis-example_3_0.png
+
 
 Plot a corner plot
 ==================

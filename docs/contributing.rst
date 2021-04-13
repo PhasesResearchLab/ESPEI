@@ -54,7 +54,7 @@ ESPEI uses the `NumPy documentation <https://github.com/numpy/numpy/blob/master/
 All functions and classes should be documented with at least a description, parameters, and return values, if applicable.
 
 Using ``Examples`` in the documentation is especially encouraged for utilities that are likely to be run by users.
-See :py:func:`espei.plot.multiplot` for an example.
+See :py:func:`espei.analysis.truncate_arrays` for an example.
 
 Web documention
 ---------------
