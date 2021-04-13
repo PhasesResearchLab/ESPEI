@@ -97,3 +97,23 @@ def test_database_initialization_custom_refstate():
     delattr(espei.refdata, CUSTOM_REFDATA_NAME + "Stable")
     delattr(espei.refdata, CUSTOM_REFDATA_NAME)
     delattr(espei.refdata, CUSTOM_REFDATA_NAME + "SER")
+
+
+def test_database_initialization_adds_GHSER_data():
+    phase_models = {
+        "components": ["CR", "NI"],
+        "phases": {
+            "FCC_A1": {
+                "sublattice_model": [["CR", "NI"]],
+                "sublattice_site_ratios": [1],
+            },
+            "BCC": {
+                "aliases": ["BCC_A2"],
+                "sublattice_model": [["CR", "NI"]],
+                "sublattice_site_ratios": [1.0],
+            },
+        }
+    }
+    dbf = initialize_database(phase_models, "SGTE91")
+    assert dbf.symbols["GHSERCR"] != sympy.S.Zero
+    assert dbf.symbols["GHSERNI"] != sympy.S.Zero
