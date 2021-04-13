@@ -387,6 +387,14 @@ def eqdataplot(eq, datasets, ax=None, plot_kwargs=None):
     >>> ax = eqdataplot(eq, datasets, ax=ax)  # doctest: +SKIP
 
     """
+    deprecation_msg = (
+        "`espei.plot.eqdataplot` is deprecated and will be removed in ESPEI 0.9. "
+        "Users depending on plotting from an `pycalphad.equilibrium` result should use "
+        "`pycalphad.plot.eqplot.eqplot` along with `espei.plot.dataplot` directly. "
+        "Note that pycalphad's mapping can offer signficant reductions in calculation "
+        "time compared to using `equilibrium` followed by `eqplot`."
+    )
+    warnings.warn(deprecation_msg, category=FutureWarning)
     # TODO: support reference legend
     conds = OrderedDict([(_map_coord_to_variable(key), unpack_condition(np.asarray(value)))
                          for key, value in sorted(eq.coords.items(), key=str)
@@ -440,6 +448,15 @@ def multiplot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=N
     >>> multiplot(dbf, ['CU', 'MG', 'VA'], my_phases, {v.P: 101325, v.T: 1000, v.X('MG'): (0, 1, 0.01)}, datasets)  # doctest: +SKIP
 
     """
+    deprecation_msg = (
+        "`espei.plot.multiplot` is deprecated and will be removed in ESPEI 0.9. "
+        "Users depending on `multiplot` should use pycalphad's `binplot` or `ternplot` "
+        "followed by `espei.plot.dataplot`. Note that pycalphad's mapping can offer "
+        "signficant reductions in calculation time compared to using `multiplot`. See "
+        "ESPEI's recipes for an example: "
+        "https://espei.org/en/latest/recipes.html#plot-phase-diagram-with-data"
+    )
+    warnings.warn(deprecation_msg, category=FutureWarning)
     eq_kwargs = eq_kwargs or dict()
     plot_kwargs = plot_kwargs or dict()
     data_kwargs = data_kwargs or dict()
