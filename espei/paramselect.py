@@ -55,7 +55,21 @@ def _param_present_in_database(dbf, phase_name, configuration, param_type):
 
 def _build_feature_matrix(sample_condition_dicts: List[Dict[Symbol, float]], symbolic_coefficients: List[Symbol]):
     """
-    Builds A for solving x = A\\b. A is an MxN matrix of M sampled data points and N is the symbolic coefficients
+    Builds A for solving x = A\\b. A is an MxN matrix of M sampled data points and N is the symbolic coefficients.
+
+    Parameters
+    ----------
+    sample_condition_dicts : List[Dict[Symbol, float]]
+        List of length ``M`` containing the conditions (T, P, YS, Z, V_I, V_J, V_K) for
+        each sampled point.
+    symbolic_coefficients : List[Symbol]
+        Symbolic coefficients of length ```N`` (e.g. ``v.T``, ``YS``) of the features
+        corresponding to the variables that will be fit.
+
+    Returns
+    -------
+    ArrayLike
+        MxN array of coefficients with sampled data conditions plugged in.
     """
     M = len(sample_condition_dicts)
     N = len(symbolic_coefficients)
