@@ -3,8 +3,8 @@ Test the utilities for parameter generation
 """
 import numpy as np
 from pycalphad import Database, Model, variables as v
-from espei.parameter_selection.utils import get_data_quantities
-from espei.core_utils import get_samples
+from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
+from espei.parameter_selection.utils import get_data_quantities, _get_sample_condition_dicts
 from espei.sublattice_tools import interaction_test
 
 
@@ -101,9 +101,10 @@ def test_get_data_quantities_AL_NI_VA_interaction():
     dd['GM'] = NEW_GM
     mod.models = dd
     print(mod.HM)
-    print(get_samples(data))
-    # desired_property, fixed_model, fixed_portions, data, samples
-    qty = get_data_quantities('HM_FORM', mod, [0], data)
+    config_tup = (('AL',), ('NI', 'VA'), ('VA',))
+    calculate_dict = get_prop_samples(data, config_tup)
+    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, list(map(len, config_tup)))
+    qty = get_data_quantities('HM_FORM', mod, [0], data, sample_condition_dicts)
     print(qty)
     assert np.all(np.isclose([-6254.7802775, -5126.1206475, -7458.3974225, -6358.04118875], qty))
 
@@ -122,15 +123,20 @@ def test_get_data_quantities_mixing_entropy():
 
     """)
     mod = Model(dbf, ['AL', 'CR'], 'AL11CR2')
-    print(get_samples(data))
     # desired_property, fixed_model, fixed_portions, data, samples
-    qty = get_data_quantities('SM_MIX', mod, [0], data)
+    config_tup = (('AL',), ('AL', 'CR'))
+    calculate_dict = get_prop_samples(data, config_tup)
+    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, list(map(len, config_tup)))
+    qty = get_data_quantities('SM_MIX', mod, [0], data, sample_condition_dicts)
     print(qty)
     assert np.all(np.isclose([7.27266667], qty))
 
 
 def test_get_data_quantities_magnetic_energy():
     data = [{"components": ["AL", "CR"], "phases": ["ALCR2"], "solver": {"mode": "manual", "sublattice_site_ratios": [1.0, 2.0], "sublattice_configurations": [["AL", "CR"]]}, "conditions": {"P": [101325], "T": [300]}, "excluded_model_contributions": ["idmix", "mag"], "output": "SM_FORM", "values": [[[5.59631999999999]]]}]
+    config_tup = (('AL',), ('CR',))
+    calculate_dict = get_prop_samples(data, config_tup)
+    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, list(map(len, config_tup)))
     # First test without any magnetic parameters
     dbf_nomag = Database("""
     ELEMENT AL FCC_A1 26.982 4577.3 28.322 !
@@ -140,7 +146,7 @@ def test_get_data_quantities_magnetic_energy():
     CONSTITUENT ALCR2 :AL,CR:AL,CR: !
     """)
     mod_nomag = Model(dbf_nomag, ['AL', 'CR'], 'ALCR2')
-    qty_nomag = get_data_quantities('SM_FORM', mod_nomag, [0], data)
+    qty_nomag = get_data_quantities('SM_FORM', mod_nomag, [0], data, sample_condition_dicts)
     print(qty_nomag)
     assert np.all(np.isclose([16.78896], qty_nomag))
 
@@ -167,6 +173,6 @@ def test_get_data_quantities_magnetic_energy():
     PARAMETER BMAGN(ALCR2,AL,CR:CR;0)      298.15 -.92; 6000 N REF0 !
     """)
     mod = Model(dbf, ['AL', 'CR'], 'ALCR2')
-    qty = get_data_quantities('SM_FORM', mod, [0], data)
+    qty = get_data_quantities('SM_FORM', mod, [0], data, sample_condition_dicts)
     print(qty)
     assert np.all(np.isclose([16.78896], qty))
