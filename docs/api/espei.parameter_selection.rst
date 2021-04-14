@@ -28,14 +28,6 @@ espei.parameter\_selection.selection module
    :undoc-members:
    :show-inheritance:
 
-espei.parameter\_selection.ternary\_parameters module
------------------------------------------------------
-
-.. automodule:: espei.parameter_selection.ternary_parameters
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 espei.parameter\_selection.utils module
 ---------------------------------------
 
