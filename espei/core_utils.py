@@ -6,7 +6,7 @@ import itertools
 import numpy as np
 import tinydb
 from espei.sublattice_tools import canonicalize, recursive_tuplify
-from espei.parameter_selection.redlich_kister import calc_site_fraction_product, calc_interaction_product
+from espei.parameter_selection.redlich_kister import calc_interaction_product
 
 
 def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
@@ -68,53 +68,6 @@ def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
         # Don't use data['values'] because we rewrote it above; not sure what 'data' references now
         desired_data[idx]['values'] = desired_data[idx]['values'][..., temp_filter, :]
     return desired_data
-
-
-def get_samples(desired_data):
-    """
-    Return the data values from desired_data, transformed to interaction products.
-
-    Parameters
-    ----------
-    desired_data : list
-        List of matched desired data, e.g. for a single property
-
-    Returns
-    -------
-    List[Tuple[float, Tuple[float, float]]]
-        Tuples of (temperature, (site fraction product, interaction product))
-
-    Notes
-    -----
-    Transforms data to interaction products, e.g. YS*{}^{xs}G=YS*XS*DXS^{n} {}^{n}L
-
-    """
-    # TODO: binary and ternaries only, possibly non-working ternary cross interactions
-    # TODO does not ravel pressure conditions
-    # TODO: could possibly combine with ravel_conditions if we do the math outside.
-    all_samples = []
-    for data in desired_data:
-        temperatures = np.atleast_1d(data['conditions']['T'])
-        num_configs = np.array(data['solver'].get('sublattice_configurations'), dtype=np.object_).shape[0]
-        site_fractions = data['solver'].get('sublattice_occupancies', [[1]] * num_configs)
-        site_fraction_product = calc_site_fraction_product(site_fractions)
-        # TODO: Subtle sorting bug here, if the interactions aren't already in sorted order...
-        interaction_product = calc_interaction_product(site_fractions)
-        comp_features = zip(site_fraction_product, interaction_product)
-        all_samples.extend(list(itertools.product(temperatures, comp_features)))
-    return all_samples
-
-
-def get_weights(desired_data):
-    weights = []
-    for data in desired_data:
-        weight = data.get('weight')
-        if weight is not None:
-            weight = np.array(weight)
-        else:
-            weight = np.ones(np.array(data['values']).shape)
-        weights.extend(weight.flatten().tolist())
-    return weights
 
 
 def _zpf_conditions_shape(zpf_values):

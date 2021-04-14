@@ -9,11 +9,14 @@ import matplotlib.lines as mlines
 import numpy as np
 import tinydb
 from pycalphad import Model, calculate, equilibrium, variables as v
+from pycalphad.core.utils import unpack_components
 from pycalphad.plot.utils import phase_legend
 from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_condition
 
+from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
 from espei.utils import bib_marker_map
-from espei.core_utils import get_data, get_samples, ravel_zpf_values
+from espei.core_utils import get_data, ravel_zpf_values
+from espei.parameter_selection.utils import _get_sample_condition_dicts
 from espei.sublattice_tools import recursive_tuplify, endmembers_from_interaction
 from espei.utils import build_sitefractions
 
@@ -495,7 +498,14 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
     matplotlib.Axes
 
     """
-    all_samples = np.array(get_samples(desired_data), dtype=np.object_)
+    species = unpack_components(dbf, comps)
+    # phase constituents are Species objects, so we need to be doing intersections with those
+    phase_constituents = dbf.phases[phase_name].constituents
+    # phase constituents must be filtered to only active:
+    constituents = [[sp.name for sp in sorted(subl_constituents.intersection(species))] for subl_constituents in phase_constituents]
+    subl_dof = list(map(len, constituents))
+    calculate_dict = get_prop_samples(desired_data, constituents)
+    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, subl_dof)
     endpoints = endmembers_from_interaction(configuration)
     interacting_subls = [c for c in recursive_tuplify(configuration) if isinstance(c, tuple)]
     disordered_config = False
@@ -517,7 +527,8 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         yattr = y
     if len(endpoints) == 1:
         # This is an endmember so we can just compute T-dependent stuff
-        temperatures = np.array([i[0] for i in all_samples], dtype=np.float_)
+        Ts = calculate_dict['T']
+        temperatures = np.asarray(Ts if len(Ts) > 0 else 298.15)
         if temperatures.min() != temperatures.max():
             temperatures = np.linspace(temperatures.min(), temperatures.max(), num=100)
         else:
@@ -594,7 +605,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
                     subl_idx = int(subl_idx)
                 indep_var_data = [c[subl_idx][1] for c in occ]
             else:
-                interactions = np.array([i[1][1] for i in get_samples([data])], dtype=np.float_)
+                interactions = np.array([cond_dict[Symbol('YS')] for cond_dict in sample_condition_dicts])
                 indep_var_data = 1 - (interactions+1)/2
             if y.endswith('_MIX') and data['output'].endswith('_FORM'):
                 # All the _FORM data we have still has the lattice stability contribution
