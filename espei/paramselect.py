@@ -17,22 +17,24 @@ Choose parameter set with best AICc score.
 """
 
 import sys
+from typing import List, Dict
 import logging
 import operator
 from collections import OrderedDict
 
 import numpy as np
 import sympy
+from sympy import Symbol
 from tinydb import where
 from pycalphad import Database, Model, variables as v
 
 import espei.refdata
 from espei.database_utils import initialize_database
-from espei.core_utils import get_data, get_samples, get_weights
+from espei.core_utils import get_data
+from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
 from espei.parameter_selection.model_building import build_candidate_models
 from espei.parameter_selection.selection import select_model
-from espei.parameter_selection.ternary_parameters import build_ternary_feature_matrix
-from espei.parameter_selection.utils import get_data_quantities, feature_transforms
+from espei.parameter_selection.utils import get_data_quantities, feature_transforms, _get_sample_condition_dicts
 from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
     tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
 from espei.utils import PickleableTinyDB, sigfigs, extract_aliases
@@ -51,29 +53,30 @@ def _param_present_in_database(dbf, phase_name, configuration, param_type):
         return True
 
 
-def _build_feature_matrix(prop, features, desired_data):
+def _build_feature_matrix(sample_condition_dicts: List[Dict[Symbol, float]], symbolic_coefficients: List[Symbol]):
     """
-    Return an MxN matrix of M data sample and N features.
+    Builds A for solving x = A\\b. A is an MxN matrix of M sampled data points and N is the symbolic coefficients.
 
     Parameters
     ----------
-    prop : str
-        String name of the property, e.g. 'HM_MIX'
-    features : tuple
-        Tuple of SymPy parameters that can be fit for this property.
-    desired_data : dict
-        Full dataset dictionary containing values, conditions, etc.
+    sample_condition_dicts : List[Dict[Symbol, float]]
+        List of length ``M`` containing the conditions (T, P, YS, Z, V_I, V_J, V_K) for
+        each sampled point.
+    symbolic_coefficients : List[Symbol]
+        Symbolic coefficients of length ```N`` (e.g. ``v.T``, ``YS``) of the features
+        corresponding to the variables that will be fit.
 
     Returns
     -------
-    numpy.ndarray
-        An MxN matrix of M samples (from desired data) and N features.
-
+    ArrayLike
+        MxN array of coefficients with sampled data conditions plugged in.
     """
-    transformed_features = [feature_transforms[prop](i) for i in features]
-    all_samples = get_samples(desired_data)
-    feature_matrix = np.empty((len(all_samples), len(transformed_features)), dtype=np.float_)
-    feature_matrix[:, :] = [[trans_feat.subs({v.T: temp, 'YS': compf[0], 'Z': compf[1]}).evalf() for trans_feat in transformed_features] for temp, compf in all_samples]
+    M = len(sample_condition_dicts)
+    N = len(symbolic_coefficients)
+    feature_matrix = np.empty((M, N))
+    for i in range(M):
+        for j in range(N):
+            feature_matrix[i, j] = symbolic_coefficients[j].subs(sample_condition_dicts[i])
     return feature_matrix
 
 
@@ -154,22 +157,27 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
         _log.trace('%s: datasets found: %s', desired_props, len(desired_data))
         if len(desired_data) > 0:
-            # Ravelled weights for all data
-            weights = get_weights(desired_data)
+            config_tup = tuple(map(tuplify, configuration))
+            calculate_dict = get_prop_samples(desired_data, config_tup)
+            sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, list(map(len, config_tup)))
+            weights = calculate_dict['weights']
+            assert len(sample_condition_dicts) == len(weights)
 
             # We assume all properties in the same fitting step have the same
             # features (all CPM, all HM, etc., but different ref states).
             # data quantities are the same for each candidate model and can be computed up front
-            data_qtys = get_data_quantities(feature_type, fixed_model, fixed_portions, desired_data)
+            data_qtys = get_data_quantities(feature_type, fixed_model, fixed_portions, desired_data, sample_condition_dicts)
 
             # build the candidate model transformation matrix and response vector (A, b in Ax=b)
             feature_matricies = []
             data_quantities = []
-            for candidate_model in candidate_models_features[desired_props[0]]:
+            for candidate_coefficients in candidate_models_features[desired_props[0]]:
+                # Map coeffiecients in G to coefficients in the feature_type (H, S, CP)
+                transformed_coefficients = list(map(feature_transforms[feature_type], candidate_coefficients))
                 if interaction_test(configuration, 3):
-                    feature_matricies.append(build_ternary_feature_matrix(desired_props[0], candidate_model, desired_data))
+                    feature_matricies.append(_build_feature_matrix(sample_condition_dicts, transformed_coefficients))
                 else:
-                    feature_matricies.append(_build_feature_matrix(desired_props[0], candidate_model, desired_data))
+                    feature_matricies.append(_build_feature_matrix(sample_condition_dicts, transformed_coefficients))
                 data_quantities.append(data_qtys)
 
             # provide candidate models and get back a selected model.
@@ -243,11 +251,11 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(3, dtype=np.object_)
-        YS = sympy.Symbol('YS')
+        YS = Symbol('YS')
         # asymmetric parameters should have Mugiannu V_I/V_J/V_K, while symmetric just has YS
-        is_asymmetric = any([(k.has(sympy.Symbol('V_I'))) and (v != 0) for k, v in parameters.items()])
+        is_asymmetric = any([(k.has(Symbol('V_I'))) and (v != 0) for k, v in parameters.items()])
         if is_asymmetric:
-            params = [(2, YS*sympy.Symbol('V_K')), (1, YS*sympy.Symbol('V_J')), (0, YS*sympy.Symbol('V_I'))]  # (excess parameter degree, symbol) tuples
+            params = [(2, YS*Symbol('V_K')), (1, YS*Symbol('V_J')), (0, YS*Symbol('V_I'))]  # (excess parameter degree, symbol) tuples
         else:
             params = [(0, YS)]  # (excess parameter degree, symbol) tuples
         for degree, check_symbol in params:
@@ -257,7 +265,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
                     if value != 0:
                         symbol_name = get_next_symbol(dbf)
                         dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
-                        parameters[key] = sympy.Symbol(symbol_name)
+                        parameters[key] = Symbol(symbol_name)
                     coef = parameters[key] * (key / check_symbol)
                     try:
                         coef = float(coef)
@@ -362,7 +370,7 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                     break
             if dbf.symbols.get(sym_name, None) is not None:
                 num_moles = sum([sites for elem, sites in zip(endmember, site_ratios) if elem != 'VA'])
-                fit_eq = num_moles * sympy.Symbol(sym_name)
+                fit_eq = num_moles * Symbol(sym_name)
         if fit_eq is None:
             # No reference lattice stability data -- we have to fit it
             parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
@@ -371,14 +379,14 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                     continue
                 symbol_name = get_next_symbol(dbf)
                 dbf.symbols[symbol_name] = sigfigs(value, numdigits)
-                parameters[key] = sympy.Symbol(symbol_name)
+                parameters[key] = Symbol(symbol_name)
             fit_eq = sympy.Add(*[value * key for key, value in parameters.items()])
             ref = 0
             for subl, ratio in zip(endmember, site_ratios):
                 if subl == 'VA':
                     continue
                 subl = (subl.upper()*2)[:2]
-                ref = ref + ratio * sympy.Symbol('GHSER'+subl)
+                ref = ref + ratio * Symbol('GHSER'+subl)
             fit_eq += ref
         _log.trace('SYMMETRIC_ENDMEMBERS: %s', symmetric_endmembers)
         for em in symmetric_endmembers:
@@ -406,14 +414,14 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(10, dtype=np.object_)
         for degree in reversed(range(10)):
-            check_symbol = sympy.Symbol('YS') * sympy.Symbol('Z')**degree
+            check_symbol = Symbol('YS') * Symbol('Z')**degree
             keys_to_remove = []
             for key, value in sorted(parameters.items(), key=str):
                 if key.has(check_symbol):
                     if value != 0:
                         symbol_name = get_next_symbol(dbf)
                         dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
-                        parameters[key] = sympy.Symbol(symbol_name)
+                        parameters[key] = Symbol(symbol_name)
                     coef = parameters[key] * (key / check_symbol)
                     try:
                         coef = float(coef)

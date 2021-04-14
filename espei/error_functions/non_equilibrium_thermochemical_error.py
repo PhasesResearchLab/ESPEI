@@ -66,40 +66,30 @@ def calculate_points_array(phase_constituents, configuration, occupancies=None):
     return points
 
 
-def get_prop_samples(dbf, comps, phase_name, desired_data):
+def get_prop_samples(desired_data, constituents):
     """
-    Return data values and the conditions to calculate them by pycalphad
-    calculate from the datasets
+    Return data values and the conditions to calculate them using pycalphad.calculate
 
     Parameters
     ----------
-    dbf : pycalphad.Database
-        Database to consider
-    comps : list
-        List of active component names
-    phase_name : str
-        Name of the phase to consider from the Database
-    desired_data : list
-        List of dictionary datasets that contain the values to sample
+    desired_data : List[Dict[str, Any]]
+        List of dataset dictionaries that contain the values to sample
+    constituents : List[List[str]]
+        Names of constituents in each sublattice.
 
     Returns
     -------
-    dict
+    Dict[str, Union[float, ArrayLike, List[float]]]
         Dictionary of condition kwargs for pycalphad's calculate and the expected values
 
     """
     # TODO: assumes T, P as conditions
-    # sublattice constituents are Species objects, so we need to be doing intersections with those
-    species_comps = unpack_components(dbf, comps)
-    phase_constituents = dbf.phases[phase_name].constituents
-    # phase constituents must be filtered to only active:
-    phase_constituents = [[c.name for c in sorted(subl_constituents.intersection(set(species_comps)))] for subl_constituents in phase_constituents]
-
     # calculate needs points, state variable lists, and values to compare to
+    num_dof = sum(map(len, constituents))
     calculate_dict = {
         'P': np.array([]),
         'T': np.array([]),
-        'points': np.atleast_2d([[]]).reshape(-1, sum([len(subl) for subl in phase_constituents])),
+        'points': np.atleast_2d([[]]).reshape(-1, num_dof),
         'values': np.array([]),
         'weights': [],
         'references': [],
@@ -112,6 +102,10 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         configurations = datum['solver']['sublattice_configurations']
         occupancies = datum['solver'].get('sublattice_occupancies')
         values = np.array(datum['values'])
+        # Broadcast the weights to the shape of the values. This ensures that
+        # the sizes of the weights and values are the same, which is important
+        # because they are flattened later (so the shape information is lost).
+        weights = np.broadcast_to(np.asarray(datum.get('weight', 1.0)), values.shape)
 
         # broadcast and flatten the conditions arrays
         P, T = ravel_conditions(values, datum_P, datum_T)
@@ -119,16 +113,16 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
             occupancies = [None] * len(configurations)
 
         # calculate the points arrays, should be 2d array of points arrays
-        points = np.array([calculate_points_array(phase_constituents, config, occup) for config, occup in zip(configurations, occupancies)])
+        points = np.array([calculate_points_array(constituents, config, occup) for config, occup in zip(configurations, occupancies)])
+        assert values.shape == weights.shape, f"Values data shape {values.shape} does not match weights shape {weights.shape}"
 
         # add everything to the calculate_dict
         calculate_dict['P'] = np.concatenate([calculate_dict['P'], P])
         calculate_dict['T'] = np.concatenate([calculate_dict['T'], T])
-        calculate_dict['points'] = np.concatenate([calculate_dict['points'], np.repeat(points, len(T)/points.shape[0], axis=0)], axis=0)
+        calculate_dict['points'] = np.concatenate([calculate_dict['points'], np.tile(points, (values.shape[0]*values.shape[1], 1))], axis=0)
         calculate_dict['values'] = np.concatenate([calculate_dict['values'], values.flatten()])
-        calculate_dict['weights'].extend(np.array([datum.get('weight', 1.0) for _ in range(values.flatten().size)]).flatten())
+        calculate_dict['weights'].extend(weights.flatten())
         calculate_dict['references'].extend([datum.get('reference', "") for _ in range(values.flatten().size)])
-
     return calculate_dict
 
 
@@ -164,6 +158,8 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
     else:
         symbols_to_fit = database_symbols_to_fit(dbf)
 
+    species_comps = set(unpack_components(dbf, comps))
+
     # estimated from NIST TRC uncertainties
     property_std_deviation = {
         'HM': 500.0/weight_dict.get('HM', 1.0),  # J/mol
@@ -178,6 +174,12 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
         ref_states.append(ref_state)
     all_data_dicts = []
     for phase_name in phases:
+        if phase_name not in dbf.phases:
+            continue
+        # phase constituents are Species objects, so we need to be doing intersections with those
+        phase_constituents = dbf.phases[phase_name].constituents
+        # phase constituents must be filtered to only active:
+        constituents = [[sp.name for sp in sorted(subl_constituents.intersection(species_comps))] for subl_constituents in phase_constituents]
         for prop in properties:
             desired_data = get_prop_data(comps, phase_name, prop, datasets, additional_query=(where('solver').exists()))
             if len(desired_data) == 0:
@@ -196,7 +198,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
                 else:
                     exc_search = (where('excluded_model_contributions').test(lambda x: tuple(sorted(x)) == exclusion)) & (where('solver').exists())
                 curr_data = get_prop_data(comps, phase_name, prop, datasets, additional_query=exc_search)
-                calculate_dict = get_prop_samples(dbf, comps, phase_name, curr_data)
+                calculate_dict = get_prop_samples(curr_data, constituents)
                 mod = Model(dbf, comps, phase_name, parameters=symbols_to_fit)
                 if prop.endswith('_FORM'):
                     output = ''.join(prop.split('_')[:-1])+'R'
