@@ -286,9 +286,79 @@ similar likelihood.
     fig = corner.corner(trace.reshape(-1, trace.shape[-1]))
     plt.show()
 
-
-
 .. image:: _static/docs-analysis-example_5_0.png
 
 
+Plot ZPF driving forces
+=======================
+This visualization can be used as a diagnostic for understanding which ZPF data
+are contributing the most driving force towards the likelihood. Note that these
+driving forces are unweighted, since the weight is applied when computing the
+log-likelihood of each driving force.
 
+.. code:: python
+
+   import numpy as np
+   import matplotlib.pyplot as plt
+   from pycalphad import Database, binplot, variables as v
+   from pycalphad.core.utils import extract_parameters
+   from espei.datasets import load_datasets, recursive_glob
+   from espei.error_functions.zpf_error import get_zpf_data, calculate_zpf_driving_forces
+
+   # User input variables
+   TDB_PATH = 'mcmc.tdb'
+   DATASETS_DIR = '../input-data'
+   COMPS = ['CR', 'NI', 'VA']
+   INDEP_COMP = v.X('NI')  # binary assumed
+   CONDS = {v.N: 1, v.P: 101325, v.T: (500, 2200, 20), INDEP_COMP: (0, 1, 0.01)}
+   CMAP = 'hot'
+   outfile = 'driving-forces.png'
+   parameters = {}  # e.g. {'VV0001': 10000.0}
+   approximate_equilibrium = False
+
+   # Script below:*
+   dbf = Database(TDB_PATH)
+   phases = list(dbf.phases.keys())
+
+   # Get the datasets, construct ZPF data and compute driving forces
+   # Driving forces and weights are ragged 2D arrays of shape (len(zpf_data), len(vertices in each zpf_data))
+   ds = load_datasets(recursive_glob(DATASETS_DIR, '*.json'))
+   zpf_data = get_zpf_data(dbf, COMPS, phases, ds, parameters=parameters)
+   param_vec = extract_parameters(parameters)[1]
+   driving_forces, weights = calculate_zpf_driving_forces(zpf_data, param_vec, approximate_equilibrium=approximate_equilibrium)
+
+   # Construct the plotting compositions, temperatures and driving forces
+   # Each should have len() == (number of vertices)
+   # Driving forces already have the vertices unrolled so we can concatenate directly
+   Xs = []
+   Ts = []
+   dfs = []
+   for data, data_driving_forces in zip(zpf_data, driving_forces):
+       for phase_region in data['phase_regions']:
+           for vertex_comp_cond, df in zip(phase_region.comp_conds, data_driving_forces):
+               if any(val is None for val in vertex_comp_cond.values()):
+                   continue
+               dfs.append(df)
+               Ts.append(phase_region.potential_conds[v.T])
+               # Binary assumptions here
+               assert len(vertex_comp_cond) == 1
+               if INDEP_COMP in vertex_comp_cond:
+                   Xs.append(vertex_comp_cond[INDEP_COMP])
+               else:
+                   # Switch the dependent and independent component
+                   Xs.append(1.0 - tuple(vertex_comp_cond.values())[0])
+
+   # Plot the phase diagram with driving forces
+   fig = plt.figure(dpi=100)
+   ax = fig.gca()
+   binplot(dbf, COMPS, phases, CONDS, plot_kwargs={'ax': ax}, eq_kwargs={'parameters': parameters})
+   sm = plt.cm.ScalarMappable(cmap=CMAP)
+   sm.set_array(dfs)
+   ax.scatter(Xs, Ts, c=dfs, cmap=CMAP, edgecolors='k')
+   fig.colorbar(sm, ax=ax, pad=0.25)
+   if outfile is not None:
+       fig.savefig(outfile)
+   else:
+       fig.show()
+
+.. image:: _static/driving-force-diagnostic.png

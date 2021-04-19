@@ -18,7 +18,6 @@ dependencies:
   - tinydb>=4
   # Developer dependencies
   # Tests
-  - mock
   - pytest
   # PyPI
   - twine

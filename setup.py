@@ -40,7 +40,6 @@ setup(
     extras_require={
         'dev': [
             'ipython',  # for pygments syntax highlighting
-            'mock',
             'pytest',
             'sphinx',
             'sphinx_rtd_theme',
@@ -65,7 +64,6 @@ setup(
         'License :: OSI Approved :: MIT License',
 
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
