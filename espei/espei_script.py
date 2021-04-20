@@ -120,7 +120,7 @@ def get_run_settings(input_dict):
         if run_settings['mcmc']['scheduler'] == 'None':
             warnings.warn(
                 "Setting scheduler to the string 'None' will be deprecated in ESPEI "
-                "0.9. Use `null` in YAML or `None` in Python.", DeprecationWarning
+                "0.9. Use `null` in YAML or `None` in Python.", FutureWarning
             )
             run_settings['mcmc']['scheduler'] = None
     if not schema.validate(run_settings):
