@@ -1,7 +1,6 @@
 channels:
   - conda-forge
 dependencies:
-  - bibtexparser
   - cerberus
   - corner
   - dask>=2
