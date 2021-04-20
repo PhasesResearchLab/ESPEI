@@ -11,7 +11,7 @@ Creating a new release
 These steps will create a new tagged version in the GitHub repository.
 
 1. ``git pull`` to make sure you haven't missed any last-minute commits. **After this point, nothing else is making it into this version.**
-#. ``pytest -v --doctest-modules espei tests`` to ensure that all tests pass locally.
+#. ``pytest`` to ensure that all tests pass locally.
 #. ``sphinx-apidoc -f -o docs/api/ espei/ -H 'API Documentation'`` to
    regenerate API documentation.
 #. Update the ``version`` and ``release`` variables of ``docs/conf.py`` to the new version.

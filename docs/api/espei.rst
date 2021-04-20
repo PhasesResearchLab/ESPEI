@@ -62,6 +62,14 @@ espei.espei\_script module
    :undoc-members:
    :show-inheritance:
 
+espei.logger module
+-------------------
+
+.. automodule:: espei.logger
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 espei.paramselect module
 ------------------------
 
