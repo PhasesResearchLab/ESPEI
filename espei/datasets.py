@@ -282,38 +282,6 @@ def apply_tags(datasets, tags):
                 datasets.update(match, doc_ids=[match.doc_id])
 
 
-def add_ideal_exclusions(datasets):
-    """
-    If there are single phase datasets present and none of them have an
-    `excluded_model_contributions` key, add ideal exclusions automatically and
-    emit a DeprecationWarning that this feature will be going away.
-
-    Parameters
-    ----------
-    datasets : PickleableTinyDB
-
-    Returns
-    -------
-    PickleableTinyDB
-
-    """
-    all_single_phase = datasets.search(where('solver').exists())
-    no_exclusions = datasets.search(where('solver').exists() & (~where('excluded_model_contributions').exists()))
-    if len(all_single_phase) > 0 and len(all_single_phase) == len(no_exclusions):
-        idmix_warning = "Single phase datasets are present, but there are no specified `excluded_model_contributions` keys present. " + \
-                        "'idmix' exclusion will be added automatically for backwards compatibility, but this will go away in ESPEI v0.8. " + \
-                        "If you want ideal mixing contributions to be excluded, see the documentation for building datasets: http://espei.org/en/latest/input_data.html"
-        warnings.warn(idmix_warning, DeprecationWarning)
-        print(idmix_warning)
-        import espei
-        if int(espei.__version__.split('.')[1]) >= 8 or int(espei.__version__.split('.')[0]) > 0:
-            raise ValueError("ESPEI developer: remove the automatic addition of ideal mixing exclusions")
-        for ds in all_single_phase:
-            ds['excluded_model_contributions'] = ['idmix']
-            datasets.update(ds, doc_ids=[ds.doc_id])
-    return datasets
-
-
 def load_datasets(dataset_filenames, include_disabled=False):
     """
     Create a PickelableTinyDB with the data from a list of filenames.
