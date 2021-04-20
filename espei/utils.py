@@ -8,11 +8,8 @@ import itertools
 import re
 from collections import namedtuple
 
-import bibtexparser
 import numpy as np
 import sympy
-from bibtexparser.bparser import BibTexParser
-from bibtexparser.customization import convert_to_unicode
 from distributed import Client
 from pycalphad import variables as v
 from sympy import Symbol
@@ -141,64 +138,6 @@ def database_symbols_to_fit(dbf, symbol_regex="^V[V]?([0-9]+)$"):
     """
     pattern = re.compile(symbol_regex)
     return sorted([x for x in sorted(dbf.symbols.keys()) if pattern.match(x)])
-
-
-def flexible_open_string(obj):
-    """
-    Return the string of a an object that is either file-like, a file path, or the raw string.
-
-    Parameters
-    ----------
-    obj : string-like or file-like
-        Either a multiline string, a path, or a file-like object
-
-    Returns
-    -------
-    str
-    """
-    if isinstance(obj, str):
-        # the obj is a string
-        if '\n' in obj:
-            # if the string has linebreaks, then we assume it's a raw string. Return it.
-            return obj
-        else:
-            # assume it is a path
-            with open(obj) as fp:
-                read_string = fp.read()
-            return read_string
-    elif hasattr(obj, 'read'):
-        # assume it is file-like
-        read_string = obj.read()
-        return read_string
-    else:
-        raise ValueError('Unable to determine how to extract the string of the passed object ({}) of type {}. Expected a raw string, file-like, or path-like.'.format(obj, type(obj)))
-
-
-bibliography_database = PickleableTinyDB(storage=MemoryStorage)
-
-def add_bibtex_to_bib_database(bibtex, bib_db=None):
-    """
-    Add entries from a BibTeX file to the bibliography database
-
-    Parameters
-    ----------
-    bibtex : str
-        Either a multiline string, a path, or a file-like object of a BibTeX file
-    bib_db: PickleableTinyDB
-        Database to put the BibTeX entries. Defaults to a module-level default database
-
-    Returns
-    -------
-    The modified bibliographic database
-    """
-    if not bib_db:
-        bib_db = bibliography_database
-    bibtex_string = flexible_open_string(bibtex)
-    parser = BibTexParser()
-    parser.customization = convert_to_unicode
-    parsed_bibtex = bibtexparser.loads(bibtex_string, parser=parser)
-    bib_db.insert_multiple(parsed_bibtex.entries)
-    return bib_db
 
 
 def bib_marker_map(bib_keys, markers=None):
@@ -407,41 +346,9 @@ def build_sitefractions(phase_name, sublattice_configurations, sublattice_occupa
     return result
 
 
-def popget(d, key, default=None):
-    """
-    Get the key from the dict, returning the default if not found.
-
-    Parameters
-    ----------
-    d : dict
-        Dictionary to get key from.
-    key : object
-        Key to get from the dictionary.
-    default : object
-        Default to return if key is not found in dictionary.
-
-    Returns
-    -------
-    object
-
-    Examples
-    ---------
-    >>> d = {'ABC': 5.0}
-    >>> popget(d, 'ZPF', 1.0) == 1.0
-    True
-    >>> popget(d, 'ABC', 1.0) == 5.0
-    True
-
-    """
-    try:
-        return d.pop(key)
-    except KeyError:
-        return default
-
-
 def extract_aliases(phase_models):
     """Map possible phase name aliases to the desired phase model phase name.
-    
+
     This function enforces that each alias is only claimed by one phase.
     Each phase name in the phase models is added as an alias for itself to
     support an "identity" operation.
@@ -459,7 +366,7 @@ def extract_aliases(phase_models):
     """
     # Intialize aliases with identity for each phase first
     aliases = {phase_name: phase_name for phase_name in phase_models["phases"].keys()}
-    for phase_name, phase_dict in phase_models["phases"].items():        
+    for phase_name, phase_dict in phase_models["phases"].items():
         for alias in phase_dict.get("aliases", []):
             if alias not in aliases:
                 aliases[alias] = phase_name

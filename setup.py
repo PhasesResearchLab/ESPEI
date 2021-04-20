@@ -21,7 +21,6 @@ setup(
     long_description_content_type='text/x-rst',
     url='https://espei.org/',
     install_requires=[
-        'bibtexparser',
         'cerberus',
         'corner',
         'dask[complete]>=2',
