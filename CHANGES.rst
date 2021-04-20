@@ -2,6 +2,34 @@
 What's New
 ==========
 
+0.8 (2021-04-19)
+================
+
+This is a major release with bug fixes and a backward compatible public API,
+but breaking changes in the behavior of parameter selection and MCMC
+parameter estimation. Some internal functions were deprecated.
+
+Improvements
+------------
+* Revamped internal logging. For users, ESPEI now has namespaced logging and filters out all non-ESPEI logs (e.g. dask and matplotlib). This change also fixed a bug where changing the verbosity in Jupyter was not taking effect. (`@bocklund`_ - :issue:`165`)
+* Fixed a bug where scalar weights of non-equilibrium thermochemical datasets were not being broadcasted correctly and raised errors. (`@bocklund`_ - :issue:`154`)
+* Fixed a bug where non-equilibrium thermochemical datasets using broadcasted temperatures and compositions were broadcasted against the values incorrectly. (`@bocklund`_ - :issue:`154`)
+* Allow disabling datasets semantically using ``disabled: true`` in JSON datasets. (`@bocklund`_ - :issue:`153`)
+* Users can now pass custom SER reference data to override SER phases, mass, H298, and S298 for existing elements or new elements. Includes better warnings for common errors when the SER data is incompatible with the phases being fit. (`@bocklund`_ - :issue:`158`)
+* Fixed a bug in computing activity error in MCMC where species were not correctly generated from the pure comopnents. (`@bocklund`_ - :issue:`152`)
+
+Breaking changes
+----------------
+* Driving forces in ZPF error are now computed from local minimum solutions rather than global minimum solutions. This change significantly improves the convergence for any phases with stable or metastable miscibility gaps. It also prevents users from prescribing phase composition conditions that cannot be satisfied. See the linked GitHub issue for a detailed description of the rationale and implementation of this change. (`@bocklund`_ - :issue:`151`)
+* Removed automatically added ideal exclusions, which was deprecated in ESPEI 0.7. Non-equilibrium thermochemical data should use the ``excluded_model_contributions`` key to exclude ``idmix``, ``mag`` or other model contributions. (`@bocklund`_ - :issue:`168`)
+* Remove deprecated ``mcmc.py`` (`@bocklund`_ - :issue:`164`)
+
+New deprecations
+----------------
+* Setting ``mcmc.scheduler`` to the string ``"None"`` to get a serial scheduler is deprecated. Users should use ``null`` in YAML/JSON or ``None`` in Python.
+* Deprecated ``multiplot`` and ``eqdataplot`` in favor of having users compose ``binplot`` and ``dataplot``. pycalphad's ``binplot`` is much faster than ``multiplot``. The extra functional call added is worth removing the maintenance burden and allows users to understand more explictly the difference between plotting data and plotting the calculated phase diagram. The documentation was updated to reflect this change and no longer uses ``multiplot``. (`@bocklund`_ - :issue:`162`)
+
+
 0.7.12 (2021-03-16)
 ===================
 
@@ -142,7 +170,7 @@ This backwards-compatible release includes several bug fixes and improvements.
 * Add support for fitting excess heat capacity.
 * Bug fix for broken potassium unary.
 * Documentation improvements for recipes
-* pycalphad 0.7.1 fixes for dask, sympy, and gmpy2 should mean that ESPEI should not require package upgrade or downgrades. Please report any installations issues in `ESPEI's Gitter Channel <https://gitter.im/PhasesResearchLab/ESPEI>`.
+* pycalphad 0.7.1 fixes for dask, sympy, and gmpy2 should mean that ESPEI should not require package upgrade or downgrades. Please report any installations issues in `ESPEI's Gitter Channel <https://gitter.im/PhasesResearchLab/ESPEI>`_.
 * [Developers] ESPEI's ``eq_callables_dict`` is now ``pycalphad.codegen.callables.build_callables``.
 * [Developers] matplotlib plotting tests are removed because nose is no longer supported.
 
