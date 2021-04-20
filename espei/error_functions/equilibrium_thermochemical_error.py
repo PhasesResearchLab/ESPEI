@@ -222,8 +222,8 @@ def calc_prop_differences(eqpropdata: EqPropData,
 
     calculated_data = np.array(calculated_data, dtype=np.float_)
 
-    assert calculated_data.shape == samples.shape, "Calculated data shape {calculated_data.shape} does not match samples shape {samples.shape}"
-    assert calculated_data.shape == weights.shape, "Calculated data shape {calculated_data.shape} does not match weights shape {weights.shape}"
+    assert calculated_data.shape == samples.shape, f"Calculated data shape {calculated_data.shape} does not match samples shape {samples.shape}"
+    assert calculated_data.shape == weights.shape, f"Calculated data shape {calculated_data.shape} does not match weights shape {weights.shape}"
     differences = calculated_data - samples
     _log.debug('Output: %s differences: %s, weights: %s, reference: %s', output, differences, weights, eqpropdata.reference)
     return differences, weights
