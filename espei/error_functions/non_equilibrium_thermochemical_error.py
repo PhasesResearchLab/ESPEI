@@ -19,6 +19,8 @@ from espei.error_functions.zpf_error import update_phase_record_parameters
 from espei.shadow_functions import calculate_
 from pycalphad.codegen.callables import build_phase_records
 
+_log = logging.getLogger(__name__)
+
 
 def calculate_points_array(phase_constituents, configuration, occupancies=None):
     """
@@ -274,6 +276,6 @@ def calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_dat
         differences = results - sample_values
         probabilities = norm.logpdf(differences, loc=0, scale=data['weights'])
         prob_sum = np.sum(probabilities)
-        logging.debug(f"Thermochemical error - {data['prop']}({phase_name}) = {prob_sum} - data: {sample_values}, differences: {differences}, probabilities: {probabilities}, references: {data['calculate_dict']['references']}")
+        _log.debug("%s(%s) - probability sum: %0.2f, data: %s, differences: %s, probabilities: %s, references: %s", data['prop'], phase_name, prob_sum, sample_values, differences, probabilities, data['calculate_dict']['references'])
         prob_error += prob_sum
     return prob_error

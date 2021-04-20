@@ -33,6 +33,9 @@ from pycalphad.core.phase_rec import PhaseRecord
 from espei.utils import PickleableTinyDB
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
 
+_log = logging.getLogger(__name__)
+
+
 def _safe_index(items, index):
     try:
         return items[index]
@@ -408,7 +411,7 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
         grid = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, points=phase_points, pdens=500, fake_points=True)
         single_eqdata = _equilibrium(species, phase_records, cond_dict, grid)
         if np.all(np.isnan(single_eqdata.NP)):
-            logging.debug('Calculation failure: all NaN phases with phases: {}, conditions: {}, parameters {}'.format(current_phase, cond_dict, parameters))
+            _log.debug('Calculation failure: all NaN phases with phases: %s, conditions: %s, parameters %s', current_phase, cond_dict, parameters)
             return np.inf
         select_energy = float(single_eqdata.GM)
         region_comps = []
@@ -475,7 +478,7 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
             eq_str = _format_phase_compositions(phase_region)
             target_hyperplane = estimate_hyperplane(phase_region, parameters, approximate_equilibrium=approximate_equilibrium)
             if np.any(np.isnan(target_hyperplane)):
-                logging.debug('ZPF error - NaN target hyperplane. Equilibria: (%s), driving force: 0.0, reference: %s.', eq_str, dataset_ref)
+                _log.debug('NaN target hyperplane. Equilibria: (%s), driving force: 0.0, reference: %s.', eq_str, dataset_ref)
                 data_driving_forces.extend([0]*len(phase_region.comp_conds))
                 data_weights.extend([weight]*len(phase_region.comp_conds))
                 continue
@@ -486,11 +489,11 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
                                                             approximate_equilibrium=approximate_equilibrium,
                                                             )
                 if np.isinf(driving_force) and short_circuit:
-                    logging.debug('ZPF error - Equilibria: (%s), current phase: %s, driving force: %s, reference: %s. Short circuiting.', eq_str, phase_region.region_phases[vertex_idx], driving_force, dataset_ref)
+                    _log.debug('Equilibria: (%s), current phase: %s, hyperplane: %s, driving force: %s, reference: %s. Short circuiting.', eq_str, phase_region.region_phases[vertex_idx], target_hyperplane, driving_force, dataset_ref)
                     return [[np.inf]], [[np.inf]]
                 data_driving_forces.append(driving_force)
                 data_weights.append(weight)
-                logging.debug('ZPF error - Equilibria: (%s), current phase: %s, driving force: %s, reference: %s', eq_str, phase_region.region_phases[vertex_idx], driving_force, dataset_ref)
+                _log.debug('Equilibria: (%s), current phase: %s, hyperplane: %s, driving force: %s, reference: %s', eq_str, phase_region.region_phases[vertex_idx], target_hyperplane, driving_force, dataset_ref)
         driving_forces.append(data_driving_forces)
         weights.append(data_weights)
     return driving_forces, weights
@@ -519,5 +522,6 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
     weights = np.concatenate(weights)
     if np.any(np.logical_or(np.isinf(driving_forces), np.isnan(driving_forces))):
         return -np.inf
-    return np.sum(norm.logpdf(driving_forces, loc=0, scale=1000/data_weight/weights))
-
+    log_probabilites = norm.logpdf(driving_forces, loc=0, scale=1000/data_weight/weights)
+    _log.debug('Data weight: %s, driving forces: %s, weights: %s, probabilities: %s', data_weight, driving_forces, weights, log_probabilites)
+    return np.sum(log_probabilites)

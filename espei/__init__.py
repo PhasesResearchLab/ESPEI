@@ -6,15 +6,13 @@ from ._version import get_versions
 __version__ = get_versions()['version']
 del get_versions
 
-from .citing import ESPEI_BIBTEX, ESPEI_CITATION
+from .logger import _setup_logging
+# Makes global logging changes; all new logger instances will be ESPEILogger objects
+_setup_logging()
 
+from .citing import ESPEI_BIBTEX, ESPEI_CITATION
 __citation__ = ESPEI_CITATION
 __bibtex__ = ESPEI_BIBTEX
-
-import logging
-# setup logger with a TRACE setting, which is between INFO and DEBUG
-TRACE = 15  # TRACE logging level
-logging.addLevelName(TRACE, 'TRACE')
 
 from espei.paramselect import generate_parameters
 from espei.espei_script import run_espei

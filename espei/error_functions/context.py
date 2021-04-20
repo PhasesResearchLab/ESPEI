@@ -9,7 +9,7 @@ from pycalphad.core.utils import instantiate_models
 from espei.error_functions import get_zpf_data, get_thermochemical_data, get_equilibrium_thermochemical_data
 from espei.utils import database_symbols_to_fit
 
-TRACE = 15
+_log = logging.getLogger(__name__)
 
 
 def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_callables=True):
@@ -46,15 +46,15 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
     if len(symbols_to_fit) == 0:
         raise ValueError('No degrees of freedom. Database must contain symbols starting with \'V\' or \'VV\', followed by a number.')
     else:
-        logging.info('Fitting {} degrees of freedom.'.format(len(symbols_to_fit)))
+        _log.info('Fitting %s degrees of freedom.', len(symbols_to_fit))
 
     for x in symbols_to_fit:
         if isinstance(dbf.symbols[x], sympy.Piecewise):
-            logging.debug('Replacing {} in database'.format(x))
+            _log.debug('Replacing %s in database', x)
             dbf.symbols[x] = dbf.symbols[x].args[0].expr
 
     # construct the models for each phase, substituting in the SymPy symbol to fit.
-    logging.log(TRACE, 'Building phase models (this may take some time)')
+    _log.trace('Building phase models (this may take some time)')
     import time
     t1 = time.time()
     phases = sorted(dbf.phases.keys())
@@ -67,22 +67,22 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
     else:
         eq_callables = None
     t2 = time.time()
-    logging.log(TRACE, 'Finished building phase models ({:0.2f}s)'.format(t2-t1))
-    logging.log(TRACE, 'Getting non-equilibrium thermochemical data (this may take some time)')
+    _log.trace('Finished building phase models (%0.2fs)', t2-t1)
+    _log.trace('Getting non-equilibrium thermochemical data (this may take some time)')
     t1 = time.time()
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=data_weights, symbols_to_fit=symbols_to_fit)
     t2 = time.time()
-    logging.log(TRACE, 'Finished getting non-equilibrium thermochemical data ({:0.2f}s)'.format(t2-t1))
-    logging.log(TRACE, 'Getting equilibrium thermochemical data (this may take some time)')
+    _log.trace('Finished getting non-equilibrium thermochemical data (%0.2fs)', t2-t1)
+    _log.trace('Getting equilibrium thermochemical data (this may take some time)')
     t1 = time.time()
     eq_thermochemical_data = get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, parameters, data_weight_dict=data_weights)
     t2 = time.time()
-    logging.log(TRACE, 'Finished getting equilibrium thermochemical data ({:0.2f}s)'.format(t2-t1))
-    logging.log(TRACE, 'Getting ZPF data (this may take some time)')
+    _log.trace('Finished getting equilibrium thermochemical data (%0.2fs)', t2-t1)
+    _log.trace('Getting ZPF data (this may take some time)')
     t1 = time.time()
     zpf_data = get_zpf_data(dbf, comps, phases, datasets, parameters)
     t2 = time.time()
-    logging.log(TRACE, 'Finished getting ZPF data ({:0.2f}s)'.format(t2-t1))
+    _log.trace('Finished getting ZPF data (%0.2fs)', t2-t1)
 
     # context for the log probability function
     # for all cases, parameters argument addressed in MCMC loop

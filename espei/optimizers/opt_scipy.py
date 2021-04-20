@@ -9,7 +9,8 @@ from espei.error_functions import calculate_activity_error, calculate_zpf_error,
 from .opt_base import OptimizerBase
 from .graph import OptNode
 
-TRACE = 15
+_log = logging.getLogger(__name__)
+
 
 class SciPyOptimizer(OptimizerBase):
     def _fit(self, symbols, ds, method='Powell', maxiter=50, verbose=False, **kwargs):
@@ -55,7 +56,7 @@ class SciPyOptimizer(OptimizerBase):
         else:
             single_phase_error = 0
         total_error = multi_phase_error + single_phase_error + actvity_error
-        logging.log(TRACE, 'Likelihood - {:0.2f}s - Thermochemical: {:0.3f}. ZPF: {:0.3f}. Activity: {:0.3f}. Total: {:0.3f}.'.format(time.time() - starttime, single_phase_error, multi_phase_error, actvity_error, total_error))
+        _log.trace('Likelihood - %0.2fs - Thermochemical: %0.3f. ZPF: %0.3f. Activity: %0.3f. Total: %0.3f.', time.time() - starttime, single_phase_error, multi_phase_error, actvity_error, total_error)
         error = np.array(total_error, dtype=np.float64)
         return error
 
