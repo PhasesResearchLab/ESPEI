@@ -29,7 +29,7 @@ import espei
 from espei.validation import schema
 from espei import generate_parameters
 from espei.utils import ImmediateClient, database_symbols_to_fit
-from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags, add_ideal_exclusions
+from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags
 from espei.optimizers.opt_mcmc import EmceeOptimizer
 
 _log = logging.getLogger(__name__)
@@ -158,7 +158,6 @@ def run_espei(run_settings):
     dataset_path = system_settings['datasets']
     datasets = load_datasets(sorted(recursive_glob(dataset_path, '*.json')))
     apply_tags(datasets, system_settings.get('tags', dict()))
-    add_ideal_exclusions(datasets)
     removed_ids = datasets.remove(where('disabled') == True)
     if len(removed_ids) > 0:
         _log.debug('Removed %d disabled datasets', len(removed_ids))

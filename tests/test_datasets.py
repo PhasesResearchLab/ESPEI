@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from espei.datasets import DatasetError, check_dataset, clean_dataset, apply_tags, add_ideal_exclusions
+from espei.datasets import DatasetError, check_dataset, clean_dataset, apply_tags
 
 from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, LI_SN_LIQUID_DATA
 from .fixtures import datasets_db
@@ -470,20 +470,3 @@ def test_applying_tags(datasets_db):
     assert len(datasets_db.all()) == 1
     assert "newkey_from_tag" in datasets_db.all()[0]
     assert datasets_db.all()[0]["newkey_from_tag"] == ["tag", "values"]
-
-
-def test_adding_ideal_exclustions(datasets_db):
-    """Test that adding ideal exclusions to single phase datasets works"""
-    datasets_db.insert(dataset_single_valid)
-    datasets_db.insert(dataset_multi_valid_ternary)
-    assert len(datasets_db.all()) == 2
-    for ds in datasets_db.all():
-        assert "excluded_model_contributions" not in ds
-    add_ideal_exclusions(datasets_db)
-    assert len(datasets_db.all()) == 2
-    num_with_excluded_mod_contributions = 0
-    for ds in datasets_db.all():
-        if "excluded_model_contributions" in ds:
-            num_with_excluded_mod_contributions += 1
-            assert ds["excluded_model_contributions"] == ["idmix"]
-    assert num_with_excluded_mod_contributions == 1
