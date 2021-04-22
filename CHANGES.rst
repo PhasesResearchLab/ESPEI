@@ -2,6 +2,15 @@
 What's New
 ==========
 
+0.8.1 (2021-04-22)
+==================
+
+This is a minor release that fixes a performance regression and retires unused
+utility code.
+
+* Fixes a performance regression in ``_sample_solution_constitution`` that could cause getting ZPF data for MCMC to be extremely slow. (`@bocklund`_ - :issue:`174`)
+* The ``flexible_open_string`` and ``add_bibtex_to_bib_database`` utilities were removed. Both were unusued in ESPEI. ESPEI no longer depends on ``bibtexparser``. (`@bocklund`_ - :issue:`171`)
+
 0.8 (2021-04-19)
 ================
 
