@@ -68,7 +68,7 @@ def _solve(equations, desired_syms, phase_name, comp_conds):
 
 def _solve_sitefracs_composition(mod: Model, comp_conds: Dict[v.X, float]) -> Dict[v.Y, Union[sympy.Expr, v.Y]]:
     """Return a dictionary of site fraction expressions that solves the prescribed composition
-    
+
     Given a Model and global composition conditions, solve for site fractions
     (dependent and independent) that can produce points (internal degrees of
     freedom) that satisfy both the global composition conditions AND internal
@@ -120,13 +120,13 @@ def _sample_solution_constitution(mod: Model, soln: Dict[v.Y, Union[sympy.Expr, 
     is to remove any points which have negative site fractions. It is the
     responsibility of the caller to enforce that the sum of positive site
     fractions is unity (which will prevent any site fractions > 1).
-    
+
     Each degree of freedom will have
 
-    * ``pdens`` points sampled linearly on the interval ``[0, 1]``    
+    * ``pdens`` points sampled linearly on the interval ``[0, 1]``
     * ``pdens`` points sampled in logspace on the intervals
        ``[MIN_SITE_FRACTION, 0.01]`` and ``[0.99, 1.0]``.
-    
+
     Returns
     -------
     ArrayLike
@@ -166,11 +166,18 @@ def _sample_solution_constitution(mod: Model, soln: Dict[v.Y, Union[sympy.Expr, 
     points = np.empty((npts, len(mod.site_fractions)))
     # Enumerating over site fractions ensures that the array must be filled correctly
     for idof, sf in enumerate(mod.site_fractions):
-        # Substitute in the independent site fraction arrays into the dependent/independent ones
-        x = tuple(indep_site_frac_dict.values())
         # A key error here would mean that a site fraction variable was not in
         # the indepedent or dependent site fractions
-        points[:, idof] = sympy.lambdify(lambdify_syms, indep_dep_dict[sf])(*x)
+        sitefracs = indep_dep_dict[sf]
+        if isinstance(sitefracs, sympy.Expr):
+            # Site fractions are dependent and symbolic. Substitute the
+            # independent site fraction arrays into the dependent ones.
+            _f = sympy.lambdify(lambdify_syms, sitefracs)
+            x = tuple(indep_site_frac_dict.values())
+            points[:, idof] = _f(*x)
+        else:
+            # site fractions are independent already
+            points[:, idof] = sitefracs
 
     # Remove any rows (points) where any site fractions are negative.
     # As long as the internal constraints were used to find the solution,
