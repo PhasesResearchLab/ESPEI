@@ -1,11 +1,13 @@
 """The test_parameter_generation module tests that parameter selection is correct"""
 
 from tinydb import where
+from tinydb.storages import MemoryStorage
 import numpy as np
 from pycalphad import Database
 import scipy
 
 from espei.paramselect import generate_parameters
+from espei.utils import PickleableTinyDB
 from .testing_data import *
 from .fixtures import datasets_db
 
@@ -480,3 +482,99 @@ def test_parameters_can_be_generated_with_component_subsets(datasets_db):
       }
 
     generate_parameters(CR_FE_PHASE_MODELS, datasets_db, 'SGTE91', 'linear')
+
+
+def test_weighting_invariance():
+    """Test that weights do not affect model selection using perfect L0 and L1 cases."""
+    phase_models = {
+        "components": ["AL", "B"],
+        "phases": {
+            "ALPHA" : {
+                "sublattice_model": [["AL", "B"]],
+                "sublattice_site_ratios": [1]
+            }
+        }
+    }
+
+    L0_data = {
+        "components": ["AL", "B"],
+        "phases": ["ALPHA"],
+        "solver": {
+            "sublattice_site_ratios": [1],
+            "sublattice_occupancies": [[[0.5, 0.5]]],
+            "sublattice_configurations": [[["AL", "B"]]],
+            "mode": "manual"
+        },
+        "conditions": {
+            "P": 101325,
+            "T": 298.15
+        },
+        "output": "HM_MIX",
+        "values": [[[-1000]]]
+    }
+
+    L1_data = {
+        "components": ["AL", "B"],
+        "phases": ["ALPHA"],
+        "solver": {
+            "sublattice_site_ratios": [1],
+            "sublattice_occupancies": [[[0.25, 0.75]], [[0.5, 0.5]], [[0.75, 0.25]]],
+            "sublattice_configurations": [[["AL", "B"]], [["AL", "B"]], [["AL", "B"]]],
+            "mode": "manual"
+        },
+        "conditions": {
+            "P": 101325,
+            "T": 298.15
+        },
+        "output": "HM_MIX",
+        "values": [[[-1000.0, 0, 1000.0]]]
+    }
+
+    # Perfect L0, no weight
+    datasets_db = PickleableTinyDB(storage=MemoryStorage)
+    datasets_db.insert(L0_data)
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    datasets_db.close()
+    params = dbf._parameters.search(where('parameter_type') == 'L')
+    print([f"L{p['parameter_order']}: {p['parameter']}" for p in params])
+    print({str(p['parameter']): dbf.symbols[str(p['parameter'])] for p in params})
+    assert len(params) == 1
+    assert dbf.symbols['VV0000'] == -4000
+
+    # Perfect L0, with weight
+    datasets_db = PickleableTinyDB(storage=MemoryStorage)
+    L0_data['weight'] = 0.1  # lower weight
+    datasets_db.insert(L0_data)
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    datasets_db.close()
+    params = dbf._parameters.search(where('parameter_type') == 'L')
+    print([f"L{p['parameter_order']}: {p['parameter']}" for p in params])
+    print({str(p['parameter']): dbf.symbols[str(p['parameter'])] for p in params})
+    assert len(params) == 1
+    assert dbf.symbols['VV0000'] == -4000
+
+
+    # Perfect L1, no weight
+    datasets_db = PickleableTinyDB(storage=MemoryStorage)
+    datasets_db.insert(L1_data)
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    datasets_db.close()
+    params = dbf._parameters.search(where('parameter_type') == 'L')
+    print([f"L{p['parameter_order']}: {p['parameter']}" for p in params])
+    print({str(p['parameter']): dbf.symbols[str(p['parameter'])] for p in params})
+    assert len(params) == 2
+    assert np.isclose(dbf.symbols['VV0000'], 1000*32/3)  # L1
+    assert np.isclose(dbf.symbols['VV0001'], 0)  # L0
+
+    # Perfect L1, with weight
+    datasets_db = PickleableTinyDB(storage=MemoryStorage)
+    L1_data['weight'] = 0.1  # lower weight
+    datasets_db.insert(L1_data)
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    datasets_db.close()
+    params = dbf._parameters.search(where('parameter_type') == 'L')
+    print([f"L{p['parameter_order']}: {p['parameter']}" for p in params])
+    print({str(p['parameter']): dbf.symbols[str(p['parameter'])] for p in params})
+    assert len(params) == 2
+    assert np.isclose(dbf.symbols['VV0000'], 1000*32/3)  # L1
+    assert np.isclose(dbf.symbols['VV0001'], 0)  # L0
