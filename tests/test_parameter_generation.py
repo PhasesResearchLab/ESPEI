@@ -578,3 +578,5 @@ def test_weighting_invariance():
     assert len(params) == 2
     assert np.isclose(dbf.symbols['VV0000'], 1000*32/3)  # L1
     assert np.isclose(dbf.symbols['VV0001'], 0)  # L0
+
+    raise ValueError("TEST")

@@ -418,7 +418,7 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
             keys_to_remove = []
             for key, value in sorted(parameters.items(), key=str):
                 if key.has(check_symbol):
-                    print('value', value, value != 0)
+                    print('key', key, 'value', value, value != 0)
                     if value != 0:
                         symbol_name = get_next_symbol(dbf)
                         dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
