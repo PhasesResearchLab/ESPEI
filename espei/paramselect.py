@@ -431,7 +431,7 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                     keys_to_remove.append(key)
             for key in keys_to_remove:
                 parameters.pop(key)
-        _log.trace('Polynomial coefs: %s', degree_polys)
+        _log.trace('Polynomial coefs: %s', degree_polys.tolist())
         # Insert into database
         symmetric_interactions = generate_symmetric_group(interaction, symmetry)
         for degree in np.arange(degree_polys.shape[0]):
