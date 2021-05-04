@@ -70,6 +70,12 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
     >>> plot_parameters(dbf, ['CU', 'MG'], 'LAVES_C15', (('CU', 'MG'), 'MG'), symmetry=None, datasets=datasets)  # doctest: +SKIP
 
     """
+    deprecation_msg = (
+        "`espei.plot.plot_parameters` is deprecated and will be removed in ESPEI 0.9. "
+        "Please use `plot_endmember` or `plot_interaction` instead."
+    )
+    warnings.warn(deprecation_msg, category=FutureWarning)
+
     em_plots = [('T', 'CPM'), ('T', 'CPM_FORM'), ('T', 'SM'), ('T', 'SM_FORM'),
                 ('T', 'HM'), ('T', 'HM_FORM')]
     mix_plots = [ ('Z', 'HM_MIX'), ('Z', 'SM_MIX')]
