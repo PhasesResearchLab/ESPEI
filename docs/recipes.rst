@@ -136,9 +136,10 @@ Plot thermochemical properties parameters with data
 
 Parameter selection in ESPEI fits Calphad parameters to thermochemical data.
 MCMC can adjust these parameters.
-In both cases, it may be useful to compare the energies of specific endmembers and interactions to the model.
-The code below compares the energies for an endmember or interaction (a configuration).
-The ``plot_parameters`` code will automatically plot all of the energies that data exists for, but no more.
+In both cases, it may be useful to compare the energies of specific
+interactions to the model predictions. The
+:py:func:`espei.plot.plot_interaction` code will plot the predicted
+interaction from the database against the available data, if any.
 
 .. code-block:: python
 
@@ -166,12 +167,12 @@ The ``plot_parameters`` code will automatically plot all of the energies that da
    import matplotlib.pyplot as plt
    from pycalphad import Database
    from espei.datasets import load_datasets, recursive_glob
-   from espei.plot import plot_parameters
+   from espei.plot import plot_interaction
 
    dbf = Database(INPUT_TDB_FILENAME)
    comps = sorted(dbf.elements)
    ds = load_datasets(recursive_glob(DATASET_DIRECTORY, '*.json'))
-   plot_parameters(dbf, comps, PHASE_NAME, CONFIGURATION, datasets=ds, symmetry=None)
+   plot_interaction(dbf, comps, PHASE_NAME, CONFIGURATION, 'HM_MIX', datasets=ds)
    plt.show()
 
 
