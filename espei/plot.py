@@ -490,7 +490,9 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     output : str
         Model property to plot on the y-axis e.g. ``'HM_MIX'``, or ``'SM_MIX'``.
         Must be a ``'_MIX'`` property.
-    desired_data : tinydb.TinyDB
+    datasets : tinydb.TinyDB
+    symmetry : list
+        List of lists containing indices of symmetric sublattices e.g. [[0, 1], [2, 3]]
     ax : plt.Axes
         Default axes used if not specified.
     plot_kwargs : Optional[Dict[str, Any]]
@@ -531,6 +533,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     ax.plot(grid, predicted_values, **plot_kwargs)
 
     # Plot the observed values from the datasets
+    # TODO: model exclusions handling
     # TODO: better reference state handling
     mod_srf = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
     mod_srf.models = {'ref': mod_srf.models['ref']}
@@ -616,6 +619,147 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     ax.figure.set_tight_layout(True)
     leg = ax.legend(loc=(1.01, 0))  # legend outside
     leg.get_frame().set_edgecolor('black')
+    return ax
+
+
+def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None, symmetry=None, bar_chart=None, x='T', ax=None, plot_kwargs=None, dataplot_kwargs=None):
+    """
+    Return one set of plotted Axes with data compared to calculated parameters
+
+    Parameters
+    ----------
+    dbf : Database
+        pycalphad thermodynamic database containing the relevant parameters.
+    comps : Sequence[str]
+        Names of components to consider in the calculation.
+    phase_name : str
+        Name of the considered phase phase
+    configuration : Tuple[Tuple[str]]
+        ESPEI-style configuration
+    output : str
+        Model property to plot on the y-axis e.g. ``'HM_MIX'``, or ``'SM_MIX'``.
+        Must be a ``'_MIX'`` property.
+    datasets : tinydb.TinyDB
+    symmetry : list
+        List of lists containing indices of symmetric sublattices e.g. [[0, 1], [2, 3]]
+    bar_chart : Union[bool, None]
+        If ``None``, will try to autodetect whether to use a bar chart. Bar charts will
+        be used automatically if there's only one potential, e.g. T.
+    ax : plt.Axes
+        Default axes used if not specified.
+    plot_kwargs : Optional[Dict[str, Any]]
+        Keyword arguments to ``ax.plot`` for the predicted data. Used for bar charts.
+    dataplot_kwargs : Optional[Dict[str, Any]]
+        Keyword arguments to ``ax.plot`` the observed data. Not used for bar charts.
+
+    Returns
+    -------
+    plt.Axes
+
+    """
+
+    if output.endswith('_MIX'):
+        raise ValueError("`plot_interaction` only supports HM, HM_FORM, SM, SM_FORM or CPM, CPM_FORM outputs.")
+    if x not in ('T',):
+        raise ValueError(f'`x` passed to `plot_endmember` must be "T" got {x}')
+    if not plot_kwargs:
+        plot_kwargs = {}
+    if not dataplot_kwargs:
+        dataplot_kwargs = {}
+
+    if not ax:
+        plt.gca()
+
+    if datasets is not None:
+        desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, output)
+    else:
+        desired_data = []
+
+    # Set up the domain of the calculation
+    species = unpack_components(dbf, comps)
+    # phase constituents are Species objects, so we need to be doing intersections with those
+    phase_constituents = dbf.phases[phase_name].constituents
+    # phase constituents must be filtered to only active
+    constituents = [[sp.name for sp in sorted(subl_constituents.intersection(species))] for subl_constituents in phase_constituents]
+    calculate_dict = get_prop_samples(desired_data, constituents)
+    xs = calculate_dict['T']
+    potential_values = np.asarray(xs if len(xs) > 0 else 298.15)
+
+    # Detect whether to do a bar chart automatically and initialize bar_chart properties
+    if bar_chart is None:
+        if np.isclose(potential_values.min(), potential_values.max()):
+            bar_chart = True
+        else:
+            bar_chart = False
+    if bar_chart:
+        # NOTE: bar chart data must be collected and plotted at the end in one call.
+        potential_grid = potential_values.min()
+        bar_labels = []
+        bar_data = []
+    else:
+        potential_grid = np.linspace(potential_values.min()-1, potential_values.max()+1, num=100)
+
+    # Plot predicted values from the database
+    endpoints = endmembers_from_interaction(configuration)
+    if len(endpoints) != 1:
+        raise ValueError(f"The configuration passed to `plot_endmember` must be an endmebmer configuration. Got {configuration}")
+    if output.endswith('_FORM'):
+        # TODO: better reference state handling
+        mod = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
+        prop = output[:-5]
+    else:
+        mod = Model(dbf, comps, phase_name)
+        prop = output
+    endmember = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))[None, None]
+    predicted_quantities = calculate(dbf, comps, [phase_name], output=prop, T=potential_grid, P=101325, points=endmember, model=mod)
+    response_data = predicted_quantities[prop].values.flatten()
+    if bar_chart:
+        bar_labels.append('This work')
+        bar_data.append(response_data[0])
+    else:
+        ax.plot(potential_grid, response_data, **plot_kwargs)
+        ax.set_xlabel(plot_mapping.get(x, x))
+        ax.set_ylabel(plot_mapping.get(output, output))
+
+    # Plot observed values
+    # TODO: model exclusions handling
+    bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
+    symbol_map = bib_marker_map(bib_reference_keys)
+    # Wrangle data
+    for data in desired_data:
+        indep_var_data = None
+        response_data = np.zeros_like(data['values'], dtype=np.float_)
+        indep_var_data = np.array(data['conditions'][x], dtype=np.float_).flatten()
+
+        response_data += np.array(data['values'], dtype=np.float_)
+        response_data = response_data.flatten()
+        if bar_chart:
+            bar_labels.append(data.get('reference', None))
+            bar_data.append(response_data[0])
+        else:
+            ref = data.get('reference', '')
+            dataplot_kwargs.setdefault('markersize', 8)
+            dataplot_kwargs.setdefault('linestyle', 'none')
+            dataplot_kwargs.setdefault('clip_on', False)
+            dataplot_kwargs.setdefault('label', symbol_map[ref]['formatted'])
+            dataplot_kwargs.setdefault('marker', symbol_map[ref]['markers']['marker'])
+            dataplot_kwargs.setdefault('fillstyle', symbol_map[ref]['markers']['fillstyle'])
+            ax.plot(indep_var_data, response_data, **dataplot_kwargs)
+
+    if bar_chart:
+        plot_kwargs.setdefault('color', 'k')
+        plot_kwargs.setdefault('height', 0.01)
+        ax.barh(0.02 * np.arange(len(bar_data)), bar_data, **plot_kwargs)
+        endmember_title = ':'.join(endpoints[0])
+        ax.get_figure().suptitle('{} (T = {} K)'.format(endmember_title, potential_values.min()), fontsize=20)
+        ax.set_yticks(0.02 * np.arange(len(bar_data)))
+        ax.set_yticklabels(bar_labels, fontsize=20)
+        # This bar chart is rotated 90 degrees, so the output is on the x-axis
+        ax.set_xlabel(plot_mapping.get(output, output))
+    else:
+        leg = ax.legend(loc=(1.01, 0))  # legend outside
+        leg.get_frame().set_edgecolor('black')
+    ax.figure.set_tight_layout(True)
     return ax
 
 
