@@ -113,10 +113,12 @@ Note that the arrays are preallocated with zeros.
 These filenames and settings can be changed using in the input file.
 You can then use these chains and corresponding log-probabilities to make corner plots, calculate autocorrelations, find optimal parameters for databases, etc..
 Some examples are shown in the :ref:`Recipes` page.
-Finally, you can use py:mod:`espei.plot` functions such as ``dataplot`` in
-concert with pycalphad to plot phase diagrams with your input equilibria data
-and ``plot_parameters`` to compare single-phase data (e.g. formation and
-mixing data) with the properties calculated from your database.
+Finally, you can use :py:mod:`espei.plot` functions such as
+:py:func:`espei.plot.dataplot` in concert with pycalphad to plot phase diagrams
+with your input equilibria data. The :py:func:`espei.plot.plot_endmember` and
+:py:func:`espei.plot.plot_interaction` functions can be
+used to compare single-phase data (e.g. formation and mixing data) with the
+properties calculated from your database.
 
 Q: Can I run ESPEI on a supercomputer supporting MPI?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -160,7 +162,6 @@ Note that if you optimize parameters in a subsystem (e.g. Cu-Mg) that is used in
 
 
 References
-==========
+----------
 
-.. [1] B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu-Mg, (2019). http://arxiv.org/abs/1902.01269.
-
+.. [1] B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg, MRS Commun. (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_.
