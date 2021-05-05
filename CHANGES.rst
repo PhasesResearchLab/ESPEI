@@ -2,6 +2,20 @@
 What's New
 ==========
 
+Development: |version|
+======================
+
+0.8.2 (2021-05-05)
+==================
+
+Improvements
+------------
+* Fix weighting in model selection (`@bocklund`_ - :issue:`176`)
+
+Deprecations
+------------
+* ``plot_parameters`` is deprecated in favor of ``plot_interaction`` and ``plot_endmember`` (`@bocklund`_ - :issue:`177`)
+
 0.8.1 (2021-04-22)
 ==================
 
@@ -33,8 +47,8 @@ Breaking changes
 * Removed automatically added ideal exclusions, which was deprecated in ESPEI 0.7. Non-equilibrium thermochemical data should use the ``excluded_model_contributions`` key to exclude ``idmix``, ``mag`` or other model contributions. (`@bocklund`_ - :issue:`168`)
 * Remove deprecated ``mcmc.py`` (`@bocklund`_ - :issue:`164`)
 
-New deprecations
-----------------
+Deprecations
+------------
 * Setting ``mcmc.scheduler`` to the string ``"None"`` to get a serial scheduler is deprecated. Users should use ``null`` in YAML/JSON or ``None`` in Python.
 * Deprecated ``multiplot`` and ``eqdataplot`` in favor of having users compose ``binplot`` and ``dataplot``. pycalphad's ``binplot`` is much faster than ``multiplot``. The extra functional call added is worth removing the maintenance burden and allows users to understand more explictly the difference between plotting data and plotting the calculated phase diagram. The documentation was updated to reflect this change and no longer uses ``multiplot``. (`@bocklund`_ - :issue:`162`)
 
