@@ -14,8 +14,7 @@ These steps will create a new tagged version in the GitHub repository.
 #. ``pytest`` to ensure that all tests pass locally.
 #. ``sphinx-apidoc -f -o docs/api/ espei/ -H 'API Documentation'`` to
    regenerate API documentation.
-#. Update the ``version`` and ``release`` variables of ``docs/conf.py`` to the new version.
-#. Commit the updated API documentation and ``conf.py`` file.
+#. Commit the updated API documentation.
 #. ``git push`` and verify all tests pass on all CI services.
 #. Generate a list of commits since the last version with
    ``git --no-pager log --oneline --no-decorate 0.1^..origin/master``.
