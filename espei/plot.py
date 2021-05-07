@@ -622,7 +622,6 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     ax.set_xlim((0, 1))
     ax.set_xlabel(str(':'.join(endpoints[0])) + ' to ' + str(':'.join(endpoints[1])))
     ax.set_ylabel(plot_mapping.get(output, output))
-    ax.figure.set_tight_layout(True)
     leg = ax.legend(loc=(1.01, 0))  # legend outside
     leg.get_frame().set_edgecolor('black')
     return ax
@@ -725,7 +724,6 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
     ax.set_ylabel(plot_mapping.get(output, output))
     leg = ax.legend(loc=(1.01, 0))  # legend outside
     leg.get_frame().set_edgecolor('black')
-    ax.figure.set_tight_layout(True)
     return ax
 
 
