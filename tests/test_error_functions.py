@@ -465,7 +465,7 @@ def test_site_fraction_solutions(constituents, site_ratios, comp_conds, expected
             soln = _solve_sitefracs_composition(mod, comp_conds)
             print(soln)
         return
-    
+
     expected_num_dependent_symbols = total_num_symbols - expected_num_independent_symbols
     num_dependent_symbols = len(soln.keys())
     assert num_dependent_symbols == expected_num_dependent_symbols

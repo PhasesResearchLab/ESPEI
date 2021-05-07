@@ -371,6 +371,8 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
             if dbf.symbols.get(sym_name, None) is not None:
                 num_moles = sum([sites for elem, sites in zip(endmember, site_ratios) if elem != 'VA'])
                 fit_eq = num_moles * Symbol(sym_name)
+                _log.trace("Found lattice stability: %s", sym_name)
+                _log.debug("%s = %s", sym_name, dbf.symbols[sym_name])
         if fit_eq is None:
             # No reference lattice stability data -- we have to fit it
             parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
