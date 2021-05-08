@@ -336,18 +336,20 @@ log-likelihood of each driving force.
    dfs = []
    for data, data_driving_forces in zip(zpf_data, driving_forces):
        for phase_region in data['phase_regions']:
-           for vertex_comp_cond, df in zip(phase_region.comp_conds, data_driving_forces):
-               if any(val is None for val in vertex_comp_cond.values()):
+           for vertex, df in zip(phase_region.vertices, data_driving_forces):
+               comp_cond = vertex.comp_conds
+               if vertex.has_missing_comp_cond:
+                   # No composition to plot
                    continue
                dfs.append(df)
                Ts.append(phase_region.potential_conds[v.T])
                # Binary assumptions here
-               assert len(vertex_comp_cond) == 1
-               if INDEP_COMP in vertex_comp_cond:
-                   Xs.append(vertex_comp_cond[INDEP_COMP])
+               assert len(comp_cond) == 1
+               if INDEP_COMP in comp_cond:
+                   Xs.append(comp_cond[INDEP_COMP])
                else:
                    # Switch the dependent and independent component
-                   Xs.append(1.0 - tuple(vertex_comp_cond.values())[0])
+                   Xs.append(1.0 - tuple(comp_cond.values())[0])
 
    # Plot the phase diagram with driving forces
    fig = plt.figure(dpi=100)
