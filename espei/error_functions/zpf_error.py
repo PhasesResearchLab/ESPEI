@@ -55,6 +55,10 @@ class PhaseRegion:
     phases: Sequence[str]
     models: Dict[str, Model]
 
+    def eq_str(self):
+        phase_compositions = ', '.join(f'{vtx.phase_name}: {vtx.comp_conds}' for vtx in self.vertices)
+        return f"conds: ({self.potential_conds}), comps: ({phase_compositions})"
+
 
 def _safe_index(items, index):
     try:
@@ -440,11 +444,6 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
     return driving_force
 
 
-def _format_phase_compositions(phase_region: PhaseRegion):
-    phase_compositions = ', '.join(f'{vtx.phase_name}: {vtx.comp_conds}' for vtx in phase_region.vertices)
-    return f"conds: ({phase_region.potential_conds}), comps: ({phase_compositions})"
-
-
 def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
                                  parameters: ArrayLike = None,
                                  approximate_equilibrium: bool = False,
@@ -492,7 +491,7 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
         # for the set of phases and corresponding tie-line verticies in equilibrium
         for phase_region in data['phase_regions']:
             # 1. Calculate the average multiphase hyperplane
-            eq_str = _format_phase_compositions(phase_region)
+            eq_str = phase_region.eq_str()
             target_hyperplane = estimate_hyperplane(phase_region, parameters, approximate_equilibrium=approximate_equilibrium)
             if np.any(np.isnan(target_hyperplane)):
                 _log.debug('NaN target hyperplane. Equilibria: (%s), driving force: 0.0, reference: %s.', eq_str, dataset_ref)
