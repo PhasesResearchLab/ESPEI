@@ -207,7 +207,12 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
                     output = prop
                 for contrib in exclusion:
                     mod.models[contrib] = sympy.S.Zero
-                    mod.reference_model.models[contrib] = sympy.S.Zero
+                    try:
+                        # TODO: we can remove this try/except block when pycalphad 0.8.6
+                        # is released with these internal API changes
+                        mod.endmember_reference_model.models[contrib] = sympy.S.Zero
+                    except AttributeError:
+                        mod.reference_model.models[contrib] = sympy.S.Zero
                 species = sorted(unpack_components(dbf, comps), key=str)
                 data_dict['species'] = species
                 model = {phase_name: mod}
