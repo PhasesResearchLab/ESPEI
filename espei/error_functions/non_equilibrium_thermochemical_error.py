@@ -208,7 +208,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
                 for contrib in exclusion:
                     mod.models[contrib] = sympy.S.Zero
                     try:
-                        # TODO: we can remove this try/except block when pycalphad 0.8.6
+                        # TODO: we can remove this try/except block when pycalphad 0.8.5
                         # is released with these internal API changes
                         mod.endmember_reference_model.models[contrib] = sympy.S.Zero
                     except AttributeError:
