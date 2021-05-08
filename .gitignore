@@ -8,7 +8,6 @@ dask-worker-space
 
 # Sphinx documentation
 docs/_build
-docs/conf.py
 
 # Editors
 *.sublime-project

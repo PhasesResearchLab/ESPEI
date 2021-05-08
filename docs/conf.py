@@ -21,6 +21,9 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))  # For autodoc and version loading
 from espei import __version__ as espei_version
+# Cleanup ESPEI version, since RTD dirties the repository
+if espei_version.endswith('.dirty'):
+    espei_version = espei_version[:-6]
 
 # -- General configuration ------------------------------------------------
 
