@@ -3,4 +3,5 @@ version: 2
 conda:
   environment: environment-dev.yml
 
-formats: all
+formats: []
+
