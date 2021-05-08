@@ -3,4 +3,6 @@ version: 2
 conda:
   environment: environment-dev.yml
 
-formats: all
+# PDF/LaTeX currently broken
+# see: https://github.com/PhasesResearchLab/ESPEI/issues/167
+formats: []
