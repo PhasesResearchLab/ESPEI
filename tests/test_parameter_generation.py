@@ -1,5 +1,6 @@
 """The test_parameter_generation module tests that parameter selection is correct"""
 
+import copy
 from tinydb import where
 from tinydb.storages import MemoryStorage
 import numpy as np
@@ -455,6 +456,15 @@ def test_initial_database_can_be_supplied(datasets_db):
 def test_model_contributions_can_be_excluded(datasets_db):
     """Model contributions excluded in the datasets should not be fit"""
     datasets_db.insert(CR_FE_HM_MIX_EXCLUDED_MAG)
+    dbf = generate_parameters(CR_FE_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', dbf=Database(CR_FE_INITIAL_TDB_CONTRIBUTIONS))
+    assert dbf.symbols['VV0000'] == 40000  # 4 mol-atom/mol-form * 10000 J/mol-atom, verified with no initial Database
+
+
+def test_multiple_excluded_contributions(datasets_db):
+    """Model contributions excluded more than once in the datasets still produce correct results"""
+    double_exclude_dataset = copy.deepcopy(CR_FE_HM_MIX_EXCLUDED_MAG)
+    double_exclude_dataset['excluded_model_contributions'] = ['mag', 'mag']
+    datasets_db.insert(double_exclude_dataset)
     dbf = generate_parameters(CR_FE_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', dbf=Database(CR_FE_INITIAL_TDB_CONTRIBUTIONS))
     assert dbf.symbols['VV0000'] == 40000  # 4 mol-atom/mol-form * 10000 J/mol-atom, verified with no initial Database
 
