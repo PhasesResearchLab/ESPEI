@@ -291,15 +291,14 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         # Each phase_region is one set of phases in equilibrium (on a tie-line),
         # e.g. [["ALPHA", ["B"], [0.25]], ["BETA", ["B"], [0.5]]]
         for idx, phase_region in enumerate(all_regions):
-            # We need to construct a PhaseRegion by matching up phases/compositions to the conditions
             # Extract the conditions for entire phase region
-            region_potential_conds = _extract_pot_conds(conditions, idx)
-            region_potential_conds.setdefault(v.N, 1.0) # Add v.N condition, if missing
+            pot_conds = _extract_pot_conds(conditions, idx)
+            pot_conds.setdefault(v.N, 1.0) # Add v.N condition, if missing
             # Extract all the phases and compositions from the tie-line points
-            region_vertices = []
+            vertices = []
             for vertex in phase_region:
                 phase_name, comp_conds, disordered_flag = _extract_phases_comps(vertex)
-                phase_recs = build_phase_records(dbf, species, data_phases, {**region_potential_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
+                phase_recs = build_phase_records(dbf, species, data_phases, {**pot_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
                 # Construct single-phase points satisfying the conditions for each phase in the region
                 if any(val is None for val in comp_conds.values()):
                     # We can't construct points because we don't have a known composition
@@ -314,8 +313,9 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                     sitefrac_soln = _solve_sitefracs_composition(mod, comp_conds)
                     phase_points = _sample_solution_constitution(mod, sitefrac_soln)
                 vtx = RegionVertex(phase_name, comp_conds, phase_points, phase_recs, disordered_flag, has_missing_comp_cond)
-                region_vertices.append(vtx)
-            phase_regions.append(PhaseRegion(region_vertices, region_potential_conds, dbf, species, data_phases, models))
+                vertices.append(vtx)
+            region = PhaseRegion(vertices, pot_conds, dbf, species, data_phases, models)
+            phase_regions.append(region)
 
         data_dict = {
             'weight': data.get('weight', 1.0),
