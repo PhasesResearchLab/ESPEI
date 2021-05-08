@@ -9,6 +9,8 @@ Improvements
 ------------
 * Fix a bug where excluded model contributions could be double counted (`@bocklund`_ - :issue:`181`)
 * Support internal API changes for pycalphad 0.8.5 (`@bocklund`_ - :issue:`183`)
+* Fix a regression for ZPF error calculations introduced in :issue:`181` where prescribed phase compositions of stoichiometric phases that used to work no longer work because the phase composition of a stoichiometric phase may be unsatisfiable (`@bocklund`_ - :issue:`185`).
+* Fix a bug in ZPF error calculations where stoichiometric phases could give incorrect energies for exact equilibrium when prescribed mass balance conditions could not be satisfied. The fix now computes the driving force exactly in all cases for stoichiometric compounds. (`@bocklund`_ - :issue:`185`)
 
 0.8.2 (2021-05-05)
 ==================

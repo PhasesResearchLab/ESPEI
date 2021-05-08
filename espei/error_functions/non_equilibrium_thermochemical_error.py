@@ -184,7 +184,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
             desired_data = get_prop_data(comps, phase_name, prop, datasets, additional_query=(where('solver').exists()))
             if len(desired_data) == 0:
                 continue
-            unique_exclusions = set([tuple(sorted(d.get('excluded_model_contributions', []))) for d in desired_data])
+            unique_exclusions = set([tuple(sorted(set(d.get('excluded_model_contributions', [])))) for d in desired_data])
             for exclusion in unique_exclusions:
                 data_dict = {
                     'phase_name': phase_name,
