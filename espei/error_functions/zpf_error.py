@@ -16,8 +16,9 @@ composition conditions to calculate chemical potentials at.
 
 import logging
 import warnings
+from dataclasses import dataclass
 from collections import OrderedDict
-from typing import Sequence, Dict, NamedTuple, Any, Union, List, Tuple
+from typing import Sequence, Dict, Any, Union, List, Tuple
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -34,6 +35,21 @@ from espei.utils import PickleableTinyDB
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
 
 _log = logging.getLogger(__name__)
+
+
+
+@dataclass
+class PhaseRegion:
+    region_phases: Sequence[str]
+    potential_conds: Dict[v.StateVariable, float]
+    comp_conds: Sequence[Dict[v.X, float]]
+    phase_points: Sequence[ArrayLike]
+    phase_flags: Sequence[str]
+    dbf: Database
+    species: Sequence[v.Species]
+    phases: Sequence[str]
+    models: Dict[str, Model]
+    phase_records: Sequence[Dict[str, PhaseRecord]]
 
 
 def _safe_index(items, index):
@@ -224,18 +240,6 @@ def extract_phases_comps(phase_region):
         phase_flags.append(flag)
     return region_phases, region_comp_conds, phase_flags
 
-
-PhaseRegion = NamedTuple('PhaseRegion', (('region_phases', Sequence[str]),
-                                         ('potential_conds', Dict[v.StateVariable, float]),
-                                         ('comp_conds', Sequence[Dict[v.X, float]]),
-                                         ('phase_points', Sequence[ArrayLike]),
-                                         ('phase_flags', Sequence[str]),
-                                         ('dbf', Database),
-                                         ('species', Sequence[v.Species]),
-                                         ('phases', Sequence[str]),
-                                         ('models', Dict[str, Model]),
-                                         ('phase_records', Sequence[Dict[str, PhaseRecord]]),
-                                         ))
 
 
 def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], datasets: PickleableTinyDB, parameters: Dict[str, float]):
