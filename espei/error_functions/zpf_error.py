@@ -37,19 +37,23 @@ from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_,
 _log = logging.getLogger(__name__)
 
 
+@dataclass
+class RegionVertex:
+    phase_name: str
+    comp_conds: Dict[v.X, float]
+    points: ArrayLike
+    phase_records: Dict[str, PhaseRecord]
+    is_disordered: bool
+    has_missing_comp_cond: bool
 
 @dataclass
 class PhaseRegion:
-    region_phases: Sequence[str]
+    vertices: Sequence[RegionVertex]
     potential_conds: Dict[v.StateVariable, float]
-    comp_conds: Sequence[Dict[v.X, float]]
-    phase_points: Sequence[ArrayLike]
-    phase_flags: Sequence[str]
     dbf: Database
     species: Sequence[v.Species]
     phases: Sequence[str]
     models: Dict[str, Model]
-    phase_records: Sequence[Dict[str, PhaseRecord]]
 
 
 def _safe_index(items, index):
@@ -204,7 +208,7 @@ def _sample_solution_constitution(mod: Model, soln: Dict[v.Y, Union[sympy.Expr, 
     return points
 
 
-def extract_conditions(all_conditions: Dict[v.StateVariable, np.ndarray], idx: int) -> Dict[v.StateVariable, float]:
+def _extract_pot_conds(all_conditions: Dict[v.StateVariable, np.ndarray], idx: int) -> Dict[v.StateVariable, float]:
     """Conditions are either scalar or 1d arrays for the conditions in the entire dataset.
     This function extracts the condition corresponding to the current region,
     based on the index in the 1d condition array.
@@ -220,26 +224,29 @@ def extract_conditions(all_conditions: Dict[v.StateVariable, np.ndarray], idx: i
     return pot_conds
 
 
-def extract_phases_comps(phase_region):
-    """Extract the phase names, phase compositions and any phase flags from
-    each tie-line point in the phase region
+def _extract_phases_comps(vertex):
+    """Extract the phase name, phase compositions and disordered flag from a vertex
     """
-    region_phases = []
-    region_comp_conds = []
-    phase_flags = []
-    for tie_point in phase_region:
-        if len(tie_point) == 4:  # phase_flag within
-            phase_name, components, compositions, flag = tie_point
-        elif len(tie_point) == 3:  # no phase_flag within
-            phase_name, components, compositions = tie_point
-            flag = None
+    if len(vertex) == 4:  # phase_flag within
+        phase_name, components, compositions, flag = vertex
+        if flag == "disordered":
+            disordered_flag = True
         else:
-            raise ValueError("Wrong number of data in tie-line point")
-        region_phases.append(phase_name)
-        region_comp_conds.append(dict(zip(map(v.X, map(lambda x: x.upper(), components)), compositions)))
-        phase_flags.append(flag)
-    return region_phases, region_comp_conds, phase_flags
+            disordered_flag = False
+    elif len(vertex) == 3:  # no phase_flag within
+        phase_name, components, compositions = vertex
+        disordered_flag = False
+    else:
+        raise ValueError("Wrong number of data in tie-line point")
+    comp_conds = dict(zip(map(v.X, map(str.upper, components)), compositions))
+    return phase_name, comp_conds, disordered_flag
 
+
+def _phase_is_stoichiometric(dbf, species, phase_name):
+    phase_constituents = dbf.phases[phase_name].constituents
+    # phase constituents must be filtered to only active:
+    constituents = [[sp.name for sp in sorted(subl_constituents.intersection(species))] for subl_constituents in phase_constituents]
+    return all(len(subl) == 1 for subl in constituents)
 
 
 def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], datasets: PickleableTinyDB, parameters: Dict[str, float]):
@@ -282,24 +289,29 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         for idx, phase_region in enumerate(all_regions):
             # We need to construct a PhaseRegion by matching up phases/compositions to the conditions
             # Extract the conditions for entire phase region
-            region_potential_conds = extract_conditions(conditions, idx)
-            region_potential_conds[v.N] = region_potential_conds.get(v.N) or 1.0  # Add v.N condition, if missing
+            region_potential_conds = _extract_pot_conds(conditions, idx)
+            region_potential_conds.setdefault(v.N, 1.0) # Add v.N condition, if missing
             # Extract all the phases and compositions from the tie-line points
-            region_phases, region_comp_conds, phase_flags = extract_phases_comps(phase_region)
-            # Construct single-phase points satisfying the conditions for each phase in the region
-            region_phase_points = []
-            for phase_name, comp_conds in zip(region_phases, region_comp_conds):
+            region_vertices = []
+            for vertex in phase_region:
+                phase_name, comp_conds, disordered_flag = _extract_phases_comps(vertex)
+                phase_recs = build_phase_records(dbf, species, data_phases, {**region_potential_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
+                # Construct single-phase points satisfying the conditions for each phase in the region
                 if any(val is None for val in comp_conds.values()):
                     # We can't construct points because we don't have a known composition
-                    region_phase_points.append(None)
-                    continue
-                mod = models[phase_name]
-                sitefrac_soln = _solve_sitefracs_composition(mod, comp_conds)
-                phase_points = _sample_solution_constitution(mod, sitefrac_soln)
-                region_phase_points.append(phase_points)
-            region_phase_records = [build_phase_records(dbf, species, data_phases, {**region_potential_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
-                                    for comp_conds in region_comp_conds]
-            phase_regions.append(PhaseRegion(region_phases, region_potential_conds, region_comp_conds, region_phase_points, phase_flags, dbf, species, data_phases, models, region_phase_records))
+                    has_missing_comp_cond = True
+                    phase_points = None
+                elif _phase_is_stoichiometric(dbf, species, phase_name):
+                    has_missing_comp_cond = False
+                    phase_points = None
+                else:
+                    has_missing_comp_cond = False
+                    mod = models[phase_name]
+                    sitefrac_soln = _solve_sitefracs_composition(mod, comp_conds)
+                    phase_points = _sample_solution_constitution(mod, sitefrac_soln)
+                vtx = RegionVertex(phase_name, comp_conds, phase_points, phase_recs, disordered_flag, has_missing_comp_cond)
+                region_vertices.append(vtx)
+            phase_regions.append(PhaseRegion(region_vertices, region_potential_conds, dbf, species, data_phases, models))
 
         data_dict = {
             'weight': data.get('weight', 1.0),
@@ -334,14 +346,11 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
     species = phase_region.species
     phases = phase_region.phases
     models = phase_region.models
-    for comp_conds, phase_flag, phase_records in zip(phase_region.comp_conds, phase_region.phase_flags, phase_region.phase_records):
-        # We are now considering a particular tie vertex
+    for vertex in phase_region.vertices:
+        phase_records = vertex.phase_records
         update_phase_record_parameters(phase_records, parameters)
-        cond_dict = {**comp_conds, **phase_region.potential_conds}
-        for key, val in cond_dict.items():
-            if val is None:
-                cond_dict[key] = np.nan
-        if np.any(np.isnan(list(cond_dict.values()))):
+        cond_dict = {**vertex.comp_conds, **phase_region.potential_conds}
+        if vertex.has_missing_comp_cond:
             # This composition is unknown -- it doesn't contribute to hyperplane estimation
             pass
         else:
@@ -366,7 +375,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
 
 
 def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: Sequence[str],
-                                phase_region: PhaseRegion, vertex_idx: int,
+                                phase_region: PhaseRegion, vertex: RegionVertex,
                                 parameters: np.ndarray, approximate_equilibrium: bool = False) -> float:
     """Calculate the integrated driving force between the current hyperplane and target hyperplane.
     """
@@ -376,24 +385,21 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
         _equilibrium = equilibrium_
     dbf = phase_region.dbf
     species = phase_region.species
-    phases = phase_region.phases
     models = phase_region.models
-    current_phase = phase_region.region_phases[vertex_idx]
-    cond_dict = {**phase_region.potential_conds, **phase_region.comp_conds[vertex_idx]}
+    current_phase = vertex.phase_name
+    cond_dict = {**phase_region.potential_conds, **vertex.comp_conds}
     str_statevar_dict = OrderedDict([(str(key),cond_dict[key]) for key in sorted(phase_region.potential_conds.keys(), key=str)])
-    phase_points = phase_region.phase_points[vertex_idx]
-    phase_flag = phase_region.phase_flags[vertex_idx]
-    phase_records = phase_region.phase_records[vertex_idx]
+    phase_points = vertex.points
+    phase_records = vertex.phase_records
     update_phase_record_parameters(phase_records, parameters)
-    for key, val in cond_dict.items():
-        if val is None:
-            cond_dict[key] = np.nan
-    if np.any(np.isnan(list(cond_dict.values()))):
-        # We don't actually know the phase composition here, so we estimate it
+    if phase_points is None:
+        # We don't have the phase composition here, so we estimate the driving force.
+        # Can happen if one of the composition conditions is unknown or if the phase is
+        # stoichiometric and the user did not specify a valid phase composition.
         single_eqdata = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, pdens=500)
         df = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(df.max())
-    elif phase_flag == 'disordered':
+    elif vertex.is_disordered:
         # Construct disordered sublattice configuration from composition dict
         # Compute energy
         # Compute residual driving force
@@ -434,10 +440,10 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
     return driving_force
 
 
-def _format_phase_compositions(phase_region):
-    phase_comp_cond_pairs = zip(phase_region.region_phases, phase_region.comp_conds)
-    phase_compositions = ', '.join(f'{ph}: {c}' for ph, c in phase_comp_cond_pairs)
+def _format_phase_compositions(phase_region: PhaseRegion):
+    phase_compositions = ', '.join(f'{vtx.phase_name}: {vtx.comp_conds}' for vtx in phase_region.vertices)
     return f"conds: ({phase_region.potential_conds}), comps: ({phase_compositions})"
+
 
 def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
                                  parameters: ArrayLike = None,
@@ -490,21 +496,21 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
             target_hyperplane = estimate_hyperplane(phase_region, parameters, approximate_equilibrium=approximate_equilibrium)
             if np.any(np.isnan(target_hyperplane)):
                 _log.debug('NaN target hyperplane. Equilibria: (%s), driving force: 0.0, reference: %s.', eq_str, dataset_ref)
-                data_driving_forces.extend([0]*len(phase_region.comp_conds))
-                data_weights.extend([weight]*len(phase_region.comp_conds))
+                data_driving_forces.extend([0]*len(phase_region.vertices))
+                data_weights.extend([weight]*len(phase_region.vertices))
                 continue
             # 2. Calculate the driving force to that hyperplane for each vertex
-            for vertex_idx in range(len(phase_region.comp_conds)):
+            for vertex in phase_region.vertices:
                 driving_force = driving_force_to_hyperplane(target_hyperplane, data_comps,
-                                                            phase_region, vertex_idx, parameters,
+                                                            phase_region, vertex, parameters,
                                                             approximate_equilibrium=approximate_equilibrium,
                                                             )
                 if np.isinf(driving_force) and short_circuit:
-                    _log.debug('Equilibria: (%s), current phase: %s, hyperplane: %s, driving force: %s, reference: %s. Short circuiting.', eq_str, phase_region.region_phases[vertex_idx], target_hyperplane, driving_force, dataset_ref)
+                    _log.debug('Equilibria: (%s), current phase: %s, hyperplane: %s, driving force: %s, reference: %s. Short circuiting.', eq_str, vertex.phase_name, target_hyperplane, driving_force, dataset_ref)
                     return [[np.inf]], [[np.inf]]
                 data_driving_forces.append(driving_force)
                 data_weights.append(weight)
-                _log.debug('Equilibria: (%s), current phase: %s, hyperplane: %s, driving force: %s, reference: %s', eq_str, phase_region.region_phases[vertex_idx], target_hyperplane, driving_force, dataset_ref)
+                _log.debug('Equilibria: (%s), current phase: %s, hyperplane: %s, driving force: %s, reference: %s', eq_str, vertex.phase_name, target_hyperplane, driving_force, dataset_ref)
         driving_forces.append(data_driving_forces)
         weights.append(data_weights)
     return driving_forces, weights
