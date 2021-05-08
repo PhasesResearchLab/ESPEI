@@ -8,6 +8,7 @@ Development: |version|
 Improvements
 ------------
 * Fix a bug where excluded model contributions could be double counted (`@bocklund`_ - :issue:`181`)
+* Support internal API changes for pycalphad 0.8.5 (`@bocklund`_ - :issue:`183`)
 
 0.8.2 (2021-05-05)
 ==================
