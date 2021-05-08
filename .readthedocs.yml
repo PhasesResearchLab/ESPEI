@@ -6,5 +6,6 @@ conda:
 sphinx:
    configuration: docs/conf.py
 
+# PDF/LaTeX currently broken
+# see: https://github.com/PhasesResearchLab/ESPEI/issues/167
 formats: []
-
