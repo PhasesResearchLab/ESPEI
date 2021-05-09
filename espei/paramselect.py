@@ -483,8 +483,9 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     dbf = initialize_database(phase_models, ref_state, dbf)
     # Fit phases in alphabetic order so the VV#### counter is constistent between runs
     for phase_name, phase_data in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
-        symmetry = phase_data.get('equivalent_sublattices', None)
-        phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
+        if phase_name in dbf.phases:
+            symmetry = phase_data.get('equivalent_sublattices', None)
+            phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
     _log.info('Finished generating parameters.')
     np.set_printoptions(linewidth=75)
     return dbf
