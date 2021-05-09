@@ -615,9 +615,10 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
         dataplot_kwargs.setdefault('markersize', 8)
         dataplot_kwargs.setdefault('linestyle', 'none')
         dataplot_kwargs.setdefault('clip_on', False)
-        dataplot_kwargs.setdefault('label', symbol_map[ref]['formatted'])
-        dataplot_kwargs.setdefault('marker', symbol_map[ref]['markers']['marker'])
-        dataplot_kwargs.setdefault('fillstyle', symbol_map[ref]['markers']['fillstyle'])
+        # Cannot use setdefault because it won't overwrite previous iterations
+        dataplot_kwargs['label'] = symbol_map[ref]['formatted']
+        dataplot_kwargs['marker'] = symbol_map[ref]['markers']['marker']
+        dataplot_kwargs['fillstyle'] = symbol_map[ref]['markers']['fillstyle']
         ax.plot(indep_var_data, response_data, **dataplot_kwargs)
     ax.set_xlim((0, 1))
     ax.set_xlabel(str(':'.join(endpoints[0])) + ' to ' + str(':'.join(endpoints[1])))
@@ -715,9 +716,10 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
         dataplot_kwargs.setdefault('markersize', 8)
         dataplot_kwargs.setdefault('linestyle', 'none')
         dataplot_kwargs.setdefault('clip_on', False)
-        dataplot_kwargs.setdefault('label', symbol_map[ref]['formatted'])
-        dataplot_kwargs.setdefault('marker', symbol_map[ref]['markers']['marker'])
-        dataplot_kwargs.setdefault('fillstyle', symbol_map[ref]['markers']['fillstyle'])
+        # Cannot use setdefault because it won't overwrite previous iterations
+        dataplot_kwargs['label'] = symbol_map[ref]['formatted']
+        dataplot_kwargs['marker'] = symbol_map[ref]['markers']['marker']
+        dataplot_kwargs['fillstyle'] = symbol_map[ref]['markers']['fillstyle']
         ax.plot(indep_var_data, response_data, **dataplot_kwargs)
 
     ax.set_xlabel(plot_mapping.get(x, x))
