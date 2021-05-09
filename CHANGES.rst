@@ -4,7 +4,11 @@ What's New
 
 |version| (development)
 =======================
+
+Improvements
+------------
 * Fix a regression where `plot_interaction` and `plot_endmember` re-used reference labels and markers (`@bocklund`_ - :issue:`187`)
+* Parameter selection now adds and fits only phases which in the phase models and are active (`@bocklund`_ - :issue:`188`)
 
 0.8.3 (2021-05-08)
 ==================
