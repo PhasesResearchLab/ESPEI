@@ -4,6 +4,7 @@ What's New
 
 |version| (development)
 =======================
+* Fix a regression where `plot_interaction` and `plot_endmember` re-used reference labels and markers (`@bocklund`_ - :issue:`187`)
 
 0.8.3 (2021-05-08)
 ==================
