@@ -69,7 +69,7 @@ def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="S
     elements = {el.upper() for el in phase_models["components"]}
     dbf.elements.update(elements)
     dbf.species.update({v.Species(el, {el: 1}, 0) for el in elements})
-    
+
     # Add SER reference data for this element
     for element in dbf.elements:
         if element in dbf.refstates:
@@ -77,7 +77,7 @@ def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="S
         el_ser_data = _get_ser_data(element, ref_state, fallback_ref_state=fallback_ref_state)
         # Try to look up the alias that we are using in this fitting
         el_ser_data["phase"] = aliases.get(el_ser_data["phase"], el_ser_data["phase"])
-        # Don't warn if the element is a species with no atoms because per-atom 
+        # Don't warn if the element is a species with no atoms because per-atom
         # formation energies are not possible (e.g. VA (VACUUM) or /- (ELECTRON_GAS))
         if el_ser_data["phase"] not in phases and v.Species(element).number_of_atoms != 0:
             # We have the Gibbs energy expression that we need in the reference
@@ -99,9 +99,10 @@ def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="S
             subl_model = phase_data['sublattice_model']
             # Only generate the sublattice model for active components
             subl_model = [sorted(set(subl).intersection(dbf.elements)) for subl in subl_model]
-            dbf.add_phase(phase_name, dict(), site_ratios)
-            dbf.add_phase_constituents(phase_name, subl_model)
-    
+            if all(len(subl) > 0 for subl in subl_model):
+                dbf.add_phase(phase_name, dict(), site_ratios)
+                dbf.add_phase_constituents(phase_name, subl_model)
+
     # Add the GHSER functions to the Database
     for element in dbf.elements:
         # Use setdefault here to not clobber user-provided functions
