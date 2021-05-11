@@ -1,42 +1,10 @@
 """
-Internal utilities for developer use. May not be useful to users.
+Utilities for querying and modifiying datasets.
 """
 import copy
 import numpy as np
 import tinydb
 from espei.sublattice_tools import canonicalize, recursive_tuplify
-
-
-def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
-    """
-    Return a list of cleaned single phase datasets matching the passed arguments.
-
-    Parameters
-    ----------
-    comps : list
-        List of string component names
-    phase_name : str
-        Name of phase
-    configuration : tuple
-        Sublattice configuration as a tuple, e.g. ("CU", ("CU", "MG"))
-    symmetry : list of lists
-        List of sublattice indices with symmetry
-    datasets : espei.utils.PickleableTinyDB
-        Database of datasets to search for data
-    prop : list
-        String name of the property of interest.
-
-    Returns
-    -------
-    list
-        List of datasets matching the arguments.
-
-    """
-    solver_qry = (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
-    desired_data = get_prop_data(comps, phase_name, prop, datasets, additional_query=solver_qry)
-    desired_data = filter_configurations(desired_data, configuration, symmetry)
-    desired_data = filter_temperatures(desired_data)
-    return desired_data
 
 
 def filter_configurations(desired_data, configuration, symmetry):

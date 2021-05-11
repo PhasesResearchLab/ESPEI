@@ -30,13 +30,13 @@ from pycalphad import Database, Model, variables as v
 
 import espei.refdata
 from espei.database_utils import initialize_database
-from espei.core_utils import get_data
+from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter
 from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
 from espei.parameter_selection.model_building import build_candidate_models
 from espei.parameter_selection.selection import select_model
 from espei.parameter_selection.utils import get_data_quantities, feature_transforms, _get_sample_condition_dicts
 from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
-    tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
+    tuplify, recursive_tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
 from espei.utils import PickleableTinyDB, sigfigs, extract_aliases
 
 _log = logging.getLogger(__name__)
@@ -154,7 +154,10 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     for desired_props in fitting_steps:
         feature_type = desired_props[0].split('_')[0]  # HM_FORM -> HM
         aicc_factor = aicc_feature_factors.get(feature_type, 1.0)
-        desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
+        solver_qry = (where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
+        desired_data = get_prop_data(comps, phase_name, desired_props, datasets, additional_query=solver_qry)
+        desired_data = filter_configurations(desired_data, configuration, symmetry)
+        desired_data = filter_temperatures(desired_data)
         _log.trace('%s: datasets found: %s', desired_props, len(desired_data))
         if len(desired_data) > 0:
             config_tup = tuple(map(tuplify, configuration))
