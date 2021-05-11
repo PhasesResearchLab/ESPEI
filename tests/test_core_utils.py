@@ -1,6 +1,9 @@
 import numpy as np
+import tinydb
 
-from espei.core_utils import get_data, recursive_map
+from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter
+from espei.datasets import recursive_map
+from espei.sublattice_tools import recursive_tuplify
 from espei.utils import PickleableTinyDB, MemoryStorage
 from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
 
@@ -33,7 +36,12 @@ def test_get_data_for_a_minimal_example():
     symmetry = None
     desired_props = ['HM_FORM']
 
-    desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
+    # The following lines replace "get_data" in a more functional form
+    solver_qry = (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
+    desired_data = get_prop_data(comps, phase_name, desired_props, datasets, additional_query=solver_qry)
+    desired_data = filter_configurations(desired_data, configuration, symmetry)
+    desired_data = filter_temperatures(desired_data)
+
     assert len(desired_data) == 1
     desired_data = desired_data[0]
     assert desired_data['components'] == comps

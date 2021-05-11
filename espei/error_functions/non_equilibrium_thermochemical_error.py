@@ -13,7 +13,7 @@ from tinydb import where
 from pycalphad import Model, ReferenceState, variables as v
 from pycalphad.core.utils import unpack_components, get_pure_elements
 
-from espei.core_utils import ravel_conditions, get_prop_data
+from espei.core_utils import ravel_conditions, get_prop_data, filter_temperatures
 from espei.utils import database_symbols_to_fit
 from espei.error_functions.zpf_error import update_phase_record_parameters
 from espei.shadow_functions import calculate_
@@ -198,6 +198,8 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
                 else:
                     exc_search = (where('excluded_model_contributions').test(lambda x: tuple(sorted(x)) == exclusion)) & (where('solver').exists())
                 curr_data = get_prop_data(comps, phase_name, prop, datasets, additional_query=exc_search)
+                # TODO: run `core_utils.filter_configurations`
+                curr_data = filter_temperatures(curr_data)
                 calculate_dict = get_prop_samples(curr_data, constituents)
                 mod = Model(dbf, comps, phase_name, parameters=symbols_to_fit)
                 if prop.endswith('_FORM'):

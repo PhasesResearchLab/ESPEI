@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import numpy as np
 import tinydb
+from sympy import Symbol
 from pycalphad import Model, calculate, equilibrium, variables as v
 from pycalphad.core.utils import unpack_components
 from pycalphad.plot.utils import phase_legend
@@ -15,7 +16,7 @@ from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_conditi
 
 from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
 from espei.utils import bib_marker_map
-from espei.core_utils import get_data, ravel_zpf_values
+from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter, ravel_zpf_values
 from espei.parameter_selection.utils import _get_sample_condition_dicts
 from espei.sublattice_tools import recursive_tuplify, endmembers_from_interaction
 from espei.utils import build_sitefractions
@@ -95,7 +96,10 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
         filtered_plots = []
         for x_val, y_val in plots:
             desired_props = [y_val.split('_')[0]+'_FORM', y_val] if y_val.endswith('_MIX') else [y_val]
-            data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
+            solver_qry = (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
+            data = get_prop_data(comps, phase_name, desired_props, datasets, additional_query=solver_qry)
+            data = filter_configurations(data, configuration, symmetry)
+            data = filter_temperatures(data)
             if len(data) > 0:
                 filtered_plots.append((x_val, y_val, data))
     elif require_data:
@@ -107,7 +111,10 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
         filtered_plots = []
         for x_val, y_val in plots:
             desired_props = [y_val.split('_')[0]+'_FORM', y_val] if y_val.endswith('_MIX') else [y_val]
-            data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
+            solver_qry = (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
+            data = get_prop_data(comps, phase_name, desired_props, datasets, additional_query=solver_qry)
+            data = filter_configurations(data, configuration, symmetry)
+            data = filter_temperatures(data)
             filtered_plots.append((x_val, y_val, data))
     else:
         filtered_plots = [(x_val, y_val, []) for x_val, y_val in plots]
@@ -548,7 +555,10 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     prop = output.split('_MIX')[0]
     desired_props = (f"{prop}_MIX", f"{prop}_FORM")
     if datasets is not None:
-        desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, desired_props)
+        solver_qry = (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
+        desired_data = get_prop_data(comps, phase_name, desired_props, datasets, additional_query=solver_qry)
+        desired_data = filter_configurations(desired_data, configuration, symmetry)
+        desired_data = filter_temperatures(desired_data)
     else:
         desired_data = []
 
@@ -673,7 +683,10 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
         plt.gca()
 
     if datasets is not None:
-        desired_data = get_data(comps, phase_name, configuration, symmetry, datasets, output)
+        solver_qry = (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
+        desired_data = get_prop_data(comps, phase_name, output, datasets, additional_query=solver_qry)
+        desired_data = filter_configurations(desired_data, configuration, symmetry)
+        desired_data = filter_temperatures(desired_data)
     else:
         desired_data = []
 

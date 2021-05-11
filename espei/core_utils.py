@@ -1,72 +1,68 @@
 """
-Internal utilities for developer use. May not be useful to users.
+Utilities for querying, modifiying, and extracting data from Datasets.
 """
 import copy
-import itertools
+from typing import List
 import numpy as np
 import tinydb
+from espei.datasets import Dataset
 from espei.sublattice_tools import canonicalize, recursive_tuplify
-from espei.parameter_selection.redlich_kister import calc_interaction_product
 
-
-def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
+def filter_configurations(desired_data: List[Dataset], configuration, symmetry) -> List[Dataset]:
     """
-    Return list of cleaned single phase datasets matching the passed arguments.
+    Return non-equilibrium thermochemical datasets with invalid configurations removed.
 
     Parameters
     ----------
-    comps : list
-        List of string component names
-    phase_name : str
-        Name of phase
+    desired_data : List[Dataset]
+        List of non-equilibrium thermochemical datasets
     configuration : tuple
         Sublattice configuration as a tuple, e.g. ("CU", ("CU", "MG"))
     symmetry : list of lists
         List of sublattice indices with symmetry
-    datasets : espei.utils.PickleableTinyDB
-        Database of datasets to search for data
-    prop : list
-        String name of the property of interest.
 
     Returns
     -------
-    list
-        List of datasets matching the arguments.
+    List[Dataset]
 
     """
-    desired_data = datasets.search((tinydb.where('output').test(lambda x: x in prop)) &
-                                   (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
-                                   (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry)) &
-                                   (tinydb.where('phases') == [phase_name]))
-    # This seems to be necessary because the 'values' member does not modify 'datasets'
-    # But everything else does!
-    desired_data = copy.deepcopy(desired_data)
-
-    def recursive_zip(a, b):
-        if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
-            return list(recursive_zip(x, y) for x, y in zip(a, b))
-        else:
-            return list(zip(a, b))
-
-    for idx, data in enumerate(desired_data):
+    for data in desired_data:
         # Filter output values to only contain data for matching sublattice configurations
         matching_configs = np.array([(canonicalize(sblconf, symmetry) == canonicalize(configuration, symmetry))
                                      for sblconf in data['solver']['sublattice_configurations']])
         matching_configs = np.arange(len(data['solver']['sublattice_configurations']))[matching_configs]
         # Rewrite output values with filtered data
-        desired_data[idx]['values'] = np.array(data['values'], dtype=np.float_)[..., matching_configs]
-        desired_data[idx]['solver']['sublattice_configurations'] = recursive_tuplify(np.array(data['solver']['sublattice_configurations'],
-                                                                                              dtype=np.object_)[matching_configs].tolist())
-        try:
-            desired_data[idx]['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'],
-                                                                             dtype=np.object_)[matching_configs].tolist()
-        except KeyError:
-            pass
-        # Filter out temperatures below 298.15 K (for now, until better refstates exist)
+        data['values'] = np.array(data['values'], dtype=np.float_)[..., matching_configs]
+        data['solver']['sublattice_configurations'] = recursive_tuplify(np.array(data['solver']['sublattice_configurations'], dtype=np.object_)[matching_configs].tolist())
+        if 'sublattice_occupancies' in data['solver']:
+            data['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'], dtype=np.object_)[matching_configs].tolist()
+    return desired_data
+
+
+def filter_temperatures(desired_data: List[Dataset]) -> List[Dataset]:
+    """
+    Return non-equilibrium thermochemical datasets with temperatures below 298.15 K removed.
+
+    The currently provided unary reference data from ESPEI use the SGTE unary data that
+    are defined as piecewise in temperature with a lower limit of 298.15 K for most
+    elements. Since pycalphad does not extrapolate outside of piecewise temperature
+    limits, this filter prevents fitting data to regions of temperature space where
+    the energy is zero.
+
+    Parameters
+    ----------
+    desired_data : List[Dataset]
+        List of non-equilibrium thermochemical datasets
+
+    Returns
+    -------
+    List[Dataset]
+
+    """
+    for data in desired_data:
         temp_filter = np.atleast_1d(data['conditions']['T']) >= 298.15
-        desired_data[idx]['conditions']['T'] = np.atleast_1d(data['conditions']['T'])[temp_filter]
-        # Don't use data['values'] because we rewrote it above; not sure what 'data' references now
-        desired_data[idx]['values'] = desired_data[idx]['values'][..., temp_filter, :]
+        data['conditions']['T'] = np.atleast_1d(data['conditions']['T'])[temp_filter]
+        data['values'] = np.array(data['values'], dtype=np.float_)[..., temp_filter, :].tolist()
     return desired_data
 
 
@@ -165,7 +161,7 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
 
     Parameters
     ----------
-    desired_data : espei.utils.PickleableTinyDB
+    desired_data : List[Dataset]
         The selected data
     independent_comps : list
         List of indepdendent components. Used for mass balance component conversion
@@ -228,33 +224,6 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
     return equilibria_dict
 
 
-def recursive_map(f, x):
-    """
-    map, but over nested lists
-
-    Parameters
-    ----------
-    f : callable
-        Function to apply to x
-    x : list or value
-        Value passed to v
-
-    Returns
-    -------
-    list or value
-    """
-    if isinstance(x, list):
-        if [isinstance(xx, list) for xx in x]:
-            # we got a nested list
-            return [recursive_map(f, xx) for xx in x]
-        else:
-            # it's a list with some values inside
-            return list(map(f, x))
-    else:
-        # not a list, probably just a singular value
-        return f(x)
-
-
 def symmetry_filter(x, config, symmetry):
     """
     Return True if the candidate sublattice configuration has any symmetry
@@ -289,9 +258,11 @@ def symmetry_filter(x, config, symmetry):
     return False
 
 
-def get_prop_data(comps, phase_name, prop, datasets, additional_query=None):
+def get_prop_data(comps, phase_name, prop, datasets, additional_query=None) -> List[Dataset]:
     """
-    Return datasets that match the components, phase and property
+    Return a copy of datasets that match the components, phase and property.
+
+    The queried datasets are copied to ensure that any modifications are safe.
 
     Parameters
     ----------
@@ -308,8 +279,7 @@ def get_prop_data(comps, phase_name, prop, datasets, additional_query=None):
 
     Returns
     -------
-    list
-        List of dictionary datasets that match the criteria
+    List[Dataset]
 
     """
     if additional_query is None:
@@ -321,4 +291,4 @@ def get_prop_data(comps, phase_name, prop, datasets, additional_query=None):
         (tinydb.where('phases') == [phase_name]) &
         additional_query
     )
-    return desired_data
+    return copy.deepcopy(desired_data)
