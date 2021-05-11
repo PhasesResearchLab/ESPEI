@@ -57,7 +57,7 @@ def test_plot_interaction_runs(datasets_db):
 
 
 def test_plot_endmember_runs(datasets_db):
-    """Test that plot_interaction runs without an error."""
+    """Test that plot_endmember runs without an error."""
     dbf = Database(CU_MG_TDB)
     comps = ['CU', 'MG', 'VA']
     config = ('CU', 'MG')
