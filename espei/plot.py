@@ -526,7 +526,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
         dataplot_kwargs = {}
 
     if not ax:
-        plt.gca()
+        ax = plt.gca()
 
     # Plot predicted values from the database
     mod = Model(dbf, comps, phase_name)
@@ -680,7 +680,7 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
         dataplot_kwargs = {}
 
     if not ax:
-        plt.gca()
+        ax = plt.gca()
 
     if datasets is not None:
         solver_qry = (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
