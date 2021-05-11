@@ -7,8 +7,11 @@ What's New
 
 Improvements
 ------------
-* Fix a regression where `plot_interaction` and `plot_endmember` re-used reference labels and markers (`@bocklund`_ - :issue:`187`)
+* Fix a regression where ``plot_interaction`` and ``plot_endmember`` re-used reference labels and markers (`@bocklund`_ - :issue:`187`)
 * Parameter selection now adds and fits only phases which in the phase models and are active (`@bocklund`_ - :issue:`188`)
+* Fix a bug where ``plot_interaction`` and ``plot_endmember`` would raise an error when axes were not passed explicitly (`@bocklund`_ - :issue:`191`)
+* Fix a bug where reference keys were assumed to be present in ``dataplot``, ``plot_interaction`` and ``plot_endmember`` (`@bocklund`_ - :issue:`191`)
+
 
 0.8.3 (2021-05-08)
 ==================

@@ -135,7 +135,7 @@ def plot_parameters(dbf, comps, phase_name, configuration, symmetry, datasets=No
             ax = _compare_data_to_parameters(dbf, comps, phase_name, data, mod, configuration, x_val, y_val, ax=ax)
 
 
-def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs=None, tieline_plot_kwargs=None):
+def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs=None, tieline_plot_kwargs=None) -> plt.Axes:
     """
     Plot datapoints corresponding to the components, phases, and conditions.
 
@@ -230,7 +230,7 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
 
     # get all the possible references from the data and create the bibliography map
-    bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
+    bib_reference_keys = sorted({entry.get('reference', '') for entry in desired_data})
     symbol_map = bib_marker_map(bib_reference_keys)
 
     # The above handled the phases as in the equilibrium, but there may be
@@ -486,7 +486,7 @@ def multiplot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=N
     return ax
 
 
-def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=None, symmetry=None, ax=None, plot_kwargs=None, dataplot_kwargs=None):
+def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=None, symmetry=None, ax=None, plot_kwargs=None, dataplot_kwargs=None) -> plt.Axes:
     """
     Return one set of plotted Axes with data compared to calculated parameters
 
@@ -526,7 +526,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
         dataplot_kwargs = {}
 
     if not ax:
-        plt.gca()
+        ax = plt.gca()
 
     # Plot predicted values from the database
     mod = Model(dbf, comps, phase_name)
@@ -579,7 +579,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
         disordered_config = True
     else:
         disordered_config = False
-    bib_reference_keys = sorted({entry['reference'] for entry in desired_data})
+    bib_reference_keys = sorted({entry.get('reference', '') for entry in desired_data})
     symbol_map = bib_marker_map(bib_reference_keys)
     for data in desired_data:
         indep_var_data = None
@@ -638,7 +638,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     return ax
 
 
-def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None, symmetry=None, x='T', ax=None, plot_kwargs=None, dataplot_kwargs=None):
+def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None, symmetry=None, x='T', ax=None, plot_kwargs=None, dataplot_kwargs=None) -> plt.Axes:
     """
     Return one set of plotted Axes with data compared to calculated parameters
 
@@ -680,7 +680,7 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
         dataplot_kwargs = {}
 
     if not ax:
-        plt.gca()
+        ax = plt.gca()
 
     if datasets is not None:
         solver_qry = (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
@@ -716,7 +716,7 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
 
     # Plot observed values
     # TODO: model exclusions handling
-    bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
+    bib_reference_keys = sorted({entry.get('reference', '') for entry in desired_data})
     symbol_map = bib_marker_map(bib_reference_keys)
     for data in desired_data:
         indep_var_data = None
@@ -856,7 +856,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
     else:
         raise NotImplementedError('No support for plotting configuration {}'.format(configuration))
 
-    bib_reference_keys = sorted(list({entry['reference'] for entry in desired_data}))
+    bib_reference_keys = sorted({entry.get('reference', '') for entry in desired_data})
     symbol_map = bib_marker_map(bib_reference_keys)
 
     for data in desired_data:
