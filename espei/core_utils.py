@@ -1,5 +1,5 @@
 """
-Utilities for querying and modifiying datasets.
+Utilities for querying, modifiying, and extracting data from Datasets.
 """
 import copy
 from typing import List
@@ -39,7 +39,7 @@ def filter_configurations(desired_data: List[Dataset], configuration, symmetry) 
     return desired_data
 
 
-def filter_temperatures(desired_data) -> List[Dataset]:
+def filter_temperatures(desired_data: List[Dataset]) -> List[Dataset]:
     """
     Return non-equilibrium thermochemical datasets with temperatures below 298.15 K removed.
 
@@ -161,7 +161,7 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
 
     Parameters
     ----------
-    desired_data : espei.utils.PickleableTinyDB
+    desired_data : List[Dataset]
         The selected data
     independent_comps : list
         List of indepdendent components. Used for mass balance component conversion
