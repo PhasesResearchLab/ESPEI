@@ -332,7 +332,9 @@ def symmetry_filter(x, config, symmetry):
 
 def get_prop_data(comps, phase_name, prop, datasets, additional_query=None):
     """
-    Return datasets that match the components, phase and property
+    Return a copy of datasets that match the components, phase and property.
+
+    The queried datasets are copied to ensure that any modifications are safe.
 
     Parameters
     ----------
@@ -362,4 +364,4 @@ def get_prop_data(comps, phase_name, prop, datasets, additional_query=None):
         (tinydb.where('phases') == [phase_name]) &
         additional_query
     )
-    return desired_data
+    return copy.deepcopy(desired_data)
