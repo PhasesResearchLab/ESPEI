@@ -9,7 +9,7 @@ from espei.sublattice_tools import canonicalize, recursive_tuplify
 
 def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
     """
-    Return list of cleaned single phase datasets matching the passed arguments.
+    Return a list of cleaned single phase datasets matching the passed arguments.
 
     Parameters
     ----------
@@ -41,7 +41,7 @@ def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
 
 def filter_configurations(desired_data, configuration, symmetry):
     """
-    Return a copy of non-equilibrium thermochemical datasets with invalid configurations removed.
+    Return non-equilibrium thermochemical datasets with invalid configurations removed.
 
     Parameters
     ----------
@@ -57,34 +57,25 @@ def filter_configurations(desired_data, configuration, symmetry):
     List[Dict[str, Any]]
 
     """
-    # TODO: can this copy be removed safely?
-    # This seems to be necessary because the 'values' member does not modify 'datasets'
-    # But everything else does!
-    desired_data = copy.deepcopy(desired_data)
-
-    for idx, data in enumerate(desired_data):
+    for data in desired_data:
         # Filter output values to only contain data for matching sublattice configurations
         matching_configs = np.array([(canonicalize(sblconf, symmetry) == canonicalize(configuration, symmetry))
                                      for sblconf in data['solver']['sublattice_configurations']])
         matching_configs = np.arange(len(data['solver']['sublattice_configurations']))[matching_configs]
         # Rewrite output values with filtered data
-        desired_data[idx]['values'] = np.array(data['values'], dtype=np.float_)[..., matching_configs]
-        desired_data[idx]['solver']['sublattice_configurations'] = recursive_tuplify(np.array(data['solver']['sublattice_configurations'],
-                                                                                              dtype=np.object_)[matching_configs].tolist())
-        try:
-            desired_data[idx]['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'],
-                                                                             dtype=np.object_)[matching_configs].tolist()
-        except KeyError:
-            pass
+        data['values'] = np.array(data['values'], dtype=np.float_)[..., matching_configs]
+        data['solver']['sublattice_configurations'] = recursive_tuplify(np.array(data['solver']['sublattice_configurations'], dtype=np.object_)[matching_configs].tolist())
+        if 'sublattice_occupancies' in data['solver']:
+            data['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'], dtype=np.object_)[matching_configs].tolist()
     return desired_data
 
 
 def filter_temperatures(desired_data):
     """
-    Return a copy of non-equilibrium thermochemical datasets with temperatures below 298.15 K removed.
+    Return non-equilibrium thermochemical datasets with temperatures below 298.15 K removed.
 
     The currently provided unary reference data from ESPEI use the SGTE unary data that
-    is defined as piecewise in temperature with a lower limit of 298.15 K for most
+    are defined as piecewise in temperature with a lower limit of 298.15 K for most
     elements. Since pycalphad does not extrapolate outside of piecewise temperature
     limits, this filter prevents fitting data to regions of temperature space where
     the energy is zero.
@@ -99,15 +90,10 @@ def filter_temperatures(desired_data):
     List[Dict[str, Any]]
 
     """
-    # TODO: can this copy be removed safely?
-    # This seems to be necessary because the 'values' member does not modify 'datasets'
-    # But everything else does!
-    desired_data = copy.deepcopy(desired_data)
-
-    for idx, data in enumerate(desired_data):
+    for data in desired_data:
         temp_filter = np.atleast_1d(data['conditions']['T']) >= 298.15
-        desired_data[idx]['conditions']['T'] = np.atleast_1d(data['conditions']['T'])[temp_filter]
-        desired_data[idx]['values'] = np.array(data['values'], dtype=np.float_)[..., temp_filter, :].tolist()
+        data['conditions']['T'] = np.atleast_1d(data['conditions']['T'])[temp_filter]
+        data['values'] = np.array(data['values'], dtype=np.float_)[..., temp_filter, :].tolist()
     return desired_data
 
 
