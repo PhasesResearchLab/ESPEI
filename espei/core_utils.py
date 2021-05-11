@@ -32,39 +32,10 @@ def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
         List of datasets matching the arguments.
 
     """
-    desired_data = datasets.search((tinydb.where('output').test(lambda x: x in prop)) &
-                                   (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
-                                   (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry)) &
-                                   (tinydb.where('phases') == [phase_name]))
-    # This seems to be necessary because the 'values' member does not modify 'datasets'
-    # But everything else does!
-    desired_data = copy.deepcopy(desired_data)
-
-    def recursive_zip(a, b):
-        if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
-            return list(recursive_zip(x, y) for x, y in zip(a, b))
-        else:
-            return list(zip(a, b))
-
-    for idx, data in enumerate(desired_data):
-        # Filter output values to only contain data for matching sublattice configurations
-        matching_configs = np.array([(canonicalize(sblconf, symmetry) == canonicalize(configuration, symmetry))
-                                     for sblconf in data['solver']['sublattice_configurations']])
-        matching_configs = np.arange(len(data['solver']['sublattice_configurations']))[matching_configs]
-        # Rewrite output values with filtered data
-        desired_data[idx]['values'] = np.array(data['values'], dtype=np.float_)[..., matching_configs]
-        desired_data[idx]['solver']['sublattice_configurations'] = recursive_tuplify(np.array(data['solver']['sublattice_configurations'],
-                                                                                              dtype=np.object_)[matching_configs].tolist())
-        try:
-            desired_data[idx]['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'],
-                                                                             dtype=np.object_)[matching_configs].tolist()
-        except KeyError:
-            pass
-        # Filter out temperatures below 298.15 K (for now, until better refstates exist)
-        temp_filter = np.atleast_1d(data['conditions']['T']) >= 298.15
-        desired_data[idx]['conditions']['T'] = np.atleast_1d(data['conditions']['T'])[temp_filter]
-        # Don't use data['values'] because we rewrote it above; not sure what 'data' references now
-        desired_data[idx]['values'] = desired_data[idx]['values'][..., temp_filter, :]
+    solver_qry = (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
+    desired_data = get_prop_data(comps, phase_name, prop, datasets, additional_query=solver_qry)
+    desired_data = filter_configurations(desired_data, configuration, symmetry)
+    desired_data = filter_temperatures(desired_data)
     return desired_data
 
 
