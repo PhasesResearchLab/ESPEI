@@ -1,18 +1,48 @@
-import fnmatch, warnings, json, os
+import fnmatch, json, os
+from typing import Any, Dict, List
 
 import numpy as np
 from tinydb.storages import MemoryStorage
 from tinydb import where
 
 from espei.utils import PickleableTinyDB
-from espei.core_utils import recursive_map
+
+# Create a type
+Dataset = Dict[str, Any]
 
 class DatasetError(Exception):
     """Exception raised when datasets are invalid."""
     pass
 
 
-def check_dataset(dataset):
+def recursive_map(f, x):
+    """
+    map, but over nested lists
+
+    Parameters
+    ----------
+    f : callable
+        Function to apply to x
+    x : list or value
+        Value passed to v
+
+    Returns
+    -------
+    list or value
+    """
+    if isinstance(x, list):
+        if [isinstance(xx, list) for xx in x]:
+            # we got a nested list
+            return [recursive_map(f, xx) for xx in x]
+        else:
+            # it's a list with some values inside
+            return list(map(f, x))
+    else:
+        # not a list, probably just a singular value
+        return f(x)
+
+
+def check_dataset(dataset: Dataset):
     """Ensure that the dataset is valid and consistent.
 
     Currently supports the following validation checks:
@@ -29,7 +59,7 @@ def check_dataset(dataset):
 
     Parameters
     ----------
-    dataset : dict
+    dataset : Dataset
         Dictionary of the standard ESPEI dataset.
 
     Returns
@@ -177,18 +207,18 @@ def check_dataset(dataset):
                         raise DatasetError('Sublattice {} in configuration {} is must be sorted in alphabetic order ({})'.format(subl, configuration, sorted(subl)))
 
 
-def clean_dataset(dataset):
+def clean_dataset(dataset: Dataset) -> Dataset:
     """
     Clean an ESPEI dataset dictionary.
 
     Parameters
     ----------
-    dataset : dict
+    dataset: Dataset
         Dictionary of the standard ESPEI dataset.   dataset : dic
 
     Returns
     -------
-    dict
+    Dataset
         Modified dataset that has been cleaned
 
     Notes
@@ -226,7 +256,7 @@ def clean_dataset(dataset):
     return dataset
 
 
-def apply_tags(datasets, tags):
+def apply_tags(datasets: PickleableTinyDB, tags):
     """
     Modify datasets using the tags system
 
@@ -239,7 +269,7 @@ def apply_tags(datasets, tags):
 
     Returns
     -------
-    PickleableTinyDB
+    None
 
     Notes
     -----
@@ -282,7 +312,7 @@ def apply_tags(datasets, tags):
                 datasets.update(match, doc_ids=[match.doc_id])
 
 
-def load_datasets(dataset_filenames, include_disabled=False):
+def load_datasets(dataset_filenames, include_disabled=False) -> PickleableTinyDB:
     """
     Create a PickelableTinyDB with the data from a list of filenames.
 

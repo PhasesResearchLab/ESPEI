@@ -1,7 +1,8 @@
 import numpy as np
 import tinydb
 
-from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter, recursive_map
+from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter
+from espei.datasets import recursive_map
 from espei.sublattice_tools import recursive_tuplify
 from espei.utils import PickleableTinyDB, MemoryStorage
 from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
