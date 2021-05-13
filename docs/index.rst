@@ -59,7 +59,8 @@ Then Markov Chain Monte Carlo (MCMC) is used to optimize the candidate models fr
 History
 -------
 
-The ESPEI package is based on a fork of `pycalphad-fitting`_. The name and idea of ESPEI are originally based off of Shang, Wang, and Liu, ESPEI: Extensible, Self-optimizing Phase Equilibrium Infrastructure for Magnesium Alloys `Magnes. Technol. 2010 617-622 (2010)`_.
+The ESPEI package is based on a fork of `pycalphad-fitting`_.
+The name and early concept of ESPEI are from Shang, Wang, and Liu, ESPEI: Extensible, Self-optimizing Phase Equilibrium Infrastructure for Magnesium Alloys, Magnes. Technol. 2010 617-622 (2010).
 
 Implementation details for ESPEI have been described in the following publications:
 
@@ -214,6 +215,6 @@ B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for 
 
 .. _pycalphad-fitting: https://github.com/richardotis/pycalphad-fitting
 .. _pycalphad: http://pycalphad.org
-.. _Richard Otis's thesis: https://etda.libraries.psu.edu/catalog/s1784k73d
-.. _Jom 69, (2017): http://dx.doi.org/10.1007/s11837-017-2318-6
-.. _Magnes. Technol. 2010 617-622 (2010): http://www.phases.psu.edu/wp-content/uploads/2010-Shang-Shunli-MagTech-ESPEI-0617-1.pdf
+
+References
+==========

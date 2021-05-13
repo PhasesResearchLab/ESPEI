@@ -9,9 +9,9 @@ Cu-Mg Example
 =============
 
 The Cu-Mg binary system is an interesting and simple binary subsystem for light
-metal alloys. It has been modeled in the literature by Coughanowr et al. [1]_,
-Zuo and Chang [2]_ and Zhou et al. [3]_ and was featured as a case study in
-Computational Thermodynamics The Calphad Method by Lukas, Fries, & Sundman [4]_.
+metal alloys. It has been modeled in the literature by [Coughanowr1991]_,
+[Zuo1993]_, and [Zhou2007]_ and was featured as a case study in
+Computational Thermodynamics: The Calphad Method [Lukas2007]_.
 
 Here we will combine density functional theory and experimental calculations of
 single-phase data to generate a first-principles phase diagram. Then that
@@ -440,10 +440,10 @@ match any new data.
 References
 ==========
 
-.. [1] Coughanowr, C. A., Ansara, I., Luoma, R., Hamalainen, M. & Lukas, H. L. Assessment of the Cu-Mg system. Zeitschrift f{ü}r Met. 82, 574–581 (1991).
-.. [2] Zuo, Y. U. E. & Chang, Y. A. Thermodynamic calculation of the Mg-Cu phase diagram. Zeitschrift f{ü}r Met. 84, 662–667 (1993).
-.. [3] Zhou, S. et al. Modeling of Thermodynamic Properties and Phase Equilibria for the Cu-Mg Binary System. J. Phase Equilibria Diffus. 28, 158–166 (2007). doi:`10.1007/s11669-007-9022-0 <https://doi.org/10.1007/s11669-007-9022-0>`_
-.. [4] Lukas, H., Fries, S. G. & Sundman, B. Computational Thermodynamics The Calphad Method. (Cambridge University Press, 2007). doi:`10.1017/CBO9780511804137 <https://doi.org/10.1017/CBO9780511804137>`_
+.. [Coughanowr1991] Coughanowr *et al.*, Assessment of the Cu-Mg system. Zeitschrift f{ü}r Met. 82, 574–581 (1991).
+.. [Zuo1993] Zuo and Chang, Thermodynamic calculation of the Mg-Cu phase diagram. Zeitschrift f{ü}r Met. 84, 662–667 (1993).
+.. [Zhou2007] *et al.* Modeling of Thermodynamic Properties and Phase Equilibria for the Cu-Mg Binary System. J. Phase Equilibria Diffus. 28, 158–166 (2007). doi:`10.1007/s11669-007-9022-0 <https://doi.org/10.1007/s11669-007-9022-0>`_
+.. [Lukas2007] Lukas, Fries, and Sundman, Computational Thermodynamics: The Calphad Method. (Cambridge University Press, 2007). doi:`10.1017/CBO9780511804137 <https://doi.org/10.1017/CBO9780511804137>`_
 
 
 Acknowledgements
