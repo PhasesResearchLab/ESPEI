@@ -5,9 +5,9 @@
 .. _Input data:
 
 
-=====================
-Making ESPEI datasets
-=====================
+===================
+Make ESPEI Datasets
+===================
 
 JSON Format
 ===========
