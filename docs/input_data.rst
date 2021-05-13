@@ -75,7 +75,7 @@ Multiple phases can exist with aliases to the same phase, e.g. ``FCC_L12`` and `
           "equivalent_sublattices": [[0, 1]]
           },
           "FCC_L12": {
-                "aliases": ["FCC_A1"],
+          "aliases": ["FCC_A1"],
           "sublattice_model": [["AL", "NI"], ["AL", "NI"], ["AL", "NI"], ["AL", "NI"], ["VA"]],
           "sublattice_site_ratios": [0.25, 0.25, 0.25, 0.25, 1],
           "equivalent_sublattices": [[0, 1, 2, 3]]
@@ -269,38 +269,88 @@ An example for Mg activties in Cu-Mg follows, with data digitized from S.P. Garg
 
 .. _phase_boundary_data:
 
-Phase Boundary Data
-===================
+Phase Diagram Data
+==================
 
-The phase boundary data JSON input files are similar to other types of input, but instead of scalar ``values`` for the property of interest, the ``values`` key represents the phase regions active in a single phase equilbrium.
+ESPEI can consider multi-component phase diagram data with an arbitrary number of phases in equilibrium.
+Phase diagram data JSON datasets are distingished by using ``"output": "ZPF"`` [1]_.
+Each entry in the JSON ``values`` corresponds to a *phase region* where one or
+more phases are participating in equilibrium under the given temperature and
+pressure conditions.
 
-Notice that the type of data we are entering in the ``output`` key is ``ZPF`` (zero-phase fraction) rather than ``CP_FORM`` or ``H_MIX``.
-Each entry in the ZPF list is a list of all phases in equilibrium, here ``[["AL3NI2", ["NI"], [0.4083]], ["BCC_B2", ["NI"], [0.4340]]]`` where each phase entry has the name of the phase, the composition element, and the composition of the tie line point.
-If there is no corresponding tie line point, such as on a liquidus line, then one of the compositions will be ``null``: ``[["LIQUID", ["NI"], [0.6992]], ["BCC_B2", ["NI"],  [null]]]``.
-Three- or n-phase equilibria are described as expected: ``[["LIQUID", ["NI"], [0.752]], ["BCC_B2", ["NI"], [0.71]], ["FCC_L12", ["NI"], [0.76]]]``.
+Each phase in the phase region must give its *phase composition*, i.e. the
+internal composition of that phase (*not* the overall composition).
+The "phase composition" is the same as a "tie-line composition" in a two-phase
+region of a binary phase diagram, but is a more general term for cases where
+the meaning of a tie-line is ambiguous like a single phase equilibrum or an
+equilibrium with three or more phases.
 
-Note that for higher-order systems the component names and compositions are lists and should be of length ``c-1``, where ``c`` is the number of components.
+Sometimes there may be a phase equilibrium where one or more of the phase
+compositions are unknown. This is especially common for phase diagram data
+determined by equilibrated alloys or by scanning calorimetry in binary systems,
+where one phase composition is determined, but the phase composition of the
+other phase(s) in equilibrium are not. In these cases, phase compositions can
+be given as ``null`` and ESPEI will estimate the phase composition.
+
+.. admonition:: Important
+   :class: important
+
+   Each phase region must have at least one phase with a prescribed phase composition.
+   If all phases in a phase region have ``null`` phase compositions, the
+   *target hyperplane* (described by Figure 1 in [Bocklund2019]_)
+   will be undefined and no driving forces will be computed.
+
+.. admonition:: Important
+   :class: important
+
+   For a dataset with ``c`` components, each phase composition must be specified by ``c-1`` components.
+   There is an implicit ``N=1`` condition.
+
+Example
+-------
 
 .. code-block:: JSON
 
-    {
-      "components": ["AL", "NI"],
-      "phases": ["AL3NI2", "BCC_B2"],
-      "conditions": {
-	      "P": 101325,
-	      "T": [1348, 1176, 977]
-      },
-      "output": "ZPF",
-      "values":   [
-             [["AL3NI2", ["NI"], [0.4083]], ["BCC_B2", ["NI"], [0.4340]]],
-	           [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4456]]],
-	           [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4532]]]
-                  ],
-      "reference": "37ALE"
-    }
+   {
+     "components": ["AL", "NI"],
+     "phases": ["AL3NI2", "BCC_B2", "LIQUID"],
+     "conditions": {
+       "P": 101325,
+        "T": [2500, 1348, 1176, 977]
+     },
+     "output": "ZPF",
+     "values": [
+       [["LIQUID", ["NI"], [0.5]]],
+       [["AL3NI2", ["NI"], [0.4083]], ["BCC_B2", ["NI"], [0.4340]]],
+       [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [null]]],
+       [["BCC_B2", ["NI"], [0.71]], ["LIQUID", ["NI"], [0.752]], ["FCC_L12", ["NI"], [0.76]]]
+     ],
+     "reference": "37ALE"
+   }
 
+Each entry in the ``values`` list is a list of all phases in equilibrium in a phase region.
+There are four phase regions:
 
-.. _Tags:
+``[["LIQUID", ["NI"], [0.5]]]``
+   Single phase equilibrium with ``LIQUID`` having a phase composition of ``X(NI,LIQUID)=0.5``.
+
+``[["AL3NI2", ["NI"], [0.4083]], ["BCC_B2", ["NI"], [0.4340]]]``
+   Two phase equilibrium between ``AL3NI2`` and ``BCC_B2``, which have phase compositions of ``X(NI,AL3NI2)=0.4083`` and ``X(NI,BCC_B2)=0.4340``, respectively.
+
+``[["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [null]]]``
+   Two phase equilibrium between ``AL3NI2`` and ``BCC_B2`` where the phase composition of ``BCC_B2`` is unknown.
+
+``[["BCC_B2", ["NI"], [0.71]], ["LIQUID", ["NI"], [0.752]], ["FCC_L12", ["NI"], [0.76]]]``
+   Eutectic reaction between ``LIQUID``, ``BCC_B2`` and ``FCC_L12``.
+
+.. admonition:: Tip: Multi-component phase regions
+   :class: Tip
+
+   To describe multi-component phase regions, simply include more components and compositions in each phase composition.
+   For example, a two-phase equilibrium in a three component system could be described by
+   ``[["ALPHA", ["CR", "NI"], [0.1, 0.25]], ["BETA", ["CR", "NI"], [null, null]]]``
+
+.. _Datasets Tags:
 
 Tags
 ====
@@ -369,3 +419,10 @@ Common Mistakes and Notes
 #. Mixing configurations should not have ideal mixing contributions.
 #. All types of data can have a ``weight`` key at the top level that will weight the standard deviation parameter in MCMC runs for that dataset. If a single dataset should have different weights applied, multiple datasets should be created.
 
+
+References
+==========
+
+.. [Bocklund2019] Bocklund, Otis, Egorov, Obaied, Roslyakova, Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg, MRS Commun. (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_
+
+.. [1] ``ZPF`` after the "Zero Phase Fraction" method [Bocklund2019]_ used to compute the likelihood. "Zero phase fraction" is a little misleading as a name, since the prescribed phase compositions in the datasets actually correspond to the overall composition where the phase fraction of the desired phase should be *one*.

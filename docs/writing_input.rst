@@ -100,7 +100,7 @@ tags
 Mapping of keys to values to add to datasets with matching tags.
 These can be used to dynamically drive values in datasets without adjusting the datasets themselves.
 Useful for adjusting weights or other values in datasets in bulk.
-For an examples of using tags in input JSON files, see :ref:`Tags`.
+For an examples of using tags in input JSON files, see :ref:`Datasets Tags`.
 
 
 output
