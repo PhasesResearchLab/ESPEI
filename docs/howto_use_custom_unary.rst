@@ -15,7 +15,7 @@ Unary reference state data provides three pieces of information about pure eleme
 #. Optional lattice stability functions for selected phases, often relative to the stable element reference energy
 
 By default, ESPEI uses the SGTE91 reference state using the functions defined
-by Dinsdale [#sgte91_paper]_.
+in [Dinsdale1991]_.
 
 ESPEI can be provided custom unary reference states for parameter generation.
 Some common use cases for custom reference states are:
@@ -45,10 +45,10 @@ A custom reference state called ``MyCustomReferenceState`` could be used by:
     generate_parameters:
       excess_model: linear
       ref_state: MyCustomReferenceState
- 
+
 Using the template package below, you can create a Python package of custom
 reference data to install for yourself, and optionally to distribute to others.
-   
+
 .. _quickstart_unary_skeleton:
 
 Quickstart: Skeleton package
@@ -109,9 +109,8 @@ Using the skeleton to create your own database
 If you want to use the skeleton to create your own reference state to provide
 ESPEI, you can follow the steps below. To keep the steps concrete, we'll create
 a reference state for Cu called ``Bocklund2019`` following the unary
-description published for Cu in Bocklund *et al.* [#espei_paper]_. within the
-segmented regression approach by Roslyakova
-*et al.* [#segmented_regression_paper]_.
+description published for Cu in [Bocklund2019]_. within the
+segmented regression approach by [Roslyakova2016]_.
 
 
 Assuming that you are fresh (without the skeleton downloaded yet):
@@ -126,7 +125,7 @@ Assuming that you are fresh (without the skeleton downloaded yet):
    #. Add the stable phase Gibbs energy for Cu to the ``Bockund2019Stable``
       variable. Note that ``OrderedDict`` is defined in the ``collections``
       module in the Python standard library.
-   
+
 
       .. code-block:: python
 
@@ -177,7 +176,7 @@ temperature. Any SymPy functions can be used (``exp``, ``log``, ``Piecewise``,
 ...). Any valid Python syntax or functions can be used, including those not
 available in commercial software (for example, direct exponentiation with
 non-integer powers). Any expression supported by pycalphad ``Model`` objects
-can be used, but note that the TDB files that ESPEI writes using these 
+can be used, but note that the TDB files that ESPEI writes using these
 expressions may not be compatible with commercial software.
 
 It's important to note that the users probably want to add a ``(0, True)``
@@ -245,11 +244,3 @@ dictionaries ``espei.refdata.CustomRefstate2020Stable`` and
 ``espei.refdata.CustomRefstate2020`` should be defined in the ``espei.refdata``
 module. For more details on the implementation, see the
 ``espei.refdata.find_and_insert_user_refstate`` function.
-
-
-References
-==========
-
-.. [#sgte91_paper] A.T. Dinsdale, Calphad 15(4) (1991) 317-425, doi:`10.1016/0364-5916(91)90030-N <https://doi.org/10.1016/0364-5916(91)90030-N>`_
-.. [#espei_paper] B. Bocklund *et al.*, MRS Communications 9(2) (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_
-.. [#segmented_regression_paper] I\. Roslyakova *et al.*, Calphad 55 (2016) 165–180. doi:`10.1016/j.calphad.2016.09.001 <https://doi.org/10.1016/j.calphad.2016.09.001>`_

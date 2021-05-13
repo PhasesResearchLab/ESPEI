@@ -131,7 +131,7 @@ Q: How is the log probability reported by ESPEI calculated?
 MCMC simulation requires determining the probability of the data given a set of parameters, :math:`p(D|\theta)`.
 In MCMC, the log probability is often used to avoid floating point errors that arise from multiplying many small floating point numbers.
 For each type of data the *error*, often interpreted as the absolute difference between the expected and calculated value, is determined.
-For the types of data and how the error is calculated, refer to the ESPEI paper [1]_.
+For the types of data and how the error is calculated, refer to the ESPEI paper [Bocklund2019]_.
 
 The error is assumed to be normally distributed around the experimental data point that the prediction of a set of parameters is being compared against.
 The log probability of each data type is calculated by the log probability density function of the error in this normal distribution with a mean of zero and the standard deviation as given by the data type and the adjustable weights (see ``data_weights`` in :ref:`Writing input files`).
@@ -159,9 +159,3 @@ You may be interested in the :ref:`input_mcmc_symbols` input parameter to
 specify which parameter subset to optimize.
 
 Note that if you optimize parameters in a subsystem (e.g. Cu-Mg) that is used in a higher order description (e.g. Al-Cu-Mg), you may need to reoptimize the parameters for the higher order system as well.
-
-
-References
-----------
-
-.. [1] B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg, MRS Commun. (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_.

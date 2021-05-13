@@ -17,7 +17,6 @@ As an alternative to setting the cores with the ``mcmc.scheduler: dask`` setting
 you can provide ESPEI with a scheduler file from dask that has information about
 how to connect to a dask parallel scheduler.
 
-
 This is generally a two step process of
 
 1. Starting a scheduler with workers and writing a scheduler file
@@ -137,8 +136,7 @@ Since many MPI jobs are run through batch schedulers, an example script for a PB
     # runs ESPEI as normal
     espei --in espei-mpi-input.yaml
 
+.. admonition:: See also
+   :class: seealso
 
-References
-==========
-
-See http://distributed.readthedocs.io/en/latest/setup.html?highlight=dask-mpi#using-mpi for more details.
+   See https://docs.dask.org/en/latest/setup/hpc.html for more details on using dask on HPC machines.

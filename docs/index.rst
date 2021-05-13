@@ -59,14 +59,11 @@ Then Markov Chain Monte Carlo (MCMC) is used to optimize the candidate models fr
 History
 -------
 
-The ESPEI package is based on a fork of `pycalphad-fitting`_. The name and idea of ESPEI are originally based off of Shang, Wang, and Liu, ESPEI: Extensible, Self-optimizing Phase Equilibrium Infrastructure for Magnesium Alloys `Magnes. Technol. 2010 617-622 (2010)`_.
-
-Implementation details for ESPEI have been described in the following publications:
-
-- B. Bocklund *et al.*, MRS Communications 9(2) (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_
-- R. Otis *et al.*, JOM 69 (2017) doi:`10.1007/s11837-017-2318-6 <http://doi.org/10.1007/s11837-017-2318-6>`_
-- Richard Otis's `thesis <https://etda.libraries.psu.edu/catalog/s1784k73d>`_
-
+The name ESPEI and early concept were developed by [Shang2010]_.
+After developing `pycalphad`_, Richard Otis reimagined the concept and wrote
+`pycalphad-fitting`_ (used in [Otis2016]_ and [Otis2017]_).
+The modern verison of ESPEI described here was created by forking
+`pycalphad-fitting`_. Implementation details can be found in [Bocklund2019]_.
 
 Change log
 ----------
@@ -97,14 +94,13 @@ See `what's new <CHANGES.html>`_!
    \part{How-to}
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: How-to
 
-   writing_input
-   specifying_priors
    input_data
-   recipes
+   specifying_priors
    howto_use_custom_unary
+   advanced_schedulers
 
 
 .. raw:: latex
@@ -115,7 +111,8 @@ See `what's new <CHANGES.html>`_!
    :maxdepth: 1
    :caption: Reference
 
-   advanced_schedulers
+   writing_input
+   recipes
    api/modules
 
 
@@ -214,6 +211,17 @@ B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for 
 
 .. _pycalphad-fitting: https://github.com/richardotis/pycalphad-fitting
 .. _pycalphad: http://pycalphad.org
-.. _Richard Otis's thesis: https://etda.libraries.psu.edu/catalog/s1784k73d
-.. _Jom 69, (2017): http://dx.doi.org/10.1007/s11837-017-2318-6
-.. _Magnes. Technol. 2010 617-622 (2010): http://www.phases.psu.edu/wp-content/uploads/2010-Shang-Shunli-MagTech-ESPEI-0617-1.pdf
+
+References
+==========
+
+.. [Bocklund2019] Bocklund *et al.*, MRS Communications 9(2) (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_
+.. [Coughanowr1991] Coughanowr *et al.*, Assessment of the Cu-Mg system. Zeitschrift f{ü}r Met. 82, 574–581 (1991).
+.. [Dinsdale1991] Dinsdale, Calphad 15(4) (1991) 317-425, doi:`10.1016/0364-5916(91)90030-N <https://doi.org/10.1016/0364-5916(91)90030-N>`_
+.. [Lukas2007] Lukas, Fries, and Sundman, Computational Thermodynamics: The Calphad Method. (Cambridge University Press, 2007). doi:`10.1017/CBO9780511804137 <https://doi.org/10.1017/CBO9780511804137>`_
+.. [Otis2016] Otis, Ph.D. Dissertation, The Pennsylvania State University (2016). https://etda.libraries.psu.edu/catalog/s1784k73d
+.. [Otis2017] Otis *et al.*, JOM 69 (2017) doi:`10.1007/s11837-017-2318-6 <http://doi.org/10.1007/s11837-017-2318-6>`_
+.. [Roslyakova2016] Roslyakova *et al.*, Calphad 55 (2016) 165–180. doi:`10.1016/j.calphad.2016.09.001 <https://doi.org/10.1016/j.calphad.2016.09.001>`_
+.. [Shang2010] Shang, Wang, and Liu, Magnes. Technol. 2010 617-622 (2010).
+.. [Zhou2007] Zhou *et al.*, J. Phase Equilibria Diffus. 28, 158–166 (2007). doi:`10.1007/s11669-007-9022-0 <https://doi.org/10.1007/s11669-007-9022-0>`_
+.. [Zuo1993] Zuo and Chang, Zeitschrift f{ü}r Met. 84, 662–667 (1993).
