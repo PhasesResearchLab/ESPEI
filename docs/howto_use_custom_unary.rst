@@ -244,11 +244,3 @@ dictionaries ``espei.refdata.CustomRefstate2020Stable`` and
 ``espei.refdata.CustomRefstate2020`` should be defined in the ``espei.refdata``
 module. For more details on the implementation, see the
 ``espei.refdata.find_and_insert_user_refstate`` function.
-
-
-References
-==========
-
-.. [Dinsdale1991] Dinsdale, Calphad 15(4) (1991) 317-425, doi:`10.1016/0364-5916(91)90030-N <https://doi.org/10.1016/0364-5916(91)90030-N>`_
-.. [Bocklund2019] Bocklund *et al.*, MRS Communications 9(2) (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_
-.. [Roslyakova2016] Roslyakova *et al.*, Calphad 55 (2016) 165–180. doi:`10.1016/j.calphad.2016.09.001 <https://doi.org/10.1016/j.calphad.2016.09.001>`_

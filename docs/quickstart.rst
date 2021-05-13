@@ -159,9 +159,3 @@ You may be interested in the :ref:`input_mcmc_symbols` input parameter to
 specify which parameter subset to optimize.
 
 Note that if you optimize parameters in a subsystem (e.g. Cu-Mg) that is used in a higher order description (e.g. Al-Cu-Mg), you may need to reoptimize the parameters for the higher order system as well.
-
-
-References
-----------
-
-.. [Bocklund2019] Bocklund *et al.*, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg, MRS Commun. (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_.
