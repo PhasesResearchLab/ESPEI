@@ -38,10 +38,10 @@ setup(
     ],
     extras_require={
         'dev': [
+            'furo',
             'ipython',  # for pygments syntax highlighting
             'pytest',
             'sphinx',
-            'sphinx_rtd_theme',
             'twine',
         ],
         'mpi': [

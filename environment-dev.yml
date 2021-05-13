@@ -21,6 +21,6 @@ dependencies:
   # PyPI
   - twine
   # Documentation
+  - furo
   - ipython  # for pygments syntax highlighting
   - sphinx
-  - sphinx_rtd_theme
