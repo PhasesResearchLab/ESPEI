@@ -103,7 +103,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     datasets : PickleableTinyDB
         All the datasets desired to fit to.
     ridge_alpha : float
-        Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
+        Value of the :math:`\\alpha` hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
         with ordinary least squares regression. For now, the parameter is applied to all features.
     aicc_feature_factors : dict
         Map of phase name to feature to a multiplication factor for the AICc's parameter penalty.
@@ -232,7 +232,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
     datasets : PickleableTinyDB
         TinyDB database of datasets
     ridge_alpha : float
-        Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
+        Value of the :math:`\\alpha` hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
         with ordinary least squares regression. For now, the parameter is applied to all features.
 
     Returns
@@ -304,7 +304,7 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
         Maps tuple(element, phase_name) -> SymPy object defining
         energy relative to SER
     ridge_alpha : float
-        Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
+        Value of the :math:`\\alpha` hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
         with ordinary least squares regression. For now, the parameter is applied to all features.
     aicc_penalty : dict
         Map of phase name to feature to a multiplication factor for the AICc's parameter penalty.
@@ -464,7 +464,7 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     excess_model : str
         String of the type of excess model to fit to, e.g. 'linear'
     ridge_alpha : float
-        Value of the $alpha$ hyperparameter used in ridge regression. Defaults
+        Value of the :math:`\\alpha` hyperparameter used in ridge regression. Defaults
         to None, which falls back to ordinary least squares regression.
         For now, the parameter is applied to all features.
     aicc_penalty_factor : dict
