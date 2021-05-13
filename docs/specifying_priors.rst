@@ -4,9 +4,9 @@
 
 .. _Specifying Priors:
 
-=================
-Specifying Priors
-=================
+==================
+Use Priors in MCMC
+==================
 
 In Bayesian statistics, data are used to update prior distributions for all parameters to calculate posterior distributions.
 A basic introduction to priors and Bayesian statistics can be found in "Kruschke, J. (2014). Doing Bayesian data analysis: A tutorial with R, JAGS, and Stan. Academic Press.".
@@ -140,5 +140,3 @@ An example of fitting two parameters using a custom gamma distributions with min
    }
 
    run_espei(get_run_settings(input_dict))
-
-
