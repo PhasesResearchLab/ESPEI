@@ -218,11 +218,12 @@ ridge_alpha
 :type: float
 :default: 1.0e-100
 
-Controls the ridge regression hyperparameter, $ alpha $, as given in the following equation for the ridge regression problem
+Controls the ridge regression hyperparameter, :math:`\alpha`, as given in the following equation for the ridge regression problem
 
-.. figure:: _static/ridge_equation.png
-    :alt: Ridge regression equation
-    :scale: 100%
+.. math::
+
+   \min_w || Xw - y||^2_2 + \alpha ||w||^2_2
+
 
 ``ridge_alpha`` should be a positive floating point number which scales the relative contribution of parameter magnitudes to the residuals.
 
@@ -244,13 +245,13 @@ Increasing the penalty factor will increase the penalty for more parameters, so 
 
 .. code-block:: yaml
 
-     aicc_penalty_factor:
-       BCC_A2:
-         HM: 5.0
-         SM: 5.0
-       LIQUID:
-         HM: 2.0
-         SM: 2.0
+   aicc_penalty_factor:
+     BCC_A2:
+     HM: 5.0
+     SM: 5.0
+     LIQUID:
+     HM: 2.0
+     SM: 2.0
 
 
 input_db
@@ -451,9 +452,11 @@ Each type of data can be weighted: zero phase fraction (``ZPF``), activity
 (``ACR``) and the different types of thermochemical error. These weights are
 used to modify the initial standard deviation of each data type by
 
-.. figure:: _static/weight_equation.png
-    :alt: Data weight equation
-    :scale: 100%
+.. math::
+
+   \sigma = \frac{\sigma_{\mathrm{initial}}} {w}
+
+
 
 .. _input_mcmc_symbols:
 

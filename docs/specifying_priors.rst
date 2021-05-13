@@ -23,7 +23,7 @@ Built-in Priors
 ===============
 
 ESPEI has several built-in priors that correspond to functions in ``scipy.stats``: ``uniform``, ``normal``, and ``triangular``.
-There is also a special (improper) ``zero`` prior that always gives $$ \ln p = 0 $$, which is the default.
+There is also a special (improper) ``zero`` prior that always gives :math:`\ln p = 0`, which is the default.
 
 Each ``scipy.stats`` prior is typically specified using several keyword argument
 parameters, e.g. ``loc`` and ``scale``, which have special meaning for the
