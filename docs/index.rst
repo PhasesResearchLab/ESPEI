@@ -100,11 +100,10 @@ See `what's new <CHANGES.html>`_!
    :maxdepth: 2
    :caption: How-to
 
-   writing_input
-   specifying_priors
    input_data
-   recipes
+   specifying_priors
    howto_use_custom_unary
+   advanced_schedulers
 
 
 .. raw:: latex
@@ -115,7 +114,8 @@ See `what's new <CHANGES.html>`_!
    :maxdepth: 1
    :caption: Reference
 
-   advanced_schedulers
+   writing_input
+   recipes
    api/modules
 
 
