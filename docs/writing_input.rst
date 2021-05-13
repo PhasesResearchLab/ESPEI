@@ -245,13 +245,13 @@ Increasing the penalty factor will increase the penalty for more parameters, so 
 
 .. code-block:: yaml
 
-   aicc_penalty_factor:
-     BCC_A2:
-     HM: 5.0
-     SM: 5.0
-     LIQUID:
-     HM: 2.0
-     SM: 2.0
+     aicc_penalty_factor:
+       BCC_A2:
+         HM: 5.0
+         SM: 5.0
+       LIQUID:
+         HM: 2.0
+         SM: 2.0
 
 
 input_db
