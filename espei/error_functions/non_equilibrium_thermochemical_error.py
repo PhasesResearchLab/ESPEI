@@ -252,18 +252,6 @@ def calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_dat
     float
         A single float of the residual sum of square errors
 
-    Notes
-    -----
-    There are different single phase values, HM_MIX, SM_FORM, CP_FORM, etc.
-    Each of these have different units and the error cannot be compared directly.
-    To normalize all of the errors, a normalization factor must be used.
-    Equation 2.59 and 2.60 in Lukas, Fries, and Sundman "Computational Thermodynamics" shows how this can be considered.
-    Each type of error will be weighted by the reciprocal of the estimated uncertainty in the measured value and conditions.
-    The weighting factor is calculated by
-    $ p_i = (\Delta L_i)^{-1} $
-    where $ \Delta L_i $ is the uncertainty in the measurement.
-    We will neglect the uncertainty for quantities such as temperature, assuming they are small.
-
     """
     if parameters is None:
         parameters = np.array([])

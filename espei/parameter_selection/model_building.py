@@ -66,9 +66,9 @@ def build_feature_sets(temperature_features, interaction_features):
     of the feature lists. They can be strings, ints, objects, tuples, etc..
 
     The number of features (related to the complexity) is a geometric series.
-    For $N$ temperature features and $M$ interaction features, the total number of
-    feature sets should be $N*(1-N**M)/(1-N)$. If $N=1$, then there are $M$ total
-    feature sets.
+    For :math:`N` temperature features and :math:`M` interaction features, the total
+    number of feature sets should be :math:`N(1-N^M)/(1-N)`. If :math:`N=1`, then there
+    are :math:`M` total feature sets.
 
     """
     # [[A], [A, B], [A, B, C], ...]
