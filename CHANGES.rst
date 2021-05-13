@@ -12,6 +12,7 @@ Improvements
 * Fix a bug where ``plot_interaction`` and ``plot_endmember`` would raise an error when axes were not passed explicitly (`@bocklund`_ - :issue:`191`)
 * Fix a bug where reference keys were assumed to be present in ``dataplot``, ``plot_interaction`` and ``plot_endmember`` (`@bocklund`_ - :issue:`191`)
 * Documentation: Rewrite phase diagram datasets section, switch paper references to RST citations, reorganize sections into how-to/reference material appropriately (`@bocklund`_ - :issue:`192`)
+* Documentation: Switch from ``sphinx_rtd_theme`` to ``furo`` theme (`@bocklund`_ - :issue:`193`)
 
 0.8.3 (2021-05-08)
 ==================
