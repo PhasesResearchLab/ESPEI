@@ -129,7 +129,7 @@ def equilibrium_(species: Sequence[v.Species], phase_records: Dict[str, PhaseRec
     """
     Perform a fast equilibrium calculation with virtually no overhead.
     """
-    statevars = get_state_variables(conds=conditions)
+    statevars = sorted(get_state_variables(conds=conditions), key=str)
     conditions = _adjust_conditions(conditions)
     str_conds = OrderedDict([(str(ky), conditions[ky]) for ky in sorted(conditions.keys(), key=str)])
     start_point = starting_point(conditions, statevars, phase_records, grid)
