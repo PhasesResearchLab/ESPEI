@@ -133,9 +133,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
     Returns
     -------
     list
-        List of data dictionaries with keys ``weight``, ``data_comps`` and
-        ``phase_regions``. ``data_comps`` are the components for the data in
-        question. ``phase_regions`` are the ZPF phases, state variables and compositions.
+        List of data dictionaries with keys ``weight``, ``phase_regions`` and ``dataset_references``.
     """
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
@@ -181,7 +179,6 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
 
         data_dict = {
             'weight': data.get('weight', 1.0),
-            'data_comps': data_comps,
             'phase_regions': phase_regions,
             'dataset_reference': data['reference']
         }
@@ -239,7 +236,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
     return target_hyperplane_mean_chempots
 
 
-def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: Sequence[str],
+def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
                                 phase_region: PhaseRegion, vertex: RegionVertex,
                                 parameters: np.ndarray, approximate_equilibrium: bool = False) -> float:
     """Calculate the integrated driving force between the current hyperplane and target hyperplane.
@@ -341,7 +338,6 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
     for data in zpf_data:
         data_driving_forces = []
         data_weights = []
-        data_comps = data['data_comps']
         weight = data['weight']
         dataset_ref = data['dataset_reference']
         # for the set of phases and corresponding tie-line verticies in equilibrium
@@ -356,8 +352,7 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
                 continue
             # 2. Calculate the driving force to that hyperplane for each vertex
             for vertex in phase_region.vertices:
-                driving_force = driving_force_to_hyperplane(target_hyperplane, data_comps,
-                                                            phase_region, vertex, parameters,
+                driving_force = driving_force_to_hyperplane(target_hyperplane, phase_region, vertex, parameters,
                                                             approximate_equilibrium=approximate_equilibrium,
                                                             )
                 if np.isinf(driving_force) and short_circuit:
