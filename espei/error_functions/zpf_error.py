@@ -15,7 +15,6 @@ composition conditions to calculate chemical potentials at.
 """
 
 import logging
-import warnings
 from dataclasses import dataclass
 from collections import OrderedDict
 from typing import Sequence, Dict, Any, Union, List, Tuple
@@ -23,7 +22,6 @@ from typing import Sequence, Dict, Any, Union, List, Tuple
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.stats import norm
-import sympy
 import tinydb
 
 from pycalphad import Database, Model, variables as v
