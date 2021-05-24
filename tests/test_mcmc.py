@@ -5,8 +5,6 @@ import pytest
 from numpy.linalg import LinAlgError
 from scipy.stats import norm
 from pycalphad import Database, variables as v
-from pycalphad.codegen.callables import build_callables
-from pycalphad.core.utils import instantiate_models
 
 from espei.error_functions.context import setup_context
 from espei.optimizers.opt_mcmc import EmceeOptimizer
