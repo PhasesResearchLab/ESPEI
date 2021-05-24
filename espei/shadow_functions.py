@@ -62,7 +62,7 @@ def _single_phase_start_point(conditions, state_variables, phase_records, grid):
 
 
 
-def calculate_(dbf: Database, species: Sequence[v.Species], phases: Sequence[str],
+def calculate_(species: Sequence[v.Species], phases: Sequence[str],
                str_statevar_dict: Dict[str, np.ndarray], models: Dict[str, Model],
                phase_records: Dict[str, PhaseRecord], output: Optional[str] = 'GM',
                points: Optional[Dict[str, np.ndarray]] = None,

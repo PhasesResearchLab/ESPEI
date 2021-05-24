@@ -264,7 +264,7 @@ def calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_dat
         sample_values = data['calculate_dict']['values']
 
         update_phase_record_parameters(phase_records, parameters)
-        results = calculate_(dbf, data['species'], [phase_name],
+        results = calculate_(data['species'], [phase_name],
                              data['str_statevar_dict'], data['model'],
                              phase_records, output=output, broadcast=False,
                              points=data['calculate_dict']['points'])[output]
