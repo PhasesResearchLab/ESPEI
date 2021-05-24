@@ -13,7 +13,7 @@ from pycalphad.core.composition_set import CompositionSet
 from pycalphad.core.starting_point import starting_point
 from pycalphad.core.eqsolver import _solve_eq_at_conditions, pointsolve
 from pycalphad.core.equilibrium import _adjust_conditions
-from pycalphad.core.utils import get_state_variables, unpack_kwarg, point_sample, generate_dof
+from pycalphad.core.utils import get_state_variables, unpack_kwarg, point_sample
 from pycalphad.core.light_dataset import LightDataset
 from pycalphad.core.calculate import _sample_phase_constitution, _compute_phase_values
 from pycalphad.core.solver import SundmanSolver
