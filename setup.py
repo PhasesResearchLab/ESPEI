@@ -28,7 +28,7 @@ setup(
         'emcee<3',
         'matplotlib',
         'numpy',
-        'pycalphad>=0.8.4',
+        'pycalphad~=0.8.4',
         'pyyaml',
         'scikit-learn',
         'scipy',
