@@ -8,8 +8,7 @@ dependencies:
   - emcee<3
   - matplotlib-base
   - numpy
-#  - pycalphad>=0.8.4,<0.9
-  - pycalphad==0.8.4
+  - pycalphad>=0.8.4,<0.9
   - python-symengine
   - pyyaml
   - scikit-learn
