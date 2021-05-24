@@ -274,7 +274,8 @@ def test_zpf_error_species(datasets_db):
     exact_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=False)
     assert np.isclose(exact_likelihood, zero_error_probability)
     approx_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=True)
-    assert np.isclose(approx_likelihood, zero_error_probability)
+    # accept higher tolerance for approximate
+    assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-4)
 
 
 def test_zpf_error_equilibrium_failure(datasets_db):
