@@ -32,12 +32,17 @@ def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
     res = opt.predict([10], prior_rvs=[rv_zero()], symbols_to_fit=[param], zpf_kwargs=zpf_kwargs)
 
     assert np.isreal(res)
-    assert np.isclose(res, -31.309645520830344, rtol=1e-4)
+    assert not np.isinf(res)
+    assert np.isclose(res, -31.309645520830344, rtol=1e-6)
 
-    res_2 = opt.predict([10000000], prior_rvs=[rv_zero()], symbols_to_fit=[param], zpf_kwargs=zpf_kwargs)
+    # The purpose of this part is to test that the driving forces (and probability)
+    # are different than the case of VV0001 = 10.
+    res_2 = opt.predict([-10000000], prior_rvs=[rv_zero()], symbols_to_fit=[param], zpf_kwargs=zpf_kwargs)
 
-    assert not np.isclose(res_2, -31.309645520830344, rtol=1e-6)
-
+    assert np.isreal(res_2)
+    assert not np.isinf(res_2)
+    # Accept a large rtol becuase the results should be _very_ different
+    assert not np.isclose(res_2, -31.309645520830344, rtol=1e-2)
 
 def test_lnprob_calculates_single_phase_probability_for_success(datasets_db):
     """lnprob() succesfully calculates the probability from single phase data"""

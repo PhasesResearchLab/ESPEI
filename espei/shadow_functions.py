@@ -19,11 +19,13 @@ from pycalphad.core.calculate import _sample_phase_constitution, _compute_phase_
 from pycalphad.core.solver import SundmanSolver
 
 
-def update_phase_record_parameters(phase_records: Dict[str, PhaseRecord], parameters: np.ndarray) -> None:
+def update_phase_record_parameters(phase_records: Dict[str, PhaseRecord], parameters: ArrayLike) -> None:
     if parameters.size > 0:
         for phase_name, phase_record in phase_records.items():
-            phase_record.parameters[:] = parameters
-
+            # very important that these are floats, otherwise parameters can end up
+            # with garbage data. `np.asarray` does not create a copy if the type is
+            # correct
+            phase_record.parameters[:] = np.asarray(parameters, dtype=np.float_)
 
 def _single_phase_start_point(conditions, state_variables, phase_records, grid):
     """Return a single CompositionSet object to use in a point calculation
