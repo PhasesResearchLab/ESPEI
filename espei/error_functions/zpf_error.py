@@ -441,7 +441,7 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
         region_comps[region_comps.index(np.nan)] = 1 - np.nansum(region_comps)
         driving_force = np.multiply(target_hyperplane_chempots, region_comps).sum() - select_energy
         driving_force = float(driving_force)
-    print(vertex.phase_name, target_hyperplane_chempots, driving_force)
+    print(vertex.phase_name, target_hyperplane_chempots, driving_force, vertex.points)
     return driving_force
 
 
