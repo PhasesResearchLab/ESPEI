@@ -39,6 +39,7 @@ _log = logging.getLogger(__name__)
 @dataclass
 class RegionVertex:
     phase_name: str
+    composition: ArrayLike  # 1D of size (number nonvacant pure elements)
     comp_conds: Dict[v.X, float]
     points: ArrayLike
     phase_records: Dict[str, PhaseRecord]
@@ -96,6 +97,24 @@ def _phase_is_stoichiometric(mod):
     return all(len(subl) == 1 for subl in mod.constituents)
 
 
+def _compute_vertex_composition(comps: Sequence[str], comp_conds: Dict[str, float]):
+    """Compute the overall composition in a vertex assuming an N=1 normalization condition"""
+    pure_elements = sorted(c for c in comps if c != 'VA')
+    vertex_composition = np.empty(len(pure_elements), dtype=np.float_)
+    unknown_indices = []
+    for idx, el in enumerate(pure_elements):
+        amt = comp_conds.get(v.X(el), None)
+        if amt is None:
+            unknown_indices.append(idx)
+            vertex_composition[idx] = np.nan
+        else:
+            vertex_composition[idx] = amt
+    if len(unknown_indices) == 1:
+        # Determine the dependent component by mass balance
+        vertex_composition[unknown_indices[0]] = 1 - np.nansum(vertex_composition)
+    return vertex_composition
+
+
 def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], datasets: PickleableTinyDB, parameters: Dict[str, float]):
     """
     Return the ZPF data used in the calculation of ZPF error
@@ -144,7 +163,8 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                 phase_recs = build_phase_records(dbf, species, data_phases, {**pot_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
                 # Construct single-phase points satisfying the conditions for each phase in the region
                 mod = models[phase_name]
-                if any(val is None for val in comp_conds.values()):
+                composition = _compute_vertex_composition(data_comps, comp_conds)
+                if np.any(np.isnan(composition)):
                     # We can't construct points because we don't have a known composition
                     has_missing_comp_cond = True
                     phase_points = None
@@ -154,7 +174,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                 else:
                     has_missing_comp_cond = False
                     phase_points = _sample_phase_constitution(mod, point_sample, True, 50)
-                vtx = RegionVertex(phase_name, comp_conds, phase_points, phase_recs, disordered_flag, has_missing_comp_cond)
+                vtx = RegionVertex(phase_name, composition, comp_conds, phase_points, phase_recs, disordered_flag, has_missing_comp_cond)
                 vertices.append(vtx)
             region = PhaseRegion(vertices, pot_conds, species, data_phases, models)
             phase_regions.append(region)
@@ -273,18 +293,10 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
         # Extract energies from single-phase calculations
         grid = calculate_(species, [current_phase], str_statevar_dict, models, phase_records, points=phase_points, pdens=50, fake_points=True)
         converged, energy = constrained_equilibrium(species, phase_records, cond_dict, grid)
-
         if not converged:
             _log.debug('Calculation failure: constrained equilibrium not converged for %s, conditions: %s, parameters %s', current_phase, cond_dict, parameters)
             return np.inf
-        select_energy = float(energy)
-        # TODO: make region_comps part of the RegionVertex so we can take the dot product right away
-        region_comps = []
-        for comp in [c for c in sorted(comps) if c != 'VA']:
-            region_comps.append(cond_dict.get(v.X(comp), np.nan))
-        region_comps[region_comps.index(np.nan)] = 1 - np.nansum(region_comps)
-        driving_force = np.multiply(target_hyperplane_chempots, region_comps).sum() - select_energy
-        driving_force = float(driving_force)
+        driving_force = float(np.dot(target_hyperplane_chempots, vertex.composition) - float(energy))
     return driving_force
 
 
