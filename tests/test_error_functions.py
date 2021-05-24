@@ -341,11 +341,11 @@ def test_equilibrium_thermochemcial_error_species(datasets_db):
     truth_values = np.array([0.0, -28133.588, -40049.995, 0.0])
     # Approximate
     errors_approximate, weights = calc_prop_differences(eqdata[0], np.array([]), True)
-    # Looser rtol because the equilibrium is approximate
-    assert np.all(np.isclose(errors_approximate, truth_values, atol=1e-6, rtol=1e-3))
+    # Looser tolerances because the equilibrium is approximate, note that this is pdens dependent
+    assert np.all(np.isclose(errors_approximate, truth_values, atol=1e-5, rtol=1e-3))
     # Exact
     errors_exact, weights = calc_prop_differences(eqdata[0], np.array([]), False)
-    assert np.all(np.isclose(errors_exact, truth_values, atol=1e-6))
+    assert np.all(np.isclose(errors_exact, truth_values, atol=1e-5))
 
 
 def test_equilibrium_thermochemical_error_unsupported_property(datasets_db):
