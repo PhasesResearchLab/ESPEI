@@ -26,7 +26,6 @@ import tinydb
 
 from pycalphad import Database, Model, variables as v
 from pycalphad.codegen.callables import build_phase_records
-from pycalphad.core.constants import MIN_SITE_FRACTION
 from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
 from pycalphad.core.phase_rec import PhaseRecord
 from espei.utils import PickleableTinyDB
@@ -58,13 +57,6 @@ class PhaseRegion:
     def eq_str(self):
         phase_compositions = ', '.join(f'{vtx.phase_name}: {vtx.comp_conds}' for vtx in self.vertices)
         return f"conds: ({self.potential_conds}), comps: ({phase_compositions})"
-
-
-def _safe_index(items, index):
-    try:
-        return items[index]
-    except IndexError:
-        return None
 
 
 def _extract_pot_conds(all_conditions: Dict[v.StateVariable, np.ndarray], idx: int) -> Dict[v.StateVariable, float]:
