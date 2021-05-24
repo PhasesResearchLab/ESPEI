@@ -11,11 +11,12 @@ from pycalphad import Database, Model, variables as v
 from pycalphad.core.phase_rec import PhaseRecord
 from pycalphad.core.composition_set import CompositionSet
 from pycalphad.core.starting_point import starting_point
-from pycalphad.core.eqsolver import _solve_eq_at_conditions
+from pycalphad.core.eqsolver import _solve_eq_at_conditions, pointsolve
 from pycalphad.core.equilibrium import _adjust_conditions
 from pycalphad.core.utils import get_state_variables, unpack_kwarg, point_sample, generate_dof
 from pycalphad.core.light_dataset import LightDataset
 from pycalphad.core.calculate import _sample_phase_constitution, _compute_phase_values
+from pycalphad.core.solver import SundmanSolver
 
 
 def update_phase_record_parameters(phase_records: Dict[str, PhaseRecord], parameters: np.ndarray) -> None:
@@ -24,7 +25,7 @@ def update_phase_record_parameters(phase_records: Dict[str, PhaseRecord], parame
             phase_record.parameters[:] = parameters
 
 
-def single_phase_start_point(conditions, state_variables, phase_records, grid):
+def _single_phase_start_point(conditions, state_variables, phase_records, grid):
     """Return a single CompositionSet object to use in a point calculation
 
     Assumes the grid has includes only candidate phases. The starting point will be
@@ -52,7 +53,7 @@ def single_phase_start_point(conditions, state_variables, phase_records, grid):
     Y = grid.Y[..., idx_min, :].squeeze()[:prx.phase_dof]
     # Get current state variables
     # TODO: can we assume sorting
-    state_vars = np.array([conditions[sv].squeeze() for sv in sorted(state_variables)])
+    state_vars = np.array([conditions[sv][0] for sv in sorted(state_variables, key=str)])
     compset = CompositionSet(prx)
     compset.update(Y, 1.0, state_vars)
     return compset
@@ -108,6 +109,19 @@ def calculate_(dbf: Database, species: Sequence[v.Species], phases: Sequence[str
         final_ds = all_phase_data[0]
     return final_ds
 
+
+def constrained_equilibrium(species: Sequence[v.Species], phase_records: Dict[str, PhaseRecord],
+                 conditions: Dict[v.StateVariable, np.ndarray], grid: LightDataset):
+    """Perform an equilibrium calculation with just a single composition set that is constrained to the global composition condition"""
+    statevars = get_state_variables(conds=conditions)
+    conditions = _adjust_conditions(conditions)
+    # Assume that all conditions keys are lists with exactly one element (point calculation)
+    str_conds = OrderedDict([(str(ky), conditions[ky][0]) for ky in sorted(conditions.keys(), key=str)])
+    compset = _single_phase_start_point(conditions, statevars, phase_records, grid)
+    # modifies `compset` in place
+    solver_result = pointsolve([compset], species, str_conds, SundmanSolver())
+    energy = compset.NP * compset.energy
+    return solver_result.converged, energy
 
 def equilibrium_(species: Sequence[v.Species], phase_records: Dict[str, PhaseRecord],
                  conditions: Dict[v.StateVariable, np.ndarray], grid: LightDataset

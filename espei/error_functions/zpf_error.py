@@ -32,7 +32,7 @@ from pycalphad.core.constants import MIN_SITE_FRACTION
 from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
 from pycalphad.core.phase_rec import PhaseRecord
 from espei.utils import PickleableTinyDB
-from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
+from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters, constrained_equilibrium
 from pycalphad.core.calculate import _sample_phase_constitution
 from pycalphad.core.utils import point_sample
 
@@ -287,11 +287,13 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
     else:
         # Extract energies from single-phase calculations
         grid = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, points=phase_points, pdens=500, fake_points=True)
-        single_eqdata = _equilibrium(species, phase_records, cond_dict, grid)
-        if np.all(np.isnan(single_eqdata.NP)):
-            _log.debug('Calculation failure: all NaN phases with phases: %s, conditions: %s, parameters %s', current_phase, cond_dict, parameters)
+        converged, energy = constrained_equilibrium(species, phase_records, cond_dict, grid)
+
+        if not converged:
+            _log.debug('Calculation failure: constrained equilibrium not converged for %s, conditions: %s, parameters %s', current_phase, cond_dict, parameters)
             return np.inf
-        select_energy = float(single_eqdata.GM)
+        select_energy = float(energy)
+        # TODO: make region_comps part of the RegionVertex so we can take the dot product right away
         region_comps = []
         for comp in [c for c in sorted(comps) if c != 'VA']:
             region_comps.append(cond_dict.get(v.X(comp), np.nan))
