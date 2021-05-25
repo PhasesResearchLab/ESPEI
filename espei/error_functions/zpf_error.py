@@ -147,7 +147,6 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                 phase_name, comp_conds, disordered_flag = _extract_phases_comps(vertex)
                 phase_recs = build_phase_records(dbf, species, data_phases, {**pot_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
                 # Construct single-phase points satisfying the conditions for each phase in the region
-                # TODO: make sure that the ZPF error handles these cases correctly still.
                 if any(val is None for val in comp_conds.values()):
                     # We can't construct points because we don't have a known composition
                     has_missing_comp_cond = True
