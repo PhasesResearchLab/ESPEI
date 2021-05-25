@@ -39,6 +39,7 @@ _log = logging.getLogger(__name__)
 @dataclass
 class RegionVertex:
     phase_name: str
+    composition: ArrayLike  # 1D of size (number nonvacant pure elements)
     comp_conds: Dict[v.X, float]
     points: ArrayLike
     phase_records: Dict[str, PhaseRecord]
@@ -96,6 +97,39 @@ def _phase_is_stoichiometric(mod):
     return all(len(subl) == 1 for subl in mod.constituents)
 
 
+def _compute_vertex_composition(comps: Sequence[str], comp_conds: Dict[str, float]):
+    """Compute the overall composition in a vertex assuming an N=1 normalization condition"""
+    pure_elements = sorted(c for c in comps if c != 'VA')
+    vertex_composition = np.empty(len(pure_elements), dtype=np.float_)
+    unknown_indices = []
+    for idx, el in enumerate(pure_elements):
+        amt = comp_conds.get(v.X(el), None)
+        if amt is None:
+            unknown_indices.append(idx)
+            vertex_composition[idx] = np.nan
+        else:
+            vertex_composition[idx] = amt
+    if len(unknown_indices) == 1:
+        # Determine the dependent component by mass balance
+        vertex_composition[unknown_indices[0]] = 1 - np.nansum(vertex_composition)
+    return vertex_composition
+
+
+def _subsample_phase_points(phase_record, phase_points, target_composition, avg_mass_residual_tol=0.02):
+    # Compute the mole fractions of each point
+    phase_compositions = np.zeros((phase_points.shape[0], target_composition.size), order='F')
+    statevar_placeholder = np.zeros((phase_points.shape[0], 3))  # assume N, P, T
+    dof = np.hstack((statevar_placeholder, phase_points))
+    for el_idx in range(target_composition.size):
+        phase_record.mass_obj_2d(phase_compositions[:, el_idx], dof, el_idx)
+
+    # Find the points indicdes where the mass is within the average mass residual tolerance
+    idxs = np.nonzero(np.mean(np.abs(phase_compositions - target_composition), axis=1) < avg_mass_residual_tol)[0]
+
+    # Return the sub-space of points where this condition holds valid
+    return phase_points[idxs]
+
+
 def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], datasets: PickleableTinyDB, parameters: Dict[str, float]):
     """
     Return the ZPF data used in the calculation of ZPF error
@@ -114,9 +148,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
     Returns
     -------
     list
-        List of data dictionaries with keys ``weight``, ``data_comps`` and
-        ``phase_regions``. ``data_comps`` are the components for the data in
-        question. ``phase_regions`` are the ZPF phases, state variables and compositions.
+        List of data dictionaries with keys ``weight``, ``phase_regions`` and ``dataset_references``.
     """
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
@@ -128,6 +160,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         species = sorted(unpack_components(dbf, data_comps), key=str)
         data_phases = filter_phases(dbf, species, candidate_phases=phases)
         models = instantiate_models(dbf, species, data_phases, parameters=parameters)
+        all_phase_points = {phase_name: _sample_phase_constitution(models[phase_name], point_sample, True, 50) for phase_name in data_phases}
         all_regions = data['values']
         conditions = data['conditions']
         phase_regions = []
@@ -144,7 +177,8 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                 phase_recs = build_phase_records(dbf, species, data_phases, {**pot_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
                 # Construct single-phase points satisfying the conditions for each phase in the region
                 mod = models[phase_name]
-                if any(val is None for val in comp_conds.values()):
+                composition = _compute_vertex_composition(data_comps, comp_conds)
+                if np.any(np.isnan(composition)):
                     # We can't construct points because we don't have a known composition
                     has_missing_comp_cond = True
                     phase_points = None
@@ -153,15 +187,17 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                     phase_points = None
                 else:
                     has_missing_comp_cond = False
-                    phase_points = _sample_phase_constitution(mod, point_sample, True, 50)
-                vtx = RegionVertex(phase_name, comp_conds, phase_points, phase_recs, disordered_flag, has_missing_comp_cond)
+                    # Only sample points that have an average mass residual within tol
+                    tol = 0.02
+                    phase_points = _subsample_phase_points(phase_recs[phase_name], all_phase_points[phase_name], composition, tol)
+                    assert phase_points.shape[0] > 0, "at least one set of points is within the target tolerance"
+                vtx = RegionVertex(phase_name, composition, comp_conds, phase_points, phase_recs, disordered_flag, has_missing_comp_cond)
                 vertices.append(vtx)
             region = PhaseRegion(vertices, pot_conds, species, data_phases, models)
             phase_regions.append(region)
 
         data_dict = {
             'weight': data.get('weight', 1.0),
-            'data_comps': data_comps,
             'phase_regions': phase_regions,
             'dataset_reference': data['reference']
         }
@@ -219,7 +255,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
     return target_hyperplane_mean_chempots
 
 
-def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: Sequence[str],
+def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
                                 phase_region: PhaseRegion, vertex: RegionVertex,
                                 parameters: np.ndarray, approximate_equilibrium: bool = False) -> float:
     """Calculate the integrated driving force between the current hyperplane and target hyperplane.
@@ -273,18 +309,10 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
         # Extract energies from single-phase calculations
         grid = calculate_(species, [current_phase], str_statevar_dict, models, phase_records, points=phase_points, pdens=50, fake_points=True)
         converged, energy = constrained_equilibrium(species, phase_records, cond_dict, grid)
-
         if not converged:
             _log.debug('Calculation failure: constrained equilibrium not converged for %s, conditions: %s, parameters %s', current_phase, cond_dict, parameters)
             return np.inf
-        select_energy = float(energy)
-        # TODO: make region_comps part of the RegionVertex so we can take the dot product right away
-        region_comps = []
-        for comp in [c for c in sorted(comps) if c != 'VA']:
-            region_comps.append(cond_dict.get(v.X(comp), np.nan))
-        region_comps[region_comps.index(np.nan)] = 1 - np.nansum(region_comps)
-        driving_force = np.multiply(target_hyperplane_chempots, region_comps).sum() - select_energy
-        driving_force = float(driving_force)
+        driving_force = float(np.dot(target_hyperplane_chempots, vertex.composition) - float(energy))
     return driving_force
 
 
@@ -329,7 +357,6 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
     for data in zpf_data:
         data_driving_forces = []
         data_weights = []
-        data_comps = data['data_comps']
         weight = data['weight']
         dataset_ref = data['dataset_reference']
         # for the set of phases and corresponding tie-line verticies in equilibrium
@@ -344,8 +371,7 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
                 continue
             # 2. Calculate the driving force to that hyperplane for each vertex
             for vertex in phase_region.vertices:
-                driving_force = driving_force_to_hyperplane(target_hyperplane, data_comps,
-                                                            phase_region, vertex, parameters,
+                driving_force = driving_force_to_hyperplane(target_hyperplane, phase_region, vertex, parameters,
                                                             approximate_equilibrium=approximate_equilibrium,
                                                             )
                 if np.isinf(driving_force) and short_circuit:
