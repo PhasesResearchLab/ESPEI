@@ -58,7 +58,7 @@ def test_non_equilibrium_thermochemical_error_with_multiple_X_points(datasets_db
     phases = list(dbf.phases.keys())
     comps = ['CU', 'MG', 'VA']
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
-    error = calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data)
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
 
     assert np.isclose(error, -4061.119001241541, rtol=1e-6)
 
@@ -71,7 +71,7 @@ def test_non_equilibrium_thermochemical_error_with_multiple_T_points(datasets_db
     phases = list(dbf.phases.keys())
     comps = ['CU', 'MG', 'VA']
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
-    error = calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data)
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
     assert np.isclose(error,-14.287293263253728, rtol=1e-6)
 
 
@@ -83,7 +83,7 @@ def test_non_equilibrium_thermochemical_error_with_multiple_T_X_points(datasets_
     phases = list(dbf.phases.keys())
     comps = ['CU', 'MG', 'VA']
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
-    error = calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data)
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
     assert np.isclose(float(error), -3282497.2380024833, rtol=1e-6)
 
 def test_non_equilibrium_thermochemical_error_for_mixing_entropy_error_is_excess_only(datasets_db):
@@ -134,7 +134,7 @@ def test_non_equilibrium_thermochemical_error_for_mixing_entropy_error_is_excess
     zero_error_prob = scipy.stats.norm(loc=0, scale=0.2).logpdf(0.0)  # SM weight = 0.2
     # Explicitly pass parameters={} to not try fitting anything
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
-    error = calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data)
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
 
 
@@ -185,7 +185,7 @@ def test_non_equilibrium_thermochemical_error_for_of_enthalpy_mixing(datasets_db
     zero_error_prob = scipy.stats.norm(loc=0, scale=500.0).logpdf(0.0)  # HM weight = 500
     # Explicitly pass parameters={} to not try fitting anything
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
-    error = calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data)
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
 
 
@@ -200,16 +200,16 @@ def test_subsystem_non_equilibrium_thermochemcial_probability(datasets_db):
 
     # Truth
     thermochemical_data = get_thermochemical_data(dbf_bin, ['CR', 'NI', 'VA'], phases, datasets_db)
-    bin_prob = calculate_non_equilibrium_thermochemical_probability(dbf_bin, thermochemical_data)
+    bin_prob = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
 
     # Getting binary subsystem data explictly (from binary input)
     thermochemical_data = get_thermochemical_data(dbf_tern, ['CR', 'NI', 'VA'], phases, datasets_db)
-    prob = calculate_non_equilibrium_thermochemical_probability(dbf_tern, thermochemical_data)
+    prob = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
     assert np.isclose(prob, bin_prob)
 
     # Getting binary subsystem from ternary input
     thermochemical_data = get_thermochemical_data(dbf_tern, ['CR', 'FE', 'NI', 'VA'], phases, datasets_db)
-    prob = calculate_non_equilibrium_thermochemical_probability(dbf_tern, thermochemical_data)
+    prob = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
     assert np.isclose(prob, bin_prob)
 
 
@@ -324,7 +324,7 @@ def test_non_equilibrium_thermochemcial_species(datasets_db):
     phases = ['LIQUID']
 
     thermochemical_data = get_thermochemical_data(dbf, ['LI', 'SN'], phases, datasets_db)
-    prob = calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data)
+    prob = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
     # Near zero error and non-zero error
     assert np.isclose(prob, (-7.13354663 + -22.43585011))
 

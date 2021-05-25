@@ -49,7 +49,6 @@ class RegionVertex:
 class PhaseRegion:
     vertices: Sequence[RegionVertex]
     potential_conds: Dict[v.StateVariable, float]
-    dbf: Database
     species: Sequence[v.Species]
     phases: Sequence[str]
     models: Dict[str, Model]
@@ -93,11 +92,8 @@ def _extract_phases_comps(vertex):
     return phase_name, comp_conds, disordered_flag
 
 
-def _phase_is_stoichiometric(dbf, species, phase_name):
-    phase_constituents = dbf.phases[phase_name].constituents
-    # phase constituents must be filtered to only active:
-    constituents = [[sp.name for sp in sorted(subl_constituents.intersection(species))] for subl_constituents in phase_constituents]
-    return all(len(subl) == 1 for subl in constituents)
+def _phase_is_stoichiometric(mod):
+    return all(len(subl) == 1 for subl in mod.constituents)
 
 
 def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], datasets: PickleableTinyDB, parameters: Dict[str, float]):
@@ -147,20 +143,20 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                 phase_name, comp_conds, disordered_flag = _extract_phases_comps(vertex)
                 phase_recs = build_phase_records(dbf, species, data_phases, {**pot_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
                 # Construct single-phase points satisfying the conditions for each phase in the region
+                mod = models[phase_name]
                 if any(val is None for val in comp_conds.values()):
                     # We can't construct points because we don't have a known composition
                     has_missing_comp_cond = True
                     phase_points = None
-                elif _phase_is_stoichiometric(dbf, species, phase_name):
+                elif _phase_is_stoichiometric(mod):
                     has_missing_comp_cond = False
                     phase_points = None
                 else:
                     has_missing_comp_cond = False
-                    mod = models[phase_name]
                     phase_points = _sample_phase_constitution(mod, point_sample, True, 50)
                 vtx = RegionVertex(phase_name, comp_conds, phase_points, phase_recs, disordered_flag, has_missing_comp_cond)
                 vertices.append(vtx)
-            region = PhaseRegion(vertices, pot_conds, dbf, species, data_phases, models)
+            region = PhaseRegion(vertices, pot_conds, species, data_phases, models)
             phase_regions.append(region)
 
         data_dict = {
@@ -192,7 +188,6 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
         _equilibrium = equilibrium_
     target_hyperplane_chempots = []
     target_hyperplane_phases = []
-    dbf = phase_region.dbf
     species = phase_region.species
     phases = phase_region.phases
     models = phase_region.models
@@ -207,7 +202,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
             str_statevar_dict = OrderedDict([(str(key), cond_dict[key]) for key in sorted(phase_region.potential_conds.keys(), key=str)])
-            grid = calculate_(dbf, species, phases, str_statevar_dict, models, phase_records, pdens=50, fake_points=True)
+            grid = calculate_(species, phases, str_statevar_dict, models, phase_records, pdens=50, fake_points=True)
             multi_eqdata = _equilibrium(species, phase_records, cond_dict, grid)
             target_hyperplane_phases.append(multi_eqdata.Phase.squeeze())
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
@@ -233,7 +228,6 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
         _equilibrium = no_op_equilibrium_
     else:
         _equilibrium = equilibrium_
-    dbf = phase_region.dbf
     species = phase_region.species
     models = phase_region.models
     current_phase = vertex.phase_name
@@ -246,7 +240,7 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
         # We don't have the phase composition here, so we estimate the driving force.
         # Can happen if one of the composition conditions is unknown or if the phase is
         # stoichiometric and the user did not specify a valid phase composition.
-        single_eqdata = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, pdens=50)
+        single_eqdata = calculate_(species, [current_phase], str_statevar_dict, models, phase_records, pdens=50)
         df = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(df.max())
     elif vertex.is_disordered:
@@ -254,28 +248,30 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
         # Compute energy
         # Compute residual driving force
         # TODO: Check that it actually makes sense to declare this phase 'disordered'
-        num_dof = sum([len(set(c).intersection(species)) for c in dbf.phases[current_phase].constituents])
+        num_dof = sum([len(subl) for subl in models[current_phase].constituents])
         desired_sitefracs = np.ones(num_dof, dtype=np.float_)
         dof_idx = 0
-        for c in dbf.phases[current_phase].constituents:
-            dof = sorted(set(c).intersection(comps))
-            if (len(dof) == 1) and (dof[0] == 'VA'):
-                return 0
-            # If it's disordered config of BCC_B2 with VA, disordered config is tiny vacancy count
-            sitefracs_to_add = np.array([cond_dict.get(v.X(d)) for d in dof], dtype=np.float_)
-            # Fix composition of dependent component
-            sitefracs_to_add[np.isnan(sitefracs_to_add)] = 1 - np.nansum(sitefracs_to_add)
-            desired_sitefracs[dof_idx:dof_idx + len(dof)] = sitefracs_to_add
-            dof_idx += len(dof)
-        # TODO: we probably should be passing desired_sitefracs to calculate_
-        # here since the internal DOF is fixed. This should satisfy the same
-        # effect as passing phase_points in the other calls here.
-        single_eqdata = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, pdens=50)
+        for subl in models[current_phase].constituents:
+            dof = sorted(subl, key=str)
+            num_subl_dof = len(subl)
+            if v.Species("VA") in dof:
+                if num_subl_dof == 1:
+                    _log.debug('Cannot predict the site fraction of vacancies in the disordered configuration %s of %s. Returning driving force of zero.', subl, current_phase)
+                    return 0
+                else:
+                    sitefracs_to_add = [1.0]
+            else:
+                sitefracs_to_add = np.array([cond_dict.get(v.X(d)) for d in dof], dtype=np.float_)
+                # Fix composition of dependent component
+                sitefracs_to_add[np.isnan(sitefracs_to_add)] = 1 - np.nansum(sitefracs_to_add)
+            desired_sitefracs[dof_idx:dof_idx + num_subl_dof] = sitefracs_to_add
+            dof_idx += num_subl_dof
+        single_eqdata = calculate_(species, [current_phase], str_statevar_dict, models, phase_records, points=np.asarray([desired_sitefracs]))
         driving_force = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(np.squeeze(driving_force))
     else:
         # Extract energies from single-phase calculations
-        grid = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, points=phase_points, pdens=50, fake_points=True)
+        grid = calculate_(species, [current_phase], str_statevar_dict, models, phase_records, points=phase_points, pdens=50, fake_points=True)
         converged, energy = constrained_equilibrium(species, phase_records, cond_dict, grid)
 
         if not converged:

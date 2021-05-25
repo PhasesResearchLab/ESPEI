@@ -96,7 +96,7 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
             'eq_thermochemical_data': eq_thermochemical_data,
         },
         'thermochemical_kwargs': {
-            'dbf': dbf, 'thermochemical_data': thermochemical_data,
+            'thermochemical_data': thermochemical_data,
         },
         'activity_kwargs': {
             'dbf': dbf, 'comps': comps, 'phases': phases, 'datasets': datasets,

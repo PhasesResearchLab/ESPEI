@@ -234,14 +234,12 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
     return all_data_dicts
 
 
-def calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data, parameters=None):
+def calculate_non_equilibrium_thermochemical_probability(thermochemical_data, parameters=None):
     """
     Calculate the weighted single phase error in the Database
 
     Parameters
     ----------
-    dbf : pycalphad.Database
-        Database to consider
     thermochemical_data : list
         List of thermochemical data dicts
     parameters : np.ndarray
@@ -264,7 +262,7 @@ def calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_dat
         sample_values = data['calculate_dict']['values']
 
         update_phase_record_parameters(phase_records, parameters)
-        results = calculate_(dbf, data['species'], [phase_name],
+        results = calculate_(data['species'], [phase_name],
                              data['str_statevar_dict'], data['model'],
                              phase_records, output=output, broadcast=False,
                              points=data['calculate_dict']['points'])[output]
