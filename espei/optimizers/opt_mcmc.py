@@ -271,6 +271,10 @@ class EmceeOptimizer(OptimizerBase):
         """
         _log.debug('Parameters - %s', params)
 
+        # Important to coerce to floats here because the values _must_ be floats if
+        # they are used to update PhaseRecords directly
+        params = np.asarray(params, dtype=np.float_)
+
         # lnprior
         prior_rvs = ctx['prior_rvs']
         lnprior_multivariate = [rv.logpdf(theta) for rv, theta in zip(prior_rvs, params)]
@@ -282,7 +286,7 @@ class EmceeOptimizer(OptimizerBase):
             return lnprior
 
         # lnlike
-        parameters = {param_name: param for param_name, param in zip(ctx['symbols_to_fit'], params)}
+        parameters = {param_name: param for param_name, param in zip(ctx['symbols_to_fit'], params.tolist())}
         zpf_kwargs = ctx.get('zpf_kwargs')
         activity_kwargs = ctx.get('activity_kwargs')
         non_equilibrium_thermochemical_kwargs = ctx.get('thermochemical_kwargs')
@@ -290,7 +294,7 @@ class EmceeOptimizer(OptimizerBase):
         starttime = time.time()
         if zpf_kwargs is not None:
             try:
-                multi_phase_error = calculate_zpf_error(parameters=np.array(params), **zpf_kwargs)
+                multi_phase_error = calculate_zpf_error(parameters=params, **zpf_kwargs)
             except (ValueError, np.linalg.LinAlgError) as e:
                 raise e
                 print(e)
@@ -298,7 +302,7 @@ class EmceeOptimizer(OptimizerBase):
         else:
             multi_phase_error = 0
         if equilibrium_thermochemical_kwargs is not None:
-            eq_thermochemical_prob = calculate_equilibrium_thermochemical_probability(parameters=np.array(params), **equilibrium_thermochemical_kwargs)
+            eq_thermochemical_prob = calculate_equilibrium_thermochemical_probability(parameters=params, **equilibrium_thermochemical_kwargs)
         else:
             eq_thermochemical_prob = 0
         if activity_kwargs is not None:
@@ -306,7 +310,7 @@ class EmceeOptimizer(OptimizerBase):
         else:
             actvity_error = 0
         if non_equilibrium_thermochemical_kwargs is not None:
-            non_eq_thermochemical_prob = calculate_non_equilibrium_thermochemical_probability(parameters=np.array(params), **non_equilibrium_thermochemical_kwargs)
+            non_eq_thermochemical_prob = calculate_non_equilibrium_thermochemical_probability(parameters=params, **non_equilibrium_thermochemical_kwargs)
         else:
             non_eq_thermochemical_prob = 0
         total_error = multi_phase_error + eq_thermochemical_prob + non_eq_thermochemical_prob + actvity_error

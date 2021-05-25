@@ -15,7 +15,6 @@ composition conditions to calculate chemical potentials at.
 """
 
 import logging
-import warnings
 from dataclasses import dataclass
 from collections import OrderedDict
 from typing import Sequence, Dict, Any, Union, List, Tuple
@@ -23,16 +22,16 @@ from typing import Sequence, Dict, Any, Union, List, Tuple
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.stats import norm
-import sympy
 import tinydb
 
 from pycalphad import Database, Model, variables as v
 from pycalphad.codegen.callables import build_phase_records
-from pycalphad.core.constants import MIN_SITE_FRACTION
 from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
 from pycalphad.core.phase_rec import PhaseRecord
 from espei.utils import PickleableTinyDB
-from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
+from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters, constrained_equilibrium
+from pycalphad.core.calculate import _sample_phase_constitution
+from pycalphad.core.utils import point_sample
 
 _log = logging.getLogger(__name__)
 
@@ -58,158 +57,6 @@ class PhaseRegion:
     def eq_str(self):
         phase_compositions = ', '.join(f'{vtx.phase_name}: {vtx.comp_conds}' for vtx in self.vertices)
         return f"conds: ({self.potential_conds}), comps: ({phase_compositions})"
-
-
-def _safe_index(items, index):
-    try:
-        return items[index]
-    except IndexError:
-        return None
-
-
-def _extract_symbols(soln):
-    """Return dependent and independent symbols in the solution dictionary"""
-    dependent_symbols = set(soln.keys())
-    independent_symbols = set()
-    for expr in soln.values():
-        independent_symbols |= expr.free_symbols
-    return dependent_symbols, independent_symbols
-
-
-def _solve(equations, desired_syms, phase_name, comp_conds):
-    """Return a unique solution dictionary to the desired equations.
-
-    Phases and composition conditions are only used for error reporting.
-    Will raise a ValueError if no solutions are possible.
-    """
-    soln_dicts = sympy.solve(equations, desired_syms, dict=True)
-    if len(soln_dicts) == 0:
-        raise ValueError(f'No possible solutions for phase "{phase_name}" to satisfy the composition conditions: {comp_conds}. Check whether these compositions are valid.')
-    elif len(soln_dicts) > 1:
-        warnings.warn(f'Multiple solutions possible for phase "{phase_name}" to satisfy the composition conditions: {comp_conds}. Taking the first solution')
-    return soln_dicts[0] # take the first solution even if multiple
-
-
-def _solve_sitefracs_composition(mod: Model, comp_conds: Dict[v.X, float]) -> Dict[v.Y, Union[sympy.Expr, v.Y]]:
-    """Return a dictionary of site fraction expressions that solves the prescribed composition
-
-    Given a Model and global composition conditions, solve for site fractions
-    (dependent and independent) that can produce points (internal degrees of
-    freedom) that satisfy both the global composition conditions AND internal
-    phase constraints.
-
-    Returns
-    -------
-    Dict[v.Y, Union[sympy.Expr, v.Y]]
-        Mapping of dependent site fractions to independent site fractions (possibly in expressions)
-
-    Notes
-    -----
-    The symbols in the solution dictionary may not seem like they are
-    independent variables and that they would invalidate the site fraction sum
-    condition if replaced with arrays. Instead, the dependent site fraction
-    would become negative if the condition were invalidated and those points
-    can be filtered out in a later step.
-    """
-    # populate equations list with the site fraction contraints
-    eqns = list(mod.get_internal_constraints()) # assumes only sublattice constraints
-
-    # Add the composition constraint equation for each constraint
-    for comp_cond_key, comp_cond_val in comp_conds.items():
-        # only one constraint because it's one condition at a time
-        X_el = mod.get_multiphase_constraints({comp_cond_key: comp_cond_val})[0].subs({v.Symbol('NP'): 1.0})
-        eqn = X_el - comp_cond_val  # = 0
-        eqns.append(eqn)
-
-    # Try to make vacancy-like species independent so we can sample their dilute constitutions effectively
-    desired_dependent_sfs = [sf for sf in mod.site_fractions if sf.species.number_of_atoms != 0]
-    soln = _solve(eqns, desired_dependent_sfs, mod.phase_name, comp_conds)
-
-    # Verify that the solution has all the site fractions
-    dep_sfs, indep_sfs = _extract_symbols(soln)
-    missing_sfs = set(mod.site_fractions).difference(dep_sfs | indep_sfs)
-    if len(missing_sfs) > 0:
-        # The solution is missing some site fractions. They may be independent
-        # variables. Add them and solve again.
-        soln = _solve(eqns, list(set(desired_dependent_sfs) | missing_sfs), mod.phase_name, comp_conds)
-
-    return soln
-
-
-def _sample_solution_constitution(mod: Model, soln: Dict[v.Y, Union[sympy.Expr, v.Y]], pdens=101) -> ArrayLike:
-    """Return an array of discrete points sampling the independent degrees of freedom of a solution
-
-    The solution is responsible for guaranteeing that all points are valid
-    under the desired constraints. The only validation/pruning performed here
-    is to remove any points which have negative site fractions. It is the
-    responsibility of the caller to enforce that the sum of positive site
-    fractions is unity (which will prevent any site fractions > 1).
-
-    Each degree of freedom will have
-
-    * ``pdens`` points sampled linearly on the interval ``[0, 1]``
-    * ``pdens`` points sampled in logspace on the intervals
-       ``[MIN_SITE_FRACTION, 0.01]`` and ``[0.99, 1.0]``.
-
-    Returns
-    -------
-    ArrayLike
-        A 2D array of shape ``(points, mod.site_fractions)``
-    """
-    # identify independent site fractions (values of `soln`)
-    indep_site_fracs = set()
-    for expr in soln.values():
-        indep_site_fracs |= expr.free_symbols
-    indep_site_fracs = sorted(indep_site_fracs, key=str)
-
-    # Sample dilute edges in logspace and linearly in the middle
-    grid_1d = np.concatenate([
-        np.logspace(np.log10(MIN_SITE_FRACTION), -2, pdens//2),  # [~0, 0.01]
-        np.linspace(0, 1, pdens),
-        np.logspace(np.log10(0.99), 0, pdens//2),  # [0.99, 1.0]
-    ])
-    # Create 1D arrays from 0 to 1 for each independent variable
-    indep_site_frac_arrays = [grid_1d for _ in indep_site_fracs]
-
-    # Broadcast the 1D arrays against each other and flatten them
-    grids_Nd = np.meshgrid(*indep_site_frac_arrays)
-    grids_1d = [grid.flatten() for grid in grids_Nd]
-    # Need an OrderedDict here because the keys will become arguments to lambdify
-    indep_site_frac_dict = OrderedDict(zip(indep_site_fracs, grids_1d))
-    lambdify_syms = tuple(indep_site_frac_dict.keys())
-
-    # Use the 2D array to fill the columns of the dependent site fractions (keys of `soln`) (points, indep. and dep. site fractions)
-    indep_dep_dict = dict()
-    indep_dep_dict.update(soln)
-    indep_dep_dict.update(indep_site_frac_dict)
-    if len(indep_site_frac_dict) > 0:
-        npts = grids_1d[0].shape[0]
-    else:
-        # No independent degrees of freedom
-        npts = 1
-    points = np.empty((npts, len(mod.site_fractions)))
-    # Enumerating over site fractions ensures that the array must be filled correctly
-    for idof, sf in enumerate(mod.site_fractions):
-        # A key error here would mean that a site fraction variable was not in
-        # the indepedent or dependent site fractions
-        sitefracs = indep_dep_dict[sf]
-        if isinstance(sitefracs, sympy.Expr):
-            # Site fractions are dependent and symbolic. Substitute the
-            # independent site fraction arrays into the dependent ones.
-            _f = sympy.lambdify(lambdify_syms, sitefracs)
-            x = tuple(indep_site_frac_dict.values())
-            points[:, idof] = _f(*x)
-        else:
-            # site fractions are independent already
-            points[:, idof] = sitefracs
-
-    # Remove any rows (points) where any site fractions are negative.
-    # As long as the internal constraints were used to find the solution,
-    # this should also ensure that any site fractions >1 are not possible.
-    valid_site_frac_rows = np.nonzero(~np.any(points < 0, axis=1))[0]
-    points = points[valid_site_frac_rows, :]
-
-    return points
 
 
 def _extract_pot_conds(all_conditions: Dict[v.StateVariable, np.ndarray], idx: int) -> Dict[v.StateVariable, float]:
@@ -310,8 +157,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                 else:
                     has_missing_comp_cond = False
                     mod = models[phase_name]
-                    sitefrac_soln = _solve_sitefracs_composition(mod, comp_conds)
-                    phase_points = _sample_solution_constitution(mod, sitefrac_soln)
+                    phase_points = _sample_phase_constitution(mod, point_sample, True, 50)
                 vtx = RegionVertex(phase_name, comp_conds, phase_points, phase_recs, disordered_flag, has_missing_comp_cond)
                 vertices.append(vtx)
             region = PhaseRegion(vertices, pot_conds, dbf, species, data_phases, models)
@@ -361,7 +207,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
             str_statevar_dict = OrderedDict([(str(key), cond_dict[key]) for key in sorted(phase_region.potential_conds.keys(), key=str)])
-            grid = calculate_(dbf, species, phases, str_statevar_dict, models, phase_records, pdens=500, fake_points=True)
+            grid = calculate_(dbf, species, phases, str_statevar_dict, models, phase_records, pdens=50, fake_points=True)
             multi_eqdata = _equilibrium(species, phase_records, cond_dict, grid)
             target_hyperplane_phases.append(multi_eqdata.Phase.squeeze())
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
@@ -400,7 +246,7 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
         # We don't have the phase composition here, so we estimate the driving force.
         # Can happen if one of the composition conditions is unknown or if the phase is
         # stoichiometric and the user did not specify a valid phase composition.
-        single_eqdata = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, pdens=500)
+        single_eqdata = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, pdens=50)
         df = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(df.max())
     elif vertex.is_disordered:
@@ -424,17 +270,19 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, comps: S
         # TODO: we probably should be passing desired_sitefracs to calculate_
         # here since the internal DOF is fixed. This should satisfy the same
         # effect as passing phase_points in the other calls here.
-        single_eqdata = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, pdens=500)
+        single_eqdata = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, pdens=50)
         driving_force = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(np.squeeze(driving_force))
     else:
         # Extract energies from single-phase calculations
-        grid = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, points=phase_points, pdens=500, fake_points=True)
-        single_eqdata = _equilibrium(species, phase_records, cond_dict, grid)
-        if np.all(np.isnan(single_eqdata.NP)):
-            _log.debug('Calculation failure: all NaN phases with phases: %s, conditions: %s, parameters %s', current_phase, cond_dict, parameters)
+        grid = calculate_(dbf, species, [current_phase], str_statevar_dict, models, phase_records, points=phase_points, pdens=50, fake_points=True)
+        converged, energy = constrained_equilibrium(species, phase_records, cond_dict, grid)
+
+        if not converged:
+            _log.debug('Calculation failure: constrained equilibrium not converged for %s, conditions: %s, parameters %s', current_phase, cond_dict, parameters)
             return np.inf
-        select_energy = float(single_eqdata.GM)
+        select_energy = float(energy)
+        # TODO: make region_comps part of the RegionVertex so we can take the dot product right away
         region_comps = []
         for comp in [c for c in sorted(comps) if c != 'VA']:
             region_comps.append(cond_dict.get(v.X(comp), np.nan))

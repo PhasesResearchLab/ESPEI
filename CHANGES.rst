@@ -7,6 +7,8 @@ What's New
 
 Improvements
 ------------
+* Migrate to pycalphad's new minimizer (`@bocklund`_ - :issue:`196`)
+* Fix a memory issue in large sublattice models by using the new minimizer to implement constrained driving forces (`@bocklund`_ - :issue:`196`)
 * Fix a regression where ``plot_interaction`` and ``plot_endmember`` re-used reference labels and markers (`@bocklund`_ - :issue:`187`)
 * Parameter selection now adds and fits only phases which in the phase models and are active (`@bocklund`_ - :issue:`188`)
 * Fix a bug where ``plot_interaction`` and ``plot_endmember`` would raise an error when axes were not passed explicitly (`@bocklund`_ - :issue:`191`)
