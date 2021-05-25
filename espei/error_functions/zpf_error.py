@@ -115,6 +115,21 @@ def _compute_vertex_composition(comps: Sequence[str], comp_conds: Dict[str, floa
     return vertex_composition
 
 
+def _subsample_phase_points(phase_record, phase_points, target_composition, avg_mass_residual_tol=0.02):
+    # Compute the mole fractions of each point
+    phase_compositions = np.zeros((phase_points.shape[0], target_composition.size), order='F')
+    statevar_placeholder = np.zeros((phase_points.shape[0], 3))  # assume N, P, T
+    dof = np.hstack((statevar_placeholder, phase_points))
+    for el_idx in range(target_composition.size):
+        phase_record.mass_obj_2d(phase_compositions[:, el_idx], dof, el_idx)
+
+    # Find the points indicdes where the mass is within the average mass residual tolerance
+    idxs = np.nonzero(np.mean(np.abs(phase_compositions - target_composition), axis=1) < avg_mass_residual_tol)[0]
+
+    # Return the sub-space of points where this condition holds valid
+    return phase_points[idxs]
+
+
 def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], datasets: PickleableTinyDB, parameters: Dict[str, float]):
     """
     Return the ZPF data used in the calculation of ZPF error
@@ -145,6 +160,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         species = sorted(unpack_components(dbf, data_comps), key=str)
         data_phases = filter_phases(dbf, species, candidate_phases=phases)
         models = instantiate_models(dbf, species, data_phases, parameters=parameters)
+        all_phase_points = {phase_name: _sample_phase_constitution(models[phase_name], point_sample, True, 50) for phase_name in data_phases}
         all_regions = data['values']
         conditions = data['conditions']
         phase_regions = []
@@ -171,7 +187,10 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                     phase_points = None
                 else:
                     has_missing_comp_cond = False
-                    phase_points = _sample_phase_constitution(mod, point_sample, True, 50)
+                    # Only sample points that have an average mass residual within tol
+                    tol = 0.02
+                    phase_points = _subsample_phase_points(phase_recs[phase_name], all_phase_points[phase_name], composition, tol)
+                    assert phase_points.shape[0] > 0, "at least one set of points is within the target tolerance"
                 vtx = RegionVertex(phase_name, composition, comp_conds, phase_points, phase_recs, disordered_flag, has_missing_comp_cond)
                 vertices.append(vtx)
             region = PhaseRegion(vertices, pot_conds, species, data_phases, models)
