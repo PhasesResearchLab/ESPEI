@@ -66,14 +66,14 @@ def calculate_(species: Sequence[v.Species], phases: Sequence[str],
                str_statevar_dict: Dict[str, np.ndarray], models: Dict[str, Model],
                phase_records: Dict[str, PhaseRecord], output: Optional[str] = 'GM',
                points: Optional[Dict[str, np.ndarray]] = None,
-               pdens: Optional[int] = 2000, broadcast: Optional[bool] = True,
+               pdens: Optional[int] = 50, broadcast: Optional[bool] = True,
                fake_points: Optional[bool] = False,
                ) -> LightDataset:
     """
     Quickly sample phase internal degree of freedom with virtually no overhead.
     """
     points_dict = unpack_kwarg(points, default_arg=None)
-    pdens_dict = unpack_kwarg(pdens, default_arg=2000)
+    pdens_dict = unpack_kwarg(pdens, default_arg=50)
     nonvacant_components = [x for x in sorted(species) if x.number_of_atoms > 0]
     maximum_internal_dof = max(prx.phase_dof for prx in phase_records.values())
     all_phase_data = []
