@@ -24,9 +24,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
+      - run: pip install -e .
+      - run: pip list
+      - run: pip install ipython furo sphinx
       # Build HTML and LaTeX docs
       # Treat all warnings as errors and "keep-going" to collect all warnings
-      - run: pip install ipython furo sphinx
       - name: Build HTML
         shell: bash
         run: |
