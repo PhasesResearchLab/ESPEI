@@ -26,6 +26,7 @@ jobs:
       - uses: actions/setup-python@v2
       # Build HTML and LaTeX docs
       # Treat all warnings as errors and "keep-going" to collect all warnings
+      - run: pip install ipython furo sphinx
       - name: Build HTML
         shell: bash
         run: |
@@ -49,6 +50,8 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - run: pip install -e .
+    - run: pip list
+    - run: pip install pytest
     - run: pytest -v
 
   PyTest-develop:
@@ -76,4 +79,6 @@ jobs:
         cd ..
         python -c 'import pycalphad; print(f"pycalphad version: {pycalphad.__version__}")'
     - run: pip install -e .
+    - run: pip list
+    - run: pip install pytest
     - run: pytest -v
