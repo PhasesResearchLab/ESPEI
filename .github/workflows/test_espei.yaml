@@ -23,56 +23,62 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          auto-update-conda: true
-          environment-file: environment-dev.yml
+      - uses: actions/setup-python@v2
+      - run: pip install -e .[dev]
+      - run: pip list
       # Build HTML and LaTeX docs
       # Treat all warnings as errors and "keep-going" to collect all warnings
       - name: Build HTML
-        shell: bash -l {0}
+        shell: bash
         run: |
           cd docs
           make SPHINXOPTS="-W --keep-going" html
 
 # PyTest: Run automated tests with PyTest using both release and development versions of pycalphad
-  PyTest:
-    name: Test Python ${{ matrix.python-version }} - pycalphad dev version ${{ matrix.pycalphad_develop_version }}
+  PyTest-release:
+    name: Test Python ${{ matrix.python-version }} - pycalphad release
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       max-parallel: 100
       matrix:
         python-version: [3.7, 3.8, 3.9]
-        pycalphad_develop_version: [true, false]
-
     steps:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
-    - uses: conda-incubator/setup-miniconda@v2
+    - uses: actions/setup-python@v2
       with:
-        auto-update-conda: true
         python-version: ${{ matrix.python-version }}
-        environment-file: environment-dev.yml
-    - name: Conda info
-      # login shell should be used so conda activate runs
-      shell: bash -l {0}
-      run: conda info
-    - name: Conda list
-      shell: bash -l {0}
-      run: conda list
+    - run: pip install --editable .[dev]
+    - run: pip list
+    - run: pytest -v
+
+  PyTest-develop:
+    name: Test Python ${{ matrix.python-version }} - pycalphad develop
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 100
+      matrix:
+        python-version: [3.7, 3.8, 3.9]
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
+    - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
     - name: Install pycalphad development version
-      shell: bash -l {0}
-      if: matrix.pycalphad_develop_version
+      shell: bash
       run: |
-        conda remove --force pycalphad
         git clone https://github.com/pycalphad/pycalphad pycalphad-dev
         cd pycalphad-dev
         git checkout develop
-        pip install --no-deps -e .
+        pip install -U -r requirements-dev.txt
+        pip install -U --no-build-isolation --editable .
         cd ..
         python -c 'import pycalphad; print(f"pycalphad version: {pycalphad.__version__}")'
-    - name: Test with pytest
-      shell: bash -l {0}
-      run: pytest -v
+    - run: pip install --editable .[dev]
+    - run: pip list
+    - run: pytest -v
