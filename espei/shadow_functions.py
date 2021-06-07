@@ -7,7 +7,7 @@ from collections import OrderedDict
 from typing import Sequence, Dict, Optional
 from numpy.typing import ArrayLike
 import numpy as np
-from pycalphad import Database, Model, variables as v
+from pycalphad import Model, variables as v
 from pycalphad.core.phase_rec import PhaseRecord
 from pycalphad.core.composition_set import CompositionSet
 from pycalphad.core.starting_point import starting_point
@@ -16,7 +16,7 @@ from pycalphad.core.equilibrium import _adjust_conditions
 from pycalphad.core.utils import get_state_variables, unpack_kwarg, point_sample
 from pycalphad.core.light_dataset import LightDataset
 from pycalphad.core.calculate import _sample_phase_constitution, _compute_phase_values
-from pycalphad.core.solver import SundmanSolver
+from pycalphad.core.solver import Solver
 
 
 def update_phase_record_parameters(phase_records: Dict[str, PhaseRecord], parameters: ArrayLike) -> None:
@@ -121,7 +121,7 @@ def constrained_equilibrium(species: Sequence[v.Species], phase_records: Dict[st
     str_conds = OrderedDict([(str(ky), conditions[ky][0]) for ky in sorted(conditions.keys(), key=str)])
     compset = _single_phase_start_point(conditions, statevars, phase_records, grid)
     # modifies `compset` in place
-    solver_result = pointsolve([compset], species, str_conds, SundmanSolver())
+    solver_result = pointsolve([compset], species, str_conds, Solver())
     energy = compset.NP * compset.energy
     return solver_result.converged, energy
 

@@ -24,9 +24,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
-      - run: pip install -e .
+      - run: pip install -e .[dev]
       - run: pip list
-      - run: pip install ipython furo sphinx
       # Build HTML and LaTeX docs
       # Treat all warnings as errors and "keep-going" to collect all warnings
       - name: Build HTML
@@ -51,11 +50,8 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - run: exit 1
-      name: TEMPORARILY DISABLED UNTIL A PYPI COMPATIBLE RELEASE EXISTS
-    - run: pip install -e .
+    - run: pip install --editable .[dev]
     - run: pip list
-    - run: pip install pytest
     - run: pytest -v
 
   PyTest-develop:
@@ -79,10 +75,10 @@ jobs:
         git clone https://github.com/pycalphad/pycalphad pycalphad-dev
         cd pycalphad-dev
         git checkout develop
-        pip install .
+        pip install -U -r requirements-dev.txt
+        pip install -U --no-build-isolation --editable .
         cd ..
         python -c 'import pycalphad; print(f"pycalphad version: {pycalphad.__version__}")'
-    - run: pip install -e .
+    - run: pip install --editable .[dev]
     - run: pip list
-    - run: pip install pytest
     - run: pytest -v
