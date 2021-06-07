@@ -2,17 +2,46 @@ Installation
 ============
 
 
-Anaconda
---------
+pip (recommended)
+-----------------
 
-Installing ESPEI from PyPI (by ``pip install espei``) is **not** supported.
-Please install ESPEI using Anaconda package manager.
-If you do not have Anaconda installed, we recommend you download and install `Miniconda3 <https://docs.conda.io/en/latest/miniconda.html>`_.
-Optionally, you may also be want to install `JupyterLab <https://jupyter.org>`_ at the same time.
+To install ESPEI from PyPI using pip:
 
 .. code-block:: bash
 
-    conda install -c conda-forge espei jupyterlab
+   pip install -U pip
+   pip install -U espei
+
+A recommended best practice is to install Python packages into a virtual environment.
+To create an environment and install ESPEI on Linux and macOS/OSX:
+
+.. code-block:: bash
+
+   python -m venv calphad-env
+   source calphad-env/bin/activate
+   pip install -U pip
+   pip install -U pycalphad
+
+On Windows:
+
+.. code-block:: batch
+
+   python -m venv calphad-env
+   calphad-env\Scripts\activate
+   pip install -U pip
+   pip install -U pycalphad
+
+
+Anaconda
+--------
+
+If you prefer using Anaconda, ESPEI is distributed on conda-forge.
+If you do not have Anaconda installed, we recommend you download and install `Miniconda3 <https://docs.conda.io/en/latest/miniconda.html>`_.
+ESPEI can be installed with the conda package manager by:
+
+.. code-block:: bash
+
+    conda install -c conda-forge espei
 
 
 .. _installing-development-versions:
@@ -24,53 +53,27 @@ To make changes to the ESPEI source code, the development version must be
 installed. If you'll need to make changes to pycalphad simultaneously, follow
 the `instructions to install the development version of pycalphad <https://pycalphad.org/docs/latest/INSTALLING.html#development-versions-advanced-users>`_ first.
 
-We recommend that users interested in developing packages work in a
-`Conda virtual environment <https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/environments.html>`_.
-The steps below will create an environment called ``espei-dev``, which can be
-entered using ``conda activate espei-dev``.
+We strongly recommend that users interested in developing packages work in a virtual environment.
+The steps below will create an environment called ``calphad-dev``, which can be
+entered using ``source calphad-dev/bin/activate`` on Linux or macOS/OSX or
+``activate calphad-dev\bin\activate`` on Windows.
 The environment name is arbitrary - you can use whatever name you prefer.
-If you already have an environment, use ``conda env update ...`` instead of
-``conda env create ...`` when following the steps below.
 
 ESPEI uses `Git <https://git-scm.com/book/en/v2>`_ and
 `GitHub <https://github.com/PhasesResearchLab/ESPEI>`_ for version control.
 Windows users: if you do not have a working version of Git,
 `download it here <https://git-scm.com/downloads>`_ first.
 
-To install the latest development version of ESPEI, use Anaconda to install the
-required dependencies using the ``environment-dev.yml`` file found in ESPEI's
-repository, then install ESPEI as editable using ``pip``.:
+To install the latest development version of ESPEI using pip:
 
 .. code-block:: bash
 
-    git clone https://github.com/phasesresearchlab/espei.git
-    cd espei
-    conda env create -n espei-dev --file environment-dev.yml
-    conda activate espei-dev
-    pip install --no-deps -e .
-
-Optionally, you may also be want to install `JupyterLab <https://jupyter.org>`_.
-Each environment needs its own copy of JupyterLab, so you will need to install
-it even if it is already installed in your ``base`` environment.
-You can install it to your ``espei-dev`` environment by running
-
-
-.. code-block:: bash
-
-    conda install -n espei-dev jupyterlab
-
-Every time you open a new terminal window, you start in the ``base``
-environment. You can activate your ``espei-dev`` environment by running
-
-.. code-block:: bash
-
-    conda activate espei-dev
-
-and return to your ``base`` environment by running
-
-.. code-block:: bash
-
-    conda deactivate espei-dev
+   python -m venv calphad-env
+   source calphad-env/bin/activate
+   git clone https://github.com/phasesresearchlab/espei.git
+   cd espei
+   pip install -U pip
+   pip install -U --editable .[dev]
 
 With the development version installed and your environment activated,
 you can run the automated tests by running
