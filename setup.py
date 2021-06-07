@@ -27,7 +27,7 @@ setup(
         'distributed>=2',
         'emcee<3',
         'matplotlib',
-        'numpy',
+        'numpy>=1.20',
         'pycalphad>=0.9.0',
         'pyyaml',
         'scikit-learn',
