@@ -5,6 +5,9 @@ What's New
 |version| (development)
 =======================
 
+0.8.4 (2021-06-06)
+==================
+
 Improvements
 ------------
 * Migrate to pycalphad's new minimizer (`@bocklund`_ - :issue:`196`)
@@ -15,6 +18,10 @@ Improvements
 * Fix a bug where reference keys were assumed to be present in ``dataplot``, ``plot_interaction`` and ``plot_endmember`` (`@bocklund`_ - :issue:`191`)
 * Documentation: Rewrite phase diagram datasets section, switch paper references to RST citations, reorganize sections into how-to/reference material appropriately (`@bocklund`_ - :issue:`192`)
 * Documentation: Switch from ``sphinx_rtd_theme`` to ``furo`` theme (`@bocklund`_ - :issue:`193`)
+
+Deprecations
+------------
+* pycalphad versions lower than 0.9.0 are no longer supported.
 
 0.8.3 (2021-05-08)
 ==================
