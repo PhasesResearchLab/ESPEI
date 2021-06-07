@@ -1,7 +1,12 @@
 version: 2
 
-conda:
-  environment: environment-dev.yml
+python:
+  version: 3.7
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - dev
 
 # PDF/LaTeX currently broken
 # see: https://github.com/PhasesResearchLab/ESPEI/issues/167
