@@ -239,7 +239,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
             # Note that we consider all phases in the system, not just ones in this tie region
             str_statevar_dict = OrderedDict([(str(key), cond_dict[key]) for key in sorted(phase_region.potential_conds.keys(), key=str)])
             grid = calculate_(species, phases, str_statevar_dict, models, phase_records, pdens=50, fake_points=True)
-            multi_eqdata = _equilibrium(species, phase_records, cond_dict, grid)
+            multi_eqdata = _equilibrium(phase_records, cond_dict, grid)
             target_hyperplane_phases.append(multi_eqdata.Phase.squeeze())
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
             # We should exclude those chemical potentials from the average because they are meaningless.
@@ -260,10 +260,6 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
                                 parameters: np.ndarray, approximate_equilibrium: bool = False) -> float:
     """Calculate the integrated driving force between the current hyperplane and target hyperplane.
     """
-    if approximate_equilibrium:
-        _equilibrium = no_op_equilibrium_
-    else:
-        _equilibrium = equilibrium_
     species = phase_region.species
     models = phase_region.models
     current_phase = vertex.phase_name
@@ -308,7 +304,8 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
     else:
         # Extract energies from single-phase calculations
         grid = calculate_(species, [current_phase], str_statevar_dict, models, phase_records, points=phase_points, pdens=50, fake_points=True)
-        converged, energy = constrained_equilibrium(species, phase_records, cond_dict, grid)
+        # TODO: consider enabling approximate for this?
+        converged, energy = constrained_equilibrium(phase_records, cond_dict, grid)
         if not converged:
             _log.debug('Calculation failure: constrained equilibrium not converged for %s, conditions: %s, parameters %s', current_phase, cond_dict, parameters)
             return np.inf
