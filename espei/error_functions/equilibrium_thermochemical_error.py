@@ -4,7 +4,7 @@ Calculate error due to equilibrium thermochemical properties.
 
 import logging
 from collections import OrderedDict
-from typing import NamedTuple, Sequence, Dict, Optional, Tuple
+from typing import NamedTuple, Sequence, Dict, Optional, Tuple, Type
 
 import numpy as np
 import tinydb
@@ -40,6 +40,7 @@ EqPropData = NamedTuple('EqPropData', (('dbf', Database),
 
 def build_eqpropdata(data: tinydb.database.Document,
                      dbf: Database,
+                     model: Optional[Dict[str, Type[Model]]] = None,
                      parameters: Optional[Dict[str, float]] = None,
                      data_weight_dict: Optional[Dict[str, float]] = None
                      ) -> EqPropData:
@@ -52,6 +53,8 @@ def build_eqpropdata(data: tinydb.database.Document,
         Document corresponding to a single ESPEI dataset.
     dbf : Database
         Database that should be used to construct the `Model` and `PhaseRecord` objects.
+    model : Optional[Dict[str, Type[Model]]]
+        Dictionary phase names to pycalphad Model classes.
     parameters : Optional[Dict[str, float]]
         Mapping of parameter symbols to values.
     data_weight_dict : Optional[Dict[str, float]]
@@ -74,7 +77,7 @@ def build_eqpropdata(data: tinydb.database.Document,
     data_comps = list(set(data['components']).union({'VA'}))
     species = sorted(unpack_components(dbf, data_comps), key=str)
     data_phases = filter_phases(dbf, species, candidate_phases=data['phases'])
-    models = instantiate_models(dbf, species, data_phases, parameters=parameters)
+    models = instantiate_models(dbf, species, data_phases, model=model, parameters=parameters)
     output = data['output']
     property_output = output.split('_')[0]  # property without _FORM, _MIX, etc.
     samples = np.array(data['values']).flatten()
@@ -114,6 +117,7 @@ def build_eqpropdata(data: tinydb.database.Document,
 def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
                                         phases: Sequence[str],
                                         datasets: PickleableTinyDB,
+                                        model: Optional[Dict[str, Model]] = None,
                                         parameters: Optional[Dict[str, float]] = None,
                                         data_weight_dict: Optional[Dict[str, float]] = None,
                                         ) -> Sequence[EqPropData]:
@@ -130,6 +134,8 @@ def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
         List of phases used to search for matching datasets.
     datasets : PickleableTinyDB
         Datasets that contain single phase data
+    model : Optional[Dict[str, Type[Model]]]
+        Dictionary phase names to pycalphad Model classes.
     parameters : Optional[Dict[str, float]]
         Mapping of parameter symbols to values.
     data_weight_dict : Optional[Dict[str, float]]
@@ -157,7 +163,7 @@ def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
 
     eq_thermochemical_data = []  # 1:1 correspondence with each dataset
     for data in desired_data:
-        eq_thermochemical_data.append(build_eqpropdata(data, dbf, parameters=parameters, data_weight_dict=data_weight_dict))
+        eq_thermochemical_data.append(build_eqpropdata(data, dbf, model=model, parameters=parameters, data_weight_dict=data_weight_dict))
     return eq_thermochemical_data
 
 

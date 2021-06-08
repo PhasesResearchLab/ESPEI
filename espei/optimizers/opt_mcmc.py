@@ -37,8 +37,9 @@ class EmceeOptimizer(OptimizerBase):
     [1] Goodman and Weare, Ensemble Samplers with Affine Invariance. Commun. Appl. Math. Comput. Sci. 5, 65-80 (2010).
     [2] Foreman-Mackey, Hogg, Lang, Goodman, emcee: The MCMC Hammer. Publ. Astron. Soc. Pac. 125, 306-312 (2013).
     """
-    def __init__(self, dbf, scheduler=None):
+    def __init__(self, dbf, phase_models=None, scheduler=None):
         super(EmceeOptimizer, self).__init__(dbf)
+        self.phase_models = phase_models
         self.scheduler = scheduler
         self.save_interval = 1
         # These are set by the _fit method
@@ -228,7 +229,7 @@ class EmceeOptimizer(OptimizerBase):
         # Set NumPy print options so logged arrays print on one line. Reset at the end.
         np.set_printoptions(linewidth=sys.maxsize)
         cbs = self.scheduler is None
-        ctx = setup_context(self.dbf, ds, symbols, data_weights=mcmc_data_weights, make_callables=cbs)
+        ctx = setup_context(self.dbf, ds, symbols, data_weights=mcmc_data_weights, phase_models=self.phase_models, make_callables=cbs)
         symbols_to_fit = ctx['symbols_to_fit']
         initial_guess = np.array([unpack_piecewise(self.dbf.symbols[s]) for s in symbols_to_fit])
 

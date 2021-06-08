@@ -377,7 +377,7 @@ def test_equilibrium_thermochemical_error_computes_correct_probability(datasets_
     assert np.all(np.isclose(errors, expected_vals))
 
     # VV0017 (LIQUID, L0)
-    eqdata = get_equilibrium_thermochemical_data(dbf, ['CU', 'MG'], phases, datasets_db, {'VV0017': -31626.6})
+    eqdata = get_equilibrium_thermochemical_data(dbf, ['CU', 'MG'], phases, datasets_db, parameters={'VV0017': -31626.6})
     # unchanged, should be the same as before
     errors, weights = calc_prop_differences(eqdata[0], np.array([-31626.6]))
     assert np.all(np.isclose(errors, [-31626.6*0.5*0.5]))

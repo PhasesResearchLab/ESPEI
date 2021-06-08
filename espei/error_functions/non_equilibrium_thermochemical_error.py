@@ -126,7 +126,7 @@ def get_prop_samples(desired_data, constituents):
     return calculate_dict
 
 
-def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symbols_to_fit=None):
+def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dict=None, symbols_to_fit=None):
     """
 
     Parameters
@@ -139,6 +139,8 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
         List of phases to consider
     datasets : espei.utils.PickleableTinyDB
         Datasets that contain single phase data
+    model : Optional[Dict[str, Type[Model]]]
+        Dictionary phase names to pycalphad Model classes.
     weight_dict : dict
         Dictionary of weights for each data type, e.g. {'HM': 200, 'SM': 2}
     symbols_to_fit : list
@@ -152,6 +154,9 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
     # phase by phase, then property by property, then by model exclusions
     if weight_dict is None:
         weight_dict = {}
+
+    if model is None:
+        model = {}
 
     if symbols_to_fit is not None:
         symbols_to_fit = sorted(symbols_to_fit)
@@ -201,7 +206,8 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
                 # TODO: run `core_utils.filter_configurations`
                 curr_data = filter_temperatures(curr_data)
                 calculate_dict = get_prop_samples(curr_data, constituents)
-                mod = Model(dbf, comps, phase_name, parameters=symbols_to_fit)
+                model_cls = model.get(phase_name, Model)
+                mod = model_cls(dbf, comps, phase_name, parameters=symbols_to_fit)
                 if prop.endswith('_FORM'):
                     output = ''.join(prop.split('_')[:-1])+'R'
                     mod.shift_reference_state(ref_states, dbf, contrib_mods={e: sympy.S.Zero for e in exclusion})
