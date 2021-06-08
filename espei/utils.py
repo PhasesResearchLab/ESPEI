@@ -4,7 +4,7 @@ Utilities for ESPEI
 Classes and functions defined here should have some reuse potential.
 """
 
-from typing import Any
+from typing import Any, Dict, Type
 import importlib
 import itertools
 import re
@@ -13,7 +13,7 @@ from collections import namedtuple
 import numpy as np
 import sympy
 from distributed import Client
-from pycalphad import variables as v
+from pycalphad import Model, variables as v
 from sympy import Symbol
 from tinydb import TinyDB, where
 from tinydb.storages import MemoryStorage
@@ -381,12 +381,9 @@ def import_qualified_object(obj_path: str) -> Any:
     """
     Import an object from a fully qualified import path.
 
-    Returns
-    -------
-    Any
-
     Examples
     --------
+    >>> from espei.utils import import_qualified_object
     >>> Mod = import_qualified_object('pycalphad.model.Model')
     >>> from pycalphad.model import Model
     >>> assert Mod is Model
@@ -397,3 +394,29 @@ def import_qualified_object(obj_path: str) -> Any:
     mod = importlib.import_module(module_import_path)
     obj = getattr(mod, obj_name)
     return obj
+
+
+# TODO: Type[Model] should be updated to Type[ModelProtocol] when that exists
+def get_model_dict(phase_models: dict) -> Dict[str, Type[Model]]:
+    """
+    Return a pycalphad-style model dictionary mapping phase names to model classes.
+
+    If a phase's "model" key is not specified, no entry is created. In practice, the
+    behavior of the defaults would be handled by pycalphad.
+
+    Parameters
+    ----------
+    phase_models : dict
+        ESPEI-style phase models dictionary
+
+    Returns
+    -------
+    Any
+
+    """
+    model_dict = {}
+    for phase_name, phase_dict in phase_models["phases"].items():
+        qualified_model_class = phase_dict.get("model")
+        if qualified_model_class is not None:
+            model_dict[phase_name] = import_qualified_object(qualified_model_class)
+    return model_dict
