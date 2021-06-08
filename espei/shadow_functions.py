@@ -11,7 +11,7 @@ from pycalphad import Model, variables as v
 from pycalphad.core.phase_rec import PhaseRecord
 from pycalphad.core.composition_set import CompositionSet
 from pycalphad.core.starting_point import starting_point
-from pycalphad.core.eqsolver import _solve_eq_at_conditions, pointsolve
+from pycalphad.core.eqsolver import _solve_eq_at_conditions, solve_and_update
 from pycalphad.core.equilibrium import _adjust_conditions
 from pycalphad.core.utils import get_state_variables, unpack_kwarg, point_sample
 from pycalphad.core.light_dataset import LightDataset
@@ -112,7 +112,7 @@ def calculate_(species: Sequence[v.Species], phases: Sequence[str],
     return final_ds
 
 
-def constrained_equilibrium(species: Sequence[v.Species], phase_records: Dict[str, PhaseRecord],
+def constrained_equilibrium(phase_records: Dict[str, PhaseRecord],
                  conditions: Dict[v.StateVariable, np.ndarray], grid: LightDataset):
     """Perform an equilibrium calculation with just a single composition set that is constrained to the global composition condition"""
     statevars = get_state_variables(conds=conditions)
@@ -121,11 +121,11 @@ def constrained_equilibrium(species: Sequence[v.Species], phase_records: Dict[st
     str_conds = OrderedDict([(str(ky), conditions[ky][0]) for ky in sorted(conditions.keys(), key=str)])
     compset = _single_phase_start_point(conditions, statevars, phase_records, grid)
     # modifies `compset` in place
-    solver_result = pointsolve([compset], species, str_conds, Solver())
+    solver_result = solve_and_update([compset], str_conds, Solver())
     energy = compset.NP * compset.energy
     return solver_result.converged, energy
 
-def equilibrium_(species: Sequence[v.Species], phase_records: Dict[str, PhaseRecord],
+def equilibrium_(phase_records: Dict[str, PhaseRecord],
                  conditions: Dict[v.StateVariable, np.ndarray], grid: LightDataset
                  ) -> LightDataset:
     """
@@ -135,10 +135,10 @@ def equilibrium_(species: Sequence[v.Species], phase_records: Dict[str, PhaseRec
     conditions = _adjust_conditions(conditions)
     str_conds = OrderedDict([(str(ky), conditions[ky]) for ky in sorted(conditions.keys(), key=str)])
     start_point = starting_point(conditions, statevars, phase_records, grid)
-    return _solve_eq_at_conditions(species, start_point, phase_records, grid, str_conds, statevars, False)
+    return _solve_eq_at_conditions(start_point, phase_records, grid, str_conds, statevars, False)
 
 
-def no_op_equilibrium_(_, phase_records: Dict[str, PhaseRecord],
+def no_op_equilibrium_(phase_records: Dict[str, PhaseRecord],
                        conditions: Dict[v.StateVariable, np.ndarray],
                        grid: LightDataset,
                        ) -> LightDataset:

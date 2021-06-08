@@ -210,7 +210,7 @@ def calc_prop_differences(eqpropdata: EqPropData,
         # str_statevar_dict must be sorted, assumes that pot_conds are.
         str_statevar_dict = OrderedDict([(str(key), vals) for key, vals in pot_conds.items()])
         grid = calculate_(species, phases, str_statevar_dict, models, phase_records, pdens=50, fake_points=True)
-        multi_eqdata = _equilibrium(species, phase_records, cond_dict, grid)
+        multi_eqdata = _equilibrium(phase_records, cond_dict, grid)
         # TODO: could be kind of slow. Callables (which are cachable) must be built.
         propdata = _eqcalculate(dbf, species, phases, cond_dict, output, data=multi_eqdata, per_phase=False, callables=None, parameters=params_dict, model=models)
 
