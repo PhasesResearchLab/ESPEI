@@ -4,6 +4,8 @@ Utilities for ESPEI
 Classes and functions defined here should have some reuse potential.
 """
 
+from typing import Any
+import importlib
 import itertools
 import re
 from collections import namedtuple
@@ -373,3 +375,25 @@ def extract_aliases(phase_models):
             else:
                 raise ValueError(f"Cannot add {alias} as an alias for {phase_name} because it is already used by {aliases[alias]}")
     return aliases
+
+
+def import_qualified_object(obj_path: str) -> Any:
+    """
+    Import an object from a fully qualified import path.
+
+    Returns
+    -------
+    Any
+
+    Examples
+    --------
+    >>> Mod = import_qualified_object('pycalphad.model.Model')
+    >>> from pycalphad.model import Model
+    >>> assert Mod is Model
+    """
+    split_path = obj_path.split('.')
+    module_import_path = '.'.join(split_path[:-1])
+    obj_name = split_path[-1]
+    mod = importlib.import_module(module_import_path)
+    obj = getattr(mod, obj_name)
+    return obj
