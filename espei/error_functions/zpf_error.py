@@ -118,7 +118,9 @@ def _compute_vertex_composition(comps: Sequence[str], comp_conds: Dict[str, floa
 def _subsample_phase_points(phase_record, phase_points, target_composition, avg_mass_residual_tol=0.02):
     # Compute the mole fractions of each point
     phase_compositions = np.zeros((phase_points.shape[0], target_composition.size), order='F')
-    statevar_placeholder = np.zeros((phase_points.shape[0], 3))  # assume N, P, T
+    # TODO: potential bug here if the composition has dependence (even piecewise
+    #   dependence) in the state variables. The compositions may be nan in this case.
+    statevar_placeholder = np.ones((phase_points.shape[0], phase_record.num_statevars))
     dof = np.hstack((statevar_placeholder, phase_points))
     for el_idx in range(target_composition.size):
         phase_record.mass_obj_2d(phase_compositions[:, el_idx], dof, el_idx)
