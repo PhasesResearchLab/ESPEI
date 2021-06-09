@@ -246,7 +246,7 @@ def run_espei(run_settings):
         approximate_equilibrium = mcmc_settings.get('approximate_equilibrium')
 
         # set up and run the EmceeOptimizer
-        optimizer = EmceeOptimizer(dbf, scheduler=client)
+        optimizer = EmceeOptimizer(dbf, phase_models=phase_models, scheduler=client)
         optimizer.save_interval = save_interval
         all_symbols = syms if syms is not None else database_symbols_to_fit(dbf)
         optimizer.fit(all_symbols, datasets, prior=prior, iterations=iterations,

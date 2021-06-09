@@ -126,7 +126,7 @@ def get_prop_samples(desired_data, constituents):
     return calculate_dict
 
 
-def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symbols_to_fit=None):
+def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dict=None, symbols_to_fit=None):
     """
 
     Parameters
@@ -139,6 +139,8 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
         List of phases to consider
     datasets : espei.utils.PickleableTinyDB
         Datasets that contain single phase data
+    model : Optional[Dict[str, Type[Model]]]
+        Dictionary phase names to pycalphad Model classes.
     weight_dict : dict
         Dictionary of weights for each data type, e.g. {'HM': 200, 'SM': 2}
     symbols_to_fit : list
@@ -152,6 +154,9 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
     # phase by phase, then property by property, then by model exclusions
     if weight_dict is None:
         weight_dict = {}
+
+    if model is None:
+        model = {}
 
     if symbols_to_fit is not None:
         symbols_to_fit = sorted(symbols_to_fit)
@@ -201,7 +206,8 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
                 # TODO: run `core_utils.filter_configurations`
                 curr_data = filter_temperatures(curr_data)
                 calculate_dict = get_prop_samples(curr_data, constituents)
-                mod = Model(dbf, comps, phase_name, parameters=symbols_to_fit)
+                model_cls = model.get(phase_name, Model)
+                mod = model_cls(dbf, comps, phase_name, parameters=symbols_to_fit)
                 if prop.endswith('_FORM'):
                     output = ''.join(prop.split('_')[:-1])+'R'
                     mod.shift_reference_state(ref_states, dbf, contrib_mods={e: sympy.S.Zero for e in exclusion})
@@ -217,17 +223,17 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
                         mod.reference_model.models[contrib] = sympy.S.Zero
                 species = sorted(unpack_components(dbf, comps), key=str)
                 data_dict['species'] = species
-                model = {phase_name: mod}
+                model_dict = {phase_name: mod}
                 statevar_dict = {getattr(v, c, None): vals for c, vals in calculate_dict.items() if isinstance(getattr(v, c, None), v.StateVariable)}
                 statevar_dict = OrderedDict(sorted(statevar_dict.items(), key=lambda x: str(x[0])))
                 str_statevar_dict = OrderedDict((str(k), vals) for k, vals in statevar_dict.items())
-                phase_records = build_phase_records(dbf, species, [phase_name], statevar_dict, model,
+                phase_records = build_phase_records(dbf, species, [phase_name], statevar_dict, model_dict,
                                                     output=output, parameters={s: 0 for s in symbols_to_fit},
                                                     build_gradients=False, build_hessians=False)
                 data_dict['str_statevar_dict'] = str_statevar_dict
                 data_dict['phase_records'] = phase_records
                 data_dict['calculate_dict'] = calculate_dict
-                data_dict['model'] = model
+                data_dict['model'] = model_dict
                 data_dict['output'] = output
                 data_dict['weights'] = np.array(property_std_deviation[prop.split('_')[0]])/np.array(calculate_dict.pop('weights'))
                 all_data_dicts.append(data_dict)

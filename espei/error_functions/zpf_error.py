@@ -17,7 +17,7 @@ composition conditions to calculate chemical potentials at.
 import logging
 from dataclasses import dataclass
 from collections import OrderedDict
-from typing import Sequence, Dict, Any, Union, List, Tuple
+from typing import Sequence, Dict, Any, Union, List, Tuple, Type, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -118,7 +118,9 @@ def _compute_vertex_composition(comps: Sequence[str], comp_conds: Dict[str, floa
 def _subsample_phase_points(phase_record, phase_points, target_composition, avg_mass_residual_tol=0.02):
     # Compute the mole fractions of each point
     phase_compositions = np.zeros((phase_points.shape[0], target_composition.size), order='F')
-    statevar_placeholder = np.zeros((phase_points.shape[0], 3))  # assume N, P, T
+    # TODO: potential bug here if the composition has dependence (even piecewise
+    #   dependence) in the state variables. The compositions may be nan in this case.
+    statevar_placeholder = np.ones((phase_points.shape[0], phase_record.num_statevars))
     dof = np.hstack((statevar_placeholder, phase_points))
     for el_idx in range(target_composition.size):
         phase_record.mass_obj_2d(phase_compositions[:, el_idx], dof, el_idx)
@@ -130,7 +132,7 @@ def _subsample_phase_points(phase_record, phase_points, target_composition, avg_
     return phase_points[idxs]
 
 
-def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], datasets: PickleableTinyDB, parameters: Dict[str, float]):
+def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], datasets: PickleableTinyDB, parameters: Dict[str, float], model: Optional[Dict[str, Type[Model]]] = None):
     """
     Return the ZPF data used in the calculation of ZPF error
 
@@ -144,6 +146,8 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         Datasets that contain single phase data
     parameters : dict
         Dictionary mapping symbols to optimize to their initial values
+    model : Optional[Dict[str, Type[Model]]]
+        Dictionary phase names to pycalphad Model classes.
 
     Returns
     -------
@@ -159,7 +163,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         data_comps = list(set(data['components']).union({'VA'}))
         species = sorted(unpack_components(dbf, data_comps), key=str)
         data_phases = filter_phases(dbf, species, candidate_phases=phases)
-        models = instantiate_models(dbf, species, data_phases, parameters=parameters)
+        models = instantiate_models(dbf, species, data_phases, model=model, parameters=parameters)
         all_phase_points = {phase_name: _sample_phase_constitution(models[phase_name], point_sample, True, 50) for phase_name in data_phases}
         all_regions = data['values']
         conditions = data['conditions']

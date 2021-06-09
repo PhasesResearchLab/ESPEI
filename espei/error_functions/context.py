@@ -7,12 +7,12 @@ from pycalphad import variables as v
 from pycalphad.codegen.callables import build_callables
 from pycalphad.core.utils import instantiate_models
 from espei.error_functions import get_zpf_data, get_thermochemical_data, get_equilibrium_thermochemical_data
-from espei.utils import database_symbols_to_fit
+from espei.utils import database_symbols_to_fit, get_model_dict
 
 _log = logging.getLogger(__name__)
 
 
-def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_callables=True):
+def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_models=None, make_callables=True):
     """
     Set up a context dictionary for calculating error.
 
@@ -54,12 +54,16 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
             dbf.symbols[x] = dbf.symbols[x].args[0].expr
 
     # construct the models for each phase, substituting in the SymPy symbol to fit.
+    if phase_models is not None:
+        model_dict = get_model_dict(phase_models)
+    else:
+        model_dict = {}
     _log.trace('Building phase models (this may take some time)')
     import time
     t1 = time.time()
     phases = sorted(dbf.phases.keys())
     parameters = dict(zip(symbols_to_fit, [0]*len(symbols_to_fit)))
-    models = instantiate_models(dbf, comps, phases, parameters=parameters)
+    models = instantiate_models(dbf, comps, phases, model=model_dict, parameters=parameters)
     if make_callables:
         eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=symbols_to_fit,
                             output='GM', build_gradients=True, build_hessians=True,
@@ -70,17 +74,17 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_ca
     _log.trace('Finished building phase models (%0.2fs)', t2-t1)
     _log.trace('Getting non-equilibrium thermochemical data (this may take some time)')
     t1 = time.time()
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=data_weights, symbols_to_fit=symbols_to_fit)
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, model=model_dict, weight_dict=data_weights, symbols_to_fit=symbols_to_fit)
     t2 = time.time()
     _log.trace('Finished getting non-equilibrium thermochemical data (%0.2fs)', t2-t1)
     _log.trace('Getting equilibrium thermochemical data (this may take some time)')
     t1 = time.time()
-    eq_thermochemical_data = get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, parameters, data_weight_dict=data_weights)
+    eq_thermochemical_data = get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, model=model_dict, parameters=parameters, data_weight_dict=data_weights)
     t2 = time.time()
     _log.trace('Finished getting equilibrium thermochemical data (%0.2fs)', t2-t1)
     _log.trace('Getting ZPF data (this may take some time)')
     t1 = time.time()
-    zpf_data = get_zpf_data(dbf, comps, phases, datasets, parameters)
+    zpf_data = get_zpf_data(dbf, comps, phases, datasets, model=model_dict, parameters=parameters)
     t2 = time.time()
     _log.trace('Finished getting ZPF data (%0.2fs)', t2-t1)
 
