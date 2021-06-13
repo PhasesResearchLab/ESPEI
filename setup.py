@@ -28,7 +28,7 @@ setup(
         'numpy>=1.20',
         'pycalphad>=0.9.0',
         'pyyaml',
-        'setuptools_scm[toml]>=6.0'
+        'setuptools_scm[toml]>=6.0',
         'scikit-learn',
         'scipy',
         'symengine',
