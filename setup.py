@@ -6,8 +6,6 @@ def readme(fname):
 
 setup(
     name='espei',
-    version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
     author='Brandon Bocklund',
     author_email='brandonbocklund@gmail.com',
     description='Fitting thermodynamic models with pycalphad.',
