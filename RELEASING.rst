@@ -2,46 +2,61 @@ Releasing ESPEI
 ===============
 
 Use this checklist to create a new release of ESPEI and distribute the package
-to PyPI and conda-forge. All steps are intended to be run from the root directory of the repository (i.e.
-the one containing ``docs/``, ``espei/``, ``setup.py``, ...).
+to PyPI and conda-forge. All steps are intended to be run from the root
+directory of the repository (i.e. the one containing ``docs/``, ``espei/``,
+``setup.py``, ...).
 
-Creating a new release
-----------------------
+Create a release of espei
+--------------------------
+To release a new version of espei:
 
-These steps will create a new tagged version in the GitHub repository.
+These steps assume that ``0.1`` is the most recently tagged version number and ``0.2`` is the next version number to be released.
+Replace their values with the last public release's version number and the new version number as appropriate.
 
-1. ``git pull`` to make sure you haven't missed any last-minute commits. **After this point, nothing else is making it into this version.**
+#. Determine what the next version number should be using `semantic versioning <https://semver.org/>`_.
+#. Resolve or defer all pull requests and issues tagged with the upcoming version milestone.
+#. ``git stash`` to save any uncommitted work.
+#. ``git checkout master``
+#. ``git pull`` to make sure you haven't missed any last-minute commits. **After this point, nothing else is making it into this version.**
 #. ``pytest`` to ensure that all tests pass locally.
-#. ``sphinx-apidoc -f -o docs/api/ espei/ -H 'API Documentation'`` to
-   regenerate API documentation.
-#. Commit the updated API documentation.
-#. ``git push`` and verify all tests pass on all CI services.
-#. Generate a list of commits since the last version with
-   ``git --no-pager log --oneline --no-decorate 0.1^..origin/master``.
-   Replace ``0.1`` with the tag of the last public version.
-#. Condense the change list into something user-readable. Update and commit
-   ``CHANGES.rst`` with the release date.
-#. ``git tag 0.2 master -m "0.2"`` Replace ``0.2`` with the new version.
-#. ``git show 0.2`` to ensure the correct commit was tagged.
-#. ``git push origin master --tags`` to push the tag to GitHub.
+#. ``sphinx-apidoc -f -H 'API Documentation' -o docs/api/ espei`` to regenerate the API documentation.
+#. Update ``CHANGES.rst`` with a human-readable list of changes since the last commit.
+   ``git log --oneline --no-decorate --color 0.1^..master`` can be used to list the changes since the last version.
+#. ``git add docs/api CHANGES.rst`` to stage the updated documentation.
+#. ``git commit -m "REL: 0.2"`` to commit the changes.
+#. ``git push origin master``
+#. **Verify that all continuous integration test and build workflows pass.**
+#. Create a release on GitHub
+
+   #. Go to https://github.com/phasesresearchlab/espei/releases/new
+   #. Set the "Tag version" field to ``0.2``.
+   #. Set the branch target to ``master``.
+   #. Set the "Release title" to ``espei 0.2``.
+   #. Leave the description box blank.
+   #. If this version is a pre-release, check the "This is a pre-release" box.
+   #. Click "Publish release".
+#. The new version will be available on PyPI when the ``Build and deploy to PyPI`` workflow on GitHub Actions finishes successfully.
 
 Now the public package must be built and distributed.
 
-Uploading to PyPI
------------------
+Deploy to PyPI (manually)
+-------------------------
 
-All tagged GitHub commits should be uploaded to PyPI automatically by the
-``deploy.yaml`` GitHub Action. If ESPEI needs to be released to PyPI manually,
-follow the steps below.
+.. warning::
 
-Manually uploading to PyPI
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+   DO NOT FOLLOW THESE STEPS unless the GitHub Actions deployment workflow is broken.
+   Creating a GitHub release should trigger the ``Build and deploy to PyPI`` workflow on GitHub Actions that will upload source and platform-dependent wheel distributions automatically.
 
-1. ``rm -R dist/*`` on Linux/OSX or ``del dist/*`` on Windows.
-#. ``python setup.py sdist`` to create a source distribution.
-#. Make sure that the script correctly detected the new version exactly and not a
-   dirty or revised state of the repository.
-#. ``twine upload -r pypi -u bocklund dist/*`` to upload to PyPI.
+To release a source distribution to PyPI:
+
+#. If deploying for the first time: ``pip install twine build``
+#. ``rm -R dist/*`` on Linux/OSX or ``del dist/*`` on Windows
+#. ``git checkout master`` to checkout the latest version
+#. ``git pull``
+#. ``git log`` to verify the repository state matches the newly created tag
+#. ``python -m build --sdist``
+#. **Make sure that the script correctly detected the new version exactly and not a dirty / revised state of the repo.**
+#. ``twine upload dist/*`` to upload (assumes a `correctly configured <https://packaging.python.org/specifications/pypirc/>`_ ``~/.pypirc`` file)
 
 
 Updating the conda-forge feedstock

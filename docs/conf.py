@@ -19,11 +19,12 @@
 #
 import os
 import sys
+import re
+
 sys.path.insert(0, os.path.abspath('..'))  # For autodoc and version loading
 from espei import __version__ as espei_version
-# Cleanup ESPEI version, since RTD dirties the repository
-if espei_version.endswith('.dirty'):
-    espei_version = espei_version[:-6]
+# Cleanup dirty local version, since RTD dirties the repository
+espei_version = re.sub('\.d[0-9]{8}', '', espei_version)
 
 # -- General configuration ------------------------------------------------
 
@@ -113,6 +114,11 @@ html_logo = '_static/ESPEI-logo-withtext@200px.png'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+# These paths are either relative to html_static_path
+# or fully qualified paths (eg. https://...)
+html_css_files = [
+    'css/custom.css',
+]
 
 # -- Options for HTMLHelp output ------------------------------------------
 

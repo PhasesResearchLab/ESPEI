@@ -3,20 +3,6 @@ name: ESPEI tests
 on: [push, pull_request]
 
 jobs:
-
-# twine-check: Check that the source distribution would be valid on PyPI
-  twine-check:
-    name: Run twine check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.x'
-      - run: pip install twine
-      - run: python setup.py sdist
-      - run: twine check dist/*
-
 # sphinx-build: Check that the documentation builds html with no warnings
   sphinx-build:
     name: Run sphinx-build
