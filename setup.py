@@ -1,6 +1,5 @@
 from setuptools import setup
 import os
-import versioneer
 
 def readme(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
@@ -26,10 +25,12 @@ setup(
         'dask[complete]>=2',
         'distributed>=2',
         'emcee<3',
+        'importlib_metadata',  # drop for Python>=3.8
         'matplotlib',
         'numpy>=1.20',
         'pycalphad>=0.9.0',
         'pyyaml',
+        'setuptools_scm[toml]>=6.0'
         'scikit-learn',
         'scipy',
         'symengine',
