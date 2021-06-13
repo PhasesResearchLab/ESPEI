@@ -1,0 +1,17 @@
+[build-system]
+requires = [
+    "setuptools>=45",
+    "setuptools_scm[toml]>=6.0",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+norecursedirs = ["espei/_dev"]
+addopts = "--doctest-modules"
+testpaths = [
+    "espei",
+    "tests",
+]
+
+[tool.setuptools_scm]
