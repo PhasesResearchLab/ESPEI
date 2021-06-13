@@ -17,6 +17,7 @@
    self
    installation
    quickstart
+   CHANGES
 
 ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for thermodynamic database development within the CALPHAD method. It uses `pycalphad`_ for calculating Gibbs free energies of thermodynamic models.
 
@@ -65,18 +66,13 @@ After developing `pycalphad`_, Richard Otis reimagined the concept and wrote
 The modern verison of ESPEI described here was created by forking
 `pycalphad-fitting`_. Implementation details can be found in [Bocklund2019]_.
 
-Change log
-----------
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-   :caption: What's new
-
-   CHANGES
+Changelog
+---------
 
 See `what's new <CHANGES.html>`_!
 
+Documentation
+-------------
 
 .. raw:: latex
 
@@ -137,7 +133,7 @@ See `what's new <CHANGES.html>`_!
    \chapter{Appendices}
 
 Getting Help
-============
+------------
 
 For help on installing and using ESPEI, please join the `PhasesResearchLab/ESPEI Gitter room <https://gitter.im/PhasesResearchLab/ESPEI>`_.
 
@@ -145,7 +141,7 @@ Bugs and software issues should be reported on `GitHub <https://github.com/Phase
 
 
 License
-=======
+-------
 
 ESPEI is MIT licensed.
 
@@ -177,7 +173,7 @@ ESPEI is MIT licensed.
 
 
 Citing ESPEI
-============
+------------
 
 If you use ESPEI for work presented in a publication, we ask that you cite the following publication:
 
@@ -203,7 +199,7 @@ B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for 
 .. only:: html
 
    Indices and tables
-   ==================
+   ------------------
 
    * :ref:`genindex`
    * :ref:`modindex`
@@ -213,7 +209,7 @@ B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for 
 .. _pycalphad: http://pycalphad.org
 
 References
-==========
+----------
 
 .. [Bocklund2019] Bocklund *et al.*, MRS Communications 9(2) (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_
 .. [Coughanowr1991] Coughanowr *et al.*, Assessment of the Cu-Mg system. Zeitschrift f{ü}r Met. 82, 574–581 (1991).
