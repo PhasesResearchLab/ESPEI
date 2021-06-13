@@ -44,7 +44,7 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
           user: __token__
-          password: ${{ secrets.PYPI_SCHEIL_TOKEN }}
+          password: ${{ secrets.PYPI_ESPEI_TOKEN }}
           # To test, uncomment the following:
-          # password: ${{ secrets.TEST_PYPI_SCHEIL_TOKEN }}
+          # password: ${{ secrets.TEST_PYPI_ESPEI_TOKEN }}
           # repository_url: https://test.pypi.org/legacy/
