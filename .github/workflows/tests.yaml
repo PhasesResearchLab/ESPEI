@@ -10,6 +10,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
+      # Development version for development docs
+      - name: Install pycalphad development version
+        run: pip install git+https://github.com/pycalphad/pycalphad.git@develop
       - run: pip install -e .[dev]
       - run: pip list
       # Build HTML and LaTeX docs
@@ -56,15 +59,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install pycalphad development version
-      shell: bash
-      run: |
-        git clone https://github.com/pycalphad/pycalphad pycalphad-dev
-        cd pycalphad-dev
-        git checkout develop
-        pip install -U -r requirements-dev.txt
-        pip install -U --no-build-isolation --editable .
-        cd ..
-        python -c 'import pycalphad; print(f"pycalphad version: {pycalphad.__version__}")'
+      run: pip install git+https://github.com/pycalphad/pycalphad.git@develop
     - run: pip install --editable .[dev]
     - run: pip list
     - run: pytest -v
