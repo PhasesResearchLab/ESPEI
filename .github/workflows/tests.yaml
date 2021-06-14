@@ -10,6 +10,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
+      # Development version for development docs
+      - name: Install pycalphad development version
+        run: pip install git+https://github.com/pycalphad/pycalphad.git@develop
       - run: pip install -e .[dev]
       - run: pip list
       # Build HTML and LaTeX docs
