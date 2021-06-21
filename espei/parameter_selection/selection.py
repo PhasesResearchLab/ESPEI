@@ -85,11 +85,11 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     n = data_quantities.size
     pk = k*p
     aic = n * np.log(rss / n) + 2.0 * pk
-    if (n - 1.0) > pk:
-        correction = (2.0 * p**2 * k**2 + 2.0 * pk) / (n - pk - 1.0)
-    else:
+    if pk >= (n - 1.0):
         # Prevent the denominator of the proper mAICc from blowing up (pk = n - 1) or negative (pk > n - 1)
         correction = (2.0 * p**2 * k**2 + 2.0 * pk) * (-n + pk + 3.0)
+    else:
+        correction = (2.0 * p**2 * k**2 + 2.0 * pk) / (n - pk - 1.0)
     aicc = aic + correction  # model score
     _log.trace('%s rss: %s, AIC: %s, AICc: %s', feature_list, rss, aic, aicc)
     return aicc
