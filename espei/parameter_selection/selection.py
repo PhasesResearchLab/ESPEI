@@ -76,25 +76,20 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
         A model score
 
     """
-    factor = aicc_factor if aicc_factor is not None else 1.0
-    num_params = len(feature_list)
+    p = aicc_factor if aicc_factor is not None else 1.0
+    k = len(feature_list)
     rss = np.square((np.dot(feature_matrix, model_coefficients) - data_quantities.astype(np.float_))*np.array(weights)).sum()
     if np.abs(rss) < rss_numerical_limit:
         rss = rss_numerical_limit
     # Compute the corrected Akaike Information Criterion
-    # The correction is (2k^2 + 2k)/(n - k - 1)
-    # Our denominator for the correction must always be an integer by this equation.
-    # Our correction can blow up if (n-k-1) = 0 and if n - 1 < k (we will actually be *lowering* the AICc)
-    # So we will prevent blowing up by taking the denominator as 1/(k-n+1) for k > n - 1
-    num_samples = data_quantities.size
-    if (num_samples - 1.0) > num_params*factor:
-        correction_denom = num_samples - factor*num_params - 1.0
-    elif (num_samples - 1.0) == num_params*factor:
-        correction_denom = 0.99
+    n = data_quantities.size
+    pk = k*p
+    aic = n * np.log(rss / n) + 2.0 * pk
+    if pk >= (n - 1.0):
+        # Prevent the denominator of the proper mAICc from blowing up (pk = n - 1) or negative (pk > n - 1)
+        correction = (2.0 * p**2 * k**2 + 2.0 * pk) * (-n + pk + 3.0)
     else:
-        correction_denom = 1.0 / (factor*num_params - num_samples + 1.0)
-    correction = factor*(2.0*num_params**2 + 2.0*num_params)/correction_denom
-    aic = 2.0*factor*num_params + num_samples * np.log(rss/num_samples)
+        correction = (2.0 * p**2 * k**2 + 2.0 * pk) / (n - pk - 1.0)
     aicc = aic + correction  # model score
     _log.trace('%s rss: %s, AIC: %s, AICc: %s', feature_list, rss, aic, aicc)
     return aicc
