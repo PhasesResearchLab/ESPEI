@@ -5,6 +5,16 @@ Changelog
 |version| (development)
 =======================
 
+0.8.5 (2021-08-09)
+==================
+
+Improvements
+------------
+
+* Migrate to the new pycalphad internal APIs for the minimizer and ``calculate`` utilities (`@bocklund`_ - :issue:`201` and :issue:`206`)
+* Improve AICc formulation to have more consistent behavior when the number of data points is small (`@bocklund`_ - :issue:`205`)
+* Enable specifying custom pycalphad ``Model`` classes in MCMC simulations via the phase models data file (`@bocklund`_ - :issue:`202`)
+
 0.8.4 (2021-06-06)
 ==================
 
