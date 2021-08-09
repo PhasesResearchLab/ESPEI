@@ -93,6 +93,11 @@ def calculate_(species: Sequence[v.Species], phases: Sequence[str],
                                          parameters={})
         all_phase_data.append(phase_ds)
 
+    fp_offset = len(nonvacant_components) if fake_points else 0
+    running_total = [fp_offset] + list(np.cumsum([phase_ds['X'].shape[-2] for phase_ds in all_phase_data]))
+    islice_by_phase = {phase_name: slice(running_total[phase_idx], running_total[phase_idx+1], None)
+                       for phase_idx, phase_name in enumerate(sorted(phases))}
+
     if len(all_phase_data) > 1:
         concatenated_coords = all_phase_data[0].coords
 
@@ -109,6 +114,7 @@ def calculate_(species: Sequence[v.Species], phases: Sequence[str],
         final_ds = LightDataset(data_vars=concatenated_data_vars, coords=concatenated_coords)
     else:
         final_ds = all_phase_data[0]
+    final_ds.attrs['phase_indices'] = islice_by_phase
     return final_ds
 
 
