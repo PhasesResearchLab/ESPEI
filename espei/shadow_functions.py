@@ -61,7 +61,6 @@ def _single_phase_start_point(conditions, state_variables, phase_records, grid):
     return compset
 
 
-
 def calculate_(species: Sequence[v.Species], phases: Sequence[str],
                str_statevar_dict: Dict[str, np.ndarray], models: Dict[str, Model],
                phase_records: Dict[str, PhaseRecord], output: Optional[str] = 'GM',
@@ -93,7 +92,9 @@ def calculate_(species: Sequence[v.Species], phases: Sequence[str],
                                          parameters={})
         all_phase_data.append(phase_ds)
 
-    fp_offset = len(nonvacant_components) if fake_points else 0
+    # assumes phase_records all have the same nonvacant pure elements,
+    # even if those elements are not present in this phase record
+    fp_offset = len(tuple(phase_records.values())[0].nonvacant_elements) if fake_points else 0
     running_total = [fp_offset] + list(np.cumsum([phase_ds['X'].shape[-2] for phase_ds in all_phase_data]))
     islice_by_phase = {phase_name: slice(running_total[phase_idx], running_total[phase_idx+1], None)
                        for phase_idx, phase_name in enumerate(sorted(phases))}
