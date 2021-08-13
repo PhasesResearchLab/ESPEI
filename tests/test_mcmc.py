@@ -144,3 +144,33 @@ def test_equilibrium_thermochemical_correct_probability(datasets_db):
     prob = opt.predict(np.array([-40000], dtype=np.float_), **ctx)
     expected_prob = norm(loc=0, scale=500).logpdf([-40000*0.5*0.5]).sum()
     assert np.isclose(prob, expected_prob)
+
+def test_lnprob_calculates_associate_tdb(datasets_db):
+    """lnprob() successfully calculates the probability for equilibrium """
+    dbf = Database.from_string(CU_MG_TDB_ASSOC, fmt='tdb')
+    datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
+    comps = ['CU', 'MG', 'VA']
+    phases = ['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2']
+    param = 'VV0001'
+    orig_val = dbf.symbols[param].args[0].expr
+    initial_params = {param: orig_val}
+
+    zpf_kwargs = {
+        'zpf_data': get_zpf_data(dbf, comps, phases, datasets_db, initial_params),
+        'data_weight': 1.0,
+    }
+    opt = EmceeOptimizer(dbf)
+    res = opt.predict([10], prior_rvs=[rv_zero()], symbols_to_fit=[param], zpf_kwargs=zpf_kwargs)
+
+    assert np.isreal(res)
+    assert not np.isinf(res)
+    assert np.isclose(res, -31.309645520830344, rtol=1e-6)
+
+    # The purpose of this part is to test that the driving forces (and probability)
+    # are different than the case of VV0001 = 10.
+    res_2 = opt.predict([-10000000], prior_rvs=[rv_zero()], symbols_to_fit=[param], zpf_kwargs=zpf_kwargs)
+
+    assert np.isreal(res_2)
+    assert not np.isinf(res_2)
+    # Accept a large rtol becuase the results should be _very_ different
+    assert not np.isclose(res_2, -31.309645520830344, rtol=1e-2)
