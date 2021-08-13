@@ -13,7 +13,7 @@ from pycalphad.core.composition_set import CompositionSet
 from pycalphad.core.starting_point import starting_point
 from pycalphad.core.eqsolver import _solve_eq_at_conditions, solve_and_update
 from pycalphad.core.equilibrium import _adjust_conditions
-from pycalphad.core.utils import get_state_variables, unpack_kwarg, point_sample
+from pycalphad.core.utils import get_pure_elements, get_state_variables, unpack_kwarg, point_sample
 from pycalphad.core.light_dataset import LightDataset
 from pycalphad.core.calculate import _sample_phase_constitution, _compute_phase_values
 from pycalphad.core.solver import Solver
@@ -60,6 +60,34 @@ def _single_phase_start_point(conditions, state_variables, phase_records, grid):
     compset.update(Y, 1.0, state_vars)
     return compset
 
+def unpack_components_(species: Sequence[v.Species]):
+    """
+        Set of Species objects
+    """
+    # Constrain possible components to those within phase's d.o.f
+    # Assume for the moment that comps contains a list of pure element strings
+    # We want to add all the species which can be created by a combination of
+    # the user-specified pure elements
+    species_dict = {s.name: s for s in species}
+    possible_comps = {v.Species(species_dict.get(x, x)) for x in species}
+    desired_active_pure_elements = [list(x.constituents.keys()) for x in possible_comps]
+    # Flatten nested list
+    desired_active_pure_elements = [el.upper() for constituents in desired_active_pure_elements for el in constituents]
+    eligible_species_from_database = {x for x in species if
+                                      set(x.constituents.keys()).issubset(desired_active_pure_elements)}
+    return eligible_species_from_database
+
+def get_pure_elements_(species: Sequence[v.Species]):
+    """
+    Return a list of pure elements in the system.
+
+    """
+    comps = sorted(unpack_components_(species))
+    components = [x for x in comps]
+    desired_active_pure_elements = [list(x.constituents.keys()) for x in components]
+    desired_active_pure_elements = [el.upper() for constituents in desired_active_pure_elements for el in constituents]
+    pure_elements = sorted(set([x for x in desired_active_pure_elements if x != 'VA']))
+    return pure_elements
 
 
 def calculate_(species: Sequence[v.Species], phases: Sequence[str],
@@ -75,6 +103,7 @@ def calculate_(species: Sequence[v.Species], phases: Sequence[str],
     points_dict = unpack_kwarg(points, default_arg=None)
     pdens_dict = unpack_kwarg(pdens, default_arg=50)
     nonvacant_components = [x for x in sorted(species) if x.number_of_atoms > 0]
+    nonvacant_elements = get_pure_elements_(species)
     maximum_internal_dof = max(prx.phase_dof for prx in phase_records.values())
     all_phase_data = []
     for phase_name in sorted(phases):
@@ -93,7 +122,7 @@ def calculate_(species: Sequence[v.Species], phases: Sequence[str],
                                          parameters={})
         all_phase_data.append(phase_ds)
 
-    fp_offset = len(nonvacant_components) if fake_points else 0
+    fp_offset = len(nonvacant_elements) if fake_points else 0
     running_total = [fp_offset] + list(np.cumsum([phase_ds['X'].shape[-2] for phase_ds in all_phase_data]))
     islice_by_phase = {phase_name: slice(running_total[phase_idx], running_total[phase_idx+1], None)
                        for phase_idx, phase_name in enumerate(sorted(phases))}
