@@ -115,7 +115,7 @@ def _compute_vertex_composition(comps: Sequence[str], comp_conds: Dict[str, floa
     return vertex_composition
 
 
-def _subsample_phase_points(phase_record, phase_points, target_composition, avg_mass_residual_tol=0.02):
+def _subsample_phase_points(phase_record, phase_points, target_composition, additional_distance_radius=0.02):
     # Compute the mole fractions of each point
     phase_compositions = np.zeros((phase_points.shape[0], target_composition.size), order='F')
     # TODO: potential bug here if the composition has dependence (even piecewise
@@ -125,8 +125,9 @@ def _subsample_phase_points(phase_record, phase_points, target_composition, avg_
     for el_idx in range(target_composition.size):
         phase_record.mass_obj_2d(phase_compositions[:, el_idx], dof, el_idx)
 
-    # Find the points indicdes where the mass is within the average mass residual tolerance
-    idxs = np.nonzero(np.mean(np.abs(phase_compositions - target_composition), axis=1) < avg_mass_residual_tol)[0]
+    # Find the points indicdes where the mass is within the radius of minimum distance + additional_distance_radius
+    distances = np.mean(np.abs(phase_compositions - target_composition), axis=1)
+    idxs = np.nonzero(distances < (distances.min() + additional_distance_radius))[0]
 
     # Return the sub-space of points where this condition holds valid
     return phase_points[idxs]
@@ -194,7 +195,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                     # Only sample points that have an average mass residual within tol
                     tol = 0.02
                     phase_points = _subsample_phase_points(phase_recs[phase_name], all_phase_points[phase_name], composition, tol)
-                    assert phase_points.shape[0] > 0, "at least one set of points is within the target tolerance"
+                    assert phase_points.shape[0] > 0, f"phase {phase_name} must have at least one set of points within the target tolerance {pot_conds} {comp_conds}"
                 vtx = RegionVertex(phase_name, composition, comp_conds, phase_points, phase_recs, disordered_flag, has_missing_comp_cond)
                 vertices.append(vtx)
             region = PhaseRegion(vertices, pot_conds, species, data_phases, models)
