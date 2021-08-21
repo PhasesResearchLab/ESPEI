@@ -164,6 +164,8 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         species = sorted(unpack_components(dbf, data_comps), key=str)
         data_phases = filter_phases(dbf, species, candidate_phases=phases)
         models = instantiate_models(dbf, species, data_phases, model=model, parameters=parameters)
+        # assumed N, P, T state variables
+        phase_recs = build_phase_records(dbf, species, data_phases, {v.N, v.P, v.T}, models, parameters=parameters, build_gradients=True, build_hessians=True)
         all_phase_points = {phase_name: _sample_phase_constitution(models[phase_name], point_sample, True, 50) for phase_name in data_phases}
         all_regions = data['values']
         conditions = data['conditions']
@@ -178,7 +180,6 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
             vertices = []
             for vertex in phase_region:
                 phase_name, comp_conds, disordered_flag = _extract_phases_comps(vertex)
-                phase_recs = build_phase_records(dbf, species, data_phases, {**pot_conds, **comp_conds}, models, parameters=parameters, build_gradients=True, build_hessians=True)
                 # Construct single-phase points satisfying the conditions for each phase in the region
                 mod = models[phase_name]
                 composition = _compute_vertex_composition(data_comps, comp_conds)
