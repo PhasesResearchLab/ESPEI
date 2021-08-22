@@ -117,6 +117,7 @@ def get_prop_samples(desired_data, constituents):
         try:
             points = np.array([calculate_points_array(constituents, config, occup) for config, occup in zip(configurations, occupancies)])
         except:
+            print(constituents, configurations, occupancies)
             continue
         assert values.shape == weights.shape, f"Values data shape {values.shape} does not match weights shape {weights.shape}"
 
