@@ -7,7 +7,7 @@ from espei.error_functions import calculate_zpf_error, calculate_activity_error,
     calculate_non_equilibrium_thermochemical_probability, \
     calculate_equilibrium_thermochemical_probability
 from espei.priors import PriorSpec, build_prior_specs
-from espei.utils import unpack_piecewise, optimal_parameters
+from espei.utils import database_symbols_to_fit, unpack_piecewise, optimal_parameters
 from espei.error_functions.context import setup_context
 from .opt_base import OptimizerBase
 from .graph import OptNode
@@ -240,6 +240,9 @@ class EmceeOptimizer(OptimizerBase):
         # Run the initial parameters for guessing purposes:
         _log.trace("Probability for initial parameters")
         self.predict(initial_guess, **ctx)
+        if iterations == 0:
+            return OptNode(dict(zip(symbols_to_fit, initial_guess)), ds)
+
         if restart_trace is not None:
             chains = self.initialize_chains_from_trace(restart_trace)
             # TODO: check that the shape is valid with the existing parameters

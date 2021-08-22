@@ -79,7 +79,7 @@ mcmc:
   schema:
     iterations:
       type: integer
-      min: 1
+      min: 0
       required: True
     prior:
       type: [dict, list]
