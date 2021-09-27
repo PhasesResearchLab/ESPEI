@@ -5,7 +5,7 @@ Calculate error due to thermochemical quantities: heat capacity, entropy, enthal
 import logging
 from collections import OrderedDict
 
-import sympy
+import symengine
 from scipy.stats import norm
 import numpy as np
 from tinydb import where
@@ -210,17 +210,17 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                 mod = model_cls(dbf, comps, phase_name, parameters=symbols_to_fit)
                 if prop.endswith('_FORM'):
                     output = ''.join(prop.split('_')[:-1])+'R'
-                    mod.shift_reference_state(ref_states, dbf, contrib_mods={e: sympy.S.Zero for e in exclusion})
+                    mod.shift_reference_state(ref_states, dbf, contrib_mods={e: symengine.S.Zero for e in exclusion})
                 else:
                     output = prop
                 for contrib in exclusion:
-                    mod.models[contrib] = sympy.S.Zero
+                    mod.models[contrib] = symengine.S.Zero
                     try:
                         # TODO: we can remove this try/except block when pycalphad 0.8.5
                         # is released with these internal API changes
-                        mod.endmember_reference_model.models[contrib] = sympy.S.Zero
+                        mod.endmember_reference_model.models[contrib] = symengine.S.Zero
                     except AttributeError:
-                        mod.reference_model.models[contrib] = sympy.S.Zero
+                        mod.reference_model.models[contrib] = symengine.S.Zero
                 species = sorted(unpack_components(dbf, comps), key=str)
                 data_dict['species'] = species
                 model_dict = {phase_name: mod}

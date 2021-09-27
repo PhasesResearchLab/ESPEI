@@ -2,7 +2,7 @@
 
 import logging
 import copy
-import sympy
+import symengine
 from pycalphad import variables as v
 from pycalphad.codegen.callables import build_callables
 from pycalphad.core.utils import instantiate_models
@@ -49,11 +49,11 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
         _log.info('Fitting %s degrees of freedom.', len(symbols_to_fit))
 
     for x in symbols_to_fit:
-        if isinstance(dbf.symbols[x], sympy.Piecewise):
+        if isinstance(dbf.symbols[x], symengine.Piecewise):
             _log.debug('Replacing %s in database', x)
-            dbf.symbols[x] = dbf.symbols[x].args[0].expr
+            dbf.symbols[x] = dbf.symbols[x].args[0]
 
-    # construct the models for each phase, substituting in the SymPy symbol to fit.
+    # construct the models for each phase, substituting in the SymEngine symbol to fit.
     if phase_models is not None:
         model_dict = get_model_dict(phase_models)
     else:

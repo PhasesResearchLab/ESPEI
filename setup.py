@@ -32,7 +32,6 @@ setup(
         'scikit-learn',
         'scipy',
         'symengine',
-        'sympy>=1.5.1',
         'tinydb>=4',
     ],
     extras_require={

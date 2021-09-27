@@ -364,7 +364,7 @@ def test_sgte_reference_state_naming_is_correct_for_character_element(datasets_d
     }
 
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
-    assert dbf.symbols['GBCCV'].args[0][0].__str__() == 'GHSERVV'
+    assert dbf.symbols['GBCCV'].args[0].__str__() == 'GHSERVV'
     assert 'GHSERVV' in dbf.symbols.keys()
     assert 'GHSERAL' in dbf.symbols.keys()
 

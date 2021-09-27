@@ -364,11 +364,6 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                 sym_name = 'G'+name[:3].upper()+em_comp.upper()
                 stability = refdata.get((em_comp.upper(), name.upper()), None)
                 if stability is not None:
-                    if isinstance(stability, symengine.Piecewise):
-                        # Default zero required for the compiled backend
-                        if (0, True) not in stability.args:
-                            new_args = stability.args + ((0, True),)
-                            stability = symengine.Piecewise(*new_args)
                     dbf.symbols[sym_name] = stability
                     break
             if dbf.symbols.get(sym_name, None) is not None:
