@@ -5,21 +5,21 @@ Tools used across parameter selection modules
 from typing import List, Dict
 import itertools
 import numpy as np
-import sympy
-from sympy import Symbol
+import symengine
+from symengine import Symbol
 from pycalphad import variables as v
 from espei.utils import build_sitefractions
 from espei.parameter_selection.redlich_kister import calc_interaction_product
 
-feature_transforms = {"CPM_FORM": lambda GM: -v.T*sympy.diff(GM, v.T, 2),
-                      "CPM_MIX": lambda GM: -v.T*sympy.diff(GM, v.T, 2),
-                      "CPM": lambda GM: -v.T*sympy.diff(GM, v.T, 2),
-                      "SM_FORM": lambda GM: -sympy.diff(GM, v.T),
-                      "SM_MIX": lambda GM: -sympy.diff(GM, v.T),
-                      "SM": lambda GM: -sympy.diff(GM, v.T),
-                      "HM_FORM": lambda GM: GM - v.T*sympy.diff(GM, v.T),
-                      "HM_MIX": lambda GM: GM - v.T*sympy.diff(GM, v.T),
-                      "HM": lambda GM: GM - v.T*sympy.diff(GM, v.T)}
+feature_transforms = {"CPM_FORM": lambda GM: -v.T*symengine.diff(GM, v.T, 2),
+                      "CPM_MIX": lambda GM: -v.T*symengine.diff(GM, v.T, 2),
+                      "CPM": lambda GM: -v.T*symengine.diff(GM, v.T, 2),
+                      "SM_FORM": lambda GM: -symengine.diff(GM, v.T),
+                      "SM_MIX": lambda GM: -symengine.diff(GM, v.T),
+                      "SM": lambda GM: -symengine.diff(GM, v.T),
+                      "HM_FORM": lambda GM: GM - v.T*symengine.diff(GM, v.T),
+                      "HM_MIX": lambda GM: GM - v.T*symengine.diff(GM, v.T),
+                      "HM": lambda GM: GM - v.T*symengine.diff(GM, v.T)}
 
 
 def shift_reference_state(desired_data, feature_transform, fixed_model, mole_atoms_per_mole_formula_unit):
@@ -32,7 +32,7 @@ def shift_reference_state(desired_data, feature_transform, fixed_model, mole_ato
         ESPEI single phase dataset
     feature_transform : Callable
         Function to transform an AST for the GM property to the property of
-        interest, i.e. entropy would be ``lambda GM: -sympy.diff(GM, v.T)``
+        interest, i.e. entropy would be ``lambda GM: -symengine.diff(GM, v.T)``
     fixed_model : pycalphad.Model
         Model with all lower order (in composition) terms already fit. Pure
         element reference state (GHSER functions) should be set to zero.
@@ -86,8 +86,8 @@ def get_data_quantities(desired_property, fixed_model, fixed_portions, data, sam
     fixed_model : pycalphad.Model
         Model with all lower order (in composition) terms already fit. Pure
         element reference state (GHSER functions) should be set to zero.
-    fixed_portions : List[sympy.Expr]
-        SymPy expressions for model parameters and interaction productions for
+    fixed_portions : List[symengine.Basic]
+        SymEngine expressions for model parameters and interaction productions for
         higher order (in T) terms for this property, e.g. [0, 3.0*YS*v.T]. In
         [qty]/mole-formula.
     data : List[Dict[str, Any]]
@@ -129,13 +129,13 @@ def get_data_quantities(desired_property, fixed_model, fixed_portions, data, sam
     data_qtys = data_qtys - feat_transform(sum(fixed_portions))
     # if any site fractions show up in our data_qtys that aren't in this datasets site fractions, set them to zero.
     for sf, i, cond_dict in zip(site_fractions, data_qtys, sample_condition_dicts):
-        missing_variables = sympy.S(i).atoms(v.SiteFraction) - set(sf.keys())
+        missing_variables = symengine.S(i).atoms(v.SiteFraction) - set(sf.keys())
         sf.update({x: 0. for x in missing_variables})
         # The equations we have just have the site fractions as YS
         # and interaction products as Z, so take the product of all
         # the site fractions that we see in our data qtys
         sf.update(cond_dict)
-    data_qtys = [sympy.S(i).xreplace(sf).evalf() for i, sf in zip(data_qtys, site_fractions)]
+    data_qtys = [symengine.S(i).xreplace(sf).evalf() for i, sf in zip(data_qtys, site_fractions)]
     data_qtys = np.asarray(data_qtys, dtype=np.float_)
     return data_qtys
 

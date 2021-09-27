@@ -3,7 +3,7 @@ Building candidate models
 """
 
 import itertools
-import sympy
+import symengine
 from espei.sublattice_tools import interaction_test
 
 
@@ -93,7 +93,7 @@ def build_candidate_models(configuration, features):
     features : dict
         Dictionary of {str: list} of generic features for a model, not
         considering the configuration. For example:
-        {'CPM_FORM': [sympy.S.One, v.T, v.T**2, v.T**3]}
+        {'CPM_FORM': [symengine.S.One, v.T, v.T**2, v.T**3]}
 
     Returns
     -------
@@ -120,8 +120,8 @@ def build_candidate_models(configuration, features):
         return features
 
     elif interaction_test(configuration, 2):  # has a binary interaction
-        YS = sympy.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
-        Z = sympy.Symbol('Z')
+        YS = symengine.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
+        Z = symengine.Symbol('Z')
         # generate increasingly complex interactions, # L0, L1, L2
         parameter_interactions = [YS, YS*Z, YS*(Z**2), YS*(Z**3)]
         for feature in features.keys():
@@ -142,9 +142,9 @@ def build_candidate_models(configuration, features):
         # combinations these cases don't exist in reality (where two elements have
         # exactly the same behavior) the symmetric case is mainly for small
         # corrections and dimensionality reduction.
-        YS = sympy.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
+        YS = symengine.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
         # Muggianu ternary interaction product for components i, j, and k
-        V_I, V_J, V_K = sympy.Symbol('V_I'), sympy.Symbol('V_J'), sympy.Symbol('V_K')
+        V_I, V_J, V_K = symengine.Symbol('V_I'), symengine.Symbol('V_J'), symengine.Symbol('V_K')
         # because we don't want our parameter interactions to go sequentially, we'll construct models in two steps
         symmetric_interactions = [(YS,)] # symmetric L0
         asymmetric_interactions = [(YS * V_I, YS * V_J, YS * V_K)] # asymmetric L0, L1, and L2
