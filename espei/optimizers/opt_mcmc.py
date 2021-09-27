@@ -169,9 +169,7 @@ class EmceeOptimizer(OptimizerBase):
         progbar_width = 30
         _log.info('Running MCMC for %s iterations.', iterations)
         try:
-            # TODO: skip_initial_state_check looks like it may be needed for emcee 3.1.1 (August 23 2021)
-            # Otherwise test_emcee_opitmizer_can_restart fails a linear independence check
-            for i, result in enumerate(self.sampler.sample(chains, iterations=iterations, skip_initial_state_check=True)):
+            for i, result in enumerate(self.sampler.sample(chains, iterations=iterations)):
                 # progress bar
                 if (i + 1) % self.save_interval == 0:
                     self.save_sampler_state()
