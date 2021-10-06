@@ -6,6 +6,7 @@ Test different error functions as isolated units.
 from unittest import mock
 import numpy as np
 import pytest
+import pickle
 import scipy.stats
 from tinydb import where
 
@@ -14,6 +15,7 @@ from pycalphad import Database, Model, variables as v
 from espei.paramselect import generate_parameters
 from espei.error_functions import *
 from espei.error_functions.equilibrium_thermochemical_error import calc_prop_differences
+from espei.error_functions.context import setup_context
 
 from .fixtures import datasets_db
 from .testing_data import *
@@ -416,3 +418,44 @@ def test_driving_force_miscibility_gap(datasets_db):
     assert prob < zero_error_prob
     prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=True)
     assert prob < zero_error_prob
+
+
+def test_zpf_context_is_pickleable(datasets_db):
+    """Test that the context for ZPF data is pickleable"""
+    datasets_db.insert(CU_MG_DATASET_ZPF_ZERO_ERROR)
+    dbf = Database(CU_MG_TDB)
+
+    ctx = setup_context(dbf, datasets_db)
+    ctx_pickle = pickle.dumps(ctx)
+    ctx_unpickle = pickle.loads(ctx_pickle)
+
+
+def test_activity_context_is_pickleable(datasets_db):
+    """Test that the context for activity data is pickleable"""
+    datasets_db.insert(CU_MG_EXP_ACTIVITY)
+    dbf = Database(CU_MG_TDB)
+
+    ctx = setup_context(dbf, datasets_db)
+    ctx_pickle = pickle.dumps(ctx)
+    ctx_unpickle = pickle.loads(ctx_pickle)
+
+
+def test_non_equilibrium_thermochemical_context_is_pickleable(datasets_db):
+    """Test that the context for non-equilibrium thermochemical data is pickleable"""
+    datasets_db.insert(CU_MG_CPM_MIX_X_HCP_A3)
+    datasets_db.insert(CU_MG_SM_MIX_T_X_FCC_A1)
+    dbf = Database(CU_MG_TDB)
+
+    ctx = setup_context(dbf, datasets_db)
+    ctx_pickle = pickle.dumps(ctx)
+    ctx_unpickle = pickle.loads(ctx_pickle)
+
+
+def test_equilibrium_thermochemical_context_is_pickleable(datasets_db):
+    """Test that the context for equilibrium thermochemical data is pickleable"""
+    datasets_db.insert(CU_MG_EQ_HMR_LIQUID)
+    dbf = Database(CU_MG_TDB)
+
+    ctx = setup_context(dbf, datasets_db)
+    ctx_pickle = pickle.dumps(ctx)
+    ctx_unpickle = pickle.loads(ctx_pickle)
