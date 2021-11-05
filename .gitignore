@@ -5,6 +5,7 @@ build
 _build
 .cache
 dask-worker-space
+*.egg-info/
 
 # Sphinx documentation
 docs/_build
