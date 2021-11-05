@@ -486,6 +486,22 @@ def multiplot(dbf, comps, phases, conds, datasets, eq_kwargs=None, plot_kwargs=N
     return ax
 
 
+def _get_interaction_predicted_values(dbf, comps, phase_name, configuration, output):
+    mod = Model(dbf, comps, phase_name)
+    mod.models['idmix'] = 0  # TODO: better reference state handling
+    endpoints = endmembers_from_interaction(configuration)
+    first_endpoint = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))
+    second_endpoint = _translate_endmember_to_array(endpoints[1], mod.ast.atoms(v.SiteFraction))
+    grid = np.linspace(0, 1, num=100)
+    point_matrix = grid[None].T * second_endpoint + (1 - grid)[None].T * first_endpoint
+    # TODO: Real temperature support
+    point_matrix = point_matrix[None, None]
+    predicted_values = calculate(
+        dbf, comps, [phase_name], output=output,
+        T=298.15, P=101325, points=point_matrix, model=mod)[output].values.flatten()
+    return grid, predicted_values
+
+
 def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=None, symmetry=None, ax=None, plot_kwargs=None, dataplot_kwargs=None) -> plt.Axes:
     """
     Return one set of plotted Axes with data compared to calculated parameters
@@ -529,18 +545,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
         ax = plt.gca()
 
     # Plot predicted values from the database
-    mod = Model(dbf, comps, phase_name)
-    mod.models['idmix'] = 0  # TODO: better reference state handling
-    endpoints = endmembers_from_interaction(configuration)
-    first_endpoint = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))
-    second_endpoint = _translate_endmember_to_array(endpoints[1], mod.ast.atoms(v.SiteFraction))
-    grid = np.linspace(0, 1, num=100)
-    point_matrix = grid[None].T * second_endpoint + (1 - grid)[None].T * first_endpoint
-    # TODO: Real temperature support
-    point_matrix = point_matrix[None, None]
-    predicted_values = calculate(
-        dbf, comps, [phase_name], output=output,
-        T=298.15, P=101325, points=point_matrix, model=mod)[output].values.flatten()
+    grid, predicted_values = _get_interaction_predicted_values(dbf, comps, phase_name, configuration, output)
     plot_kwargs.setdefault('label', 'This work')
     plot_kwargs.setdefault('color', 'k')
     ax.plot(grid, predicted_values, **plot_kwargs)
