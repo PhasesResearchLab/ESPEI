@@ -633,7 +633,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     ax.set_xlim((0, 1))
     ax.set_xlabel(str(':'.join(endpoints[0])) + ' to ' + str(':'.join(endpoints[1])))
     ax.set_ylabel(plot_mapping.get(output, output))
-    leg = ax.legend(loc=(1.01, 0))  # legend outside
+    leg = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))  # legend outside
     leg.get_frame().set_edgecolor('black')
     return ax
 
@@ -737,7 +737,7 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
 
     ax.set_xlabel(plot_mapping.get(x, x))
     ax.set_ylabel(plot_mapping.get(output, output))
-    leg = ax.legend(loc=(1.01, 0))  # legend outside
+    leg = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))  # legend outside
     leg.get_frame().set_edgecolor('black')
     return ax
 
@@ -931,7 +931,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         ax.set_xlabel(plot_mapping.get(y, y))
     else:
         ax.set_frame_on(False)
-        leg = ax.legend(loc='best')
+        leg = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))  # legend outside
         leg.get_frame().set_edgecolor('black')
     return ax
 
