@@ -4,6 +4,7 @@ Calculate error due to thermochemical quantities: heat capacity, entropy, enthal
 
 import logging
 from collections import OrderedDict
+from typing import List
 
 import sympy
 from scipy.stats import norm
@@ -13,13 +14,39 @@ from tinydb import where
 from pycalphad import Model, ReferenceState, variables as v
 from pycalphad.core.utils import unpack_components, get_pure_elements
 
+from espei.datasets import Dataset
 from espei.core_utils import ravel_conditions, get_prop_data, filter_temperatures
 from espei.utils import database_symbols_to_fit
 from espei.error_functions.zpf_error import update_phase_record_parameters
 from espei.shadow_functions import calculate_
+from espei.sublattice_tools import canonicalize, recursive_tuplify, tuplify
 from pycalphad.codegen.callables import build_phase_records
 
 _log = logging.getLogger(__name__)
+
+
+def filter_sublattice_configurations(desired_data: List[Dataset], subl_model):  # TODO: symmetry support
+    """Modify the desired_data to remove any configurations that cannot be represented by the sublattice model."""
+    subl_model_sets = [set(subl) for subl in subl_model]
+    for data in desired_data:
+        matching_configs = []  # binary mask of whether a configuration is represented by the sublattice model
+        for config in data['solver']['sublattice_configurations']:
+            config = recursive_tuplify(canonicalize(config, None))
+            if (
+                len(config) == len(subl_model) and
+                all(subl.issuperset(tuplify(config_subl)) for subl, config_subl in zip(subl_model_sets, config))
+            ):
+                matching_configs.append(True)
+            else:
+                matching_configs.append(False)
+        matching_configs = np.asarray(matching_configs, dtype=np.bool_)
+
+        # Rewrite output values with filtered data
+        data['values'] = np.array(data['values'], dtype=np.float_)[..., matching_configs]
+        data['solver']['sublattice_configurations'] = recursive_tuplify(np.array(data['solver']['sublattice_configurations'], dtype=np.object_)[matching_configs].tolist())
+        if 'sublattice_occupancies' in data['solver']:
+            data['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'], dtype=np.object_)[matching_configs].tolist()
+    return desired_data
 
 
 def calculate_points_array(phase_constituents, configuration, occupancies=None):
@@ -113,12 +140,7 @@ def get_prop_samples(desired_data, constituents):
             occupancies = [None] * len(configurations)
 
         # calculate the points arrays, should be 2d array of points arrays
-        # TODO: Skip if configuration is not a subset of the constituents
-        try:
-            points = np.array([calculate_points_array(constituents, config, occup) for config, occup in zip(configurations, occupancies)])
-        except:
-            print(constituents, configurations, occupancies)
-            continue
+        points = np.array([calculate_points_array(constituents, config, occup) for config, occup in zip(configurations, occupancies)])
         assert values.shape == weights.shape, f"Values data shape {values.shape} does not match weights shape {weights.shape}"
 
         # add everything to the calculate_dict
@@ -208,7 +230,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                 else:
                     exc_search = (where('excluded_model_contributions').test(lambda x: tuple(sorted(x)) == exclusion)) & (where('solver').exists())
                 curr_data = get_prop_data(comps, phase_name, prop, datasets, additional_query=exc_search)
-                # TODO: run `core_utils.filter_configurations`
+                curr_data = filter_sublattice_configurations(curr_data, constituents)
                 curr_data = filter_temperatures(curr_data)
                 calculate_dict = get_prop_samples(curr_data, constituents)
                 model_cls = model.get(phase_name, Model)
