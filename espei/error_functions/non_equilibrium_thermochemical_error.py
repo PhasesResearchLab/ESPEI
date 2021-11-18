@@ -129,6 +129,9 @@ def get_prop_samples(desired_data, constituents):
         configurations = datum['solver']['sublattice_configurations']
         occupancies = datum['solver'].get('sublattice_occupancies')
         values = np.array(datum['values'])
+        if values.size == 0:
+            # Skip any data that don't have any values left (e.g. after filtering)
+            continue
         # Broadcast the weights to the shape of the values. This ensures that
         # the sizes of the weights and values are the same, which is important
         # because they are flattened later (so the shape information is lost).
