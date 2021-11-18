@@ -59,7 +59,7 @@ def test_get_thermochemical_data_filters_invalid_sublattice_configurations(datas
     comps = ["CU", "MG", "VA"]
     phases = ["CUMG2"]
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
-    print('tc data', thermochemical_data)
+    print('thermochemical data:', thermochemical_data)
     assert thermochemical_data[0]["calculate_dict"]["values"].shape == (2,)
 
     error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
