@@ -25,7 +25,7 @@ from pycalphad.codegen.callables import build_phase_records
 _log = logging.getLogger(__name__)
 
 
-def filter_sublattice_configurations(desired_data: List[Dataset], subl_model):  # TODO: symmetry support
+def filter_sublattice_configurations(desired_data: List[Dataset], subl_model) -> List[Dataset]:  # TODO: symmetry support
     """Modify the desired_data to remove any configurations that cannot be represented by the sublattice model."""
     subl_model_sets = [set(subl) for subl in subl_model]
     for data in desired_data:
