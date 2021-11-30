@@ -428,9 +428,18 @@ def test_zpf_context_is_pickleable(datasets_db):
     datasets_db.insert(CU_MG_DATASET_ZPF_ZERO_ERROR)
     dbf = Database(CU_MG_TDB)
 
+    symbols_to_fit = database_symbols_to_fit(dbf)
+    initial_guess = np.array([unpack_piecewise(dbf.symbols[s]) for s in symbols_to_fit])
+    prior_dict = EmceeOptimizer.get_priors(None, symbols_to_fit, initial_guess)
     ctx = setup_context(dbf, datasets_db)
+    ctx.update(prior_dict)
+
     ctx_pickle = pickle.dumps(ctx)
     ctx_unpickled = pickle.loads(ctx_pickle)
+
+    regular_predict  = EmceeOptimizer.predict(initial_guess, **ctx)
+    unpickle_predict = EmceeOptimizer.predict(initial_guess, **ctx_unpickled)
+    assert np.isclose(regular_predict, unpickle_predict)
 
 
 def test_activity_context_is_pickleable(datasets_db):
