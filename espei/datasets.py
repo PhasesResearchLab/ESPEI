@@ -321,13 +321,23 @@ def load_datasets(dataset_filenames, include_disabled=False, database: Optional[
     dataset_filenames : [str]
         List of filenames to load as datasets
     include_disabled : bool
-        If True, include dataset files that have the `"disabled": True`key/value pair. Defaults to False.
+        If True, include dataset files that have the ``{"disabled": True}`` key/value pair. Defaults to False.
     database : Optional[PickleableTinyDB]
         Insert datasets into an existing database if one is passed, otherwise create a new database. Defaults to None (creating a new database).
 
     Returns
     -------
     PickleableTinyDB
+
+    Examples
+    --------
+    >>> # Create an empty database of datasets, then load datasets a path
+    >>> from espei.datasets import load_datasets, recursive_glob
+    >>> dataset_db = load_datasets([])
+    >>> # the argument passed to database is returned _and_ mutated in-place
+    >>> db_1 = load_datasets(recursive_glob("path-to-datasets"), database=dataset_db)
+    >>> assert dataset_db is db_1
+    
     """
     ds_database = database if database is not None else PickleableTinyDB(storage=MemoryStorage)
     for fname in dataset_filenames:
