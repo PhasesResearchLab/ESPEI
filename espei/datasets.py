@@ -1,5 +1,5 @@
 import fnmatch, json, os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from tinydb.storages import MemoryStorage
@@ -312,7 +312,7 @@ def apply_tags(datasets: PickleableTinyDB, tags):
                 datasets.update(match, doc_ids=[match.doc_id])
 
 
-def load_datasets(dataset_filenames, include_disabled=False) -> PickleableTinyDB:
+def load_datasets(dataset_filenames, include_disabled=False, database: Optional[PickleableTinyDB] = None) -> PickleableTinyDB:
     """
     Create a PickelableTinyDB with the data from a list of filenames.
 
@@ -320,12 +320,16 @@ def load_datasets(dataset_filenames, include_disabled=False) -> PickleableTinyDB
     ----------
     dataset_filenames : [str]
         List of filenames to load as datasets
+    include_disabled : bool
+        If True, include dataset files that have the `"disabled": True`key/value pair. Defaults to False.
+    database : Optional[PickleableTinyDB]
+        Insert datasets into an existing database if one is passed, otherwise create a new database. Defaults to None (creating a new database).
 
     Returns
     -------
     PickleableTinyDB
     """
-    ds_database = PickleableTinyDB(storage=MemoryStorage)
+    ds_database = database if database is not None else PickleableTinyDB(storage=MemoryStorage)
     for fname in dataset_filenames:
         with open(fname) as file_:
             try:
