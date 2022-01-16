@@ -183,14 +183,15 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
             hyperplane_vertices = []
             for vertex in phase_region:
                 phase_name, comp_conds, disordered_flag = _extract_phases_comps(vertex)
+                composition = _compute_vertex_composition(data_comps, comp_conds)
                 if phase_name.upper() == '__HYPERPLANE__':
                     if np.any(np.isnan(composition)):  # TODO: make this a part of the dataset checker
                         raise ValueError(f"__HYPERPLANE__ vertex ({vertex}) must have all independent compositions defined to make a well-defined hyperplane (from dataset: {data})")
                     vtx = RegionVertex(phase_name, None, comp_conds, None, phase_recs, disordered_flag, False)
                     hyperplane_vertices.append(vtx)
+                    continue
                 # Construct single-phase points satisfying the conditions for each phase in the region
                 mod = models[phase_name]
-                composition = _compute_vertex_composition(data_comps, comp_conds)
                 if np.any(np.isnan(composition)):
                     # We can't construct points because we don't have a known composition
                     has_missing_comp_cond = True
