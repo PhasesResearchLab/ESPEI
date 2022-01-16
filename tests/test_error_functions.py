@@ -496,5 +496,17 @@ def test_zpf_error_for_prescribed_hyperplane_composition(datasets_db):
     dbf = Database(A_B_REGULAR_SOLUTION_TDB)  # Ideal solution case by default
     zpf_data = get_zpf_data(dbf, ["A", "B"], ["ALPHA"], datasets_db, {})
     driving_forces, weights = calculate_zpf_driving_forces(zpf_data)
-    assert len(driving_forces) == 1
-    assert np.isclose(driving_forces[0], 0.0)
+    flat_driving_forces = np.asarray(driving_forces).flatten()
+    assert len(flat_driving_forces) == 1
+    assert np.isclose(flat_driving_forces[0], 0.0)
+
+
+def test_zpf_error_hyperplane_with_null_phases(datasets_db):
+    """Test typical use case of __HYPERPLANE__, where no phase compositions are defined."""
+    datasets_db.insert(CU_MG_DATASET_ZPF_HYPERPLANE_TWOPHASE)
+    dbf = Database(CU_MG_TDB)  # Ideal solution case by default
+    zpf_data = get_zpf_data(dbf, ["CU", "MG"], list(dbf.phases.keys()), datasets_db, {})
+    driving_forces, weights = calculate_zpf_driving_forces(zpf_data)
+    flat_driving_forces = np.asarray(driving_forces).flatten()
+    assert len(flat_driving_forces) == 2  # One for each vertex, HCP_A3 and CUMG2
+    assert np.allclose(flat_driving_forces, [-6.1889362, -2728.79332765])
