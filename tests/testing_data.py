@@ -672,7 +672,7 @@ CU_MG_DATASET_ZPF_HYPERPLANE_TWOPHASE = yaml.load("""{
   "broadcast_conditions": false,
   "output": "ZPF",
   "values":   [
-    [["__HYPERPLANE__", ["CU"], [0.001015]], ["HCP_A3", ["CU"], [null]], ["CUMG2", ["CU"], [null]]]
+    [["__HYPERPLANE__", ["CU"], [0.05]], ["HCP_A3", ["CU"], [null]], ["CUMG2", ["CU"], [null]]]
   ],
   "reference": "Jones (1931)",
   "bibtex": "jones1931",

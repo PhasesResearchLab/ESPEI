@@ -509,4 +509,4 @@ def test_zpf_error_hyperplane_with_null_phases(datasets_db):
     driving_forces, weights = calculate_zpf_driving_forces(zpf_data)
     flat_driving_forces = np.asarray(driving_forces).flatten()
     assert len(flat_driving_forces) == 2  # One for each vertex, HCP_A3 and CUMG2
-    assert np.allclose(flat_driving_forces, [-6.1889362, -2728.79332765])
+    assert np.allclose(flat_driving_forces, [-18.05883506, -780.50836135])
