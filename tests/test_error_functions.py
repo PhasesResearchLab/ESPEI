@@ -15,6 +15,7 @@ from pycalphad import Database, Model, variables as v
 from espei.paramselect import generate_parameters
 from espei.error_functions import *
 from espei.error_functions.equilibrium_thermochemical_error import calc_prop_differences
+from espei.error_functions.zpf_error import calculate_zpf_driving_forces
 from espei.error_functions.context import setup_context
 
 from .fixtures import datasets_db
@@ -487,3 +488,13 @@ def test_equilibrium_thermochemical_context_is_pickleable(datasets_db):
     ctx = setup_context(dbf, datasets_db)
     ctx_pickle = pickle.dumps(ctx)
     ctx_unpickle = pickle.loads(ctx_pickle)
+
+
+def test_zpf_error_for_prescribed_hyperplane_composition(datasets_db):
+    """Test a dataset with __HYPERPLANE__ defined works"""
+    datasets_db.insert(A_B_DATASET_ALPHA)
+    dbf = Database(A_B_REGULAR_SOLUTION_TDB)  # Ideal solution case by default
+    zpf_data = get_zpf_data(dbf, ["A", "B"], ["ALPHA"], datasets_db, {})
+    driving_forces, weights = calculate_zpf_driving_forces(zpf_data)
+    assert len(driving_forces) == 1
+    assert np.isclose(driving_forces[0], 0.0)

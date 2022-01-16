@@ -586,6 +586,23 @@ A_B_DATASET_ALPHA = yaml.load("""{
 }
 """, Loader=YAML_LOADER)
 
+A_B_DATASET_ALPHA_WITH_HYPERPLANE = yaml.load("""{
+  "components": ["A", "B"],
+  "phases": ["ALPHA"],
+  "conditions": {
+    "P": 101325,
+    "T": [300.0]
+  },
+  "output": "ZPF",
+    "values":   [
+    [["__HYPERPLANE__", ["A"], [0.5]], ["ALPHA", ["B"], [0.5]]]
+   ],
+  "reference": "testing",
+  "comment": "Hyperplane composition at the same point as the overall composition"
+}
+""", Loader=YAML_LOADER)
+
+
 
 A_B_C_DATASET_TERNARY_PHASE_EQUILIBRIA = yaml.load("""{
   "components": ["A", "B", "C"],
