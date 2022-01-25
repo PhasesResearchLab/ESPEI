@@ -829,6 +829,7 @@ $ As assessed by Xiong doi:10.1016/j.calphad.2011.05.002
  ELEMENT VA   VACUUM           0.0000E+00  0.0000E+00  0.0000E+00!
  ELEMENT FE   BCC_A2           5.5847E+01  4.4890E+03  2.7280E+01!
  ELEMENT CR   BCC_A2           5.1996E+01  4.0500E+03  2.3560E+01!
+ TYPE_DEFINITION % SEQ * !
 $             **********   FCC_A1   *********
  TYPE_DEFINITION G GES AM-PH FCC_A1 MAG -3 0.25 !
  PHASE FCC_A1  %G  2 1   1 !
