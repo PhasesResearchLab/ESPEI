@@ -11,14 +11,6 @@
 
    \part{Introduction}
 
-.. toctree::
-   :maxdepth: 1
-
-   self
-   installation
-   quickstart
-   CHANGES
-
 ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for creating CALPHAD databases and evaluating the uncertanity of CALPHAD models.
 The purpose of ESPEI is to be both a user tool for fitting state-of-the-art CALPHAD-type models and to be a research platform for developing methods for fitting and uncertainty quantification.
 ESPEI uses `pycalphad`_ for the thermodynamic backend and supports fitting adjustable parameters for any pycalphad model.
@@ -73,14 +65,52 @@ Details on the implementation of ESPEI can be found in the following publication
 We are thankful for the financial support provided to Brandon during his Ph.D. by the Computational Materials Education and Training (CoMET) NSF Research Traineeship (grant number DGE-1449785)
 and from a NASA Space Technology Research Fellowship (NSTRF, grant number 80NSSC18K1168).
 
+Getting Help
+------------
+
+For help on installing and using ESPEI, please join the `PhasesResearchLab/ESPEI Gitter room <https://gitter.im/PhasesResearchLab/ESPEI>`_.
+
+Bugs and software issues should be reported on the `GitHub issue tracker <https://github.com/PhasesResearchLab/ESPEI/issues>`_.
+
+Citing ESPEI
+------------
+
+If you use ESPEI for work presented in a publication, we ask that you cite the following publication:
+
+B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg, MRS Commun. (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_.
+
+::
+
+   @article{Bocklund2019ESPEI,
+            archivePrefix = {arXiv},
+            arxivId = {1902.01269},
+            author = {Bocklund, Brandon and Otis, Richard and Egorov, Aleksei and Obaied, Abdulmonem and Roslyakova, Irina and Liu, Zi-Kui},
+            doi = {10.1557/mrc.2019.59},
+            eprint = {1902.01269},
+            issn = {2159-6859},
+            journal = {MRS Communications},
+            month = {jun},
+            pages = {1--10},
+            title = {{ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg}},
+            year = {2019}
+   }
 
 Changelog
 ---------
 
 See `what's new <CHANGES.html>`_!
 
+
 Documentation
 -------------
+
+.. toctree::
+   :maxdepth: 1
+
+   self
+   installation
+   quickstart
+   CHANGES
 
 .. raw:: latex
 
@@ -140,13 +170,6 @@ Documentation
 
    \chapter{Appendices}
 
-Getting Help
-------------
-
-For help on installing and using ESPEI, please join the `PhasesResearchLab/ESPEI Gitter room <https://gitter.im/PhasesResearchLab/ESPEI>`_.
-
-Bugs and software issues should be reported on the `GitHub issue tracker <https://github.com/PhasesResearchLab/ESPEI/issues>`_.
-
 
 License
 -------
@@ -178,30 +201,6 @@ ESPEI is MIT licensed.
    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
    SOFTWARE.
-
-
-Citing ESPEI
-------------
-
-If you use ESPEI for work presented in a publication, we ask that you cite the following publication:
-
-B. Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu, ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg, MRS Commun. (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_.
-
-::
-
-   @article{Bocklund2019ESPEI,
-            archivePrefix = {arXiv},
-            arxivId = {1902.01269},
-            author = {Bocklund, Brandon and Otis, Richard and Egorov, Aleksei and Obaied, Abdulmonem and Roslyakova, Irina and Liu, Zi-Kui},
-            doi = {10.1557/mrc.2019.59},
-            eprint = {1902.01269},
-            issn = {2159-6859},
-            journal = {MRS Communications},
-            month = {jun},
-            pages = {1--10},
-            title = {{ESPEI for efficient thermodynamic database development, modification, and uncertainty quantification: application to Cu–Mg}},
-            year = {2019}
-   }
 
 
 .. only:: html
