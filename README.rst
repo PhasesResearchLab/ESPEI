@@ -2,16 +2,48 @@
 ESPEI
 =====
 
-
 ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for thermodynamic database development within the CALPHAD method. It uses `pycalphad`_ for calculating Gibbs free energies of thermodynamic models.
 
 Read the documentation at `espei.org <https://espei.org>`_.
 
-Installation Anaconda (recommended)
------------------------------------
+Installing
+==========
 
-ESPEI does not require any special compiler, but several dependencies do.
-Therefore it is suggested to install ESPEI from conda-forge.
+pip (recommended)
+-----------------
+
+To install ESPEI from PyPI using pip:
+
+.. code-block:: bash
+
+   pip install -U pip
+   pip install -U espei
+
+A recommended best practice is to install Python packages into a virtual environment.
+To create an environment and install ESPEI on Linux and macOS/OSX:
+
+.. code-block:: bash
+
+   python -m venv calphad-env
+   source calphad-env/bin/activate
+   pip install -U pip
+   pip install -U pycalphad
+
+On Windows:
+
+.. code-block:: batch
+
+   python -m venv calphad-env
+   calphad-env\Scripts\activate
+   pip install -U pip
+   pip install -U pycalphad
+
+Anaconda
+--------
+
+If you prefer using Anaconda, ESPEI is distributed on conda-forge.
+If you do not have Anaconda installed, we recommend you download and install `Miniconda3 <https://docs.conda.io/en/latest/miniconda.html>`_.
+ESPEI can be installed with the conda package manager by:
 
 .. code-block:: bash
 
