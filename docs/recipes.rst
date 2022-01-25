@@ -116,8 +116,7 @@ Plot phase diagram with data
    conds = {v.P: 101325, v.T: (700, 2200, 10), v.X("CR"): (0, 1, 0.01)}
 
    # plot the phase diagram and data
-   fig = plt.figure(dpi=150)
-   ax = fig.gca()
+   fig, ax = plt.sublots(dpi=150)
    binplot(dbf, comps, phases, conds, plot_kwargs={"ax": ax})
    dataplot(comps, phases, conds, datasets, ax=ax)
    ax.set_title("Cr-Ni\nParameter Generation")
@@ -203,7 +202,7 @@ log-probability changes for all of the chains as a function of iterations.
     trace, lnprob = truncate_arrays(trace, lnprob)
 
 
-    ax = plt.gca()
+    ax = plt.subplot()
     ax.set_yscale('log')
     ax.set_xlabel('Iterations')
     ax.set_ylabel('- lnprob')
@@ -240,7 +239,7 @@ are relative to each other.
     num_chains = trace.shape[0]
     num_parameters = trace.shape[2]
     for parameter in range(num_parameters):
-        ax = plt.figure().gca()
+        fig, ax = plt.subplots()  # new figure for every parameter
         ax.set_xlabel('Iterations')
         ax.set_ylabel('Parameter value')
         ax.plot(trace[..., parameter].T)
@@ -352,8 +351,7 @@ log-likelihood of each driving force.
                    Xs.append(1.0 - tuple(comp_cond.values())[0])
 
    # Plot the phase diagram with driving forces
-   fig = plt.figure(dpi=100)
-   ax = fig.gca()
+   fig, ax = plt.subplots(dpi=100)
    binplot(dbf, COMPS, phases, CONDS, plot_kwargs={'ax': ax}, eq_kwargs={'parameters': parameters})
    sm = plt.cm.ScalarMappable(cmap=CMAP)
    sm.set_array(dfs)
