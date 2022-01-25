@@ -37,9 +37,9 @@ def fit_model(feature_matrix, data_quantities, ridge_alpha, weights=None):
 
     """
     if ridge_alpha is not None:
-        clf = Ridge(fit_intercept=False, normalize=True, alpha=ridge_alpha)
+        clf = Ridge(fit_intercept=False, alpha=ridge_alpha)
     else:
-        clf = LinearRegression(fit_intercept=False, normalize=True)
+        clf = LinearRegression(fit_intercept=False)
     clf.fit(feature_matrix, data_quantities, sample_weight=weights)
     return clf.coef_
 
