@@ -25,6 +25,8 @@ ESPEI uses `pycalphad`_ for the thermodynamic backend and supports fitting adjus
 
 ESPEI is developed in the open on `GitHub <https://github.com/PhasesResearchLab/ESPEI>`_.
 The project is led by Brandon Bocklund, who is currently a postdoctoral researcher at Lawrence Livermore National Laboratory.
+Brandon developed ESPEI while completing his Ph.D. under Zi-Kui Liu at The Pennsylvania State University.
+See the project's `History`_ for more details.
 
 What does ESPEI do?
 -------------------
@@ -66,7 +68,7 @@ After developing `pycalphad`_, Richard Otis and Zi-Kui Liu reimagined the concep
 Details on the implementation of ESPEI can be found in the following publications: 
 
 - B\. Bocklund *et al.*, MRS Communications 9(2) (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_.
-- B\. Bocklund, Ph.D. Dissertation (Chapter 3) (2021), https://etda.libraries.psu.edu/catalog/21192bjb54
+- B\. Bocklund, Ph.D. Dissertation (Chapter 3), The Pennsylvania State University (2021), https://etda.libraries.psu.edu/catalog/21192bjb54
 
 We are thankful for the financial support provided to Brandon during his Ph.D. by the Computational Materials Education and Training (CoMET) NSF Research Traineeship (grant number DGE-1449785)
 and from a NASA Space Technology Research Fellowship (NSTRF, grant number 80NSSC18K1168).
