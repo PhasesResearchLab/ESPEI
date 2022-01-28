@@ -148,7 +148,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
 
     # These is our previously fit partial model from previous steps
     # Subtract out all of these contributions (zero out reference state because these are formation properties)
-    fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
+    fixed_model = None  # Profiling suggests we delay instantiation
     fixed_portions = [0]
 
     for desired_props in fitting_steps:
@@ -160,6 +160,8 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         desired_data = filter_temperatures(desired_data)
         _log.trace('%s: datasets found: %s', desired_props, len(desired_data))
         if len(desired_data) > 0:
+            if fixed_model is None:
+                fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
             config_tup = tuple(map(tuplify, configuration))
             calculate_dict = get_prop_samples(desired_data, config_tup)
             sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, list(map(len, config_tup)))
