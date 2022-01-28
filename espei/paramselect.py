@@ -26,6 +26,7 @@ import numpy as np
 import sympy
 from sympy import Symbol
 from tinydb import where
+import tinydb
 from pycalphad import Database, Model, variables as v
 
 import espei.refdata
@@ -490,7 +491,15 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     for phase_name, phase_data in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
         if phase_name in dbf.phases:
             symmetry = phase_data.get('equivalent_sublattices', None)
-            phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
+            # Filter datasets by thermochemical data for this phase
+            dataset = tinydb.Query()
+            phase_filtered_datasets = PickleableTinyDB(storage=tinydb.storages.MemoryStorage)
+            single_phase_thermochemical_query = (
+                (dataset.phases == [phase_name])  # TODO: aliases support
+                & dataset.solver.exists()
+            )
+            phase_filtered_datasets.insert_multiple(datasets.search(single_phase_thermochemical_query))
+            phase_fit(dbf, phase_name, symmetry, phase_filtered_datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
     _log.info('Finished generating parameters.')
     np.set_printoptions(linewidth=75)
     return dbf
