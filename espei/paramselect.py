@@ -255,18 +255,19 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
         else:
             _log.trace('INTERACTION: %s', ixx)
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
+        parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=str)])  # SymPy performance mitigation
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(3, dtype=np.object_)
         YS = Symbol('YS')
         # asymmetric parameters should have Mugiannu V_I/V_J/V_K, while symmetric just has YS
-        is_asymmetric = any([(k.has(Symbol('V_I'))) and (v != 0) for k, v in parameters.items()])
+        is_asymmetric = any([(ky.has(Symbol('V_I'))) and (vl != 0) for ky, vl in parameters.items()])
         if is_asymmetric:
             params = [(2, YS*Symbol('V_K')), (1, YS*Symbol('V_J')), (0, YS*Symbol('V_I'))]  # (excess parameter degree, symbol) tuples
         else:
             params = [(0, YS)]  # (excess parameter degree, symbol) tuples
         for degree, check_symbol in params:
             keys_to_remove = []
-            for key, value in sorted(parameters.items(), key=str):
+            for key, value in parameters.items():
                 if key.has(check_symbol):
                     if value != 0:
                         symbol_name = get_next_symbol(dbf)
@@ -419,12 +420,13 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
         else:
             _log.trace('INTERACTION: %s', ixx)
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
+        parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=str)])  # SymPy performance mitigation
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(10, dtype=np.object_)
         for degree in reversed(range(10)):
             check_symbol = Symbol('YS') * Symbol('Z')**degree
             keys_to_remove = []
-            for key, value in sorted(parameters.items(), key=str):
+            for key, value in parameters.items():
                 if key.has(check_symbol):
                     if value != 0:
                         symbol_name = get_next_symbol(dbf)
