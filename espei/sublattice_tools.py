@@ -180,7 +180,7 @@ def sorted_interactions(interactions, max_interaction_order, symmetry):
     return filtered_interactions
 
 
-def generate_interactions(endmembers, order, symmetry):
+def generate_interactions(endmembers, order, symmetry, forbid_cross_interactions=None):
     """
     Returns a list of sorted interactions of a certain order
 
@@ -194,6 +194,12 @@ def generate_interactions(endmembers, order, symmetry):
         List of lists containing symmetrically equivalent sublattice indices,
         e.g. [[0, 1], [2, 3]] means that sublattices 0 and 1 are equivalent and
         sublattices 2 and 3 are also equivalent.
+    forbid_cross_interactions : Optiona[bool]
+        If True, will prevent cross interations from being generated. If None,
+        automatically determine based on the symmetry. If there is no symmetry,
+        cross interactions are forbidden. Symmetry usually implies that there
+        is a disordered state that is interesting, so cross interactions are
+        allowed.
 
     Returns
     -------
@@ -201,26 +207,32 @@ def generate_interactions(endmembers, order, symmetry):
         List of interaction tuples, e.g. [('A', ('A', 'B'))]
 
     """
-    interactions = list(itertools.combinations(endmembers, order))
-    transformed_interactions = []
-    for endmembers in interactions:
-        interaction = []
-        has_correct_interaction_order = False  # flag to check that we have interactions of at least interaction_order
-        # occupants is a tuple of each endmember's ith constituent, looping through i
-        for occupants in zip(*endmembers):
-            # if all occupants are the same, the ith element of the interaction is not an interacting element
-            if all([occupants[0] == x for x in occupants[1:]]):
-                interaction.append(occupants[0])
-            else:  # there is an interaction
-                interacting_species = tuple(sorted(set(occupants)))
-                if len(interacting_species) == order:
-                    has_correct_interaction_order = True
-                interaction.append(interacting_species)
-        # only add this interaction if it has an interaction of the desired order.
-        # that is, throw away interactions that degenerate to a lower order
-        if has_correct_interaction_order:
-            transformed_interactions.append(interaction)
-    return sorted_interactions(transformed_interactions, order, symmetry)
+    if forbid_cross_interactions is None:
+        # Profiling indicates that it is worth skipping cross interactions in
+        # multi-component systems due to the cost of the sorted_interactions
+        if symmetry is None:
+            forbid_cross_interactions = True  # symmetry may imply ordering, so keep these
+        else:
+            forbid_cross_interactions = False
+    interactions = []
+    for endmembers in itertools.combinations(endmembers, order):
+        config = []
+        has_desired_order = False  # Some interactions make for degenerate endmember
+        for subl in zip(*endmembers):
+            subl = set(subl)
+            num_constit = len(subl)
+            if num_constit == 1:
+                config.append(tuple(subl)[0])  # Canonical form: a pure sublattice is not a sequence
+            else:
+                if has_desired_order and forbid_cross_interactions:
+                    has_desired_order = False  # setting this to false ensures the interaction won't be added
+                    break
+                if num_constit == order:
+                    has_desired_order = True
+                config.append(tuple(sorted(subl)))
+        if has_desired_order:
+            interactions.append(config)
+    return sorted_interactions(interactions, order, symmetry)
 
 
 def interaction_test(configuration, order=None):
