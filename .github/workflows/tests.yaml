@@ -61,7 +61,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install pycalphad development version
-      run: pip install git+https://github.com/pycalphad/pycalphad.git@545be00353e43a1e9ae7baf242253a19fd540ca6
+      run: pip install git+https://github.com/pycalphad/pycalphad.git@9a12344085dd0ba720e57c1c5ebafbf26a5d0c30
     - run: pip install --editable .[dev]
     - run: pip list
     - run: pytest -v
