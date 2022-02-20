@@ -4,9 +4,11 @@ import copy
 from tinydb import where
 from tinydb.storages import MemoryStorage
 import numpy as np
-from pycalphad import Database
+from pycalphad import Database, variables as v
 import scipy
+from symengine import Symbol
 
+from espei.logger import config_logger
 from espei.paramselect import generate_parameters
 from espei.utils import PickleableTinyDB
 from .testing_data import *
@@ -445,6 +447,21 @@ def test_cpm_sm_data_can_be_fit_successively(datasets_db):
     assert dbf.symbols['VV0002'] == -40.953  # T*ln(T) L1 term
     assert dbf.symbols['VV0003'] == -44.57 # T*ln(T) L0 term
 
+
+def test_high_order_interaction_terms_no_spurious_symbols(datasets_db):
+    """Test that no spurious symbols (e.g. `Z`) slip into the symbolic part of generated excess parameters"""
+    config_logger(verbosity=3)
+    datasets_db.insert(CU_ZN_SM_MIX_L1)
+    dbf = generate_parameters(CU_ZN_LIQUID_PHASE_MODEL, datasets_db, 'SGTE91', 'linear')
+
+    assert 'VV0000' in dbf.symbols
+    assert 'VV0001' in dbf.symbols
+
+    params = dbf.search((where("parameter_order") == 1) & (where("parameter_type") == "L"))
+    assert len(params) == 1
+    param = params[0]['parameter']
+    print(param)
+    assert param == Symbol("VV0000") * v.T
 
 
 def test_initial_database_can_be_supplied(datasets_db):
