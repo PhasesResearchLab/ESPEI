@@ -53,6 +53,33 @@ def _param_present_in_database(dbf, phase_name, configuration, param_type):
         return True
 
 
+def _poly_degrees(expr):
+    poly_dict = {}
+    for at in expr.atoms(symengine.Symbol):
+        poly_dict[at] = 1
+    for at in expr.atoms(symengine.log):
+        poly_dict[at] = 1
+    for at in expr.atoms(symengine.Pow):
+        poly_dict[at.args[0]] = at.args[1]
+    return poly_dict
+
+def has_symbol(expr, check_symbol):
+    """
+    Workaround for SymEngine not supporting Basic.has() with non-Symbol arguments.
+    Only works for detecting subsets of multiplication of variables.
+    """
+    try:
+        return expr.has(check_symbol)
+    except TypeError:
+        expr_poly = _poly_degrees(expr)
+        check_poly = _poly_degrees(check_symbol)
+        for cs, check_degree in check_poly.items():
+            eps = expr_poly.get(cs, 0)
+            if check_degree > eps:
+                return False
+        return True
+
+
 def _build_feature_matrix(sample_condition_dicts: List[Dict[Symbol, float]], symbolic_coefficients: List[Symbol]):
     """
     Builds A for solving x = A\\b. A is an MxN matrix of M sampled data points and N is the symbolic coefficients.
@@ -264,7 +291,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
         for degree, check_symbol in params:
             keys_to_remove = []
             for key, value in sorted(parameters.items(), key=str):
-                if key.xreplace({check_symbol: 0}) != key:
+                if has_symbol(key, check_symbol):
                     if value != 0:
                         symbol_name = get_next_symbol(dbf)
                         dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
@@ -412,12 +439,14 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
             _log.trace('INTERACTION: %s', ixx)
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
         # Organize parameters by polynomial degree
+        def stable_sort_key(x):
+            return str(sorted(x[0].args, key=str))
         degree_polys = np.zeros(10, dtype=np.object_)
         for degree in reversed(range(10)):
             check_symbol = Symbol('YS') * Symbol('Z')**degree
             keys_to_remove = []
-            for key, value in sorted(parameters.items(), key=str):
-                if key.xreplace({check_symbol: 0}) != key:
+            for key, value in sorted(parameters.items(), key=stable_sort_key):
+                if has_symbol(key, check_symbol):
                     if value != 0:
                         symbol_name = get_next_symbol(dbf)
                         dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
