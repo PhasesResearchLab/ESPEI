@@ -320,7 +320,7 @@ after 115 iterations.
     trace, lnprob = truncate_arrays(trace, lnprob)
 
 
-    ax = plt.gca()
+    ax = plt.subplot()
     ax.set_yscale('log')
     ax.set_ylim(1e7, 1e10)
     ax.set_xlabel('Iterations')
@@ -360,7 +360,7 @@ parameters explore the space and converge to a solution.
     num_chains = trace.shape[0]
     num_parameters = 3 # only plot the first three parameter, for all of them use `trace.shape[2]`
     for parameter in range(num_parameters):
-        ax = plt.figure().gca()
+        fig, ax = plt.subplots()
         ax.set_xlabel('Iterations')
         ax.set_ylabel('Parameter value')
         for chain in range(num_chains):

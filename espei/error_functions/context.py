@@ -5,7 +5,7 @@ import copy
 import symengine
 from pycalphad import variables as v
 from pycalphad.codegen.callables import build_callables
-from pycalphad.core.utils import instantiate_models
+from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
 from espei.error_functions import get_zpf_data, get_thermochemical_data, get_equilibrium_thermochemical_data
 from espei.utils import database_symbols_to_fit, get_model_dict
 
@@ -36,7 +36,10 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
     back to the original database, the dbf.symbols.update method should be used.
     """
     dbf = copy.deepcopy(dbf)
-    comps = sorted([sp for sp in dbf.elements])
+    if phase_models is not None:
+        comps = sorted(phase_models['components'])
+    else:
+        comps = sorted([sp for sp in dbf.elements])
     if symbols_to_fit is None:
         symbols_to_fit = database_symbols_to_fit(dbf)
     else:
@@ -61,7 +64,7 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
     _log.trace('Building phase models (this may take some time)')
     import time
     t1 = time.time()
-    phases = sorted(dbf.phases.keys())
+    phases = sorted(filter_phases(dbf, unpack_components(dbf, comps), dbf.phases.keys()))
     parameters = dict(zip(symbols_to_fit, [0]*len(symbols_to_fit)))
     models = instantiate_models(dbf, comps, phases, model=model_dict, parameters=parameters)
     if make_callables:

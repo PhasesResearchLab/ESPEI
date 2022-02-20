@@ -117,7 +117,7 @@ def test_get_data_quantities_mixing_entropy():
     dbf = Database("""
     ELEMENT AL FCC_A1 26.982 4577.3 28.322 !
     ELEMENT CR BCC_A2 51.996 4050.0 23.56 !
-
+    TYPE_DEFINITION % SEQ * !
     PHASE AL11CR2 %  2 10.0 2.0 !
     CONSTITUENT AL11CR2 :AL:AL,CR: !
 
@@ -141,7 +141,7 @@ def test_get_data_quantities_magnetic_energy():
     dbf_nomag = Database("""
     ELEMENT AL FCC_A1 26.982 4577.3 28.322 !
     ELEMENT CR BCC_A2 51.996 4050.0 23.56 !
-
+    TYPE_DEFINITION % SEQ * !
     PHASE ALCR2 %  2 1.0 2.0 !
     CONSTITUENT ALCR2 :AL,CR:AL,CR: !
     """)
@@ -155,6 +155,7 @@ def test_get_data_quantities_magnetic_energy():
     ELEMENT AL   FCC_A1                    2.6982E+01  4.5773E+03  2.8322E+01!
     ELEMENT CR   BCC_A2                    5.1996E+01  4.0500E+03  2.3560E+01!
 
+    TYPE_DEFINITION % SEQ * !
     TYPE_DEFINITION & GES A_P_D ALCR2 MAGNETIC  -1.0    4.00000E-01 !
     PHASE ALCR2  %&  2 1   2 !
     CONSTITUENT ALCR2  :AL,CR : AL,CR :  !

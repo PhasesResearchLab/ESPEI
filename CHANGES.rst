@@ -5,6 +5,18 @@ Changelog
 |version| (development)
 =======================
 
+0.8.6 (2022-01-25)
+==================
+
+Improvements
+------------
+
+* Significant performance improvement in startup time in MCMC for ZPF data and decrease in runtime memory usage (`@bocklund`_ - :issue:`210`)
+* Improve sampling of energy surface for finding constrained driving forces in ZPF data, at least one energy surface sample is now guaranteed (`@bocklund`_ - :issue:`211`)
+* Fix bug in MCMC when fitting ZPF data for non-pure element species with recent versions of pycalphad (`@wahab2604`_ - :issue:`208`)
+* MCMC: Add support for fitting subsets of the database components given in phase models  (`@bocklund`_ - :issue:`218`)
+* Update dependencies and resolve deprecations (`@bocklund`_ - :issue:`222`, :issue:`223`)
+
 0.8.5 (2021-08-09)
 ==================
 
@@ -431,3 +443,4 @@ ESPEI is now a package! New features include
 
 .. _`@bocklund`: https://github.com/bocklund
 .. _`@jwsiegel2510`: https://github.com/jwsiegel2510
+.. _`@wahab2604`: https://github.com/wahab2604

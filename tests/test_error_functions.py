@@ -55,6 +55,34 @@ def test_subsystem_activity_probability(datasets_db):
     assert np.isclose(prob, bin_prob)
 
 
+def test_get_thermochemical_data_filters_invalid_sublattice_configurations(datasets_db):
+    datasets_db.insert(CU_MG_HM_MIX_CUMG2_ANTISITE)
+
+    dbf = Database(CU_MG_TDB)
+    comps = ["CU", "MG", "VA"]
+    phases = ["CUMG2"]
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
+    print('thermochemical data:', thermochemical_data)
+    assert thermochemical_data[0]["calculate_dict"]["values"].shape == (2,)
+
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
+    assert np.isclose(error, -14.28729)
+
+
+def test_get_thermochemical_data_filters_configurations_when_all_configurations_are_invalid(datasets_db):
+    datasets_db.insert(CU_MG_HM_MIX_CUMG2_ALL_INVALID)  # No valid configurations
+
+    dbf = Database(CU_MG_TDB)
+    comps = ["CU", "MG", "VA"]
+    phases = ["CUMG2"]
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
+    print('thermochemical data:', thermochemical_data)
+    assert thermochemical_data[0]["calculate_dict"]["values"].shape == (0,)
+
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
+    assert np.isclose(error, 0)
+
+
 def test_non_equilibrium_thermochemical_error_with_multiple_X_points(datasets_db):
     """Multiple composition datapoints in a dataset for a mixing phase should be successful."""
     datasets_db.insert(CU_MG_CPM_MIX_X_HCP_A3)

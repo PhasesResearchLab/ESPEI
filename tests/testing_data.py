@@ -9,7 +9,7 @@ A_B_REGULAR_SOLUTION_TDB = """
 ELEMENT A ALPHA 0.0 0.0 0.0 !
 ELEMENT B ALPHA 0.0 0.0 0.0 !
 
-TYPE_DEFINITION % SEQ *!    
+TYPE_DEFINITION % SEQ *!
 
 PHASE ALPHA % 1 1 !
 CONSTITUENT ALPHA : A B : !
@@ -340,6 +340,48 @@ CU_MG_EQ_HMR_LIQUID = {
     "values": [[[0]]],
     "reference": "equilibrium thermochemical tests", "comment": "True values depend on parameters."
 }
+
+
+CU_MG_HM_MIX_CUMG2_ANTISITE = yaml.load("""{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["CUMG2"],
+  "solver": {
+    "sublattice_site_ratios": [1, 2],
+    "sublattice_configurations": [["CU", "MG"], ["MG", "CU"], ["MG", "MG"], ["CU", "CU"]],
+    "mode": "manual"
+  },
+  "conditions": {
+    "P": 101325,
+    "T": [300, 400],
+  },
+
+  "output": "HM_MIX",
+    "values":   [[[10, 11, 12, 13], [100, 101, 102, 103]]],
+  "reference": "FAKE DATA",
+  "comment": "FAKE DATA"
+}
+""", Loader=YAML_LOADER)
+
+
+CU_MG_HM_MIX_CUMG2_ALL_INVALID = yaml.load("""{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["CUMG2"],
+  "solver": {
+    "sublattice_site_ratios": [1, 2],
+    "sublattice_configurations": [["MG", "CU"], ["MG", "MG"], ["CU", "CU"]],
+    "mode": "manual"
+  },
+  "conditions": {
+    "P": 101325,
+    "T": [300, 400],
+  },
+
+  "output": "HM_MIX",
+    "values":   [[[11, 12, 13], [101, 102, 103]]],
+  "reference": "FAKE DATA",
+  "comment": "FAKE DATA"
+}
+""", Loader=YAML_LOADER)
 
 
 CU_MG_HM_MIX_T_CUMG2 = yaml.load("""{
@@ -787,6 +829,7 @@ $ As assessed by Xiong doi:10.1016/j.calphad.2011.05.002
  ELEMENT VA   VACUUM           0.0000E+00  0.0000E+00  0.0000E+00!
  ELEMENT FE   BCC_A2           5.5847E+01  4.4890E+03  2.7280E+01!
  ELEMENT CR   BCC_A2           5.1996E+01  4.0500E+03  2.3560E+01!
+ TYPE_DEFINITION % SEQ * !
 $             **********   FCC_A1   *********
  TYPE_DEFINITION G GES AM-PH FCC_A1 MAG -3 0.25 !
  PHASE FCC_A1  %G  2 1   1 !
