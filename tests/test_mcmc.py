@@ -21,7 +21,7 @@ def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
     comps = ['CU', 'MG', 'VA']
     phases = ['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2']
     param = 'VV0001'
-    orig_val = dbf.symbols[param].args[0].expr
+    orig_val = dbf.symbols[param].args[0]
     initial_params = {param: orig_val}
 
     zpf_kwargs = {
@@ -152,7 +152,7 @@ def test_lnprob_calculates_associate_tdb(datasets_db):
     comps = ['CU', 'MG', 'VA']
     phases = ['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2']
     param = 'VV0001'
-    orig_val = dbf.symbols[param].args[0].expr
+    orig_val = dbf.symbols[param].args[0]
     initial_params = {param: orig_val}
 
     zpf_kwargs = {

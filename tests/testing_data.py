@@ -789,6 +789,18 @@ CU_ZN_SM_MIX_EXPR_TO_FLOAT = {
 "excluded_model_contributions": ["idmix"]
 }
 
+CU_ZN_SM_MIX_L1 = {
+"components": ["CU", "ZN"],"phases": ["LIQUID"],
+"solver": {"mode": "manual", "sublattice_site_ratios": [1],
+           "sublattice_configurations": [[["CU", "ZN"]], [["CU", "ZN"]]],
+"sublattice_occupancies": [[[0.5, 0.5]], [[0.25, 0.75]]]},
+"conditions": {"P": 101325, "T": 600},
+"output": "SM_MIX",
+"values": [[[0, 10000]]],
+"excluded_model_contributions": ["idmix"]
+}
+
+
 ###############################################################################
 # CR-FE
 ###############################################################################

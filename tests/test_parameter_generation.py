@@ -4,9 +4,11 @@ import copy
 from tinydb import where
 from tinydb.storages import MemoryStorage
 import numpy as np
-from pycalphad import Database
+from pycalphad import Database, variables as v
 import scipy
+from symengine import Symbol
 
+from espei.logger import config_logger
 from espei.paramselect import generate_parameters
 from espei.utils import PickleableTinyDB
 from .testing_data import *
@@ -364,7 +366,7 @@ def test_sgte_reference_state_naming_is_correct_for_character_element(datasets_d
     }
 
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
-    assert dbf.symbols['GBCCV'].args[0][0].__str__() == 'GHSERVV'
+    assert dbf.symbols['GBCCV'].args[0].__str__() == 'GHSERVV'
     assert 'GHSERVV' in dbf.symbols.keys()
     assert 'GHSERAL' in dbf.symbols.keys()
 
@@ -439,10 +441,27 @@ def test_cpm_sm_data_can_be_fit_successively(datasets_db):
     datasets_db.insert(CU_ZN_SM_MIX_EXPR_TO_FLOAT)
     dbf = generate_parameters(CU_ZN_LIQUID_PHASE_MODEL, datasets_db, 'SGTE91', 'linear')
     # beware that the calculate() results will not match up exactly with the original data due to rounding of parameters
+
     assert dbf.symbols['VV0000'] == 105.255  # T*ln(T) L2 term
     assert dbf.symbols['VV0001'] == -40.953  # T*ln(T) L1 term
     assert dbf.symbols['VV0002'] == -44.57 # T*ln(T) L0 term
     assert dbf.symbols['VV0003'] == 36.6556 # L0 T term, found after CPM_MIX addition
+
+
+def test_high_order_interaction_terms_no_spurious_symbols(datasets_db):
+    """Test that no spurious symbols (e.g. `Z`) slip into the symbolic part of generated excess parameters"""
+    config_logger(verbosity=3)
+    datasets_db.insert(CU_ZN_SM_MIX_L1)
+    dbf = generate_parameters(CU_ZN_LIQUID_PHASE_MODEL, datasets_db, 'SGTE91', 'linear')
+
+    assert 'VV0000' in dbf.symbols
+    assert 'VV0001' in dbf.symbols
+
+    params = dbf.search((where("parameter_order") == 1) & (where("parameter_type") == "L"))
+    assert len(params) == 1
+    param = params[0]['parameter']
+    print(param)
+    assert param == Symbol("VV0000") * v.T
 
 
 def test_initial_database_can_be_supplied(datasets_db):
