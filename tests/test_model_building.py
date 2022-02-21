@@ -4,7 +4,7 @@ Tests for building models for parameter selection
 
 from collections import OrderedDict
 
-import sympy
+import symengine
 from pycalphad import variables as v
 
 from espei.parameter_selection.model_building import build_feature_sets, build_candidate_models
@@ -13,8 +13,8 @@ from espei.sublattice_tools import generate_symmetric_group, sorted_interactions
 
 def test_build_feature_sets_generates_desired_binary_features_for_cp_like():
     """Binary feature sets can be correctly generated for heat capacity-like features"""
-    YS = sympy.Symbol("YS")
-    Z = sympy.Symbol("Z")
+    YS = symengine.Symbol("YS")
+    Z = symengine.Symbol("Z")
     temp_features = [v.T, v.T**2, 1/v.T, v.T**3]
     excess_features= [YS, YS*Z, YS*Z**2, YS*Z**3]
     feat_sets = build_feature_sets(temp_features, excess_features)
@@ -32,45 +32,45 @@ def test_build_feature_sets_generates_desired_binary_features_for_cp_like():
 def test_binary_candidate_models_are_constructed_correctly():
     """Candidate models should be generated for all valid combinations of possible models in the binary case"""
     features = OrderedDict([("CPM_FORM",
-                 (v.T*sympy.log(v.T), v.T**2)),
+                 (v.T*symengine.log(v.T), v.T**2)),
                 ("SM_FORM", (v.T,)),
-                ("HM_FORM", (sympy.S.One,))
+                ("HM_FORM", (symengine.S.One,))
                 ])
-    YS = sympy.Symbol('YS')
-    Z = sympy.Symbol('Z')
+    YS = symengine.Symbol('YS')
+    Z = symengine.Symbol('Z')
     candidate_models = build_candidate_models((('A', 'B'), 'A'), features)
     assert candidate_models == OrderedDict([
         ('CPM_FORM', [
-            [v.T*YS*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T), v.T*YS*Z**2*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T), v.T*YS*Z**2*sympy.log(v.T), v.T**2*YS*Z**2],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*sympy.log(v.T), v.T**2*YS*Z**2],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T), v.T*YS*Z**2*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T), v.T*YS*Z**2*sympy.log(v.T), v.T**2*YS*Z**2],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*sympy.log(v.T), v.T**2*YS*Z**2],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T), v.T*YS*Z**2*sympy.log(v.T), v.T*YS*Z**3*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T), v.T*YS*Z**2*sympy.log(v.T), v.T*YS*Z**3*sympy.log(v.T), v.T**2*YS*Z**3],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T), v.T*YS*Z**2*sympy.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T), v.T*YS*Z**2*sympy.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*sympy.log(v.T), v.T**2*YS*Z**3],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*sympy.log(v.T), v.T*YS*Z**3*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*sympy.log(v.T), v.T*YS*Z**3*sympy.log(v.T), v.T**2*YS*Z**3],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*sympy.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*sympy.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*sympy.log(v.T), v.T**2*YS*Z**3],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T), v.T*YS*Z**2*sympy.log(v.T), v.T*YS*Z**3*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T), v.T*YS*Z**2*sympy.log(v.T), v.T*YS*Z**3*sympy.log(v.T), v.T**2*YS*Z**3],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T), v.T*YS*Z**2*sympy.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T), v.T*YS*Z**2*sympy.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*sympy.log(v.T), v.T**2*YS*Z**3],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*sympy.log(v.T), v.T*YS*Z**3*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*sympy.log(v.T), v.T*YS*Z**3*sympy.log(v.T), v.T**2*YS*Z**3],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*sympy.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS, v.T*YS*Z*sympy.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*sympy.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*sympy.log(v.T), v.T**2*YS*Z**3]
+            [v.T*YS*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T), v.T*YS*Z**2*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T), v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T*YS*Z**2*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T), v.T*YS*Z**2*symengine.log(v.T), v.T*YS*Z**3*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T), v.T*YS*Z**2*symengine.log(v.T), v.T*YS*Z**3*symengine.log(v.T), v.T**2*YS*Z**3],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T), v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T), v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*symengine.log(v.T), v.T**2*YS*Z**3],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T), v.T*YS*Z**3*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T), v.T*YS*Z**3*symengine.log(v.T), v.T**2*YS*Z**3],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*symengine.log(v.T), v.T**2*YS*Z**3],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T*YS*Z**2*symengine.log(v.T), v.T*YS*Z**3*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T*YS*Z**2*symengine.log(v.T), v.T*YS*Z**3*symengine.log(v.T), v.T**2*YS*Z**3],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*symengine.log(v.T), v.T**2*YS*Z**3],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T), v.T*YS*Z**3*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T), v.T*YS*Z**3*symengine.log(v.T), v.T**2*YS*Z**3],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*symengine.log(v.T), v.T**2*YS*Z**3]
         ]),
         ('SM_FORM', [
             [v.T*YS],
@@ -90,19 +90,19 @@ def test_binary_candidate_models_are_constructed_correctly():
 def test_ternary_candidate_models_are_constructed_correctly():
     """Candidate models should be generated for all valid combinations of possible models in the ternary case"""
     features = OrderedDict([("CPM_FORM",
-                 (v.T*sympy.log(v.T), v.T**2)),
+                 (v.T*symengine.log(v.T), v.T**2)),
                 ("SM_FORM", (v.T,)),
-                ("HM_FORM", (sympy.S.One,))
+                ("HM_FORM", (symengine.S.One,))
                 ])
-    YS = sympy.Symbol('YS')
-    V_I, V_J, V_K = sympy.Symbol('V_I'), sympy.Symbol('V_J'), sympy.Symbol('V_K')
+    YS = symengine.Symbol('YS')
+    V_I, V_J, V_K = symengine.Symbol('V_I'), symengine.Symbol('V_J'), symengine.Symbol('V_K')
     candidate_models = build_candidate_models((('A', 'B', 'C'), 'A'), features)
     assert candidate_models == OrderedDict([
         ('CPM_FORM', [
-            [v.T*YS*sympy.log(v.T)],
-            [v.T*YS*sympy.log(v.T), v.T**2*YS],
-            [v.T*V_I*YS*sympy.log(v.T), v.T*V_J*YS*sympy.log(v.T), v.T*V_K*YS*sympy.log(v.T)],
-            [v.T*V_I*YS*sympy.log(v.T), v.T**2*V_I*YS, v.T*V_J*YS*sympy.log(v.T), v.T**2*V_J*YS, v.T*V_K*YS*sympy.log(v.T), v.T**2*V_K*YS],
+            [v.T*YS*symengine.log(v.T)],
+            [v.T*YS*symengine.log(v.T), v.T**2*YS],
+            [v.T*V_I*YS*symengine.log(v.T), v.T*V_J*YS*symengine.log(v.T), v.T*V_K*YS*symengine.log(v.T)],
+            [v.T*V_I*YS*symengine.log(v.T), v.T**2*V_I*YS, v.T*V_J*YS*symengine.log(v.T), v.T**2*V_J*YS, v.T*V_K*YS*symengine.log(v.T), v.T**2*V_K*YS],
         ]),
         ('SM_FORM', [
             [v.T*YS],

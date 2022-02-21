@@ -23,8 +23,8 @@ import operator
 from collections import OrderedDict
 
 import numpy as np
-import sympy
-from sympy import Symbol
+import symengine
+from symengine import Symbol
 from tinydb import where
 import tinydb
 from pycalphad import Database, Model, variables as v
@@ -51,6 +51,38 @@ def _param_present_in_database(dbf, phase_name, configuration, param_type):
             (where('constituent_array') == const_arr)
     search_result = dbf._parameters.search(query)
     if len(search_result) > 0:
+        return True
+
+
+def _stable_sort_key(x):
+    return str(sorted(x[0].args, key=str))
+
+
+def _poly_degrees(expr):
+    poly_dict = {}
+    for at in expr.atoms(symengine.Symbol):
+        poly_dict[at] = 1
+    for at in expr.atoms(symengine.log):
+        poly_dict[at] = 1
+    for at in expr.atoms(symengine.Pow):
+        poly_dict[at.args[0]] = at.args[1]
+    return poly_dict
+
+
+def has_symbol(expr, check_symbol):
+    """
+    Workaround for SymEngine not supporting Basic.has() with non-Symbol arguments.
+    Only works for detecting subsets of multiplication of variables.
+    """
+    try:
+        return expr.has(check_symbol)
+    except TypeError:
+        expr_poly = _poly_degrees(expr)
+        check_poly = _poly_degrees(check_symbol)
+        for cs, check_degree in check_poly.items():
+            eps = expr_poly.get(cs, 0)
+            if check_degree > eps:
+                return False
         return True
 
 
@@ -111,7 +143,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     features : dict
         Maps "property" to a list of features for the linear model.
         These will be transformed from "GM" coefficients
-        e.g., {"CPM_FORM": (v.T*sympy.log(v.T), v.T**2, v.T**-1, v.T**3)} (Default value = None)
+        e.g., {"CPM_FORM": (v.T*symengine.log(v.T), v.T**2, v.T**-1, v.T**3)} (Default value = None)
 
     Returns
     -------
@@ -130,9 +162,9 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
 
     # create the candidate models and fitting steps
     if features is None:
-        features = OrderedDict([("CPM_FORM", (v.T * sympy.log(v.T), v.T**2, v.T**-1, v.T**3)),
+        features = OrderedDict([("CPM_FORM", (v.T * symengine.log(v.T), v.T**2, v.T**-1, v.T**3)),
                                 ("SM_FORM", (v.T,)),
-                                ("HM_FORM", (sympy.S.One,)),
+                                ("HM_FORM", (symengine.S.One,)),
                                 ])
     # dict of {feature, [candidate_models]}
     candidate_models_features = build_candidate_models(configuration, features)
@@ -268,7 +300,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
         for degree, check_symbol in params:
             keys_to_remove = []
             for key, value in parameters.items():
-                if key.has(check_symbol):
+                if has_symbol(key, check_symbol):
                     if value != 0:
                         symbol_name = get_next_symbol(dbf)
                         dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
@@ -276,7 +308,7 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
                     coef = parameters[key] * (key / check_symbol)
                     try:
                         coef = float(coef)
-                    except TypeError:
+                    except RuntimeError:
                         pass
                     degree_polys[degree] += coef
                     keys_to_remove.append(key)
@@ -305,7 +337,7 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
     datasets : PickleableTinyDB
         All datasets to consider for the calculation.
     refdata : dict
-        Maps tuple(element, phase_name) -> SymPy object defining
+        Maps tuple(element, phase_name) -> SymEngine object defining
         energy relative to SER
     ridge_alpha : float
         Value of the :math:`\\alpha` hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
@@ -368,11 +400,6 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                 sym_name = 'G'+name[:3].upper()+em_comp.upper()
                 stability = refdata.get((em_comp.upper(), name.upper()), None)
                 if stability is not None:
-                    if isinstance(stability, sympy.Piecewise):
-                        # Default zero required for the compiled backend
-                        if (0, True) not in stability.args:
-                            new_args = stability.args + ((0, True),)
-                            stability = sympy.Piecewise(*new_args)
                     dbf.symbols[sym_name] = stability
                     break
             if dbf.symbols.get(sym_name, None) is not None:
@@ -389,7 +416,7 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                 symbol_name = get_next_symbol(dbf)
                 dbf.symbols[symbol_name] = sigfigs(value, numdigits)
                 parameters[key] = Symbol(symbol_name)
-            fit_eq = sympy.Add(*[value * key for key, value in parameters.items()])
+            fit_eq = symengine.Add(*[value * key for key, value in parameters.items()])
             ref = 0
             for subl, ratio in zip(endmember, site_ratios):
                 if subl == 'VA':
@@ -420,14 +447,14 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
         else:
             _log.trace('INTERACTION: %s', ixx)
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
-        parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=str)])  # SymPy performance mitigation
+        parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=_stable_sort_key)])  # SymPy performance mitigation
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(10, dtype=np.object_)
         for degree in reversed(range(10)):
             check_symbol = Symbol('YS') * Symbol('Z')**degree
             keys_to_remove = []
             for key, value in parameters.items():
-                if key.has(check_symbol):
+                if has_symbol(key, check_symbol):
                     if value != 0:
                         symbol_name = get_next_symbol(dbf)
                         dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
@@ -435,7 +462,7 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                     coef = parameters[key] * (key / check_symbol)
                     try:
                         coef = float(coef)
-                    except TypeError:
+                    except RuntimeError:
                         pass
                     degree_polys[degree] += coef
                     keys_to_remove.append(key)

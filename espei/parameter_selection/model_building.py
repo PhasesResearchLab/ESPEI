@@ -3,8 +3,8 @@ Building candidate models
 """
 
 import itertools
-import sympy
 from pycalphad.core.cache import cacheit
+import symengine
 from espei.sublattice_tools import interaction_test
 
 def make_successive(xs):
@@ -97,7 +97,7 @@ def build_candidate_models(configuration, features):
     features : dict
         Dictionary of {str: list} of generic features for a model, not
         considering the configuration. For example:
-        {'CPM_FORM': [sympy.S.One, v.T, v.T**2, v.T**3]}
+        {'CPM_FORM': [symengine.S.One, v.T, v.T**2, v.T**3]}
 
     Returns
     -------
@@ -121,11 +121,11 @@ def build_candidate_models(configuration, features):
     feature_candidate_models = {}
     if not interaction_test(configuration):  # endmembers only
         for feature_name, temperature_features in features.items():
-            interaction_features = (sympy.S.One,)
+            interaction_features = (symengine.S.One,)
             feature_candidate_models[feature_name] = build_feature_sets(temperature_features, interaction_features)
     elif interaction_test(configuration, 2):  # has a binary interaction
-        YS = sympy.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
-        Z = sympy.Symbol('Z')
+        YS = symengine.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
+        Z = symengine.Symbol('Z')
         for feature_name, temperature_features in features.items():
             # generate increasingly complex interactions (power of Z is Redlich-Kister order)
             interaction_features = (YS, YS*Z, YS*(Z**2), YS*(Z**3))  # L0, L1, L2, L3
@@ -133,9 +133,9 @@ def build_candidate_models(configuration, features):
     elif interaction_test(configuration, 3):  # has a ternary interaction
         # Ternaries interactions should have exactly two interaction sets:
         # 1. a single symmetric ternary parameter (YS)
-        YS = sympy.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
+        YS = symengine.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
         # 2. L0, L1, and L2 parameters
-        V_I, V_J, V_K = sympy.Symbol('V_I'), sympy.Symbol('V_J'), sympy.Symbol('V_K')
+        V_I, V_J, V_K = symengine.Symbol('V_I'), symengine.Symbol('V_J'), symengine.Symbol('V_K')
         symmetric_interactions = (YS,) # symmetric L0
         for feature_name, temperature_features in features.items():
             # We are ignoring cases where we have L0 == L1 != L2 (and like

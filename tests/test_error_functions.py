@@ -4,6 +4,8 @@ Test different error functions as isolated units.
 """
 
 from unittest import mock
+from espei.optimizers.opt_mcmc import EmceeOptimizer
+from espei.utils import database_symbols_to_fit
 import numpy as np
 import pytest
 import pickle
@@ -16,6 +18,7 @@ from espei.paramselect import generate_parameters
 from espei.error_functions import *
 from espei.error_functions.equilibrium_thermochemical_error import calc_prop_differences
 from espei.error_functions.context import setup_context
+from espei.utils import unpack_piecewise
 
 from .fixtures import datasets_db
 from .testing_data import *
@@ -453,9 +456,18 @@ def test_zpf_context_is_pickleable(datasets_db):
     datasets_db.insert(CU_MG_DATASET_ZPF_ZERO_ERROR)
     dbf = Database(CU_MG_TDB)
 
+    symbols_to_fit = database_symbols_to_fit(dbf)
+    initial_guess = np.array([unpack_piecewise(dbf.symbols[s]) for s in symbols_to_fit])
+    prior_dict = EmceeOptimizer.get_priors(None, symbols_to_fit, initial_guess)
     ctx = setup_context(dbf, datasets_db)
+    ctx.update(prior_dict)
+
     ctx_pickle = pickle.dumps(ctx)
-    ctx_unpickle = pickle.loads(ctx_pickle)
+    ctx_unpickled = pickle.loads(ctx_pickle)
+
+    regular_predict  = EmceeOptimizer.predict(initial_guess, **ctx)
+    unpickle_predict = EmceeOptimizer.predict(initial_guess, **ctx_unpickled)
+    assert np.isclose(regular_predict, unpickle_predict)
 
 
 def test_activity_context_is_pickleable(datasets_db):
@@ -463,9 +475,18 @@ def test_activity_context_is_pickleable(datasets_db):
     datasets_db.insert(CU_MG_EXP_ACTIVITY)
     dbf = Database(CU_MG_TDB)
 
+    symbols_to_fit = database_symbols_to_fit(dbf)
+    initial_guess = np.array([unpack_piecewise(dbf.symbols[s]) for s in symbols_to_fit])
+    prior_dict = EmceeOptimizer.get_priors(None, symbols_to_fit, initial_guess)
     ctx = setup_context(dbf, datasets_db)
+    ctx.update(prior_dict)
+
     ctx_pickle = pickle.dumps(ctx)
-    ctx_unpickle = pickle.loads(ctx_pickle)
+    ctx_unpickled = pickle.loads(ctx_pickle)
+
+    regular_predict  = EmceeOptimizer.predict(initial_guess, **ctx)
+    unpickle_predict = EmceeOptimizer.predict(initial_guess, **ctx_unpickled)
+    assert np.isclose(regular_predict, unpickle_predict)
 
 
 def test_non_equilibrium_thermochemical_context_is_pickleable(datasets_db):
@@ -474,9 +495,18 @@ def test_non_equilibrium_thermochemical_context_is_pickleable(datasets_db):
     datasets_db.insert(CU_MG_SM_MIX_T_X_FCC_A1)
     dbf = Database(CU_MG_TDB)
 
+    symbols_to_fit = database_symbols_to_fit(dbf)
+    initial_guess = np.array([unpack_piecewise(dbf.symbols[s]) for s in symbols_to_fit])
+    prior_dict = EmceeOptimizer.get_priors(None, symbols_to_fit, initial_guess)
     ctx = setup_context(dbf, datasets_db)
+    ctx.update(prior_dict)
+
     ctx_pickle = pickle.dumps(ctx)
-    ctx_unpickle = pickle.loads(ctx_pickle)
+    ctx_unpickled = pickle.loads(ctx_pickle)
+
+    regular_predict  = EmceeOptimizer.predict(initial_guess, **ctx)
+    unpickle_predict = EmceeOptimizer.predict(initial_guess, **ctx_unpickled)
+    assert np.isclose(regular_predict, unpickle_predict)
 
 
 def test_equilibrium_thermochemical_context_is_pickleable(datasets_db):
@@ -484,6 +514,15 @@ def test_equilibrium_thermochemical_context_is_pickleable(datasets_db):
     datasets_db.insert(CU_MG_EQ_HMR_LIQUID)
     dbf = Database(CU_MG_TDB)
 
+    symbols_to_fit = database_symbols_to_fit(dbf)
+    initial_guess = np.array([unpack_piecewise(dbf.symbols[s]) for s in symbols_to_fit])
+    prior_dict = EmceeOptimizer.get_priors(None, symbols_to_fit, initial_guess)
     ctx = setup_context(dbf, datasets_db)
+    ctx.update(prior_dict)
+
     ctx_pickle = pickle.dumps(ctx)
-    ctx_unpickle = pickle.loads(ctx_pickle)
+    ctx_unpickled = pickle.loads(ctx_pickle)
+
+    regular_predict  = EmceeOptimizer.predict(initial_guess, **ctx)
+    unpickle_predict = EmceeOptimizer.predict(initial_guess, **ctx_unpickled)
+    assert np.isclose(regular_predict, unpickle_predict)

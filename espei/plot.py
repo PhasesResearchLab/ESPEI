@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import numpy as np
 import tinydb
-from sympy import Symbol
+from symengine import Symbol
 from pycalphad import Model, calculate, equilibrium, variables as v
 from pycalphad.core.utils import unpack_components
 from pycalphad.plot.utils import phase_legend

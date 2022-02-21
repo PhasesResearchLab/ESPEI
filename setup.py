@@ -31,8 +31,7 @@ setup(
         'setuptools_scm[toml]>=6.0',
         'scikit-learn>=1.0',
         'scipy',
-        'symengine',
-        'sympy>=1.5.1',
+        'symengine>=0.9',
         'tinydb>=4',
     ],
     extras_require={
