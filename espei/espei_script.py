@@ -18,7 +18,6 @@ import numpy as np
 import yaml
 import dask
 import distributed
-import sympy
 import symengine
 from tinydb import where
 import emcee
@@ -61,7 +60,6 @@ def log_version_info():
     _log.debug('pycalphad version   %s', pycalphad.__version__)
     _log.debug('dask version        %s', dask.__version__)
     _log.debug('distributed version %s', distributed.__version__)
-    _log.debug('sympy version       %s', sympy.__version__)
     _log.debug('symengine version   %s', symengine.__version__)
     _log.debug('emcee version       %s', emcee.__version__)
     _log.info("If you use ESPEI for work presented in a publication, we ask that you cite the following paper:\n    %s", espei.__citation__)

@@ -6,8 +6,8 @@ number of tests, but a small amount of coverage.
 
 from pycalphad import variables as v
 import pytest
-import sympy
-from sympy import Piecewise, Symbol
+import symengine
+from symengine import Piecewise, Symbol
 
 import espei.refdata
 from espei.database_utils import initialize_database, _get_ser_data
@@ -50,8 +50,8 @@ def test_get_ser_data_is_successful_without_refdata():
 def test_database_initialization_custom_refstate():
     """Test that a custom reference state with ficticious pure elements can be used to construct a Database"""
     refdata_stable = {
-        "Q": Piecewise((sympy.oo, True)),
-        "ZX": Piecewise((sympy.oo, True)),
+        "Q": Piecewise((symengine.oo, True)),
+        "ZX": Piecewise((symengine.oo, True)),
     }
     refdata = {
         ("Q", "ALPHA"): Symbol("GHSERQQ"),
@@ -115,5 +115,5 @@ def test_database_initialization_adds_GHSER_data():
         }
     }
     dbf = initialize_database(phase_models, "SGTE91")
-    assert dbf.symbols["GHSERCR"] != sympy.S.Zero
-    assert dbf.symbols["GHSERNI"] != sympy.S.Zero
+    assert dbf.symbols["GHSERCR"] != symengine.S.Zero
+    assert dbf.symbols["GHSERNI"] != symengine.S.Zero

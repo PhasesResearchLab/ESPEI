@@ -3,7 +3,6 @@
 
 import logging
 from typing import Dict, Union
-import sympy
 from pycalphad import Database, variables as v
 import espei.refdata
 from espei.utils import extract_aliases

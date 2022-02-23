@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import numpy as np
 import tinydb
-from sympy import Symbol
+from symengine import Symbol
 from pycalphad import Model, calculate, equilibrium, variables as v
 from pycalphad.core.utils import unpack_components
 from pycalphad.plot.utils import phase_legend
@@ -197,7 +197,7 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs
 
     # set up plot if not done already
     if ax is None:
-        ax = plt.gca(projection=projection)
+        ax = plt.subplot(projection=projection)
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
         ax.tick_params(axis='both', which='major', labelsize=14)
@@ -542,7 +542,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
         dataplot_kwargs = {}
 
     if not ax:
-        ax = plt.gca()
+        ax = plt.subplot()
 
     # Plot predicted values from the database
     grid, predicted_values = _get_interaction_predicted_values(dbf, comps, phase_name, configuration, output)
@@ -685,7 +685,7 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
         dataplot_kwargs = {}
 
     if not ax:
-        ax = plt.gca()
+        ax = plt.subplot()
 
     if datasets is not None:
         solver_qry = (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
@@ -792,8 +792,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
         endpoints = [endpoints[0], endpoints[-1]]
         disordered_config = True
     if not ax:
-        fig = plt.figure(figsize=plt.figaspect(1))
-        ax = fig.gca()
+        ax = plt.subplot()
     bar_chart = False
     bar_labels = []
     bar_data = []

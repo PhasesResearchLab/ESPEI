@@ -825,6 +825,18 @@ CU_ZN_SM_MIX_EXPR_TO_FLOAT = {
 "excluded_model_contributions": ["idmix"]
 }
 
+CU_ZN_SM_MIX_L1 = {
+"components": ["CU", "ZN"],"phases": ["LIQUID"],
+"solver": {"mode": "manual", "sublattice_site_ratios": [1],
+           "sublattice_configurations": [[["CU", "ZN"]], [["CU", "ZN"]]],
+"sublattice_occupancies": [[[0.5, 0.5]], [[0.25, 0.75]]]},
+"conditions": {"P": 101325, "T": 600},
+"output": "SM_MIX",
+"values": [[[0, 10000]]],
+"excluded_model_contributions": ["idmix"]
+}
+
+
 ###############################################################################
 # CR-FE
 ###############################################################################
@@ -865,6 +877,7 @@ $ As assessed by Xiong doi:10.1016/j.calphad.2011.05.002
  ELEMENT VA   VACUUM           0.0000E+00  0.0000E+00  0.0000E+00!
  ELEMENT FE   BCC_A2           5.5847E+01  4.4890E+03  2.7280E+01!
  ELEMENT CR   BCC_A2           5.1996E+01  4.0500E+03  2.3560E+01!
+ TYPE_DEFINITION % SEQ * !
 $             **********   FCC_A1   *********
  TYPE_DEFINITION G GES AM-PH FCC_A1 MAG -3 0.25 !
  PHASE FCC_A1  %G  2 1   1 !

@@ -11,17 +11,17 @@ import re
 from collections import namedtuple
 
 import numpy as np
-import sympy
+import symengine
 from distributed import Client
 from pycalphad import Model, variables as v
-from sympy import Symbol
+from symengine import Symbol
 from tinydb import TinyDB, where
 from tinydb.storages import MemoryStorage
 
 
 def unpack_piecewise(x):
-    if isinstance(x, sympy.Piecewise):
-        return float(x.args[0].expr)
+    if isinstance(x, symengine.Piecewise):
+        return float(x.args[0])
     else:
         return float(x)
 
@@ -200,13 +200,13 @@ def parameter_term(expression, symbol):
         # the parameter is the symbol, so the multiplicative term is 1.
         term = 1
     else:
-        if isinstance(expression, sympy.Piecewise):
-            expression = expression.args[0][0]
-        if isinstance(expression, sympy.Symbol):
+        if isinstance(expression, symengine.Piecewise):
+            expression = expression.args[0]
+        if isinstance(expression, symengine.Symbol):
             # this is not mathematically correct, but we just need to be able to split it into args
-            expression = sympy.Add(expression, 1)
-        if not isinstance(expression, sympy.Add):
-            raise ValueError('Parameter {} is a {} not a sympy.Add or a Piecewise Add'.format(expression, type(expression)))
+            expression = symengine.Add(expression, 1)
+        if not isinstance(expression, symengine.Add):
+            raise ValueError('Parameter {} is a {} not a symengine.Add or a Piecewise Add'.format(expression, type(expression)))
 
         expression_terms = expression.args
         term = None
@@ -252,7 +252,7 @@ def formatted_parameter(dbf, symbol, unique=True):
     Parameters
     ----------
     dbf : pycalphad.Database
-    symbol : string or sympy.Symbol
+    symbol : string or symengine.Symbol
         Symbol in the Database to get the parameter for.
     unique : bool
         If True, will raise if more than one parameter containing the symbol is found.
