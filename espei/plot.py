@@ -244,8 +244,14 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs
         data_phases.update(set(entry['phases']))
     new_phases = sorted(list(data_phases.difference(set(phases))))
     phases.extend(new_phases)
-    legend_handles, phase_color_map = phase_legend(phases)
-
+    # matplotlib doesn't allow legend labels to have leading underscores,
+    # so generate the legend without them, special casing only hyperplane for now
+    # https://github.com/matplotlib/matplotlib/issues/5200/
+    phases_without_hyperplane = [phase_name for phase_name in phases if phase_name != "__HYPERPLANE__"]
+    legend_handles, phase_color_map = phase_legend(phases_without_hyperplane)
+    # Force hyperplane color to black
+    phase_color_map["__HYPERPLANE__"] = "black"
+    
     if projection is None:
         # TODO: There are lot of ways this could break in multi-component situations
 
@@ -262,14 +268,12 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs
         scatter_kwargs.update(plot_kwargs)
 
         eq_dict = ravel_zpf_values(desired_data, [x])
-
-        # two phase
         updated_tieline_plot_kwargs = {'linewidth':1, 'color':'k'}
         if tieline_plot_kwargs is not None:
             updated_tieline_plot_kwargs.update(tieline_plot_kwargs)
-        equilibria_to_plot = eq_dict.get(1, [])
-        equilibria_to_plot.extend(eq_dict.get(2, []))
-        equilibria_to_plot.extend(eq_dict.get(3, []))
+        # No special case handling for number of phases in equilibrium.
+        # It is up to dataset curators to provide data that thermodynamically correct to plot.
+        equilibria_to_plot = [phase_region for phase_regions in eq_dict.values() for phase_region in phase_regions]
         for eq in equilibria_to_plot:
             # plot the scatter points for the right phases
             x_points, y_points = [], []
