@@ -233,8 +233,10 @@ class EmceeOptimizer(OptimizerBase):
 
         prior_dict = self.get_priors(prior, symbols_to_fit, initial_guess)
         ctx.update(prior_dict)
-        ctx['zpf_kwargs']['approximate_equilibrium'] = approximate_equilibrium
-        ctx['equilibrium_thermochemical_kwargs']['approximate_equilibrium'] = approximate_equilibrium
+        if 'zpf_kwargs' in ctx:
+            ctx['zpf_kwargs']['approximate_equilibrium'] = approximate_equilibrium
+        if 'equilibrium_thermochemical_kwargs' in ctx:
+            ctx['equilibrium_thermochemical_kwargs']['approximate_equilibrium'] = approximate_equilibrium
         # Run the initial parameters for guessing purposes:
         _log.trace("Probability for initial parameters")
         self.predict(initial_guess, **ctx)
