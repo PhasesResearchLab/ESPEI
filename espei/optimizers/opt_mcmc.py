@@ -174,10 +174,8 @@ class EmceeOptimizer(OptimizerBase):
                 if (i + 1) % self.save_interval == 0:
                     self.save_sampler_state()
                     _log.trace('Acceptance ratios for parameters: %s', self.sampler.acceptance_fraction)
-                n = int((progbar_width + 1) * float(i) / iterations)
+                n = int((progbar_width) * float(i + 1) / iterations)
                 _log.info("\r[%s%s] (%d of %d)\n", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
-            n = int((progbar_width + 1) * float(i + 1) / iterations)
-            _log.info("\r[%s%s] (%d of %d)\n", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
         except KeyboardInterrupt:
             pass
         _log.info('MCMC complete.')
