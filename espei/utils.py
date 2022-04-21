@@ -8,6 +8,7 @@ from typing import Any, Dict, Type
 import importlib
 import itertools
 import re
+import warnings
 from collections import namedtuple
 
 import numpy as np
@@ -108,17 +109,20 @@ def optimal_parameters(trace_array, lnprob_array, kth=0):
     unique_params = np.zeros(trace_array.shape[-1])
     unique_params_found = -1
     # loop through all possible nonzero iterations
-    for i in range(nz[-1][-1]):
-        # find the next set of parameters parameters
-        candidate_index = np.argpartition(-lnprob_array[nz], i)[i]
-        candidate_params = trace_array[nz][candidate_index]
-        # if the parameters are unique, make them the new unique parameters
-        if np.any(candidate_params != unique_params):
-            unique_params = candidate_params
-            unique_params_found += 1
-        # if we have found the kth set of unique parameters, stop
-        if unique_params_found == kth:
-            return unique_params
+    if nz[-1].size > 0:
+        for i in range(nz[-1][-1]):
+            # find the next set of parameters parameters
+            candidate_index = np.argpartition(-lnprob_array[nz], i)[i]
+            candidate_params = trace_array[nz][candidate_index]
+            # if the parameters are unique, make them the new unique parameters
+            if np.any(candidate_params != unique_params):
+                unique_params = candidate_params
+                unique_params_found += 1
+            # if we have found the kth set of unique parameters, stop
+            if unique_params_found == kth:
+                return unique_params
+    else:
+        warnings.warn("optimal_parameters() did not find any non-zero parameters in the trace.")
     return np.zeros(trace_array.shape[-1])
 
 
