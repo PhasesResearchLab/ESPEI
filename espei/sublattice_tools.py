@@ -124,8 +124,19 @@ def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None,
     # fixed_subl_indices were not given, they are assumed to be inequivalent and constant
     fixed_subl_indices = sorted(set(sublattice_indices) - set(seen_subl_indices))
 
+    # permute within each sublattice, i.e. [0, 1] -> [[0, 1], [1, 0]]
+    intra_sublattice_permutations = (itertools.permutations(equiv_subl) for equiv_subl in symmetry)
+    # product, combining all internal sublattice permutations, i.e.
+    # [[0, 1], [1, 0]] and [[2, 3], [3, 2]] become [ ([0, 1], [2, 3]), ... ]
+    sublattice_products = itertools.product(*intra_sublattice_permutations)
+    # finally, swap sets of equivalent sublattices, i.e.
+    # [ ([0, 1], [2, 3]), ... ] -> [[ ([0, 1], [2, 3]),  ([2, 3], [0, 1]) ], ... ]
+    inter_sublattice_permutations = (itertools.permutations(x) for x in sublattice_products)
+
     symmetrically_distinct_configurations = set()
-    for proposed_distinct_indices in list(itertools.chain.from_iterable([itertools.permutations(x) for x in itertools.product(*[itertools.permutations(equiv_subl) for equiv_subl in symmetry])])):
+    # chain.from_iterable calls flatten out nested permutation lists, i.e.
+    # ([0, 1], [2, 3]) -> [0, 1, 2, 3]
+    for proposed_distinct_indices in itertools.chain.from_iterable(inter_sublattice_permutations):
         new_config = list(configuration[i] for i in itertools.chain.from_iterable(proposed_distinct_indices))
         # The configuration only contains indices for symmetric sublattices. For the
         # inequivalent sublattices, we need to insert them at their proper indices.
