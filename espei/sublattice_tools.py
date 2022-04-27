@@ -107,12 +107,12 @@ def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None,
     (`[[0, 1], [2, 3]] == [[2, 3], [0, 1]]`), is not necessarily required. It
     could be that sublattices 0 and 1 represent equivalent substitutional
     sublattices, while 2 and 3 represent equivalent interstitial sites.
-    Interchange sublattices between substitutional sublattices is allowed, but
+    Interchanging sublattices between substitutional sublattices is allowed, but
     the substitutional sites would not be interchangeable with the interstitial
     sites. To achieve this kind of effect with this function, you would need to
-    call it once with the equivlanet substitutional sublattices, then for each
-    generated configuration, call this function again, giving the equivalent
-    interstitial sublattices.
+    call it once with the equivalent substitutional sublattices, then for each
+    generated configuration, call this function again, giving the unique
+    configurations for symmetric interstitial sublattices.
     """
     # recursively casting sequences to tuples ensures that the generated configurations are hashable
     configuration = recursive_tuplify(configuration)
