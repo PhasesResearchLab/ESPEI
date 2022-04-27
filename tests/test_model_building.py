@@ -126,6 +126,36 @@ def test_symmetric_group_can_be_generated_for_2_sl_endmembers_with_symmetry():
     assert symm_groups == [('AL', 'CO'), ('CO', 'AL')]
 
 
+def test_generating_symmetric_group_bcc_4sl():
+    """Binary BCC 4SL ordered symmetric configurations can can be generated"""
+    bcc_4sl_symmetry = [[0, 1], [2, 3]]
+
+    config_D03_A3B = ["A", "A", "A", "B"]
+    symm_groups = generate_symmetric_group(config_D03_A3B, bcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "A", "B"),
+        ("A", "A", "B", "A"),
+        ("A", "B", "A", "A"),
+        ("B", "A", "A", "A"),
+    ]
+
+    config_B2_A2B2 = ["A", "A", "B", "B"]
+    symm_groups = generate_symmetric_group(config_B2_A2B2, bcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "B", "B"),
+        ("B", "B", "A", "A"),
+    ]
+
+    config_B32_A2B2 = ["A", "B", "A", "B"]
+    symm_groups = generate_symmetric_group(config_B32_A2B2, bcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "B", "A", "B"),
+        ("A", "B", "B", "A"),
+        ("B", "A", "A", "B"),
+        ("B", "A", "B", "A"),
+    ]
+
+
 def test_interaction_sorting_is_correct():
     """High order (order >= 3) interactions should sort correctly"""
     # Correct sorting of n-order interactions should sort first by number of
@@ -157,4 +187,3 @@ def test_interaction_sorting_is_correct():
         ('CO', ('AL', 'CO', 'CR')),                # (1, 0, 1)
         ('CR', ('AL', 'CO', 'CR')),                # (1, 0, 1)
     ]
-
