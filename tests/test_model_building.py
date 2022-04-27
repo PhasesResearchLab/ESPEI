@@ -156,6 +156,31 @@ def test_generating_symmetric_group_bcc_4sl():
     ]
 
 
+def test_generating_symmetric_group_fcc_4sl():
+    """Binary FCC 4SL ordered symmetric configurations can can be generated"""
+    fcc_4sl_symmetry = [[0, 1, 2, 3]]
+
+    config_L1_2_A3B = ["A", "A", "A", "B"]
+    symm_groups = generate_symmetric_group(config_L1_2_A3B, fcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "A", "B"),
+        ("A", "A", "B", "A"),
+        ("A", "B", "A", "A"),
+        ("B", "A", "A", "A"),
+    ]
+
+    config_L1_0_A2B2 = ["A", "A", "B", "B"]
+    symm_groups = generate_symmetric_group(config_L1_0_A2B2, fcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "B", "B"),
+        ("A", "B", "A", "B"),
+        ("A", "B", "B", "A"),
+        ("B", "A", "A", "B"),
+        ("B", "A", "B", "A"),
+        ("B", "B", "A", "A"),
+    ]
+
+
 def test_interaction_sorting_is_correct():
     """High order (order >= 3) interactions should sort correctly"""
     # Correct sorting of n-order interactions should sort first by number of
