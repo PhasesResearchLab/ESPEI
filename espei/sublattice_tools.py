@@ -89,10 +89,8 @@ def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None,
         given, `symmetry` _must_ contain all sublattice indices exactly once. For
         example: `[[0, 1], [2, 3]]` means that sublattices 0 and 1 are equivalent to
         each other and sublattices 2 and 3 are also equivalent to each other. Symmetry
-        of `[[0, 1, 2, 3], [4]]` means that the first four sublattices are symmetric to
-        each other and the last sublattice is not equivalent to any other sublattice.
-        If `None` is given as the value, it is assumed that all sublattices are
-        inequivalent.
+        of `[[0, 1, 2, 3]]` means that the first four sublattices are symmetric to
+        each other. If `None` is given, no new configurations are generated.
 
     Returns
     -------
@@ -103,8 +101,7 @@ def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None,
     configuration = recursive_tuplify(configuration)  # ensures that the generated configurations are
     sublattice_indices = list(range(len(configuration)))
     if symmetry is None:
-        # Each sublattice is independent and only symmetric with itself.
-        symmetry = [[i] for i in sublattice_indices]
+        return [configuration]
     seen_subl_indices = sorted([i for equiv_subl in symmetry for i in equiv_subl])
     if (sublattice_indices != seen_subl_indices) or (set(sublattice_indices) != set(seen_subl_indices)):
         raise ValueError(f"Expected that the entries of `symmetry` give each sublattice index exactly once. Got {len(sublattice_indices)} sublattices with indices {sublattice_indices} for symmetry {symmetry}")
