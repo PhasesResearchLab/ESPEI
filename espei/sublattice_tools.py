@@ -106,7 +106,7 @@ def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None,
     Technically, equivalency between sublattices (`[[0, 1], [2, 3]] == [[2, 3], [0, 1]]`)
     is not necessarily required. It could be that sublattices 0 and 1 represent
     equivalent substitutional sublattices, while 2 and 3 represent equivalent
-    interstitial sites. Constituent interchange would be possible within a sublattice,
+    interstitial sites. Constituent interchange would be possible between substitutional sublattices,
     but the substitutional sites would not be interchangeable with the interstitial
     sites.
 
