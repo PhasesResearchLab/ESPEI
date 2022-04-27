@@ -91,7 +91,7 @@ def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None,
         sublattices are internally equivalent and the sublattices themselves are assumed
         interchangeble. That is, for a symmetry of `[[0, 1], [2, 3]]`, sublattices
         0 and 1 are equivalent to each other (i.e. `[0, 1] == [1, 0]`) and similarly for
-        sublattices 2 and 3. It also implies that the sublattices are interchangable,
+        sublattices 2 and 3. It also implies that the sublattices are interchangeable,
         (i.e. `[[0, 1], [2, 3]] == [[2, 3], [0, 1]]`), but note that constituents cannot
         change sublattices (i.e. `[[0, 1], [2, 3]] != [[0, 3], [2, 1]]`).
          If `symmetry=None` is given, no new configurations are generated.
@@ -107,7 +107,7 @@ def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None,
     is not necessarily required. It could be that sublattices 0 and 1 represent
     equivalent substitutional sublattices, while 2 and 3 represent equivalent
     interstitial sites. Constituent interchange would be possible within a sublattice,
-    but the substitutional sites would not be interchangable with the interstitial
+    but the substitutional sites would not be interchangeable with the interstitial
     sites.
 
     Since this function is primarily used for models where the with symmetries are
