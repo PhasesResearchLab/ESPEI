@@ -85,31 +85,54 @@ def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None,
         Typically a constituent array. The length should correspond to the number of
         sublattices in the phase.
     symmetry : Union[None, Sequence[Sequence[int]]]
-        A list of lists giving the indices of symmetrically equivalent sublattices. If
-        given, `symmetry` _must_ contain all sublattice indices exactly once. For
-        example: `[[0, 1], [2, 3]]` means that sublattices 0 and 1 are equivalent to
-        each other and sublattices 2 and 3 are also equivalent to each other. Symmetry
-        of `[[0, 1, 2, 3]]` means that the first four sublattices are symmetric to
-        each other. If `None` is given, no new configurations are generated.
+        A list of lists giving the indices of symmetrically equivalent sublattices.
+        For example: a symmetry of `[[0, 1, 2, 3]]` means that the first four
+        sublattices are symmetric to each other. If multiple sublattices are given, the
+        sublattices are internally equivalent and the sublattices themselves are assumed
+        interchangeble. That is, for a symmetry of `[[0, 1], [2, 3]]`, sublattices
+        0 and 1 are equivalent to each other (i.e. `[0, 1] == [1, 0]`) and similarly for
+        sublattices 2 and 3. It also implies that the sublattices are interchangable,
+        (i.e. `[[0, 1], [2, 3]] == [[2, 3], [0, 1]]`), but note that constituents cannot
+        change sublattices (i.e. `[[0, 1], [2, 3]] != [[0, 3], [2, 1]]`).
+         If `symmetry=None` is given, no new configurations are generated.
 
     Returns
     -------
     tuple
         Tuple of configuration tuples that are all symmetrically equivalent.
 
+    Notes
+    -----
+    Technically, equivalency between sublattices (`[[0, 1], [2, 3]] == [[2, 3], [0, 1]]`)
+    is not necessarily required. It could be that sublattices 0 and 1 represent
+    equivalent substitutional sublattices, while 2 and 3 represent equivalent
+    interstitial sites. Constituent interchange would be possible within a sublattice,
+    but the substitutional sites would not be interchangable with the interstitial
+    sites.
+
+    Since this function is primarily used for models where the with symmetries are
+    interchanable (ordered bcc configurations in particular), we choose to neglect that
+    case here.
+
     """
-    configuration = recursive_tuplify(configuration)  # ensures that the generated configurations are
+    # recursively casting sequences to tuples ensures that the generated configurations are hashable
+    configuration = recursive_tuplify(configuration)
     sublattice_indices = list(range(len(configuration)))
     if symmetry is None:
         return [configuration]
     seen_subl_indices = sorted([i for equiv_subl in symmetry for i in equiv_subl])
-    if (sublattice_indices != seen_subl_indices) or (set(sublattice_indices) != set(seen_subl_indices)):
-        raise ValueError(f"Expected that the entries of `symmetry` give each sublattice index exactly once. Got {len(sublattice_indices)} sublattices with indices {sublattice_indices} for symmetry {symmetry}")
+    # fixed_subl_indices were not given, they are assumed to be inequivalent and constant
+    fixed_subl_indices = sorted(set(sublattice_indices) - set(seen_subl_indices))
 
     symmetrically_distinct_configurations = set()
     for proposed_distinct_indices in list(itertools.chain.from_iterable([itertools.permutations(x) for x in itertools.product(*[itertools.permutations(equiv_subl) for equiv_subl in symmetry])])):
-        new_config = tuple(configuration[i] for i in itertools.chain.from_iterable(proposed_distinct_indices))
-        symmetrically_distinct_configurations.add(new_config)
+        new_config = list(configuration[i] for i in itertools.chain.from_iterable(proposed_distinct_indices))
+        # The configuration only contains indices for symmetric sublattices. For the
+        # inequivalent sublattices, we need to insert them at their proper indices.
+        # Indices _must_ be in sorted order because we are changing the array size on insertion.
+        for fixed_idx in fixed_subl_indices:
+            new_config.insert(fixed_idx, configuration[fixed_idx])
+        symmetrically_distinct_configurations.add(tuple(new_config))
     return sorted(symmetrically_distinct_configurations, key=canonical_sort_key)
 
 
