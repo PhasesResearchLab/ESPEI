@@ -126,6 +126,19 @@ def test_symmetric_group_can_be_generated_for_2_sl_endmembers_with_symmetry():
     assert symm_groups == [('AL', 'CO'), ('CO', 'AL')]
 
 
+def test_generating_symmetric_group_works_without_symmetry():
+    """generate_symmetric_group returns the passed configuration if symmetry=None"""
+
+    config_D03_A3B = ["A", "A", "A", "B"]
+    symm_groups = generate_symmetric_group(config_D03_A3B, None)
+    assert symm_groups == [("A", "A", "A", "B")]
+
+    symm_groups = generate_symmetric_group((("CR", "FE"), "VA"), None)
+    assert symm_groups == [
+        (("CR", "FE"), "VA")
+    ]
+
+
 def test_generating_symmetric_group_bcc_4sl():
     """Binary BCC 4SL ordered symmetric configurations can can be generated"""
     bcc_4sl_symmetry = [[0, 1], [2, 3]]
@@ -179,6 +192,51 @@ def test_generating_symmetric_group_fcc_4sl():
         ("B", "A", "B", "A"),
         ("B", "B", "A", "A"),
     ]
+
+
+def test_generating_symmetric_group_works_with_interstitial_sublattice():
+    """Symmetry groups for phases with an inequivalent vacancy sublattice are correctly generated"""
+    bcc_4sl_symmetry = [[0, 1], [2, 3]]
+    config_D03_A3B = ["A", "A", "A", "B", "VA"]
+    symm_groups = generate_symmetric_group(config_D03_A3B, bcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "A", "B", "VA"),
+        ("A", "A", "B", "A", "VA"),
+        ("A", "B", "A", "A", "VA"),
+        ("B", "A", "A", "A", "VA"),
+    ]
+
+    fcc_4sl_symmetry = [[0, 1, 2, 3]]
+    config_L1_2_A3B = ["A", "A", "A", "B", "VA"]
+    symm_groups = generate_symmetric_group(config_L1_2_A3B, fcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "A", "B", "VA"),
+        ("A", "A", "B", "A", "VA"),
+        ("A", "B", "A", "A", "VA"),
+        ("B", "A", "A", "A", "VA"),
+    ]
+
+    # "Unrealistic" cases where the vacancy sublattice is in the middle at index 2
+    bcc_4sl_symmetry = [[0, 1], [3, 4]]
+    config_D03_A3B = ["A", "A", "VA", "A", "B"]
+    symm_groups = generate_symmetric_group(config_D03_A3B, bcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "VA", "A", "B"),
+        ("A", "A", "VA", "B", "A"),
+        ("A", "B", "VA", "A", "A"),
+        ("B", "A", "VA", "A", "A"),
+    ]
+
+    fcc_4sl_symmetry = [[0, 1, 3, 4]]
+    config_L1_2_A3B = ["A", "A", "VA", "A", "B"]
+    symm_groups = generate_symmetric_group(config_L1_2_A3B, fcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "VA", "A", "B"),
+        ("A", "A", "VA", "B", "A"),
+        ("A", "B", "VA", "A", "A"),
+        ("B", "A", "VA", "A", "A"),
+    ]
+
 
 
 def test_interaction_sorting_is_correct():
