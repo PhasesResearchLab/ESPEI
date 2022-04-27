@@ -94,7 +94,7 @@ def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None,
         sublattices 2 and 3. It also implies that the sublattices are interchangeable,
         (i.e. `[[0, 1], [2, 3]] == [[2, 3], [0, 1]]`), but note that constituents cannot
         change sublattices (i.e. `[[0, 1], [2, 3]] != [[0, 3], [2, 1]]`).
-         If `symmetry=None` is given, no new configurations are generated.
+        If `symmetry=None` is given, no new configurations are generated.
 
     Returns
     -------
