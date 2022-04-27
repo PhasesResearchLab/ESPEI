@@ -2,9 +2,8 @@
 Utilities for manipulating sublattice models.
 """
 
+from typing import Any, Sequence, Union
 import itertools
-
-import numpy as np
 
 
 def tuplify(x):
@@ -75,19 +74,25 @@ def canonicalize(configuration, equivalent_sublattices):
     return recursive_tuplify(canonicalized)
 
 
-def generate_symmetric_group(configuration, symmetry):
+def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None, Sequence[Sequence[int]]]):
     """
-    For a particular configuration and list of sublattices with symmetry,
+    For a particular configuration and list of sublattices that are symmetric,
     generate all the symmetrically equivalent configurations.
 
     Parameters
     ----------
-    configuration : tuple
-        Tuple of a sublattice configuration.
-    symmetry : list of lists
-        List of lists containing symmetrically equivalent sublattice indices,
-        e.g. [[0, 1], [2, 3]] means that sublattices 0 and 1 are equivalent and
-        sublattices 2 and 3 are also equivalent.
+    configuration : Sequence[Any]
+        Typically a constituent array. The length should correspond to the number of
+        sublattices in the phase.
+    symmetry : Union[None, Sequence[Sequence[int]]]
+        A list of lists giving the indices of symmetrically equivalent sublattices. If
+        given, `symmetry` _must_ contain all sublattice indices exactly once. For
+        example: `[[0, 1], [2, 3]]` means that sublattices 0 and 1 are equivalent to
+        each other and sublattices 2 and 3 are also equivalent to each other. Symmetry
+        of `[[0, 1, 2, 3], [4]]` means that the first four sublattices are symmetric to
+        each other and the last sublattice is not equivalent to any other sublattice.
+        If `None` is given as the value, it is assumed that all sublattices are
+        inequivalent.
 
     Returns
     -------
@@ -95,32 +100,20 @@ def generate_symmetric_group(configuration, symmetry):
         Tuple of configuration tuples that are all symmetrically equivalent.
 
     """
-    configurations = [recursive_tuplify(configuration)]
-    permutation = np.array(symmetry, dtype=np.object_)
+    configuration = recursive_tuplify(configuration)  # ensures that the generated configurations are
+    sublattice_indices = list(range(len(configuration)))
+    if symmetry is None:
+        # Each sublattice is independent and only symmetric with itself.
+        symmetry = [[i] for i in sublattice_indices]
+    seen_subl_indices = sorted([i for equiv_subl in symmetry for i in equiv_subl])
+    if (sublattice_indices != seen_subl_indices) or (set(sublattice_indices) != set(seen_subl_indices)):
+        raise ValueError(f"Expected that the entries of `symmetry` give each sublattice index exactly once. Got {len(sublattice_indices)} sublattices with indices {sublattice_indices} for symmetry {symmetry}")
 
-    def permute(x):
-        if len(x) == 0:
-            return x
-        x[0] = np.roll(x[0], 1)
-        x[:] = np.roll(x, 1, axis=0)
-        return x
-
-    if symmetry is not None:
-        while np.any(np.array(symmetry, dtype=np.object_) != permute(permutation)):
-            new_conf = np.array(configurations[0], dtype=np.object_)
-            subgroups = []
-            # There is probably a more efficient way to do this
-            for subl in permutation:
-                subgroups.append([configuration[idx] for idx in subl])
-            # subgroup is ordered according to current permutation
-            # but we'll index it based on the original symmetry
-            # This should permute the configurations
-            for subl, subgroup in zip(symmetry, subgroups):
-                for subl_idx, conf_idx in enumerate(subl):
-                    new_conf[conf_idx] = subgroup[subl_idx]
-            configurations.append(recursive_tuplify(new_conf.tolist()))
-
-    return sorted(set(configurations), key=canonical_sort_key)
+    symmetrically_distinct_configurations = set()
+    for proposed_distinct_indices in list(itertools.chain.from_iterable([itertools.permutations(x) for x in itertools.product(*[itertools.permutations(equiv_subl) for equiv_subl in symmetry])])):
+        new_config = tuple(configuration[i] for i in itertools.chain.from_iterable(proposed_distinct_indices))
+        symmetrically_distinct_configurations.add(new_config)
+    return sorted(symmetrically_distinct_configurations, key=canonical_sort_key)
 
 
 def sorted_interactions(interactions, max_interaction_order, symmetry):
