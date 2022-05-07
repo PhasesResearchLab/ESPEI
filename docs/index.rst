@@ -11,7 +11,7 @@
 
    \part{Introduction}
 
-ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for creating CALPHAD databases and evaluating the uncertanity of CALPHAD models.
+ESPEI, or Extensible Self-optimizing Phase Equilibria Infrastructure, is a tool for creating CALPHAD databases and evaluating the uncertainty of CALPHAD models.
 The purpose of ESPEI is to be both a user tool for fitting state-of-the-art CALPHAD-type models and to be a research platform for developing methods for fitting and uncertainty quantification.
 ESPEI uses `pycalphad`_ for the thermodynamic backend and supports fitting adjustable parameters for any pycalphad model.
 
