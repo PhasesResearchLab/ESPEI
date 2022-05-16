@@ -26,6 +26,7 @@ import numpy as np
 import symengine
 from symengine import Symbol
 from tinydb import where
+import tinydb
 from pycalphad import Database, Model, variables as v
 
 import espei.refdata
@@ -53,6 +54,10 @@ def _param_present_in_database(dbf, phase_name, configuration, param_type):
         return True
 
 
+def _stable_sort_key(x):
+    return str(sorted(x[0].args, key=str))
+
+
 def _poly_degrees(expr):
     poly_dict = {}
     for at in expr.atoms(symengine.Symbol):
@@ -62,6 +67,7 @@ def _poly_degrees(expr):
     for at in expr.atoms(symengine.Pow):
         poly_dict[at.args[0]] = at.args[1]
     return poly_dict
+
 
 def has_symbol(expr, check_symbol):
     """
@@ -175,7 +181,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
 
     # These is our previously fit partial model from previous steps
     # Subtract out all of these contributions (zero out reference state because these are formation properties)
-    fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
+    fixed_model = None  # Profiling suggests we delay instantiation
     fixed_portions = [0]
 
     for desired_props in fitting_steps:
@@ -187,6 +193,8 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         desired_data = filter_temperatures(desired_data)
         _log.trace('%s: datasets found: %s', desired_props, len(desired_data))
         if len(desired_data) > 0:
+            if fixed_model is None:
+                fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
             config_tup = tuple(map(tuplify, configuration))
             calculate_dict = get_prop_samples(desired_data, config_tup)
             sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, list(map(len, config_tup)))
@@ -279,18 +287,19 @@ def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ri
         else:
             _log.trace('INTERACTION: %s', ixx)
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
+        parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=str)])  # SymPy performance mitigation
         # Organize parameters by polynomial degree
         degree_polys = np.zeros(3, dtype=np.object_)
         YS = Symbol('YS')
         # asymmetric parameters should have Mugiannu V_I/V_J/V_K, while symmetric just has YS
-        is_asymmetric = any([(k.has(Symbol('V_I'))) and (v != 0) for k, v in parameters.items()])
+        is_asymmetric = any([(ky.has(Symbol('V_I'))) and (vl != 0) for ky, vl in parameters.items()])
         if is_asymmetric:
             params = [(2, YS*Symbol('V_K')), (1, YS*Symbol('V_J')), (0, YS*Symbol('V_I'))]  # (excess parameter degree, symbol) tuples
         else:
             params = [(0, YS)]  # (excess parameter degree, symbol) tuples
         for degree, check_symbol in params:
             keys_to_remove = []
-            for key, value in sorted(parameters.items(), key=str):
+            for key, value in parameters.items():
                 if has_symbol(key, check_symbol):
                     if value != 0:
                         symbol_name = get_next_symbol(dbf)
@@ -438,14 +447,13 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
         else:
             _log.trace('INTERACTION: %s', ixx)
         parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
+        parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=_stable_sort_key)])  # SymPy performance mitigation
         # Organize parameters by polynomial degree
-        def stable_sort_key(x):
-            return str(sorted(x[0].args, key=str))
         degree_polys = np.zeros(10, dtype=np.object_)
         for degree in reversed(range(10)):
             check_symbol = Symbol('YS') * Symbol('Z')**degree
             keys_to_remove = []
-            for key, value in sorted(parameters.items(), key=stable_sort_key):
+            for key, value in parameters.items():
                 if has_symbol(key, check_symbol):
                     if value != 0:
                         symbol_name = get_next_symbol(dbf)
@@ -512,7 +520,15 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     for phase_name, phase_data in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
         if phase_name in dbf.phases:
             symmetry = phase_data.get('equivalent_sublattices', None)
-            phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
+            # Filter datasets by thermochemical data for this phase
+            dataset = tinydb.Query()
+            phase_filtered_datasets = PickleableTinyDB(storage=tinydb.storages.MemoryStorage)
+            single_phase_thermochemical_query = (
+                (dataset.phases == [phase_name])  # TODO: aliases support
+                & dataset.solver.exists()
+            )
+            phase_filtered_datasets.insert_multiple(datasets.search(single_phase_thermochemical_query))
+            phase_fit(dbf, phase_name, symmetry, phase_filtered_datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
     _log.info('Finished generating parameters.')
     np.set_printoptions(linewidth=75)
     return dbf

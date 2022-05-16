@@ -3,9 +3,9 @@ Building candidate models
 """
 
 import itertools
+from pycalphad.core.cache import cacheit
 import symengine
 from espei.sublattice_tools import interaction_test
-
 
 def make_successive(xs):
     """
@@ -28,7 +28,7 @@ def make_successive(xs):
     """
     return [xs[:(i+1)] for i in range(len(xs))]
 
-
+@cacheit  # This can be expensive if run from an inner loop, so it is cached
 def build_feature_sets(temperature_features, interaction_features):
     """
     Return a list of broadcasted features
@@ -79,7 +79,11 @@ def build_feature_sets(temperature_features, interaction_features):
     model_sets = make_successive(feats)
     # models that are not distributed or summed
     candidate_feature_sets = list(itertools.chain(*[list(itertools.product(*model_set)) for model_set in model_sets]))
-    return candidate_feature_sets
+    candidate_models = []
+    for feat_set in candidate_feature_sets:
+        # multiply the interactions through and flatten the feature list
+        candidate_models.append(list(itertools.chain(*[[param_order[1]*temp_feat for temp_feat in param_order[0]] for param_order in feat_set])))
+    return candidate_models
 
 
 def build_candidate_models(configuration, features):
@@ -114,51 +118,43 @@ def build_candidate_models(configuration, features):
     L0: A
     L1: A + BT
     """
+    feature_candidate_models = {}
     if not interaction_test(configuration):  # endmembers only
-        for feature in features.keys():
-            features[feature] = make_successive(features[feature])
-        return features
-
+        for feature_name, temperature_features in features.items():
+            interaction_features = (symengine.S.One,)
+            feature_candidate_models[feature_name] = build_feature_sets(temperature_features, interaction_features)
     elif interaction_test(configuration, 2):  # has a binary interaction
         YS = symengine.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
         Z = symengine.Symbol('Z')
-        # generate increasingly complex interactions, # L0, L1, L2
-        parameter_interactions = [YS, YS*Z, YS*(Z**2), YS*(Z**3)]
-        for feature in features.keys():
-            candidate_feature_sets = build_feature_sets(features[feature], parameter_interactions)
-            # list of (for example): ((['TlogT'], 'YS'), (['TlogT', 'T**2'], 'YS*Z'))
-            candidate_models = []
-            for feat_set in candidate_feature_sets:
-                # multiply the interactions through and flatten the feature list
-                candidate_models.append(list(itertools.chain(*[[param_order[1]*temp_feat for temp_feat in param_order[0]] for param_order in feat_set])))
-            features[feature] = candidate_models
-        return features
-
+        for feature_name, temperature_features in features.items():
+            # generate increasingly complex interactions (power of Z is Redlich-Kister order)
+            interaction_features = (YS, YS*Z, YS*(Z**2), YS*(Z**3))  # L0, L1, L2, L3
+            feature_candidate_models[feature_name] = build_feature_sets(temperature_features, interaction_features)
     elif interaction_test(configuration, 3):  # has a ternary interaction
-        # Ternaries interactions should have exactly two candidate models:
+        # Ternaries interactions should have exactly two interaction sets:
         # 1. a single symmetric ternary parameter (YS)
-        # 2. L0, L1, and L2 parameters corresponding to Muggianu parameters
-        # We are ignoring cases where we have L0 == L1, but L0 != L2 and all of the
-        # combinations these cases don't exist in reality (where two elements have
-        # exactly the same behavior) the symmetric case is mainly for small
-        # corrections and dimensionality reduction.
         YS = symengine.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
-        # Muggianu ternary interaction product for components i, j, and k
+        # 2. L0, L1, and L2 parameters
         V_I, V_J, V_K = symengine.Symbol('V_I'), symengine.Symbol('V_J'), symengine.Symbol('V_K')
-        # because we don't want our parameter interactions to go sequentially, we'll construct models in two steps
-        symmetric_interactions = [(YS,)] # symmetric L0
-        asymmetric_interactions = [(YS * V_I, YS * V_J, YS * V_K)] # asymmetric L0, L1, and L2
-        for feature in features.keys():
-            sym_candidate_feature_sets = build_feature_sets(features[feature], symmetric_interactions)
-            asym_candidate_feature_sets = build_feature_sets(features[feature], asymmetric_interactions)
-            # list of (for example): ((['TlogT'], ('YS',)), (['TlogT', 'T**2'], ('YS',))
-            candidate_models = []
-            for feat_set in itertools.chain(sym_candidate_feature_sets, asym_candidate_feature_sets):
-                feat_set_params = []
-                # multiply the interactions through with distributing
-                for temp_feats, inter_feats in feat_set:
-                    # temperature features and interaction features
-                    feat_set_params.append([inter*feat for inter, feat in itertools.product(temp_feats, inter_feats)])
-                candidate_models.append(list(itertools.chain(*feat_set_params)))
-            features[feature] = candidate_models
-        return features
+        symmetric_interactions = (YS,) # symmetric L0
+        for feature_name, temperature_features in features.items():
+            # We are ignoring cases where we have L0 == L1 != L2 (and like
+            # permutations) because these cases (where two elements exactly the
+            # same behavior) don't exist in reality. Tthe symmetric case is
+            # mainly for small corrections and dimensionality reduction.
+            # Because we don't want our parameter interactions to be successive
+            # (i.e. products of symmetric and asymmetric terms), we'll candidates in two steps
+            tern_ix_cands = []
+            tern_ix_cands += build_feature_sets(temperature_features, symmetric_interactions)
+            # special handling for asymmetric features, we don't want a successive V_I, V_J, V_K, but all three should be present
+            asym_feats = (
+                build_feature_sets(temperature_features, (YS * V_I,)), # asymmetric L0
+                build_feature_sets(temperature_features, (YS * V_J,)), # asymmetric L1
+                build_feature_sets(temperature_features, (YS * V_K,)), # asymmetric L2
+            )                
+            for v_i_feats, v_j_feats, v_k_feats in zip(*asym_feats):
+                tern_ix_cands.append(v_i_feats + v_j_feats + v_k_feats)
+            feature_candidate_models[feature_name] = tern_ix_cands
+    else:
+        raise ValueError(f"Interaction order not known for configuration {configuration}")
+    return feature_candidate_models

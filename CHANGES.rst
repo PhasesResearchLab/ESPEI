@@ -5,12 +5,20 @@ Changelog
 |version| (development)
 =======================
 
+0.8.7 (2022-02-21)
+==================
+
+Improvements
+------------
+* Add support for Python 3.10 (`@bocklund`_ - :issue:`227`)
+* Add support for changes in pycalphad 0.10 that use SymEngine as the symbolic backend (`@bocklund`_ - :issue:`212`)
+* Performance improvements in parameter selection, which can lead to more than an order of magnitude improvement for phases with large sublattice models (`@bocklund`_ - :issue:`225`)
+
 0.8.6 (2022-01-25)
 ==================
 
 Improvements
 ------------
-
 * Significant performance improvement in startup time in MCMC for ZPF data and decrease in runtime memory usage (`@bocklund`_ - :issue:`210`)
 * Improve sampling of energy surface for finding constrained driving forces in ZPF data, at least one energy surface sample is now guaranteed (`@bocklund`_ - :issue:`211`)
 * Fix bug in MCMC when fitting ZPF data for non-pure element species with recent versions of pycalphad (`@wahab2604`_ - :issue:`208`)

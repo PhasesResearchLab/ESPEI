@@ -13,36 +13,20 @@ from espei.sublattice_tools import generate_symmetric_group, sorted_interactions
 
 def test_build_feature_sets_generates_desired_binary_features_for_cp_like():
     """Binary feature sets can be correctly generated for heat capacity-like features"""
-    binary_temp_features = ['TlogT', 'T**2', '1/T', 'T**3']
-    binary_excess_features= ['YS', 'YS*Z', 'YS*Z**2', 'YS*Z**3']
-    feat_sets = build_feature_sets(binary_temp_features, binary_excess_features)
+    YS = symengine.Symbol("YS")
+    Z = symengine.Symbol("Z")
+    temp_features = [v.T, v.T**2, 1/v.T, v.T**3]
+    excess_features= [YS, YS*Z, YS*Z**2, YS*Z**3]
+    feat_sets = build_feature_sets(temp_features, excess_features)
     assert len(feat_sets) == 340
-    assert feat_sets[0] == ((['TlogT'], 'YS'),)
-    assert feat_sets[5] == ((['TlogT'], 'YS'), (['TlogT', 'T**2'], 'YS*Z'))
-    assert feat_sets[-1] == ((['TlogT', 'T**2', '1/T', 'T**3'], 'YS'), (['TlogT', 'T**2', '1/T', 'T**3'], 'YS*Z'), (['TlogT', 'T**2', '1/T', 'T**3'], 'YS*Z**2'), (['TlogT', 'T**2', '1/T', 'T**3'], 'YS*Z**3'))
-
-
-def test_build_feature_sets_generates_desired_binary_features_for_h_like():
-    """Binary feature sets can be correctly generated for enthalpy-like models"""
-    binary_temp_features = ['1']
-    binary_excess_features= ['YS', 'YS*Z', 'YS*Z**2', 'YS*Z**3']
-    feat_sets = build_feature_sets(binary_temp_features, binary_excess_features)
-    assert len(feat_sets) == 4
-    assert feat_sets[0] == ((['1'], 'YS'),)
-    assert feat_sets[1] == ((['1'], 'YS'), (['1'], 'YS*Z'))
-    assert feat_sets[2] == ((['1'], 'YS'), (['1'], 'YS*Z'), (['1'], 'YS*Z**2'))
-    assert feat_sets[3] == ((['1'], 'YS'), (['1'], 'YS*Z'), (['1'], 'YS*Z**2'), (['1'], 'YS*Z**3'))
-
-
-def test_build_feature_sets_generates_desired_ternary_features():
-    """Ternary feature sets can be correctly generated"""
-    ternary_temp_features = ['1']
-    ternary_excess_features= [('YS',), ('YS*V_I', 'YS*V_J', 'YS*V_K')]
-    feat_sets = build_feature_sets(ternary_temp_features, ternary_excess_features)
-    assert len(feat_sets) == 2
-    assert feat_sets[0] == ((['1'], ('YS',)),)
-    assert feat_sets[1] == ((['1'], ('YS',)), (['1'], ('YS*V_I', 'YS*V_J', 'YS*V_K')))
-
+    assert feat_sets[0] == [v.T*YS]
+    assert feat_sets[5] == [v.T*YS, v.T*YS*Z, v.T**2*YS*Z]
+    assert feat_sets[-1] == [
+        v.T * YS,        v.T**2 * YS,        1/v.T * YS,        v.T**3 * YS,
+        v.T * YS * Z,    v.T**2 * YS * Z,    1/v.T * YS * Z,    v.T**3 * YS * Z,
+        v.T * YS * Z**2, v.T**2 * YS * Z**2, 1/v.T * YS * Z**2, v.T**3 * YS * Z**2,
+        v.T * YS * Z**3, v.T**2 * YS * Z**3, 1/v.T * YS * Z**3, v.T**3 * YS * Z**3,
+        ]
 
 
 def test_binary_candidate_models_are_constructed_correctly():
@@ -118,7 +102,7 @@ def test_ternary_candidate_models_are_constructed_correctly():
             [v.T*YS*symengine.log(v.T)],
             [v.T*YS*symengine.log(v.T), v.T**2*YS],
             [v.T*V_I*YS*symengine.log(v.T), v.T*V_J*YS*symengine.log(v.T), v.T*V_K*YS*symengine.log(v.T)],
-            [v.T*V_I*YS*symengine.log(v.T), v.T*V_J*YS*symengine.log(v.T), v.T*V_K*YS*symengine.log(v.T), v.T**2*V_I*YS, v.T**2*V_J*YS, v.T**2*V_K*YS],
+            [v.T*V_I*YS*symengine.log(v.T), v.T**2*V_I*YS, v.T*V_J*YS*symengine.log(v.T), v.T**2*V_J*YS, v.T*V_K*YS*symengine.log(v.T), v.T**2*V_K*YS],
         ]),
         ('SM_FORM', [
             [v.T*YS],
@@ -140,6 +124,119 @@ def test_symmetric_group_can_be_generated_for_2_sl_endmembers_with_symmetry():
     """A phase with symmetric sublattices should find a symmetric endmember """
     symm_groups = generate_symmetric_group(('AL', 'CO'), [[0, 1]])
     assert symm_groups == [('AL', 'CO'), ('CO', 'AL')]
+
+
+def test_generating_symmetric_group_works_without_symmetry():
+    """generate_symmetric_group returns the passed configuration if symmetry=None"""
+
+    config_D03_A3B = ["A", "A", "A", "B"]
+    symm_groups = generate_symmetric_group(config_D03_A3B, None)
+    assert symm_groups == [("A", "A", "A", "B")]
+
+    symm_groups = generate_symmetric_group((("CR", "FE"), "VA"), None)
+    assert symm_groups == [
+        (("CR", "FE"), "VA")
+    ]
+
+
+def test_generating_symmetric_group_bcc_4sl():
+    """Binary BCC 4SL ordered symmetric configurations can can be generated"""
+    bcc_4sl_symmetry = [[0, 1], [2, 3]]
+
+    config_D03_A3B = ["A", "A", "A", "B"]
+    symm_groups = generate_symmetric_group(config_D03_A3B, bcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "A", "B"),
+        ("A", "A", "B", "A"),
+        ("A", "B", "A", "A"),
+        ("B", "A", "A", "A"),
+    ]
+
+    config_B2_A2B2 = ["A", "A", "B", "B"]
+    symm_groups = generate_symmetric_group(config_B2_A2B2, bcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "B", "B"),
+        ("B", "B", "A", "A"),
+    ]
+
+    config_B32_A2B2 = ["A", "B", "A", "B"]
+    symm_groups = generate_symmetric_group(config_B32_A2B2, bcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "B", "A", "B"),
+        ("A", "B", "B", "A"),
+        ("B", "A", "A", "B"),
+        ("B", "A", "B", "A"),
+    ]
+
+
+def test_generating_symmetric_group_fcc_4sl():
+    """Binary FCC 4SL ordered symmetric configurations can can be generated"""
+    fcc_4sl_symmetry = [[0, 1, 2, 3]]
+
+    config_L1_2_A3B = ["A", "A", "A", "B"]
+    symm_groups = generate_symmetric_group(config_L1_2_A3B, fcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "A", "B"),
+        ("A", "A", "B", "A"),
+        ("A", "B", "A", "A"),
+        ("B", "A", "A", "A"),
+    ]
+
+    config_L1_0_A2B2 = ["A", "A", "B", "B"]
+    symm_groups = generate_symmetric_group(config_L1_0_A2B2, fcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "B", "B"),
+        ("A", "B", "A", "B"),
+        ("A", "B", "B", "A"),
+        ("B", "A", "A", "B"),
+        ("B", "A", "B", "A"),
+        ("B", "B", "A", "A"),
+    ]
+
+
+def test_generating_symmetric_group_works_with_interstitial_sublattice():
+    """Symmetry groups for phases with an inequivalent vacancy sublattice are correctly generated"""
+    bcc_4sl_symmetry = [[0, 1], [2, 3]]
+    config_D03_A3B = ["A", "A", "A", "B", "VA"]
+    symm_groups = generate_symmetric_group(config_D03_A3B, bcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "A", "B", "VA"),
+        ("A", "A", "B", "A", "VA"),
+        ("A", "B", "A", "A", "VA"),
+        ("B", "A", "A", "A", "VA"),
+    ]
+
+    fcc_4sl_symmetry = [[0, 1, 2, 3]]
+    config_L1_2_A3B = ["A", "A", "A", "B", "VA"]
+    symm_groups = generate_symmetric_group(config_L1_2_A3B, fcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "A", "B", "VA"),
+        ("A", "A", "B", "A", "VA"),
+        ("A", "B", "A", "A", "VA"),
+        ("B", "A", "A", "A", "VA"),
+    ]
+
+    # "Unrealistic" cases where the vacancy sublattice is in the middle at index 2
+    bcc_4sl_symmetry = [[0, 1], [3, 4]]
+    config_D03_A3B = ["A", "A", "VA", "A", "B"]
+    symm_groups = generate_symmetric_group(config_D03_A3B, bcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "VA", "A", "B"),
+        ("A", "A", "VA", "B", "A"),
+        ("A", "B", "VA", "A", "A"),
+        ("B", "A", "VA", "A", "A"),
+    ]
+
+    fcc_4sl_symmetry = [[0, 1, 3, 4]]
+    config_L1_2_A3B = ["A", "A", "VA", "A", "B"]
+    symm_groups = generate_symmetric_group(config_L1_2_A3B, fcc_4sl_symmetry)
+    assert symm_groups == [
+        ("A", "A", "VA", "A", "B"),
+        ("A", "A", "VA", "B", "A"),
+        ("A", "B", "VA", "A", "A"),
+        ("B", "A", "VA", "A", "A"),
+    ]
+
 
 
 def test_interaction_sorting_is_correct():
@@ -173,4 +270,3 @@ def test_interaction_sorting_is_correct():
         ('CO', ('AL', 'CO', 'CR')),                # (1, 0, 1)
         ('CR', ('AL', 'CO', 'CR')),                # (1, 0, 1)
     ]
-

@@ -174,10 +174,8 @@ class EmceeOptimizer(OptimizerBase):
                 if (i + 1) % self.save_interval == 0:
                     self.save_sampler_state()
                     _log.trace('Acceptance ratios for parameters: %s', self.sampler.acceptance_fraction)
-                n = int((progbar_width + 1) * float(i) / iterations)
+                n = int((progbar_width) * float(i + 1) / iterations)
                 _log.info("\r[%s%s] (%d of %d)\n", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
-            n = int((progbar_width + 1) * float(i + 1) / iterations)
-            _log.info("\r[%s%s] (%d of %d)\n", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
         except KeyboardInterrupt:
             pass
         _log.info('MCMC complete.')
@@ -235,8 +233,10 @@ class EmceeOptimizer(OptimizerBase):
 
         prior_dict = self.get_priors(prior, symbols_to_fit, initial_guess)
         ctx.update(prior_dict)
-        ctx['zpf_kwargs']['approximate_equilibrium'] = approximate_equilibrium
-        ctx['equilibrium_thermochemical_kwargs']['approximate_equilibrium'] = approximate_equilibrium
+        if 'zpf_kwargs' in ctx:
+            ctx['zpf_kwargs']['approximate_equilibrium'] = approximate_equilibrium
+        if 'equilibrium_thermochemical_kwargs' in ctx:
+            ctx['equilibrium_thermochemical_kwargs']['approximate_equilibrium'] = approximate_equilibrium
         # Run the initial parameters for guessing purposes:
         _log.trace("Probability for initial parameters")
         self.predict(initial_guess, **ctx)
