@@ -11,7 +11,7 @@ from pycalphad import Model, variables as v
 from pycalphad.core.phase_rec import PhaseRecord
 from pycalphad.core.composition_set import CompositionSet
 from pycalphad.core.starting_point import starting_point
-from pycalphad.core.eqsolver import _solve_eq_at_conditions, solve_and_update
+from pycalphad.core.eqsolver import _solve_eq_at_conditions
 from pycalphad.core.equilibrium import _adjust_conditions
 from pycalphad.core.utils import get_state_variables, unpack_kwarg, point_sample
 from pycalphad.core.light_dataset import LightDataset
@@ -127,8 +127,10 @@ def constrained_equilibrium(phase_records: Dict[str, PhaseRecord],
     # Assume that all conditions keys are lists with exactly one element (point calculation)
     str_conds = OrderedDict([(str(ky), conditions[ky][0]) for ky in sorted(conditions.keys(), key=str)])
     compset = _single_phase_start_point(conditions, statevars, phase_records, grid)
-    # modifies `compset` in place
-    solver_result = solve_and_update([compset], str_conds, Solver())
+    solution_compsets = [compset]
+    solver = Solver()
+    # modifies `solution_compsets` and `compset` in place
+    solver_result = solver.solve(solution_compsets, str_conds)
     energy = compset.NP * compset.energy
     return solver_result.converged, energy
 
