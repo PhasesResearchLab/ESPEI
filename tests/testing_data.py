@@ -586,6 +586,23 @@ A_B_DATASET_ALPHA = yaml.load("""{
 }
 """, Loader=YAML_LOADER)
 
+A_B_DATASET_ALPHA_WITH_HYPERPLANE = yaml.load("""{
+  "components": ["A", "B"],
+  "phases": ["ALPHA"],
+  "conditions": {
+    "P": 101325,
+    "T": [300.0]
+  },
+  "output": "ZPF",
+    "values":   [
+    [["__HYPERPLANE__", ["A"], [0.5]], ["ALPHA", ["B"], [0.5]]]
+   ],
+  "reference": "testing",
+  "comment": "Hyperplane composition at the same point as the overall composition"
+}
+""", Loader=YAML_LOADER)
+
+
 
 A_B_C_DATASET_TERNARY_PHASE_EQUILIBRIA = yaml.load("""{
   "components": ["A", "B", "C"],
@@ -641,6 +658,25 @@ CU_MG_DATASET_ZPF_STRING_VALUES = yaml.load("""{
         [["LIQUID", ["MG"], ["0.0712664"]], ["FCC_A1", ["MG"],  [null]]]
     ],
     "reference": "Sahmen1908"
+}
+""", Loader=YAML_LOADER)
+
+
+CU_MG_DATASET_ZPF_HYPERPLANE_TWOPHASE = yaml.load("""{
+  "components": ["CU", "MG"],
+  "phases": ["HCP_A3", "CUMG2"],
+  "conditions": {
+    "P": 101325,
+    "T": [733.15]
+  },
+  "broadcast_conditions": false,
+  "output": "ZPF",
+  "values":   [
+    [["__HYPERPLANE__", ["CU"], [0.05]], ["HCP_A3", ["CU"], [null]], ["CUMG2", ["CU"], [null]]]
+  ],
+  "reference": "Jones (1931)",
+  "bibtex": "jones1931",
+  "comment": "Table 6 Alloy #8 (460C). The overall composition is given, but neither of the phase compositions are known."
 }
 """, Loader=YAML_LOADER)
 
@@ -764,8 +800,8 @@ AL_CO_CR_BCC_B2_TERNARY_NON_SYMMETRIC_DATASET = {
 CU_ZN_LIQUID_PHASE_MODEL = {
   "components": ["CU", "ZN"], "refdata": "SGTE91",
   "phases": {"LIQUID" : {
-	"sublattice_model": [["CU", "ZN"]],
-	"sublattice_site_ratios": [1]}}
+  "sublattice_model": [["CU", "ZN"]],
+  "sublattice_site_ratios": [1]}}
 }
 
 CU_ZN_CPM_MIX_EXPR_TO_FLOAT = {

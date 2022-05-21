@@ -17,6 +17,7 @@ from pycalphad import Database, Model, variables as v
 from espei.paramselect import generate_parameters
 from espei.error_functions import *
 from espei.error_functions.equilibrium_thermochemical_error import calc_prop_differences
+from espei.error_functions.zpf_error import calculate_zpf_driving_forces
 from espei.error_functions.context import setup_context
 from espei.utils import unpack_piecewise
 
@@ -526,3 +527,25 @@ def test_equilibrium_thermochemical_context_is_pickleable(datasets_db):
     regular_predict  = EmceeOptimizer.predict(initial_guess, **ctx)
     unpickle_predict = EmceeOptimizer.predict(initial_guess, **ctx_unpickled)
     assert np.isclose(regular_predict, unpickle_predict)
+
+
+def test_zpf_error_for_prescribed_hyperplane_composition(datasets_db):
+    """Test a dataset with __HYPERPLANE__ defined works"""
+    datasets_db.insert(A_B_DATASET_ALPHA)
+    dbf = Database(A_B_REGULAR_SOLUTION_TDB)  # Ideal solution case by default
+    zpf_data = get_zpf_data(dbf, ["A", "B"], ["ALPHA"], datasets_db, {})
+    driving_forces, weights = calculate_zpf_driving_forces(zpf_data)
+    flat_driving_forces = np.asarray(driving_forces).flatten()
+    assert len(flat_driving_forces) == 1
+    assert np.isclose(flat_driving_forces[0], 0.0)
+
+
+def test_zpf_error_hyperplane_with_null_phases(datasets_db):
+    """Test typical use case of __HYPERPLANE__, where no phase compositions are defined."""
+    datasets_db.insert(CU_MG_DATASET_ZPF_HYPERPLANE_TWOPHASE)
+    dbf = Database(CU_MG_TDB)  # Ideal solution case by default
+    zpf_data = get_zpf_data(dbf, ["CU", "MG"], list(dbf.phases.keys()), datasets_db, {})
+    driving_forces, weights = calculate_zpf_driving_forces(zpf_data)
+    flat_driving_forces = np.asarray(driving_forces).flatten()
+    assert len(flat_driving_forces) == 2  # One for each vertex, HCP_A3 and CUMG2
+    assert np.allclose(flat_driving_forces, [-18.05883506, -780.50836135])

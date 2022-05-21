@@ -48,7 +48,8 @@ class RegionVertex:
 
 @dataclass
 class PhaseRegion:
-    vertices: Sequence[RegionVertex]
+    hyperplane_vertices: Sequence[RegionVertex]  # Vertices used to estimate the target hyperplane
+    vertices: Sequence[RegionVertex]  # Vertices to compute driving forces
     potential_conds: Dict[v.StateVariable, float]
     species: Sequence[v.Species]
     phases: Sequence[str]
@@ -179,11 +180,18 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
             pot_conds.setdefault(v.N, 1.0) # Add v.N condition, if missing
             # Extract all the phases and compositions from the tie-line points
             vertices = []
+            hyperplane_vertices = []
             for vertex in phase_region:
                 phase_name, comp_conds, disordered_flag = _extract_phases_comps(vertex)
+                composition = _compute_vertex_composition(data_comps, comp_conds)
+                if phase_name.upper() == '__HYPERPLANE__':
+                    if np.any(np.isnan(composition)):  # TODO: make this a part of the dataset checker
+                        raise ValueError(f"__HYPERPLANE__ vertex ({vertex}) must have all independent compositions defined to make a well-defined hyperplane (from dataset: {data})")
+                    vtx = RegionVertex(phase_name, None, comp_conds, None, phase_recs, disordered_flag, False)
+                    hyperplane_vertices.append(vtx)
+                    continue
                 # Construct single-phase points satisfying the conditions for each phase in the region
                 mod = models[phase_name]
-                composition = _compute_vertex_composition(data_comps, comp_conds)
                 if np.any(np.isnan(composition)):
                     # We can't construct points because we don't have a known composition
                     has_missing_comp_cond = True
@@ -199,7 +207,10 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                     assert phase_points.shape[0] > 0, f"phase {phase_name} must have at least one set of points within the target tolerance {pot_conds} {comp_conds}"
                 vtx = RegionVertex(phase_name, composition, comp_conds, phase_points, phase_recs, disordered_flag, has_missing_comp_cond)
                 vertices.append(vtx)
-            region = PhaseRegion(vertices, pot_conds, species, data_phases, models)
+            if len(hyperplane_vertices) == 0:
+                # Define the hyperplane at the vertices of the ZPF points
+                hyperplane_vertices = vertices
+            region = PhaseRegion(hyperplane_vertices, vertices, pot_conds, species, data_phases, models)
             phase_regions.append(region)
 
         data_dict = {
@@ -233,7 +244,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
     species = phase_region.species
     phases = phase_region.phases
     models = phase_region.models
-    for vertex in phase_region.vertices:
+    for vertex in phase_region.hyperplane_vertices:
         phase_records = vertex.phase_records
         update_phase_record_parameters(phase_records, parameters)
         cond_dict = {**vertex.comp_conds, **phase_region.potential_conds}
