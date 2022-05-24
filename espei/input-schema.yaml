@@ -79,7 +79,7 @@ mcmc:
   schema:
     iterations:
       type: integer
-      min: 0
+      min: 1
       required: True
     prior:
       type: [dict, list]
@@ -126,6 +126,6 @@ mcmc:
       required: True
     data_weights:
       type: dict
-      default: {'ZPF': 1.0, 'ACR': 1.0, 'HM': 1.0, 'SM': 1.0, 'CPM': 1.0}
+      default: {'ZPF': 1.0, 'ACR': 1.0, 'HM': 1.0, 'SM': 1.0, 'CPM': 1.0, 'Y': 1.0}
     symbols:
       type: list

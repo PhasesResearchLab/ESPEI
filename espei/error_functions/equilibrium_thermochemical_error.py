@@ -4,12 +4,13 @@ Calculate error due to equilibrium thermochemical properties.
 
 import logging
 from collections import OrderedDict
-from typing import NamedTuple, Sequence, Dict, Optional, Tuple, Type
+from typing import NamedTuple, Sequence, Dict, Optional, Tuple
 
 import numpy as np
 import tinydb
 from tinydb import where
 from scipy.stats import norm
+
 from pycalphad.plot.eqplot import _map_coord_to_variable
 from pycalphad import Database, Model, ReferenceState, variables as v
 from pycalphad.core.equilibrium import _eqcalculate
@@ -19,9 +20,6 @@ from pycalphad.core.phase_rec import PhaseRecord
 
 from espei.utils import PickleableTinyDB
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
-
-_log = logging.getLogger(__name__)
-
 
 EqPropData = NamedTuple('EqPropData', (('dbf', Database),
                                        ('species', Sequence[v.Species]),
@@ -40,7 +38,6 @@ EqPropData = NamedTuple('EqPropData', (('dbf', Database),
 
 def build_eqpropdata(data: tinydb.database.Document,
                      dbf: Database,
-                     model: Optional[Dict[str, Type[Model]]] = None,
                      parameters: Optional[Dict[str, float]] = None,
                      data_weight_dict: Optional[Dict[str, float]] = None
                      ) -> EqPropData:
@@ -53,8 +50,6 @@ def build_eqpropdata(data: tinydb.database.Document,
         Document corresponding to a single ESPEI dataset.
     dbf : Database
         Database that should be used to construct the `Model` and `PhaseRecord` objects.
-    model : Optional[Dict[str, Type[Model]]]
-        Dictionary phase names to pycalphad Model classes.
     parameters : Optional[Dict[str, float]]
         Mapping of parameter symbols to values.
     data_weight_dict : Optional[Dict[str, float]]
@@ -77,7 +72,7 @@ def build_eqpropdata(data: tinydb.database.Document,
     data_comps = list(set(data['components']).union({'VA'}))
     species = sorted(unpack_components(dbf, data_comps), key=str)
     data_phases = filter_phases(dbf, species, candidate_phases=data['phases'])
-    models = instantiate_models(dbf, species, data_phases, model=model, parameters=parameters)
+    models = instantiate_models(dbf, species, data_phases, parameters=parameters)
     output = data['output']
     property_output = output.split('_')[0]  # property without _FORM, _MIX, etc.
     samples = np.array(data['values']).flatten()
@@ -117,7 +112,6 @@ def build_eqpropdata(data: tinydb.database.Document,
 def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
                                         phases: Sequence[str],
                                         datasets: PickleableTinyDB,
-                                        model: Optional[Dict[str, Model]] = None,
                                         parameters: Optional[Dict[str, float]] = None,
                                         data_weight_dict: Optional[Dict[str, float]] = None,
                                         ) -> Sequence[EqPropData]:
@@ -134,8 +128,6 @@ def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
         List of phases used to search for matching datasets.
     datasets : PickleableTinyDB
         Datasets that contain single phase data
-    model : Optional[Dict[str, Type[Model]]]
-        Dictionary phase names to pycalphad Model classes.
     parameters : Optional[Dict[str, float]]
         Mapping of parameter symbols to values.
     data_weight_dict : Optional[Dict[str, float]]
@@ -157,13 +149,14 @@ def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
         # data that isn't ZPF or non-equilibrium thermochemical
         (where('output') != 'ZPF') & (~where('solver').exists()) &
         (where('output').test(lambda x: 'ACR' not in x)) &  # activity data not supported yet
+        (where('output').test(lambda x: 'Y' not in x))&
         (where('components').test(lambda x: set(x).issubset(comps))) &
         (where('phases').test(lambda x: set(x).issubset(set(phases))))
     )
 
     eq_thermochemical_data = []  # 1:1 correspondence with each dataset
     for data in desired_data:
-        eq_thermochemical_data.append(build_eqpropdata(data, dbf, model=model, parameters=parameters, data_weight_dict=data_weight_dict))
+        eq_thermochemical_data.append(build_eqpropdata(data, dbf, parameters=parameters, data_weight_dict=data_weight_dict))
     return eq_thermochemical_data
 
 
@@ -207,16 +200,16 @@ def calc_prop_differences(eqpropdata: EqPropData,
     update_phase_record_parameters(phase_records, parameters)
     params_dict = OrderedDict(zip(map(str, eqpropdata.params_keys), parameters))
     output = eqpropdata.output
-    weights = np.array(eqpropdata.weight, dtype=np.float_)
-    samples = np.array(eqpropdata.samples, dtype=np.float_)
+    weights = np.array(eqpropdata.weight, dtype=np.float)
+    samples = np.array(eqpropdata.samples, dtype=np.float)
 
     calculated_data = []
     for comp_conds in eqpropdata.composition_conds:
         cond_dict = OrderedDict(**pot_conds, **comp_conds)
         # str_statevar_dict must be sorted, assumes that pot_conds are.
         str_statevar_dict = OrderedDict([(str(key), vals) for key, vals in pot_conds.items()])
-        grid = calculate_(species, phases, str_statevar_dict, models, phase_records, pdens=50, fake_points=True)
-        multi_eqdata = _equilibrium(phase_records, cond_dict, grid)
+        grid = calculate_(dbf, species, phases, str_statevar_dict, models, phase_records, pdens=500, fake_points=True)
+        multi_eqdata = _equilibrium(species, phase_records, cond_dict, grid)
         # TODO: could be kind of slow. Callables (which are cachable) must be built.
         propdata = _eqcalculate(dbf, species, phases, cond_dict, output, data=multi_eqdata, per_phase=False, callables=None, parameters=params_dict, model=models)
 
@@ -226,12 +219,12 @@ def calc_prop_differences(eqpropdata: EqPropData,
         vals = getattr(propdata, output).flatten().tolist()
         calculated_data.extend(vals)
 
-    calculated_data = np.array(calculated_data, dtype=np.float_)
+    calculated_data = np.array(calculated_data, dtype=np.float)
 
     assert calculated_data.shape == samples.shape, f"Calculated data shape {calculated_data.shape} does not match samples shape {samples.shape}"
     assert calculated_data.shape == weights.shape, f"Calculated data shape {calculated_data.shape} does not match weights shape {weights.shape}"
     differences = calculated_data - samples
-    _log.debug('Output: %s differences: %s, weights: %s, reference: %s', output, differences, weights, eqpropdata.reference)
+    logging.debug(f'Equilibrium thermochemical error - output: {output} differences: {differences}, weights: {weights}, reference: {eqpropdata.reference}')
     return differences, weights
 
 

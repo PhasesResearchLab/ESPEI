@@ -12,14 +12,13 @@ import logging
 import multiprocessing
 import sys
 import json
-import warnings
 
 import numpy as np
 import yaml
 import dask
 import distributed
+import sympy
 import symengine
-from tinydb import where
 import emcee
 import pycalphad
 from pycalphad import Database
@@ -27,14 +26,12 @@ from pycalphad import Database
 import espei
 from espei.validation import schema
 from espei import generate_parameters
-from espei.utils import ImmediateClient, database_symbols_to_fit
-from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags
+from espei.utils import ImmediateClient, get_dask_config_paths, database_symbols_to_fit
+from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags, add_ideal_exclusions
 from espei.optimizers.opt_mcmc import EmceeOptimizer
 
-_log = logging.getLogger(__name__)
+TRACE = 15  # TRACE logging level
 
-# Force distributed's work-stealing to be False
-dask.config.set({'distributed.scheduler.work-stealing': False})
 
 parser = argparse.ArgumentParser(description=__doc__)
 
@@ -56,35 +53,46 @@ parser.add_argument("--version", "-v", action='version',
 
 def log_version_info():
     """Print version info to the log"""
-    _log.info('espei version       %s', espei.__version__)
-    _log.debug('pycalphad version   %s', pycalphad.__version__)
-    _log.debug('dask version        %s', dask.__version__)
-    _log.debug('distributed version %s', distributed.__version__)
-    _log.debug('symengine version   %s', symengine.__version__)
-    _log.debug('emcee version       %s', emcee.__version__)
-    _log.info("If you use ESPEI for work presented in a publication, we ask that you cite the following paper:\n    %s", espei.__citation__)
+    logging.info('espei version       ' + str(espei.__version__))
+    logging.debug('pycalphad version   ' + str(pycalphad.__version__))
+    logging.debug('dask version        ' + str(dask.__version__))
+    logging.debug('distributed version ' + str(distributed.__version__))
+    logging.debug('sympy version       ' + str(sympy.__version__))
+    logging.debug('symengine version   ' + str(symengine.__version__))
+    logging.debug('emcee version       ' + str(emcee.__version__))
+    logging.info("If you use ESPEI for work presented in a publication, we ask that you cite the following paper:\n    {}".format(espei.__citation__))
 
+def get_dask_config_paths():
+    candidates = dask.config.paths
+    file_paths = []
+    for path in candidates:
+        if os.path.exists(path):
+            if os.path.isdir(path):
+                file_paths.extend(sorted([
+                    os.path.join(path, p)
+                    for p in os.listdir(path)
+                    if os.path.splitext(p)[1].lower() in ('.json', '.yaml', '.yml')
+                ]))
+            else:
+                file_paths.append(path)
+    return file_paths
 
 def _raise_dask_work_stealing():
     """
-    Raise if work stealing is turned on in dask
+    Raise if work stealing is turn on in dask
 
     Raises
     -------
     ValueError
 
-    Examples
-    --------
-    >>> _raise_dask_work_stealing()  # should not raise if dask is set correctly
-
     """
-    import dask, distributed
-    has_work_stealing = dask.config.get('distributed.scheduler.work_stealing')
+    import distributed
+    has_work_stealing = distributed.config['distributed']['scheduler']['work-stealing']
     if has_work_stealing:
-        raise ValueError("The parameter 'distributed.scheduler.work-stealing' is on in dask. "
-                         "This parameter causes some instability for long-running processes. "
-                         "As of ESPEI v0.7.9, 'work-stealing' should be disabled automatically. "
-                         "If you are seeing this error, please contact a developer.")
+        raise ValueError("The parameter 'work-stealing' is on in dask. Enabling this parameter causes some instability. "
+            "Set 'distributed.scheduler.work-stealing: False' in your dask configuration. "
+            "Configuration files on this machine are:\n{} (latter files have priority).\n"
+            "See the example at http://espei.org/en/latest/installation.html#configuration for more.".format(get_dask_config_paths()))
 
 
 def get_run_settings(input_dict):
@@ -112,15 +120,9 @@ def get_run_settings(input_dict):
     run_settings = schema.normalized(input_dict)
     # can't have chain_std_deviation and chains_per_parameter defaults with restart_trace
     if run_settings.get('mcmc') is not None:
-        if run_settings['mcmc'].get('restart_trace') is None:
-            run_settings['mcmc']['chains_per_parameter'] = run_settings['mcmc'].get('chains_per_parameter', 2)
-            run_settings['mcmc']['chain_std_deviation'] = run_settings['mcmc'].get('chain_std_deviation', 0.1)
-        if run_settings['mcmc']['scheduler'] == 'None':
-            warnings.warn(
-                "Setting scheduler to the string 'None' will be deprecated in ESPEI "
-                "0.9. Use `null` in YAML or `None` in Python.", FutureWarning
-            )
-            run_settings['mcmc']['scheduler'] = None
+            if run_settings['mcmc'].get('restart_trace') is None:
+                run_settings['mcmc']['chains_per_parameter'] = run_settings['mcmc'].get('chains_per_parameter', 2)
+                run_settings['mcmc']['chain_std_deviation'] = run_settings['mcmc'].get('chain_std_deviation', 0.1)
     if not schema.validate(run_settings):
         raise ValueError(schema.errors)
     return run_settings
@@ -144,24 +146,26 @@ def run_espei(run_settings):
     generate_parameters_settings = run_settings.get('generate_parameters')
     mcmc_settings = run_settings.get('mcmc')
 
-    # Configure logger
-    log_verbosity = output_settings['verbosity']
-    log_filename = output_settings['logfile']
-    espei.logger.config_logger(verbosity=log_verbosity, filename=log_filename)
+    # handle verbosity
+    verbosity = {
+        0: logging.WARNING,
+        1: logging.INFO,
+        2: TRACE,
+        3: logging.DEBUG
+    }
+    logging.basicConfig(level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
 
     log_version_info()
 
     # load datasets and handle i/o
-    _log.trace('Loading and checking datasets.')
+    logging.log(TRACE, 'Loading and checking datasets.')
     dataset_path = system_settings['datasets']
     datasets = load_datasets(sorted(recursive_glob(dataset_path, '*.json')))
-    apply_tags(datasets, system_settings.get('tags', dict()))
-    removed_ids = datasets.remove(where('disabled') == True)
-    if len(removed_ids) > 0:
-        _log.debug('Removed %d disabled datasets', len(removed_ids))
     if len(datasets.all()) == 0:
-        _log.warning('No datasets were found in the path %s. This should be a directory containing dataset files ending in `.json`.', dataset_path)
-    _log.trace('Finished checking datasets')
+        logging.warning('No datasets were found in the path {}. This should be a directory containing dataset files ending in `.json`.'.format(dataset_path))
+    apply_tags(datasets, system_settings.get('tags', dict()))
+    add_ideal_exclusions(datasets)
+    logging.log(TRACE, 'Finished checking datasets')
 
     with open(system_settings['phase_models']) as fp:
         phase_models = json.load(fp)
@@ -190,37 +194,37 @@ def run_espei(run_settings):
         # check that the MCMC output files do not already exist
         # only matters if we are actually running MCMC
         if tracefile is not None and os.path.exists(tracefile):
-            raise OSError('Tracefile "%s" exists and would be overwritten by a new run. Use the ``output.tracefile`` setting to set a different name.', tracefile)
+            raise OSError('Tracefile "{}" exists and would be overwritten by a new run. Use the ``output.tracefile`` setting to set a different name.'.format(tracefile))
         if probfile is not None and os.path.exists(probfile):
-            raise OSError('Probfile "%s" exists and would be overwritten by a new run. Use the ``output.probfile`` setting to set a different name.', probfile)
+            raise OSError('Probfile "{}" exists and would be overwritten by a new run. Use the ``output.probfile`` setting to set a different name.'.format(probfile))
 
         # scheduler setup
-        if mcmc_settings['scheduler'] is not None:
+        if mcmc_settings['scheduler'] == 'dask':
             _raise_dask_work_stealing()  # check for work-stealing
-            if mcmc_settings['scheduler'] == 'dask':
-                _raise_dask_work_stealing()  # check for work-stealing
-                from distributed import LocalCluster
-                cores = mcmc_settings.get('cores', multiprocessing.cpu_count())
-                if (cores > multiprocessing.cpu_count()):
-                    cores = multiprocessing.cpu_count()
-                    _log.warning("The number of cores chosen is larger than available. "
-                                 "Defaulting to run on the %s available cores.", cores)
-                # TODO: make dask-scheduler-verbosity a YAML input so that users can debug. Should have the same log levels as verbosity
-                scheduler = LocalCluster(n_workers=cores, threads_per_worker=1, processes=True, memory_limit=0)
-                client = ImmediateClient(scheduler)
-                try:
-                    bokeh_server_info = client.scheduler_info()['services']['bokeh']
-                    _log.info("bokeh server for dask scheduler at localhost:%s", bokeh_server_info)
-                except KeyError:
-                    _log.info("Install bokeh to use the dask bokeh server.")
-            else: # we were passed a scheduler file name
-                client = ImmediateClient(scheduler_file=mcmc_settings['scheduler'])
-            client.run(espei.logger.config_logger, verbosity=log_verbosity, filename=log_filename)
-            client.run(np.set_printoptions, linewidth=sys.maxsize)
-            _log.info("Running with dask scheduler: %s [%s cores]" % (client.scheduler, sum(client.ncores().values())))
-        else:
+            from distributed import LocalCluster
+            cores = mcmc_settings.get('cores', multiprocessing.cpu_count())
+            if (cores > multiprocessing.cpu_count()):
+                cores = multiprocessing.cpu_count()
+                logging.warning("The number of cores chosen is larger than available. "
+                                "Defaulting to run on the {} available cores.".format(cores))
+            # TODO: make dask-scheduler-verbosity a YAML input so that users can debug. Should have the same log levels as verbosity
+            scheduler = LocalCluster(n_workers=cores, threads_per_worker=1, processes=True, memory_limit=0)
+            client = ImmediateClient(scheduler)
+            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
+            logging.info("Running with dask scheduler: %s [%s cores]" % (scheduler, sum(client.ncores().values())))
+            try:
+                bokeh_server_info = client.scheduler_info()['services']['bokeh']
+                logging.info("bokeh server for dask scheduler at localhost:{}".format(bokeh_server_info))
+            except KeyError:
+                logging.info("Install bokeh to use the dask bokeh server.")
+        elif mcmc_settings['scheduler'] == 'None' or mcmc_settings['scheduler'] is None:
             client = None
-            _log.info("Not using a parallel scheduler. ESPEI is running MCMC on a single core.")
+            logging.info("Not using a parallel scheduler. ESPEI is running MCMC on a single core.")
+        else: # we were passed a scheduler file name
+            _raise_dask_work_stealing()  # check for work-stealing
+            client = ImmediateClient(scheduler_file=mcmc_settings['scheduler'])
+            client.run(logging.basicConfig, level=verbosity[output_settings['verbosity']], filename=output_settings['logfile'])
+            logging.info("Running with dask scheduler: %s [%s cores]" % (client.scheduler, sum(client.ncores().values())))
 
         # get a Database
         if mcmc_settings.get('input_db'):
@@ -244,7 +248,7 @@ def run_espei(run_settings):
         approximate_equilibrium = mcmc_settings.get('approximate_equilibrium')
 
         # set up and run the EmceeOptimizer
-        optimizer = EmceeOptimizer(dbf, phase_models=phase_models, scheduler=client)
+        optimizer = EmceeOptimizer(dbf, scheduler=client)
         optimizer.save_interval = save_interval
         all_symbols = syms if syms is not None else database_symbols_to_fit(dbf)
         optimizer.fit(all_symbols, datasets, prior=prior, iterations=iterations,
@@ -302,7 +306,7 @@ def main():
         with open(input_file) as f:
             input_settings = json.load(f)
     else:
-        raise ValueError('Unknown file type %s for input file %s. YAML and JSON are supported', ext, input_file)
+        raise ValueError('Unknown file type {} for input file {}. YAML and JSON are supported'.format(ext, input_file))
 
     run_espei(input_settings)
 

@@ -2,17 +2,17 @@
 
 import logging
 import copy
-import symengine
+import sympy
 from pycalphad import variables as v
 from pycalphad.codegen.callables import build_callables
-from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
+from pycalphad.core.utils import instantiate_models
 from espei.error_functions import get_zpf_data, get_thermochemical_data, get_equilibrium_thermochemical_data
-from espei.utils import database_symbols_to_fit, get_model_dict
+from espei.utils import database_symbols_to_fit
 
-_log = logging.getLogger(__name__)
+TRACE = 15
 
 
-def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_models=None, make_callables=True):
+def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, make_callables=True):
     """
     Set up a context dictionary for calculating error.
 
@@ -36,10 +36,7 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
     back to the original database, the dbf.symbols.update method should be used.
     """
     dbf = copy.deepcopy(dbf)
-    if phase_models is not None:
-        comps = sorted(phase_models['components'])
-    else:
-        comps = sorted([sp for sp in dbf.elements])
+    comps = sorted([sp for sp in dbf.elements])
     if symbols_to_fit is None:
         symbols_to_fit = database_symbols_to_fit(dbf)
     else:
@@ -49,24 +46,20 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
     if len(symbols_to_fit) == 0:
         raise ValueError('No degrees of freedom. Database must contain symbols starting with \'V\' or \'VV\', followed by a number.')
     else:
-        _log.info('Fitting %s degrees of freedom.', len(symbols_to_fit))
+        logging.info('Fitting {} degrees of freedom.'.format(len(symbols_to_fit)))
 
     for x in symbols_to_fit:
-        if isinstance(dbf.symbols[x], symengine.Piecewise):
-            _log.debug('Replacing %s in database', x)
-            dbf.symbols[x] = dbf.symbols[x].args[0]
+        if isinstance(dbf.symbols[x], sympy.Piecewise):
+            logging.debug('Replacing {} in database'.format(x))
+            dbf.symbols[x] = dbf.symbols[x].args[0].expr
 
-    # construct the models for each phase, substituting in the SymEngine symbol to fit.
-    if phase_models is not None:
-        model_dict = get_model_dict(phase_models)
-    else:
-        model_dict = {}
-    _log.trace('Building phase models (this may take some time)')
+    # construct the models for each phase, substituting in the SymPy symbol to fit.
+    logging.log(TRACE, 'Building phase models (this may take some time)')
     import time
     t1 = time.time()
-    phases = sorted(filter_phases(dbf, unpack_components(dbf, comps), dbf.phases.keys()))
+    phases = sorted(dbf.phases.keys())
     parameters = dict(zip(symbols_to_fit, [0]*len(symbols_to_fit)))
-    models = instantiate_models(dbf, comps, phases, model=model_dict, parameters=parameters)
+    models = instantiate_models(dbf, comps, phases, parameters=parameters)
     if make_callables:
         eq_callables = build_callables(dbf, comps, phases, models, parameter_symbols=symbols_to_fit,
                             output='GM', build_gradients=True, build_hessians=True,
@@ -74,22 +67,22 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
     else:
         eq_callables = None
     t2 = time.time()
-    _log.trace('Finished building phase models (%0.2fs)', t2-t1)
-    _log.trace('Getting non-equilibrium thermochemical data (this may take some time)')
+    logging.log(TRACE, 'Finished building phase models ({:0.2f}s)'.format(t2-t1))
+    logging.log(TRACE, 'Getting non-equilibrium thermochemical data (this may take some time)')
     t1 = time.time()
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, model=model_dict, weight_dict=data_weights, symbols_to_fit=symbols_to_fit)
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=data_weights, symbols_to_fit=symbols_to_fit)
     t2 = time.time()
-    _log.trace('Finished getting non-equilibrium thermochemical data (%0.2fs)', t2-t1)
-    _log.trace('Getting equilibrium thermochemical data (this may take some time)')
+    logging.log(TRACE, 'Finished getting non-equilibrium thermochemical data ({:0.2f}s)'.format(t2-t1))
+    logging.log(TRACE, 'Getting equilibrium thermochemical data (this may take some time)')
     t1 = time.time()
-    eq_thermochemical_data = get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, model=model_dict, parameters=parameters, data_weight_dict=data_weights)
+    eq_thermochemical_data = get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, parameters, data_weight_dict=data_weights)
     t2 = time.time()
-    _log.trace('Finished getting equilibrium thermochemical data (%0.2fs)', t2-t1)
-    _log.trace('Getting ZPF data (this may take some time)')
+    logging.log(TRACE, 'Finished getting equilibrium thermochemical data ({:0.2f}s)'.format(t2-t1))
+    logging.log(TRACE, 'Getting ZPF data (this may take some time)')
     t1 = time.time()
-    zpf_data = get_zpf_data(dbf, comps, phases, datasets, model=model_dict, parameters=parameters)
+    zpf_data = get_zpf_data(dbf, comps, phases, datasets, parameters)
     t2 = time.time()
-    _log.trace('Finished getting ZPF data (%0.2fs)', t2-t1)
+    logging.log(TRACE, 'Finished getting ZPF data ({:0.2f}s)'.format(t2-t1))
 
     # context for the log probability function
     # for all cases, parameters argument addressed in MCMC loop
@@ -103,12 +96,17 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
             'eq_thermochemical_data': eq_thermochemical_data,
         },
         'thermochemical_kwargs': {
-            'thermochemical_data': thermochemical_data,
+            'dbf': dbf, 'thermochemical_data': thermochemical_data,
         },
         'activity_kwargs': {
             'dbf': dbf, 'comps': comps, 'phases': phases, 'datasets': datasets,
             'phase_models': models, 'callables': eq_callables,
             'data_weight': data_weights.get('ACR', 1.0),
+        },
+        'Y_kwargs':{
+            'dbf': dbf, 'comps': comps, 'phases': phases, 'datasets': datasets,
+            'phase_models': models, 'callables': eq_callables,
+            'data_weight': data_weights.get('Y', 1.0),
         },
     }
     return error_context

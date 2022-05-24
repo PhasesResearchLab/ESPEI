@@ -4,25 +4,27 @@ Utilities for ESPEI
 Classes and functions defined here should have some reuse potential.
 """
 
-from typing import Any, Dict, Type
-import importlib
 import itertools
 import re
-import warnings
+import os
 from collections import namedtuple
 
+import bibtexparser
 import numpy as np
-import symengine
+import sympy
+import dask
+from bibtexparser.bparser import BibTexParser
+from bibtexparser.customization import convert_to_unicode
 from distributed import Client
-from pycalphad import Model, variables as v
-from symengine import Symbol
+from pycalphad import variables as v
+from sympy import Symbol
 from tinydb import TinyDB, where
 from tinydb.storages import MemoryStorage
 
 
 def unpack_piecewise(x):
-    if isinstance(x, symengine.Piecewise):
-        return float(x.args[0])
+    if isinstance(x, sympy.Piecewise):
+        return float(x.args[0].expr)
     else:
         return float(x)
 
@@ -52,10 +54,6 @@ class ImmediateClient(Client):
     returned by map.
     """
     def map(self, f, *iterators, **kwargs):
-        """Map a function on a sequence of arguments.
-
-        Any keyword arguments are passed to distributed.Client.map
-        """
         _client = super(ImmediateClient, self)
         result = _client.gather(_client.map(f, *[list(it) for it in iterators], **kwargs))
         return result
@@ -64,7 +62,7 @@ class ImmediateClient(Client):
 def sigfigs(x, n):
     """Round x to n significant digits"""
     if x != 0:
-        return np.around(x, -(np.floor(np.log10(np.abs(x)))).astype(np.int_) + (n - 1))
+        return np.around(x, -(np.floor(np.log10(np.abs(x)))).astype(np.int) + (n - 1))
     else:
         return x
 
@@ -109,20 +107,17 @@ def optimal_parameters(trace_array, lnprob_array, kth=0):
     unique_params = np.zeros(trace_array.shape[-1])
     unique_params_found = -1
     # loop through all possible nonzero iterations
-    if nz[-1].size > 0:
-        for i in range(nz[-1][-1]):
-            # find the next set of parameters parameters
-            candidate_index = np.argpartition(-lnprob_array[nz], i)[i]
-            candidate_params = trace_array[nz][candidate_index]
-            # if the parameters are unique, make them the new unique parameters
-            if np.any(candidate_params != unique_params):
-                unique_params = candidate_params
-                unique_params_found += 1
-            # if we have found the kth set of unique parameters, stop
-            if unique_params_found == kth:
-                return unique_params
-    else:
-        warnings.warn("optimal_parameters() did not find any non-zero parameters in the trace.")
+    for i in range(nz[-1][-1]):
+        # find the next set of parameters parameters
+        candidate_index = np.argpartition(-lnprob_array[nz], i)[i]
+        candidate_params = trace_array[nz][candidate_index]
+        # if the parameters are unique, make them the new unique parameters
+        if np.any(candidate_params != unique_params):
+            unique_params = candidate_params
+            unique_params_found += 1
+        # if we have found the kth set of unique parameters, stop
+        if unique_params_found == kth:
+            return unique_params
     return np.zeros(trace_array.shape[-1])
 
 
@@ -144,6 +139,64 @@ def database_symbols_to_fit(dbf, symbol_regex="^V[V]?([0-9]+)$"):
     """
     pattern = re.compile(symbol_regex)
     return sorted([x for x in sorted(dbf.symbols.keys()) if pattern.match(x)])
+
+
+def flexible_open_string(obj):
+    """
+    Return the string of a an object that is either file-like, a file path, or the raw string.
+
+    Parameters
+    ----------
+    obj : string-like or file-like
+        Either a multiline string, a path, or a file-like object
+
+    Returns
+    -------
+    str
+    """
+    if isinstance(obj, str):
+        # the obj is a string
+        if '\n' in obj:
+            # if the string has linebreaks, then we assume it's a raw string. Return it.
+            return obj
+        else:
+            # assume it is a path
+            with open(obj) as fp:
+                read_string = fp.read()
+            return read_string
+    elif hasattr(obj, 'read'):
+        # assume it is file-like
+        read_string = obj.read()
+        return read_string
+    else:
+        raise ValueError('Unable to determine how to extract the string of the passed object ({}) of type {}. Expected a raw string, file-like, or path-like.'.format(obj, type(obj)))
+
+
+bibliography_database = PickleableTinyDB(storage=MemoryStorage)
+
+def add_bibtex_to_bib_database(bibtex, bib_db=None):
+    """
+    Add entries from a BibTeX file to the bibliography database
+
+    Parameters
+    ----------
+    bibtex : str
+        Either a multiline string, a path, or a file-like object of a BibTeX file
+    bib_db: PickleableTinyDB
+        Database to put the BibTeX entries. Defaults to a module-level default database
+
+    Returns
+    -------
+    The modified bibliographic database
+    """
+    if not bib_db:
+        bib_db = bibliography_database
+    bibtex_string = flexible_open_string(bibtex)
+    parser = BibTexParser()
+    parser.customization = convert_to_unicode
+    parsed_bibtex = bibtexparser.loads(bibtex_string, parser=parser)
+    bib_db.insert_multiple(parsed_bibtex.entries)
+    return bib_db
 
 
 def bib_marker_map(bib_keys, markers=None):
@@ -204,13 +257,13 @@ def parameter_term(expression, symbol):
         # the parameter is the symbol, so the multiplicative term is 1.
         term = 1
     else:
-        if isinstance(expression, symengine.Piecewise):
-            expression = expression.args[0]
-        if isinstance(expression, symengine.Symbol):
+        if isinstance(expression, sympy.Piecewise):
+            expression = expression.args[0][0]
+        if isinstance(expression, sympy.Symbol):
             # this is not mathematically correct, but we just need to be able to split it into args
-            expression = symengine.Add(expression, 1)
-        if not isinstance(expression, symengine.Add):
-            raise ValueError('Parameter {} is a {} not a symengine.Add or a Piecewise Add'.format(expression, type(expression)))
+            expression = sympy.Add(expression, 1)
+        if not isinstance(expression, sympy.Add):
+            raise ValueError('Parameter {} is a {} not a sympy.Add or a Piecewise Add'.format(expression, type(expression)))
 
         expression_terms = expression.args
         term = None
@@ -256,7 +309,7 @@ def formatted_parameter(dbf, symbol, unique=True):
     Parameters
     ----------
     dbf : pycalphad.Database
-    symbol : string or symengine.Symbol
+    symbol : string or sympy.Symbol
         Symbol in the Database to get the parameter for.
     unique : bool
         If True, will raise if more than one parameter containing the symbol is found.
@@ -352,75 +405,65 @@ def build_sitefractions(phase_name, sublattice_configurations, sublattice_occupa
     return result
 
 
-def extract_aliases(phase_models):
-    """Map possible phase name aliases to the desired phase model phase name.
-
-    This function enforces that each alias is only claimed by one phase.
-    Each phase name in the phase models is added as an alias for itself to
-    support an "identity" operation.
+def popget(d, key, default=None):
+    """
+    Get the key from the dict, returning the default if not found.
 
     Parameters
     ----------
-    phase_models
-        Phase models ESPEI uses to initialize databases. Must contain a mapping
-        of phase names to phase data (sublattices, site ratios, aliases)
+    d : dict
+        Dictionary to get key from.
+    key : object
+        Key to get from the dictionary.
+    default : object
+        Default to return if key is not found in dictionary.
 
     Returns
     -------
-    Dict[str, str]
+    object
+
+    Examples
+    ---------
+    >>> d = {'ABC': 5.0}
+    >>> popget(d, 'ZPF', 1.0) == 1.0
+    True
+    >>> popget(d, 'ABC', 1.0) == 5.0
+    True
 
     """
-    # Intialize aliases with identity for each phase first
-    aliases = {phase_name: phase_name for phase_name in phase_models["phases"].keys()}
-    for phase_name, phase_dict in phase_models["phases"].items():
-        for alias in phase_dict.get("aliases", []):
-            if alias not in aliases:
-                aliases[alias] = phase_name
-            else:
-                raise ValueError(f"Cannot add {alias} as an alias for {phase_name} because it is already used by {aliases[alias]}")
-    return aliases
+    try:
+        return d.pop(key)
+    except KeyError:
+        return default
 
 
-def import_qualified_object(obj_path: str) -> Any:
+def get_dask_config_paths():
     """
-    Import an object from a fully qualified import path.
+    Return a list of configuration file paths for dask.
+
+    The last path in the list has the highest precedence.
+
+    Returns
+    -------
+    list
 
     Examples
     --------
-    >>> from espei.utils import import_qualified_object
-    >>> Mod = import_qualified_object('pycalphad.model.Model')
-    >>> from pycalphad.model import Model
-    >>> assert Mod is Model
-    """
-    split_path = obj_path.split('.')
-    module_import_path = '.'.join(split_path[:-1])
-    obj_name = split_path[-1]
-    mod = importlib.import_module(module_import_path)
-    obj = getattr(mod, obj_name)
-    return obj
-
-
-# TODO: Type[Model] should be updated to Type[ModelProtocol] when that exists
-def get_model_dict(phase_models: dict) -> Dict[str, Type[Model]]:
-    """
-    Return a pycalphad-style model dictionary mapping phase names to model classes.
-
-    If a phase's "model" key is not specified, no entry is created. In practice, the
-    behavior of the defaults would be handled by pycalphad.
-
-    Parameters
-    ----------
-    phase_models : dict
-        ESPEI-style phase models dictionary
-
-    Returns
-    -------
-    Any
+    >>> config_files = get_dask_config_paths()
+    >>> len(config_files) >= 1
+    True
 
     """
-    model_dict = {}
-    for phase_name, phase_dict in phase_models["phases"].items():
-        qualified_model_class = phase_dict.get("model")
-        if qualified_model_class is not None:
-            model_dict[phase_name] = import_qualified_object(qualified_model_class)
-    return model_dict
+    candidates = dask.config.paths
+    file_paths = []
+    for path in candidates:
+        if os.path.exists(path):
+            if os.path.isdir(path):
+                file_paths.extend(sorted([
+                    os.path.join(path, p)
+                    for p in os.listdir(path)
+                    if os.path.splitext(p)[1].lower() in ('.json', '.yaml', '.yml')
+                ]))
+            else:
+                file_paths.append(path)
+    return file_paths

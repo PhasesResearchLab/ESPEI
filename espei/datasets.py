@@ -1,48 +1,18 @@
-import fnmatch, json, os
-from typing import Any, Dict, List
+import fnmatch, warnings, json, os
 
 import numpy as np
 from tinydb.storages import MemoryStorage
 from tinydb import where
 
 from espei.utils import PickleableTinyDB
-
-# Create a type
-Dataset = Dict[str, Any]
+from espei.core_utils import recursive_map
 
 class DatasetError(Exception):
     """Exception raised when datasets are invalid."""
     pass
 
-
-def recursive_map(f, x):
-    """
-    map, but over nested lists
-
-    Parameters
-    ----------
-    f : callable
-        Function to apply to x
-    x : list or value
-        Value passed to v
-
-    Returns
-    -------
-    list or value
-    """
-    if isinstance(x, list):
-        if [isinstance(xx, list) for xx in x]:
-            # we got a nested list
-            return [recursive_map(f, xx) for xx in x]
-        else:
-            # it's a list with some values inside
-            return list(map(f, x))
-    else:
-        # not a list, probably just a singular value
-        return f(x)
-
-
-def check_dataset(dataset: Dataset):
+    
+def check_dataset(dataset):
     """Ensure that the dataset is valid and consistent.
 
     Currently supports the following validation checks:
@@ -59,7 +29,7 @@ def check_dataset(dataset: Dataset):
 
     Parameters
     ----------
-    dataset : Dataset
+    dataset : dict
         Dictionary of the standard ESPEI dataset.
 
     Returns
@@ -73,6 +43,7 @@ def check_dataset(dataset: Dataset):
     """
     is_equilibrium = 'solver' not in dataset.keys() and dataset['output'] != 'ZPF'
     is_activity = dataset['output'].startswith('ACR')
+    is_fraction = dataset['output'].startswith('Y')
     is_zpf = dataset['output'] == 'ZPF'
     is_single_phase = 'solver' in dataset.keys()
     if not any((is_equilibrium, is_single_phase, is_zpf)):
@@ -96,6 +67,8 @@ def check_dataset(dataset: Dataset):
     if is_equilibrium:
         conditions = dataset['conditions']
         comp_conditions = {k: v for k, v in conditions.items() if k.startswith('X_')}
+    if is_fraction:
+        pass;
     if is_activity:
         ref_state = dataset['reference_state']
     elif is_equilibrium:
@@ -113,6 +86,8 @@ def check_dataset(dataset: Dataset):
         if num_x_conds.count(num_x_conds[0]) != len(num_x_conds):
             raise DatasetError('All compositions in conditions are not the same shape. Note that conditions cannot be broadcast. Composition conditions are {}'.format(comp_conditions))
         conditions_shape = (num_pressure, num_temperature, num_x_conds[0])
+        if is_fraction:
+            values_shape=values_shape[0:3]
         if conditions_shape != values_shape:
             raise DatasetError('Shape of conditions (P, T, compositions): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
     elif is_single_phase:
@@ -183,7 +158,7 @@ def check_dataset(dataset: Dataset):
                 if len(component_list) != len(mole_fraction_list):
                     raise DatasetError('The length of the components list and mole fractions list in tieline {} for the ZPF point {} should be the same.'.format(tieline, zpf))
                 # check that all mole fractions are less than one
-                mf_sum = np.nansum(np.array(mole_fraction_list, dtype=np.float_))
+                mf_sum = np.nansum(np.array(mole_fraction_list, dtype=np.float))
                 if any([mf is not None for mf in mole_fraction_list]) and mf_sum > 1.0:
                     raise DatasetError('Mole fractions for tieline {} for the ZPF point {} sum to greater than one.'.format(tieline, zpf))
 
@@ -207,18 +182,19 @@ def check_dataset(dataset: Dataset):
                         raise DatasetError('Sublattice {} in configuration {} is must be sorted in alphabetic order ({})'.format(subl, configuration, sorted(subl)))
 
 
-def clean_dataset(dataset: Dataset) -> Dataset:
+
+def clean_dataset(dataset):
     """
     Clean an ESPEI dataset dictionary.
 
     Parameters
     ----------
-    dataset: Dataset
+    dataset : dict
         Dictionary of the standard ESPEI dataset.   dataset : dic
 
     Returns
     -------
-    Dataset
+    dict
         Modified dataset that has been cleaned
 
     Notes
@@ -249,14 +225,27 @@ def clean_dataset(dataset: Dataset) -> Dataset:
                     new_tieline.append([tieline_point[0], tieline_point[1], recursive_map(float, tieline_point[2])])
             new_values.append(new_tieline)
         dataset["values"] = new_values
+    elif dataset["output"] == "Y":
+        values = dataset["values"]
+        new_values = []
+        for fractions in values:
+            new_fractions = []
+            for fractions_point in fractions:
+                if any([comp is None for comp in fractions_point[0]]):
+                    # this is a null tieline point
+                    new_fractions.append(fractions_point)
+                else:
+                    new_fractions.append(recursive_map(float, fractions_point))
+            new_values.append(new_fractions)
+        dataset["values"] = new_values        
     else:
         # values should be all numerical
+        
         dataset["values"] = recursive_map(float, dataset["values"])
-
     return dataset
 
 
-def apply_tags(datasets: PickleableTinyDB, tags):
+def apply_tags(datasets, tags):
     """
     Modify datasets using the tags system
 
@@ -269,7 +258,7 @@ def apply_tags(datasets: PickleableTinyDB, tags):
 
     Returns
     -------
-    None
+    PickleableTinyDB
 
     Notes
     -----
@@ -312,7 +301,39 @@ def apply_tags(datasets: PickleableTinyDB, tags):
                 datasets.update(match, doc_ids=[match.doc_id])
 
 
-def load_datasets(dataset_filenames, include_disabled=False) -> PickleableTinyDB:
+def add_ideal_exclusions(datasets):
+    """
+    If there are single phase datasets present and none of them have an
+    `excluded_model_contributions` key, add ideal exclusions automatically and
+    emit a DeprecationWarning that this feature will be going away.
+
+    Parameters
+    ----------
+    datasets : PickleableTinyDB
+
+    Returns
+    -------
+    PickleableTinyDB
+
+    """
+    all_single_phase = datasets.search(where('solver').exists())
+    no_exclusions = datasets.search(where('solver').exists() & (~where('excluded_model_contributions').exists()))
+    if len(all_single_phase) > 0 and len(all_single_phase) == len(no_exclusions):
+        idmix_warning = "Single phase datasets are present, but there are no specified `excluded_model_contributions` keys present. " + \
+                        "'idmix' exclusion will be added automatically for backwards compatibility, but this will go away in ESPEI v0.8. " + \
+                        "If you want ideal mixing contributions to be excluded, see the documentation for building datasets: http://espei.org/en/latest/input_data.html"
+        warnings.warn(idmix_warning, DeprecationWarning)
+        print(idmix_warning)
+        import espei
+        if int(espei.__version__.split('.')[1]) >= 8 or int(espei.__version__.split('.')[0]) > 0:
+            raise ValueError("ESPEI developer: remove the automatic addition of ideal mixing exclusions")
+        for ds in all_single_phase:
+            ds['excluded_model_contributions'] = ['idmix']
+            datasets.update(ds, doc_ids=[ds.doc_id])
+    return datasets
+
+
+def load_datasets(dataset_filenames):
     """
     Create a PickelableTinyDB with the data from a list of filenames.
 
@@ -330,9 +351,6 @@ def load_datasets(dataset_filenames, include_disabled=False) -> PickleableTinyDB
         with open(fname) as file_:
             try:
                 d = json.load(file_)
-                if not include_disabled and d.get('disabled', False):
-                    # The dataset is disabled and not included
-                    continue
                 check_dataset(d)
                 ds_database.insert(clean_dataset(d))
             except ValueError as e:

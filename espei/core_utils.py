@@ -1,69 +1,120 @@
 """
-Utilities for querying, modifiying, and extracting data from Datasets.
+Internal utilities for developer use. May not be useful to users.
 """
 import copy
-from typing import List
+import itertools
 import numpy as np
 import tinydb
-from espei.datasets import Dataset
 from espei.sublattice_tools import canonicalize, recursive_tuplify
+from espei.parameter_selection.redlich_kister import calc_site_fraction_product, calc_interaction_product
 
-def filter_configurations(desired_data: List[Dataset], configuration, symmetry) -> List[Dataset]:
+
+def get_data(comps, phase_name, configuration, symmetry, datasets, prop):
     """
-    Return non-equilibrium thermochemical datasets with invalid configurations removed.
+    Return list of cleaned single phase datasets matching the passed arguments.
 
     Parameters
     ----------
-    desired_data : List[Dataset]
-        List of non-equilibrium thermochemical datasets
+    comps : list
+        List of string component names
+    phase_name : str
+        Name of phase
     configuration : tuple
         Sublattice configuration as a tuple, e.g. ("CU", ("CU", "MG"))
     symmetry : list of lists
         List of sublattice indices with symmetry
+    datasets : espei.utils.PickleableTinyDB
+        Database of datasets to search for data
+    prop : list
+        String name of the property of interest.
 
     Returns
     -------
-    List[Dataset]
+    list
+        List of datasets matching the arguments.
 
     """
-    for data in desired_data:
+    desired_data = datasets.search((tinydb.where('output').test(lambda x: x in prop)) &
+                                   (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
+                                   (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry)) &
+                                   (tinydb.where('phases') == [phase_name]))
+    # This seems to be necessary because the 'values' member does not modify 'datasets'
+    # But everything else does!
+    desired_data = copy.deepcopy(desired_data)
+
+    def recursive_zip(a, b):
+        if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
+            return list(recursive_zip(x, y) for x, y in zip(a, b))
+        else:
+            return list(zip(a, b))
+
+    for idx, data in enumerate(desired_data):
         # Filter output values to only contain data for matching sublattice configurations
         matching_configs = np.array([(canonicalize(sblconf, symmetry) == canonicalize(configuration, symmetry))
                                      for sblconf in data['solver']['sublattice_configurations']])
         matching_configs = np.arange(len(data['solver']['sublattice_configurations']))[matching_configs]
         # Rewrite output values with filtered data
-        data['values'] = np.array(data['values'], dtype=np.float_)[..., matching_configs]
-        data['solver']['sublattice_configurations'] = recursive_tuplify(np.array(data['solver']['sublattice_configurations'], dtype=np.object_)[matching_configs].tolist())
-        if 'sublattice_occupancies' in data['solver']:
-            data['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'], dtype=np.object_)[matching_configs].tolist()
+        desired_data[idx]['values'] = np.array(data['values'], dtype=np.float)[..., matching_configs]
+        desired_data[idx]['solver']['sublattice_configurations'] = recursive_tuplify(np.array(data['solver']['sublattice_configurations'],
+                                                                                              dtype=np.object)[matching_configs].tolist())
+        try:
+            desired_data[idx]['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'],
+                                                                             dtype=np.object)[matching_configs].tolist()
+        except KeyError:
+            pass
+        # Filter out temperatures below 298.15 K (for now, until better refstates exist)
+        temp_filter = np.atleast_1d(data['conditions']['T']) >= 298.15
+        desired_data[idx]['conditions']['T'] = np.atleast_1d(data['conditions']['T'])[temp_filter]
+        # Don't use data['values'] because we rewrote it above; not sure what 'data' references now
+        desired_data[idx]['values'] = desired_data[idx]['values'][..., temp_filter, :]
     return desired_data
 
 
-def filter_temperatures(desired_data: List[Dataset]) -> List[Dataset]:
+def get_samples(desired_data):
     """
-    Return non-equilibrium thermochemical datasets with temperatures below 298.15 K removed.
-
-    The currently provided unary reference data from ESPEI use the SGTE unary data that
-    are defined as piecewise in temperature with a lower limit of 298.15 K for most
-    elements. Since pycalphad does not extrapolate outside of piecewise temperature
-    limits, this filter prevents fitting data to regions of temperature space where
-    the energy is zero.
+    Return the data values from desired_data, transformed to interaction products.
 
     Parameters
     ----------
-    desired_data : List[Dataset]
-        List of non-equilibrium thermochemical datasets
+    desired_data : list
+        List of matched desired data, e.g. for a single property
 
     Returns
     -------
-    List[Dataset]
+    List[Tuple[float, Tuple[float, float]]]
+        Tuples of (temperature, (site fraction product, interaction product))
+
+    Notes
+    -----
+    Transforms data to interaction products, e.g. YS*{}^{xs}G=YS*XS*DXS^{n} {}^{n}L
 
     """
+    # TODO: binary and ternaries only, possibly non-working ternary cross interactions
+    # TODO does not ravel pressure conditions
+    # TODO: could possibly combine with ravel_conditions if we do the math outside.
+    all_samples = []
     for data in desired_data:
-        temp_filter = np.atleast_1d(data['conditions']['T']) >= 298.15
-        data['conditions']['T'] = np.atleast_1d(data['conditions']['T'])[temp_filter]
-        data['values'] = np.array(data['values'], dtype=np.float_)[..., temp_filter, :].tolist()
-    return desired_data
+        temperatures = np.atleast_1d(data['conditions']['T'])
+        num_configs = np.array(data['solver'].get('sublattice_configurations'), dtype=np.object).shape[0]
+        site_fractions = data['solver'].get('sublattice_occupancies', [[1]] * num_configs)
+        site_fraction_product = calc_site_fraction_product(site_fractions)
+        # TODO: Subtle sorting bug here, if the interactions aren't already in sorted order...
+        interaction_product = calc_interaction_product(site_fractions)
+        comp_features = zip(site_fraction_product, interaction_product)
+        all_samples.extend(list(itertools.product(temperatures, comp_features)))
+    return all_samples
+
+
+def get_weights(desired_data):
+    weights = []
+    for data in desired_data:
+        weight = data.get('weight')
+        if weight is not None:
+            weight = np.array(weight)
+        else:
+            weight = np.ones(np.array(data['values']).shape)
+        weights.extend(weight.flatten().tolist())
+    return weights
 
 
 def _zpf_conditions_shape(zpf_values):
@@ -136,11 +187,15 @@ def ravel_conditions(values, *conditions, **kwargs):
     """
     # we have to parse the `zpf` kwarg manually because py27 does not allow named args after *args
     zpf = kwargs.get('zpf')
+    Y = kwargs.get('Y')
     if zpf:
         values_shape = _zpf_conditions_shape(values)
         # we have to make our integers tuples
         if not isinstance(values_shape, tuple):
             values_shape = tuple([values_shape])
+    if Y:
+        values_shape =np.array(values).shape
+        values_shape = values_shape[0:3]
     else:
         values_shape = np.array(values).shape
     ravelled_conditions = []
@@ -161,7 +216,7 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
 
     Parameters
     ----------
-    desired_data : List[Dataset]
+    desired_data : espei.utils.PickleableTinyDB
         The selected data
     independent_comps : list
         List of indepdendent components. Used for mass balance component conversion
@@ -224,6 +279,33 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
     return equilibria_dict
 
 
+def recursive_map(f, x):
+    """
+    map, but over nested lists
+
+    Parameters
+    ----------
+    f : callable
+        Function to apply to x
+    x : list or value
+        Value passed to v
+
+    Returns
+    -------
+    list or value
+    """
+    if isinstance(x, list):
+        if [isinstance(xx, list) for xx in x]:
+            # we got a nested list
+            return [recursive_map(f, xx) for xx in x]
+        else:
+            # it's a list with some values inside
+            return list(map(f, x))
+    else:
+        # not a list, probably just a singular value
+        return f(x)
+
+
 def symmetry_filter(x, config, symmetry):
     """
     Return True if the candidate sublattice configuration has any symmetry
@@ -258,11 +340,9 @@ def symmetry_filter(x, config, symmetry):
     return False
 
 
-def get_prop_data(comps, phase_name, prop, datasets, additional_query=None) -> List[Dataset]:
+def get_prop_data(comps, phase_name, prop, datasets, additional_query=None):
     """
-    Return a copy of datasets that match the components, phase and property.
-
-    The queried datasets are copied to ensure that any modifications are safe.
+    Return datasets that match the components, phase and property
 
     Parameters
     ----------
@@ -279,7 +359,8 @@ def get_prop_data(comps, phase_name, prop, datasets, additional_query=None) -> L
 
     Returns
     -------
-    List[Dataset]
+    list
+        List of dictionary datasets that match the criteria
 
     """
     if additional_query is None:
@@ -291,4 +372,4 @@ def get_prop_data(comps, phase_name, prop, datasets, additional_query=None) -> L
         (tinydb.where('phases') == [phase_name]) &
         additional_query
     )
-    return copy.deepcopy(desired_data)
+    return desired_data

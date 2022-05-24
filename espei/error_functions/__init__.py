@@ -3,6 +3,7 @@ Functions for calculating error.
 """
 
 from .activity_error import calculate_activity_error
+from .Y_error import calculate_Y_probability
 from .non_equilibrium_thermochemical_error import calculate_non_equilibrium_thermochemical_probability, get_thermochemical_data
 from .zpf_error import calculate_zpf_error, get_zpf_data
 from .equilibrium_thermochemical_error import calculate_equilibrium_thermochemical_probability, get_equilibrium_thermochemical_data

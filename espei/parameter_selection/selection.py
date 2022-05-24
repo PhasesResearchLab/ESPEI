@@ -4,10 +4,9 @@ Fit, score and select models
 
 import logging
 import numpy as np
-from numpy.typing import ArrayLike
 from sklearn.linear_model import Ridge, LinearRegression
 
-_log = logging.getLogger(__name__)
+TRACE = 15  # TRACE logging level
 
 
 def fit_model(feature_matrix, data_quantities, ridge_alpha, weights=None):
@@ -16,54 +15,46 @@ def fit_model(feature_matrix, data_quantities, ridge_alpha, weights=None):
 
     Parameters
     ----------
-    feature_matrix : ArrayLike
-        (:math:`M \\times N`) regressor matrix. The transformed model inputs (y_i, T, P, etc.)
-    data_quantities : ArrayLike
-        Size (:math:`M`) response vector. Target values of the output (e.g. HM_MIX) to reproduce.
+    feature_matrix : ndarray
+        (M*N) regressor matrix. The transformed model inputs (y_i, T, P, etc.)
+    data_quantities : ndarray
+        (M,) response vector. Target values of the output (e.g. HM_MIX) to reproduce.
     ridge_alpha : float
-        Value of the :math:`\\alpha` hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
+        Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
         with ordinary least squares regression. For now, the parameter is applied to all features.
 
     Returns
     -------
     list
-        List of model coefficients of size (:math:`N`)
+        List of model coefficients of shape (N,)
 
     Notes
     -----
-    Solve :math:`Ax = b` where :math:`x` are the desired model coefficients,
-    :math:`A` is the ``feature_matrix`` and
-    :math:`b` corrresponds to ``data_quantities``.
-
+    Solve Ax = b. `x` are the desired model coefficients. `A` is the
+    'feature_matrix'. `b` corrresponds to 'data_quantities'.
     """
     if ridge_alpha is not None:
-        clf = Ridge(fit_intercept=False, alpha=ridge_alpha)
+        clf = Ridge(fit_intercept=False, normalize=True, alpha=ridge_alpha)
     else:
-        clf = LinearRegression(fit_intercept=False)
+        clf = LinearRegression(fit_intercept=False, normalize=True)
     clf.fit(feature_matrix, data_quantities, sample_weight=weights)
     return clf.coef_
 
 
 def score_model(feature_matrix, data_quantities, model_coefficients, feature_list, weights, aicc_factor=None, rss_numerical_limit=1.0e-16):
     """
-    Use the modified AICc to score a model that has been fit.
-
-    The modified AICc is given by
-
-    .. math::
-
-       \\mathrm{mAICc} = n \\ln \\frac{\\mathrm{RSS}}{n} + 2pk + \\frac {2p^2k^2 + 2pk} {n - pk - 1}
+    Use the AICc to score a model that has been fit.
 
     Parameters
     ----------
-    feature_matrix : ArrayLike
-        (:math:`M \\times N`) regressor matrix. The transformed model inputs (y_i, T, P, etc.)
-    data_quantities : ArrayLike
-        Size (:math:`M`) response vector. Target values of the output (e.g. HM_MIX) to reproduce.
+    feature_matrix : ndarray
+        (M*N) regressor matrix. The transformed model inputs (y_i, T, P, etc.)
+    data_quantities : ndarray
+        (M,) response vector. Target values of the output (e.g. HM_MIX) to reproduce.
     model_coefficients : list
-        Size (:math:`N`) list of fitted model coefficients to be scored.
+        List of fitted model coefficients to be scored. Has shape (N,).
     feature_list : list
-        Polynomial coefficients corresponding to each column of ``feature_matrix``.
+        Polynomial coefficients corresponding to each column of 'feature_matrix'.
         Has shape (N,). Purely a logging aid.
     aicc_factor : float
         Multiplication factor for the AICc's parameter penalty.
@@ -75,23 +66,35 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     float
         A model score
 
+    Notes
+    -----
+    Solve Ax = b, where 'feature_matrix' is A and 'data_quantities' is b.
+
+    The likelihood function is a simple least squares with no regularization. The form of the AIC is valid under
+    assumption all sample variances are random and Gaussian, model is univariate. It is assumed the model here is
+    univariate with T.
     """
-    p = aicc_factor if aicc_factor is not None else 1.0
-    k = len(feature_list)
-    rss = np.square((np.dot(feature_matrix, model_coefficients) - data_quantities.astype(np.float_))*np.array(weights)).sum()
+    factor = aicc_factor if aicc_factor is not None else 1.0
+    num_params = len(feature_list)
+    rss = np.square(np.dot(feature_matrix, model_coefficients) - data_quantities.astype(np.float)*np.array(weights)).sum()
     if np.abs(rss) < rss_numerical_limit:
         rss = rss_numerical_limit
     # Compute the corrected Akaike Information Criterion
-    n = data_quantities.size
-    pk = k*p
-    aic = n * np.log(rss / n) + 2.0 * pk
-    if pk >= (n - 1.0):
-        # Prevent the denominator of the proper mAICc from blowing up (pk = n - 1) or negative (pk > n - 1)
-        correction = (2.0 * p**2 * k**2 + 2.0 * pk) * (-n + pk + 3.0)
+    # The correction is (2k^2 + 2k)/(n - k - 1)
+    # Our denominator for the correction must always be an integer by this equation.
+    # Our correction can blow up if (n-k-1) = 0 and if n - 1 < k (we will actually be *lowering* the AICc)
+    # So we will prevent blowing up by taking the denominator as 1/(p-n+1) for p > n - 1
+    num_samples = data_quantities.size
+    if (num_samples - 1.0) > num_params*factor:
+        correction_denom = num_samples - factor*num_params - 1.0
+    elif (num_samples - 1.0) == num_params*factor:
+        correction_denom = 0.99
     else:
-        correction = (2.0 * p**2 * k**2 + 2.0 * pk) / (n - pk - 1.0)
+        correction_denom = 1.0 / (factor*num_params - num_samples + 1.0)
+    correction = factor*(2.0*num_params**2 + 2.0*num_params)/correction_denom
+    aic = 2.0*factor*num_params + num_samples * np.log(rss/num_samples)
     aicc = aic + correction  # model score
-    _log.trace('%s rss: %s, AIC: %s, AICc: %s', feature_list, rss, aic, aicc)
+    logging.log(TRACE, '{} rss: {}, AIC: {}, AICc: {}'.format(feature_list, rss, aic, aicc))
     return aicc
 
 
@@ -104,11 +107,10 @@ def select_model(candidate_models, ridge_alpha, weights, aicc_factor=None):
     candidate_models : list
         List of tuples of (features, feature_matrix, data_quantities)
     ridge_alpha : float
-        Value of the :math:`\\alpha` hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
+        Value of the $alpha$ hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
         with ordinary least squares regression. For now, the parameter is applied to all features.
     aicc_factor : float
         Multiplication factor for the AICc's parameter penalty.
-
     Returns
     -------
     tuple
@@ -125,3 +127,4 @@ def select_model(candidate_models, ridge_alpha, weights, aicc_factor=None):
             opt_model_score = model_score
             opt_model = (feature_list, model_coefficients)
     return opt_model
+
