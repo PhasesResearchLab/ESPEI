@@ -5,6 +5,16 @@ Changelog
 |version| (development)
 =======================
 
+0.8.8 (2022-05-22)
+==================
+
+Improvements
+------------
+* Generalize  entering the `__HYPERPLANE__` phase in ZPF vertices to control the compositions for the target hyperplane (`@bocklund`_ - :issue:`221`)
+* Update for CompositionSet-based solver in pycalphad 0.10.1 (`@bocklund`_ - :issue:`232`)
+* Fix generating parameters for symmetry of 4 sublattice FCC models (`@bocklund`_ - :issue:`229`)
+* Fix a bug where a trace of all zeros would raise an error.
+
 0.8.7 (2022-02-21)
 ==================
 
