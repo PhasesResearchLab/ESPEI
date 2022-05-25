@@ -71,12 +71,14 @@ def calculate_Y_probability(dbf, comps, phases, datasets, parameters=None, phase
         data_phases = phases
         conditions = {}
         conds_list = [(cond, value) for cond, value in ds['conditions'].items() if cond not in ('P', 'T')]
-
+        print(conds_list)
         for comp_name, comp_x in conds_list:
-            P, T, X = ravel_conditions(ds['values'], ds['conditions']['P'], ds['conditions']['T'], comp_x)
+            print(comp_name, comp_x)
+            P, T, X = ravel_conditions(ds['values'], ds['conditions']['P'], ds['conditions']['T'], comp_x,Y=True)
             conditions[v.P] = P
             conditions[v.T] = T
             conditions[_map_coord_to_variable(comp_name)] = X
+        print(P,T,X)
         conditions_list = [{c: conditions[c][i] for c in conditions.keys()} for i in range(len(conditions[v.T]))]
         print('cond',len(conditions[v.T]),X,conditions_list)
         current_Y = []

@@ -355,7 +355,7 @@ def test_Y_error(datasets_db):
 
     dbf = Database(NB_NI_TDB)
     error = calculate_Y_probability(dbf, ['NB','NI','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {})
-    assert np.isclose(error, -59816.69319172018, rtol=1e-6)
+    assert np.isclose(error, -29908.346595859857, rtol=1e-6)
 
 
 
