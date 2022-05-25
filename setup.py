@@ -26,7 +26,7 @@ setup(
         'importlib_metadata',  # drop for Python>=3.8
         'matplotlib',
         'numpy>=1.20',
-        'pycalphad>=0.10.0',
+        'pycalphad>=0.10.1',
         'pyyaml',
         'setuptools_scm[toml]>=6.0',
         'scikit-learn>=1.0',
