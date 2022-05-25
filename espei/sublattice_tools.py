@@ -2,9 +2,8 @@
 Utilities for manipulating sublattice models.
 """
 
+from typing import Any, Sequence, Union
 import itertools
-
-import numpy as np
 
 
 def tuplify(x):
@@ -75,52 +74,76 @@ def canonicalize(configuration, equivalent_sublattices):
     return recursive_tuplify(canonicalized)
 
 
-def generate_symmetric_group(configuration, symmetry):
+def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None, Sequence[Sequence[int]]]):
     """
-    For a particular configuration and list of sublattices with symmetry,
+    For a particular configuration and list of sublattices that are symmetric,
     generate all the symmetrically equivalent configurations.
 
     Parameters
     ----------
-    configuration : tuple
-        Tuple of a sublattice configuration.
-    symmetry : list of lists
-        List of lists containing symmetrically equivalent sublattice indices,
-        e.g. [[0, 1], [2, 3]] means that sublattices 0 and 1 are equivalent and
-        sublattices 2 and 3 are also equivalent.
+    configuration : Sequence[Any]
+        Typically a constituent array. The length should correspond to the number of
+        sublattices in the phase.
+    symmetry : Union[None, Sequence[Sequence[int]]]
+        A list of lists giving the indices of symmetrically equivalent sublattices.
+        For example: a symmetry of `[[0, 1, 2, 3]]` means that the first four
+        sublattices are symmetric to each other. If multiple sublattices are given, the
+        sublattices are internally equivalent and the sublattices themselves are assumed
+        interchangeble. That is, for a symmetry of `[[0, 1], [2, 3]]`, sublattices
+        0 and 1 are equivalent to each other (i.e. `[0, 1] == [1, 0]`) and similarly for
+        sublattices 2 and 3. It also implies that the sublattices are interchangeable,
+        (i.e. `[[0, 1], [2, 3]] == [[2, 3], [0, 1]]`), but note that constituents cannot
+        change sublattices (i.e. `[[0, 1], [2, 3]] != [[0, 3], [2, 1]]`).
+        If `symmetry=None` is given, no new configurations are generated.
 
     Returns
     -------
     tuple
         Tuple of configuration tuples that are all symmetrically equivalent.
 
+    Notes
+    -----
+    In the general case, equivalency between sublattices, for example
+    (`[[0, 1], [2, 3]] == [[2, 3], [0, 1]]`), is not necessarily required. It
+    could be that sublattices 0 and 1 represent equivalent substitutional
+    sublattices, while 2 and 3 represent equivalent interstitial sites.
+    Interchanging sublattices between substitutional sublattices is allowed, but
+    the substitutional sites would not be interchangeable with the interstitial
+    sites. To achieve this kind of effect with this function, you would need to
+    call it once with the equivalent substitutional sublattices, then for each
+    generated configuration, call this function again, giving the unique
+    configurations for symmetric interstitial sublattices.
     """
-    configurations = [recursive_tuplify(configuration)]
-    permutation = np.array(symmetry, dtype=np.object)
+    # recursively casting sequences to tuples ensures that the generated configurations are hashable
+    configuration = recursive_tuplify(configuration)
+    sublattice_indices = list(range(len(configuration)))
+    if symmetry is None:
+        return [configuration]
+    seen_subl_indices = sorted([i for equiv_subl in symmetry for i in equiv_subl])
+    # fixed_subl_indices were not given, they are assumed to be inequivalent and constant
+    fixed_subl_indices = sorted(set(sublattice_indices) - set(seen_subl_indices))
 
-    def permute(x):
-        if len(x) == 0:
-            return x
-        x[0] = np.roll(x[0], 1)
-        x[:] = np.roll(x, 1, axis=0)
-        return x
+    # permute within each sublattice, i.e. [0, 1] -> [[0, 1], [1, 0]]
+    intra_sublattice_permutations = (itertools.permutations(equiv_subl) for equiv_subl in symmetry)
+    # product, combining all internal sublattice permutations, i.e.
+    # [[0, 1], [1, 0]] and [[2, 3], [3, 2]] become [ ([0, 1], [2, 3]), ... ]
+    sublattice_products = itertools.product(*intra_sublattice_permutations)
+    # finally, swap sets of equivalent sublattices, i.e.
+    # [ ([0, 1], [2, 3]), ... ] -> [[ ([0, 1], [2, 3]),  ([2, 3], [0, 1]) ], ... ]
+    inter_sublattice_permutations = (itertools.permutations(x) for x in sublattice_products)
 
-    if symmetry is not None:
-        while np.any(np.array(symmetry, dtype=np.object) != permute(permutation)):
-            new_conf = np.array(configurations[0], dtype=np.object)
-            subgroups = []
-            # There is probably a more efficient way to do this
-            for subl in permutation:
-                subgroups.append([configuration[idx] for idx in subl])
-            # subgroup is ordered according to current permutation
-            # but we'll index it based on the original symmetry
-            # This should permute the configurations
-            for subl, subgroup in zip(symmetry, subgroups):
-                for subl_idx, conf_idx in enumerate(subl):
-                    new_conf[conf_idx] = subgroup[subl_idx]
-            configurations.append(recursive_tuplify(new_conf.tolist()))
-
-    return sorted(set(configurations), key=canonical_sort_key)
+    symmetrically_distinct_configurations = set()
+    # chain.from_iterable calls flatten out nested permutation lists, i.e.
+    # ([0, 1], [2, 3]) -> [0, 1, 2, 3]
+    for proposed_distinct_indices in itertools.chain.from_iterable(inter_sublattice_permutations):
+        new_config = list(configuration[i] for i in itertools.chain.from_iterable(proposed_distinct_indices))
+        # The configuration only contains indices for symmetric sublattices. For the
+        # inequivalent sublattices, we need to insert them at their proper indices.
+        # Indices _must_ be in sorted order because we are changing the array size on insertion.
+        for fixed_idx in fixed_subl_indices:
+            new_config.insert(fixed_idx, configuration[fixed_idx])
+        symmetrically_distinct_configurations.add(tuple(new_config))
+    return sorted(symmetrically_distinct_configurations, key=canonical_sort_key)
 
 
 def sorted_interactions(interactions, max_interaction_order, symmetry):
@@ -180,7 +203,7 @@ def sorted_interactions(interactions, max_interaction_order, symmetry):
     return filtered_interactions
 
 
-def generate_interactions(endmembers, order, symmetry):
+def generate_interactions(endmembers, order, symmetry, forbid_cross_interactions=None):
     """
     Returns a list of sorted interactions of a certain order
 
@@ -194,6 +217,12 @@ def generate_interactions(endmembers, order, symmetry):
         List of lists containing symmetrically equivalent sublattice indices,
         e.g. [[0, 1], [2, 3]] means that sublattices 0 and 1 are equivalent and
         sublattices 2 and 3 are also equivalent.
+    forbid_cross_interactions : Optiona[bool]
+        If True, will prevent cross interations from being generated. If None,
+        automatically determine based on the symmetry. If there is no symmetry,
+        cross interactions are forbidden. Symmetry usually implies that there
+        is a disordered state that is interesting, so cross interactions are
+        allowed.
 
     Returns
     -------
@@ -201,26 +230,32 @@ def generate_interactions(endmembers, order, symmetry):
         List of interaction tuples, e.g. [('A', ('A', 'B'))]
 
     """
-    interactions = list(itertools.combinations(endmembers, order))
-    transformed_interactions = []
-    for endmembers in interactions:
-        interaction = []
-        has_correct_interaction_order = False  # flag to check that we have interactions of at least interaction_order
-        # occupants is a tuple of each endmember's ith constituent, looping through i
-        for occupants in zip(*endmembers):
-            # if all occupants are the same, the ith element of the interaction is not an interacting element
-            if all([occupants[0] == x for x in occupants[1:]]):
-                interaction.append(occupants[0])
-            else:  # there is an interaction
-                interacting_species = tuple(sorted(set(occupants)))
-                if len(interacting_species) == order:
-                    has_correct_interaction_order = True
-                interaction.append(interacting_species)
-        # only add this interaction if it has an interaction of the desired order.
-        # that is, throw away interactions that degenerate to a lower order
-        if has_correct_interaction_order:
-            transformed_interactions.append(interaction)
-    return sorted_interactions(transformed_interactions, order, symmetry)
+    if forbid_cross_interactions is None:
+        # Profiling indicates that it is worth skipping cross interactions in
+        # multi-component systems due to the cost of the sorted_interactions
+        if symmetry is None:
+            forbid_cross_interactions = True  # symmetry may imply ordering, so keep these
+        else:
+            forbid_cross_interactions = False
+    interactions = []
+    for endmembers in itertools.combinations(endmembers, order):
+        config = []
+        has_desired_order = False  # Some interactions make for degenerate endmember
+        for subl in zip(*endmembers):
+            subl = set(subl)
+            num_constit = len(subl)
+            if num_constit == 1:
+                config.append(tuple(subl)[0])  # Canonical form: a pure sublattice is not a sequence
+            else:
+                if has_desired_order and forbid_cross_interactions:
+                    has_desired_order = False  # setting this to false ensures the interaction won't be added
+                    break
+                if num_constit == order:
+                    has_desired_order = True
+                config.append(tuple(sorted(subl)))
+        if has_desired_order:
+            interactions.append(config)
+    return sorted_interactions(interactions, order, symmetry)
 
 
 def interaction_test(configuration, order=None):

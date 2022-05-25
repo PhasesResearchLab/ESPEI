@@ -4,8 +4,9 @@ Calculate error due to thermochemical quantities: heat capacity, entropy, enthal
 
 import logging
 from collections import OrderedDict
+from typing import List
 
-import sympy
+import symengine
 from scipy.stats import norm
 import numpy as np
 from tinydb import where
@@ -13,11 +14,39 @@ from tinydb import where
 from pycalphad import Model, ReferenceState, variables as v
 from pycalphad.core.utils import unpack_components, get_pure_elements
 
-from espei.core_utils import ravel_conditions, get_prop_data
+from espei.datasets import Dataset
+from espei.core_utils import ravel_conditions, get_prop_data, filter_temperatures
 from espei.utils import database_symbols_to_fit
 from espei.error_functions.zpf_error import update_phase_record_parameters
 from espei.shadow_functions import calculate_
+from espei.sublattice_tools import canonicalize, recursive_tuplify, tuplify
 from pycalphad.codegen.callables import build_phase_records
+
+_log = logging.getLogger(__name__)
+
+
+def filter_sublattice_configurations(desired_data: List[Dataset], subl_model) -> List[Dataset]:  # TODO: symmetry support
+    """Modify the desired_data to remove any configurations that cannot be represented by the sublattice model."""
+    subl_model_sets = [set(subl) for subl in subl_model]
+    for data in desired_data:
+        matching_configs = []  # binary mask of whether a configuration is represented by the sublattice model
+        for config in data['solver']['sublattice_configurations']:
+            config = recursive_tuplify(canonicalize(config, None))
+            if (
+                len(config) == len(subl_model) and
+                all(subl.issuperset(tuplify(config_subl)) for subl, config_subl in zip(subl_model_sets, config))
+            ):
+                matching_configs.append(True)
+            else:
+                matching_configs.append(False)
+        matching_configs = np.asarray(matching_configs, dtype=np.bool_)
+
+        # Rewrite output values with filtered data
+        data['values'] = np.array(data['values'], dtype=np.float_)[..., matching_configs]
+        data['solver']['sublattice_configurations'] = np.array(data['solver']['sublattice_configurations'], dtype=np.object_)[matching_configs].tolist()
+        if 'sublattice_occupancies' in data['solver']:
+            data['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'], dtype=np.object_)[matching_configs].tolist()
+    return desired_data
 
 
 def calculate_points_array(phase_constituents, configuration, occupancies=None):
@@ -64,40 +93,30 @@ def calculate_points_array(phase_constituents, configuration, occupancies=None):
     return points
 
 
-def get_prop_samples(dbf, comps, phase_name, desired_data):
+def get_prop_samples(desired_data, constituents):
     """
-    Return data values and the conditions to calculate them by pycalphad
-    calculate from the datasets
+    Return data values and the conditions to calculate them using pycalphad.calculate
 
     Parameters
     ----------
-    dbf : pycalphad.Database
-        Database to consider
-    comps : list
-        List of active component names
-    phase_name : str
-        Name of the phase to consider from the Database
-    desired_data : list
-        List of dictionary datasets that contain the values to sample
+    desired_data : List[Dict[str, Any]]
+        List of dataset dictionaries that contain the values to sample
+    constituents : List[List[str]]
+        Names of constituents in each sublattice.
 
     Returns
     -------
-    dict
+    Dict[str, Union[float, ArrayLike, List[float]]]
         Dictionary of condition kwargs for pycalphad's calculate and the expected values
 
     """
     # TODO: assumes T, P as conditions
-    # sublattice constituents are Species objects, so we need to be doing intersections with those
-    species_comps = unpack_components(dbf, comps)
-    phase_constituents = dbf.phases[phase_name].constituents
-    # phase constituents must be filtered to only active:
-    phase_constituents = [[c.name for c in sorted(subl_constituents.intersection(set(species_comps)))] for subl_constituents in phase_constituents]
-
     # calculate needs points, state variable lists, and values to compare to
+    num_dof = sum(map(len, constituents))
     calculate_dict = {
         'P': np.array([]),
         'T': np.array([]),
-        'points': np.atleast_2d([[]]).reshape(-1, sum([len(subl) for subl in phase_constituents])),
+        'points': np.atleast_2d([[]]).reshape(-1, num_dof),
         'values': np.array([]),
         'weights': [],
         'references': [],
@@ -110,6 +129,13 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
         configurations = datum['solver']['sublattice_configurations']
         occupancies = datum['solver'].get('sublattice_occupancies')
         values = np.array(datum['values'])
+        if values.size == 0:
+            # Skip any data that don't have any values left (e.g. after filtering)
+            continue
+        # Broadcast the weights to the shape of the values. This ensures that
+        # the sizes of the weights and values are the same, which is important
+        # because they are flattened later (so the shape information is lost).
+        weights = np.broadcast_to(np.asarray(datum.get('weight', 1.0)), values.shape)
 
         # broadcast and flatten the conditions arrays
         P, T = ravel_conditions(values, datum_P, datum_T)
@@ -117,20 +143,20 @@ def get_prop_samples(dbf, comps, phase_name, desired_data):
             occupancies = [None] * len(configurations)
 
         # calculate the points arrays, should be 2d array of points arrays
-        points = np.array([calculate_points_array(phase_constituents, config, occup) for config, occup in zip(configurations, occupancies)])
+        points = np.array([calculate_points_array(constituents, config, occup) for config, occup in zip(configurations, occupancies)])
+        assert values.shape == weights.shape, f"Values data shape {values.shape} does not match weights shape {weights.shape}"
 
         # add everything to the calculate_dict
         calculate_dict['P'] = np.concatenate([calculate_dict['P'], P])
         calculate_dict['T'] = np.concatenate([calculate_dict['T'], T])
-        calculate_dict['points'] = np.concatenate([calculate_dict['points'], np.repeat(points, len(T)/points.shape[0], axis=0)], axis=0)
+        calculate_dict['points'] = np.concatenate([calculate_dict['points'], np.tile(points, (values.shape[0]*values.shape[1], 1))], axis=0)
         calculate_dict['values'] = np.concatenate([calculate_dict['values'], values.flatten()])
-        calculate_dict['weights'].extend(np.array([datum.get('weight', 1.0) for _ in range(values.flatten().size)]).flatten())
+        calculate_dict['weights'].extend(weights.flatten())
         calculate_dict['references'].extend([datum.get('reference', "") for _ in range(values.flatten().size)])
-
     return calculate_dict
 
 
-def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symbols_to_fit=None):
+def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dict=None, symbols_to_fit=None):
     """
 
     Parameters
@@ -143,6 +169,8 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
         List of phases to consider
     datasets : espei.utils.PickleableTinyDB
         Datasets that contain single phase data
+    model : Optional[Dict[str, Type[Model]]]
+        Dictionary phase names to pycalphad Model classes.
     weight_dict : dict
         Dictionary of weights for each data type, e.g. {'HM': 200, 'SM': 2}
     symbols_to_fit : list
@@ -157,10 +185,15 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
     if weight_dict is None:
         weight_dict = {}
 
+    if model is None:
+        model = {}
+
     if symbols_to_fit is not None:
         symbols_to_fit = sorted(symbols_to_fit)
     else:
         symbols_to_fit = database_symbols_to_fit(dbf)
+
+    species_comps = set(unpack_components(dbf, comps))
 
     # estimated from NIST TRC uncertainties
     property_std_deviation = {
@@ -176,11 +209,17 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
         ref_states.append(ref_state)
     all_data_dicts = []
     for phase_name in phases:
+        if phase_name not in dbf.phases:
+            continue
+        # phase constituents are Species objects, so we need to be doing intersections with those
+        phase_constituents = dbf.phases[phase_name].constituents
+        # phase constituents must be filtered to only active:
+        constituents = [[sp.name for sp in sorted(subl_constituents.intersection(species_comps))] for subl_constituents in phase_constituents]
         for prop in properties:
             desired_data = get_prop_data(comps, phase_name, prop, datasets, additional_query=(where('solver').exists()))
             if len(desired_data) == 0:
                 continue
-            unique_exclusions = set([tuple(sorted(d.get('excluded_model_contributions', []))) for d in desired_data])
+            unique_exclusions = set([tuple(sorted(set(d.get('excluded_model_contributions', [])))) for d in desired_data])
             for exclusion in unique_exclusions:
                 data_dict = {
                     'phase_name': phase_name,
@@ -194,43 +233,49 @@ def get_thermochemical_data(dbf, comps, phases, datasets, weight_dict=None, symb
                 else:
                     exc_search = (where('excluded_model_contributions').test(lambda x: tuple(sorted(x)) == exclusion)) & (where('solver').exists())
                 curr_data = get_prop_data(comps, phase_name, prop, datasets, additional_query=exc_search)
-                calculate_dict = get_prop_samples(dbf, comps, phase_name, curr_data)
-                mod = Model(dbf, comps, phase_name, parameters=symbols_to_fit)
+                curr_data = filter_sublattice_configurations(curr_data, constituents)
+                curr_data = filter_temperatures(curr_data)
+                calculate_dict = get_prop_samples(curr_data, constituents)
+                model_cls = model.get(phase_name, Model)
+                mod = model_cls(dbf, comps, phase_name, parameters=symbols_to_fit)
                 if prop.endswith('_FORM'):
                     output = ''.join(prop.split('_')[:-1])+'R'
-                    mod.shift_reference_state(ref_states, dbf, contrib_mods={e: sympy.S.Zero for e in exclusion})
+                    mod.shift_reference_state(ref_states, dbf, contrib_mods={e: symengine.S.Zero for e in exclusion})
                 else:
                     output = prop
                 for contrib in exclusion:
-                    mod.models[contrib] = sympy.S.Zero
-                    mod.reference_model.models[contrib] = sympy.S.Zero
+                    mod.models[contrib] = symengine.S.Zero
+                    try:
+                        # TODO: we can remove this try/except block when pycalphad 0.8.5
+                        # is released with these internal API changes
+                        mod.endmember_reference_model.models[contrib] = symengine.S.Zero
+                    except AttributeError:
+                        mod.reference_model.models[contrib] = symengine.S.Zero
                 species = sorted(unpack_components(dbf, comps), key=str)
                 data_dict['species'] = species
-                model = {phase_name: mod}
+                model_dict = {phase_name: mod}
                 statevar_dict = {getattr(v, c, None): vals for c, vals in calculate_dict.items() if isinstance(getattr(v, c, None), v.StateVariable)}
                 statevar_dict = OrderedDict(sorted(statevar_dict.items(), key=lambda x: str(x[0])))
                 str_statevar_dict = OrderedDict((str(k), vals) for k, vals in statevar_dict.items())
-                phase_records = build_phase_records(dbf, species, [phase_name], statevar_dict, model,
+                phase_records = build_phase_records(dbf, species, [phase_name], statevar_dict, model_dict,
                                                     output=output, parameters={s: 0 for s in symbols_to_fit},
                                                     build_gradients=False, build_hessians=False)
                 data_dict['str_statevar_dict'] = str_statevar_dict
                 data_dict['phase_records'] = phase_records
                 data_dict['calculate_dict'] = calculate_dict
-                data_dict['model'] = model
+                data_dict['model'] = model_dict
                 data_dict['output'] = output
                 data_dict['weights'] = np.array(property_std_deviation[prop.split('_')[0]])/np.array(calculate_dict.pop('weights'))
                 all_data_dicts.append(data_dict)
     return all_data_dicts
 
 
-def calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_data, parameters=None):
+def calculate_non_equilibrium_thermochemical_probability(thermochemical_data, parameters=None):
     """
     Calculate the weighted single phase error in the Database
 
     Parameters
     ----------
-    dbf : pycalphad.Database
-        Database to consider
     thermochemical_data : list
         List of thermochemical data dicts
     parameters : np.ndarray
@@ -240,18 +285,6 @@ def calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_dat
     -------
     float
         A single float of the residual sum of square errors
-
-    Notes
-    -----
-    There are different single phase values, HM_MIX, SM_FORM, CP_FORM, etc.
-    Each of these have different units and the error cannot be compared directly.
-    To normalize all of the errors, a normalization factor must be used.
-    Equation 2.59 and 2.60 in Lukas, Fries, and Sundman "Computational Thermodynamics" shows how this can be considered.
-    Each type of error will be weighted by the reciprocal of the estimated uncertainty in the measured value and conditions.
-    The weighting factor is calculated by
-    $ p_i = (\Delta L_i)^{-1} $
-    where $ \Delta L_i $ is the uncertainty in the measurement.
-    We will neglect the uncertainty for quantities such as temperature, assuming they are small.
 
     """
     if parameters is None:
@@ -265,13 +298,13 @@ def calculate_non_equilibrium_thermochemical_probability(dbf, thermochemical_dat
         sample_values = data['calculate_dict']['values']
 
         update_phase_record_parameters(phase_records, parameters)
-        results = calculate_(dbf, data['species'], [phase_name],
+        results = calculate_(data['species'], [phase_name],
                              data['str_statevar_dict'], data['model'],
                              phase_records, output=output, broadcast=False,
                              points=data['calculate_dict']['points'])[output]
         differences = results - sample_values
         probabilities = norm.logpdf(differences, loc=0, scale=data['weights'])
         prob_sum = np.sum(probabilities)
-        logging.debug(f"Thermochemical error - {data['prop']}({phase_name}) = {prob_sum} - data: {sample_values}, differences: {differences}, probabilities: {probabilities}, references: {data['calculate_dict']['references']}")
+        _log.debug("%s(%s) - probability sum: %0.2f, data: %s, differences: %s, probabilities: %s, references: %s", data['prop'], phase_name, prob_sum, sample_values, differences, probabilities, data['calculate_dict']['references'])
         prob_error += prob_sum
     return prob_error

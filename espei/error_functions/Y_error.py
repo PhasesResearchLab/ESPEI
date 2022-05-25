@@ -73,11 +73,12 @@ def calculate_Y_probability(dbf, comps, phases, datasets, parameters=None, phase
         conds_list = [(cond, value) for cond, value in ds['conditions'].items() if cond not in ('P', 'T')]
 
         for comp_name, comp_x in conds_list:
-            P, T, X = ravel_conditions(ds['values'], ds['conditions']['P'], ds['conditions']['T'], comp_x,Y=True)
+            P, T, X = ravel_conditions(ds['values'], ds['conditions']['P'], ds['conditions']['T'], comp_x)
             conditions[v.P] = P
             conditions[v.T] = T
             conditions[_map_coord_to_variable(comp_name)] = X
         conditions_list = [{c: conditions[c][i] for c in conditions.keys()} for i in range(len(conditions[v.T]))]
+        print('cond',len(conditions[v.T]),X,conditions_list)
         current_Y = []
         model=instantiate_models(dbf, data_comps, ds['phases'])
         sublattice=model[ds['phases'][0]].site_fractions
@@ -99,6 +100,7 @@ def calculate_Y_probability(dbf, comps, phases, datasets, parameters=None, phase
         ind=[i for i,v in enumerate(target_Y) if v == None]
         target_Y=np.delete(target_Y,ind)
         current_Y=np.delete(current_Y,ind)
+        print(target_Y,current_Y)
         pe =norm(loc=0, scale=0.01/(weight*data_weight)).logpdf(np.array(target_Y - current_Y, dtype=np.float64))
         error += np.sum(pe)
         logging.debug('Site_fraction error - data: {}, site_fraction difference: {}, probability: {}, reference: {}'.format(target_Y, current_Y-target_Y, pe, ds["reference"]))
