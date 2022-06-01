@@ -5,12 +5,14 @@ import numpy as np
 import emcee
 from espei.error_functions import calculate_zpf_error, calculate_activity_error, \
     calculate_non_equilibrium_thermochemical_probability, \
-    calculate_equilibrium_thermochemical_probability
+    calculate_equilibrium_thermochemical_probability, \
+    calculate_Y_probability
 from espei.priors import PriorSpec, build_prior_specs
 from espei.utils import unpack_piecewise, optimal_parameters
 from espei.error_functions.context import setup_context
 from .opt_base import OptimizerBase
 from .graph import OptNode
+
 
 _log = logging.getLogger(__name__)
 
@@ -223,7 +225,7 @@ class EmceeOptimizer(OptimizerBase):
         -------
         OptNode
 
-        """
+          """
         # Set NumPy print options so logged arrays print on one line. Reset at the end.
         np.set_printoptions(linewidth=sys.maxsize)
         cbs = self.scheduler is None
@@ -237,6 +239,8 @@ class EmceeOptimizer(OptimizerBase):
             ctx['zpf_kwargs']['approximate_equilibrium'] = approximate_equilibrium
         if 'equilibrium_thermochemical_kwargs' in ctx:
             ctx['equilibrium_thermochemical_kwargs']['approximate_equilibrium'] = approximate_equilibrium
+        if 'Y_kwargs' in ctx:
+            ctx['Y_kwargs']['approximate_equilibrium'] = approximate_equilibrium            
         # Run the initial parameters for guessing purposes:
         _log.trace("Probability for initial parameters")
         self.predict(initial_guess, **ctx)
@@ -290,6 +294,7 @@ class EmceeOptimizer(OptimizerBase):
         parameters = {param_name: param for param_name, param in zip(ctx['symbols_to_fit'], params.tolist())}
         zpf_kwargs = ctx.get('zpf_kwargs')
         activity_kwargs = ctx.get('activity_kwargs')
+        Y_kwargs = ctx.get('Y_kwargs')
         non_equilibrium_thermochemical_kwargs = ctx.get('thermochemical_kwargs')
         equilibrium_thermochemical_kwargs = ctx.get('equilibrium_thermochemical_kwargs')
         starttime = time.time()
@@ -310,12 +315,16 @@ class EmceeOptimizer(OptimizerBase):
             actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
         else:
             actvity_error = 0
+        if Y_kwargs is not None:
+            Y_prob = calculate_Y_probability(parameters=params,**Y_kwargs)
+        else:
+            Y_prob = 0
         if non_equilibrium_thermochemical_kwargs is not None:
             non_eq_thermochemical_prob = calculate_non_equilibrium_thermochemical_probability(parameters=params, **non_equilibrium_thermochemical_kwargs)
         else:
             non_eq_thermochemical_prob = 0
-        total_error = multi_phase_error + eq_thermochemical_prob + non_eq_thermochemical_prob + actvity_error
-        _log.trace('Likelihood - %0.2fs - Non-equilibrium thermochemical: %0.3f. Equilibrium thermochemical: %0.3f. ZPF: %0.3f. Activity: %0.3f. Total: %0.3f.', time.time() - starttime, non_eq_thermochemical_prob, eq_thermochemical_prob, multi_phase_error, actvity_error, total_error)
+        total_error = multi_phase_error + eq_thermochemical_prob + non_eq_thermochemical_prob + actvity_error + Y_prob
+        _log.trace('Likelihood - %0.2fs - Non-equilibrium thermochemical: %0.3f. Equilibrium thermochemical: %0.3f. ZPF: %0.3f. Activity: %0.3f. Y: %0.3f. Total: %0.3f.', time.time() - starttime, non_eq_thermochemical_prob, eq_thermochemical_prob, multi_phase_error, actvity_error, Y_prob, total_error)
         lnlike = np.array(total_error, dtype=np.float64)
 
         lnprob = lnprior + lnlike

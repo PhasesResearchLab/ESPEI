@@ -73,6 +73,7 @@ def check_dataset(dataset: Dataset):
     """
     is_equilibrium = 'solver' not in dataset.keys() and dataset['output'] != 'ZPF'
     is_activity = dataset['output'].startswith('ACR')
+    is_fraction = dataset['output'].startswith('Y')
     is_zpf = dataset['output'] == 'ZPF'
     is_single_phase = 'solver' in dataset.keys()
     if not any((is_equilibrium, is_single_phase, is_zpf)):
@@ -98,6 +99,8 @@ def check_dataset(dataset: Dataset):
         comp_conditions = {k: v for k, v in conditions.items() if k.startswith('X_')}
     if is_activity:
         ref_state = dataset['reference_state']
+    if is_fraction:
+        pass;    
     elif is_equilibrium:
         for el, vals in dataset.get('reference_states', {}).items():
             if 'phase' not in vals:
@@ -113,6 +116,8 @@ def check_dataset(dataset: Dataset):
         if num_x_conds.count(num_x_conds[0]) != len(num_x_conds):
             raise DatasetError('All compositions in conditions are not the same shape. Note that conditions cannot be broadcast. Composition conditions are {}'.format(comp_conditions))
         conditions_shape = (num_pressure, num_temperature, num_x_conds[0])
+        if is_fraction:
+            values_shape=values_shape[0:3]        
         if conditions_shape != values_shape:
             raise DatasetError('Shape of conditions (P, T, compositions): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
     elif is_single_phase:
@@ -249,6 +254,19 @@ def clean_dataset(dataset: Dataset) -> Dataset:
                     new_tieline.append([tieline_point[0], tieline_point[1], recursive_map(float, tieline_point[2])])
             new_values.append(new_tieline)
         dataset["values"] = new_values
+    elif dataset["output"] == "Y":
+        values = dataset["values"]
+        new_values = []
+        for fractions in values:
+            new_fractions = []
+            for fractions_point in fractions:
+                if any([comp is None for comp in fractions_point[0]]):
+                    # this is a null tieline point
+                    new_fractions.append(fractions_point)
+                else:
+                    new_fractions.append(recursive_map(float, fractions_point))
+            new_values.append(new_fractions)
+        dataset["values"] = new_values            
     else:
         # values should be all numerical
         dataset["values"] = recursive_map(float, dataset["values"])

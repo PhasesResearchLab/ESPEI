@@ -348,6 +348,17 @@ def test_zpf_error_works_for_stoichiometric_cmpd_tielines(datasets_db):
     approx_likelihood = calculate_zpf_error(zpf_data)
     assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-6)
 
+def test_Y_error(datasets_db):
+    """Test that site occupancy error returns a correct result"""
+
+    datasets_db.insert(NB_NI_Y_EXP)
+
+    dbf = Database(NB_NI_TDB)
+    Y_thermochemical_data = get_Y_thermochemical_data(dbf, ['NB','NI','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {})
+    error = calculate_Y_probability(Y_thermochemical_data,np.array([]))
+    assert np.isclose(error, -31533.7916795969, rtol=1e-6)
+
+
 
 def test_non_equilibrium_thermochemcial_species(datasets_db):
     """Test species work for non-equilibrium thermochemical data."""

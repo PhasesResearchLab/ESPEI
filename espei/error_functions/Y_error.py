@@ -1,14 +1,16 @@
-"""
-Calculate error due to equilibrium thermochemical properties.
-"""
 
+import yaml
+YAML_LOADER = yaml.FullLoader
+from espei.datasets import DatasetError, load_datasets
+from espei.core_utils import ravel_conditions
+
+import copy
 import logging
 from collections import OrderedDict
 from typing import NamedTuple, Sequence, Dict, Optional, Tuple, Type
-
 import numpy as np
 import tinydb
-from tinydb import where
+from tinydb import TinyDB, Query, where
 from scipy.stats import norm
 from pycalphad.plot.eqplot import _map_coord_to_variable
 from pycalphad import Database, Model, ReferenceState, variables as v
@@ -17,13 +19,14 @@ from pycalphad.codegen.callables import build_phase_records
 from pycalphad.core.utils import instantiate_models, filter_phases, extract_parameters, unpack_components, unpack_condition
 from pycalphad.core.phase_rec import PhaseRecord
 
-from espei.utils import PickleableTinyDB
+from espei.utils import PickleableTinyDB, MemoryStorage
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
+
+
 
 _log = logging.getLogger(__name__)
 
-
-EqPropData = NamedTuple('EqPropData', (('dbf', Database),
+YPropData = NamedTuple('YPropData', (('dbf', Database),
                                        ('species', Sequence[v.Species]),
                                        ('phases', Sequence[str]),
                                        ('potential_conds', Dict[v.StateVariable, float]),
@@ -38,14 +41,14 @@ EqPropData = NamedTuple('EqPropData', (('dbf', Database),
                                        ))
 
 
-def build_eqpropdata(data: tinydb.database.Document,
+def build_Ypropdata(data: tinydb.database.Document,
                      dbf: Database,
                      model: Optional[Dict[str, Type[Model]]] = None,
                      parameters: Optional[Dict[str, float]] = None,
                      data_weight_dict: Optional[Dict[str, float]] = None
-                     ) -> EqPropData:
+                     ) -> YPropData:
     """
-    Build EqPropData for the calculations corresponding to a single dataset.
+    Build YPropData for the calculations corresponding to a single dataset.
 
     Parameters
     ----------
@@ -62,14 +65,12 @@ def build_eqpropdata(data: tinydb.database.Document,
 
     Returns
     -------
-    EqPropData
+    YPropData
     """
     parameters = parameters if parameters is not None else {}
     data_weight_dict = data_weight_dict if data_weight_dict is not None else {}
     property_std_deviation = {
-        'HM': 500.0,  # J/mol
-        'SM':   0.2,  # J/K-mol
-        'CPM':  0.2,  # J/K-mol
+        'Y': 0.01,
     }
 
     params_keys, _ = extract_parameters(parameters)
@@ -84,13 +85,7 @@ def build_eqpropdata(data: tinydb.database.Document,
     reference = data.get('reference', '')
 
     # Models are now modified in response to the data from this data
-    if 'reference_states' in data:
-        property_output = output[:-1] if output.endswith('R') else output  # unreferenced model property so we can tell shift_reference_state what to build.
-        reference_states = []
-        for el, vals in data['reference_states'].items():
-            reference_states.append(ReferenceState(v.Species(el), vals['phase'], fixed_statevars=vals.get('fixed_state_variables')))
-        for mod in models.values():
-            mod.shift_reference_state(reference_states, dbf, output=(property_output,))
+
 
     data['conditions'].setdefault('N', 1.0)  # Add default for N. Nothing else is supported in pycalphad anyway.
     pot_conds = OrderedDict([(getattr(v, key), unpack_condition(data['conditions'][key])) for key in sorted(data['conditions'].keys()) if not key.startswith('X_')])
@@ -108,21 +103,21 @@ def build_eqpropdata(data: tinydb.database.Document,
 
     # Build weights, should be the same size as the values
     total_num_calculations = len(rav_comp_conds)*np.prod([len(vals) for vals in pot_conds.values()])
-    dataset_weights = np.array(data.get('weight', 1.0)) * np.ones(total_num_calculations)
+    dataset_weights = np.array(data.get('weight', 10.0)) * np.ones(total_num_calculations)
     weights = (property_std_deviation.get(property_output, 1.0)/data_weight_dict.get(property_output, 1.0)/dataset_weights).flatten()
 
-    return EqPropData(dbf, species, data_phases, pot_conds, rav_comp_conds, models, params_keys, phase_records, output, samples, weights, reference)
+    return YPropData(dbf, species, data_phases, pot_conds, rav_comp_conds, models, params_keys, phase_records, output, samples, weights, reference)
 
 
-def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
+def get_Y_thermochemical_data(dbf: Database, comps: Sequence[str],
                                         phases: Sequence[str],
                                         datasets: PickleableTinyDB,
                                         model: Optional[Dict[str, Model]] = None,
                                         parameters: Optional[Dict[str, float]] = None,
                                         data_weight_dict: Optional[Dict[str, float]] = None,
-                                        ) -> Sequence[EqPropData]:
+                                        ) -> Sequence[YPropData]:
     """
-    Get all the EqPropData for each matching equilibrium thermochemical dataset in the datasets
+    Get all the YPropData for each matching equilibrium thermochemical dataset in the datasets
 
     Parameters
     ----------
@@ -150,48 +145,65 @@ def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
 
     Returns
     -------
-    Sequence[EqPropData]
+    Sequence[YPropData]
     """
 
     desired_data = datasets.search(
-        # data that isn't ZPF or non-equilibrium thermochemical
-        (where('output') != 'ZPF') & (~where('solver').exists()) &
-        (where('output').test(lambda x: 'ACR' not in x)) &  # activity data not supported yet
-        (where('output').test(lambda x: 'Y' not in x))& 
-        (where('components').test(lambda x: set(x).issubset(comps))) &
-        (where('phases').test(lambda x: set(x).issubset(set(phases))))
-    )
+        (where('output').test(lambda x: 'Y' in x)) &
+        (where('components').test(lambda x: set(x).issubset(comps))))
 
-    eq_thermochemical_data = []  # 1:1 correspondence with each dataset
+    Y_thermochemical_data = []  # 1:1 correspondence with each dataset
     for data in desired_data:
-        eq_thermochemical_data.append(build_eqpropdata(data, dbf, model=model, parameters=parameters, data_weight_dict=data_weight_dict))
-    return eq_thermochemical_data
+        Y_thermochemical_data.append(build_Ypropdata(data, dbf, model=model, parameters=parameters, data_weight_dict=data_weight_dict))
+    return Y_thermochemical_data
 
 
-def calc_prop_differences(eqpropdata: EqPropData,
+
+
+
+
+
+def calculate_Y_probability_differences(Ypropdata: YPropData,
                           parameters: np.ndarray,
                           approximate_equilibrium: Optional[bool] = False,
                           ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Calculate differences between the expected and calculated values for a property
+    Return the sum of square error from site fraction data
 
     Parameters
     ----------
-    eqpropdata : EqPropData
-        Data corresponding to equilibrium calculations for a single datasets.
-    parameters : np.ndarray
-        Array of parameters to fit. Must be sorted in the same symbol sorted
-        order used to create the PhaseRecords.
-    approximate_equilibrium : Optional[bool]
-        Whether or not to use an approximate version of equilibrium that does
-        not refine the solution and uses ``starting_point`` instead.
+    dbf : pycalphad.Database
+        Database to consider
+    comps : list
+        List of active component names
+    phases : list
+        List of phases to consider
+    datasets : espei.utils.PickleableTinyDB
+        Datasets that contain single phase data
+    parameters : dict
+        Dictionary of symbols that will be overridden in pycalphad.equilibrium
+    phase_models : dict
+        Phase models to pass to pycalphad calculations
+    callables : dict
+        Callables to pass to pycalphad
+    data_weight : float
+        Weight for standard deviation of activity measurements, dimensionless.
+        Corresponds to the standard deviation of differences in chemical
+        potential in typical measurements of activity, in J/mol.
 
     Returns
     -------
-    Tuple[np.ndarray, np.ndarray]
-        Pair of
-        * differences between the calculated property and expected property
-        * weights for this dataset
+    float
+        A single float of the sum of square errors
+
+    Notes
+    -----
+    General procedure:
+    1. Get the datasets
+    2. For each dataset
+        a. Calculate current site fraction 
+        b. Find the target site fraction
+        c. Calculate error due to site fraction
 
     """
     if approximate_equilibrium:
@@ -199,44 +211,61 @@ def calc_prop_differences(eqpropdata: EqPropData,
     else:
         _equilibrium = equilibrium_
 
-    dbf = eqpropdata.dbf
-    species = eqpropdata.species
-    phases = eqpropdata.phases
-    pot_conds = eqpropdata.potential_conds
-    models = eqpropdata.models
-    phase_records = eqpropdata.phase_records
+    dbf = Ypropdata.dbf
+    species = Ypropdata.species
+    phases = Ypropdata.phases
+
+    pot_conds = Ypropdata.potential_conds
+    models = Ypropdata.models
+    phase_records = Ypropdata.phase_records
     update_phase_record_parameters(phase_records, parameters)
-    params_dict = OrderedDict(zip(map(str, eqpropdata.params_keys), parameters))
-    output = eqpropdata.output
-    weights = np.array(eqpropdata.weight, dtype=np.float_)
-    samples = np.array(eqpropdata.samples, dtype=np.float_)
+    params_dict = OrderedDict(zip(map(str, Ypropdata.params_keys), parameters))
+    output = 'GM'
+    weights = np.array(Ypropdata.weight, dtype=np.float_)
+    samples = Ypropdata.samples
+    sublattice=models[phases[0]].site_fractions
 
     calculated_data = []
-    for comp_conds in eqpropdata.composition_conds:
+    for comp_conds in Ypropdata.composition_conds:
         cond_dict = OrderedDict(**pot_conds, **comp_conds)
         # str_statevar_dict must be sorted, assumes that pot_conds are.
         str_statevar_dict = OrderedDict([(str(key), vals) for key, vals in pot_conds.items()])
         grid = calculate_(species, phases, str_statevar_dict, models, phase_records, pdens=50, fake_points=True)
         multi_eqdata = _equilibrium(phase_records, cond_dict, grid)
+        result_st=multi_eqdata.Y.flatten()
+
+        result = result_st[np.logical_not(np.isnan(result_st))]
+        if len(result)==0 or len(result)<len(sublattice):
+            return -np.inf 
+        elif len(result) > len(sublattice):
+            result_st=result_st[0]
+            result = result_st[np.logical_not(np.isnan(result_st))]
         # TODO: could be kind of slow. Callables (which are cachable) must be built.
-        propdata = _eqcalculate(dbf, species, phases, cond_dict, output, data=multi_eqdata, per_phase=False, callables=None, parameters=params_dict, model=models)
+        #propdata = _eqcalculate(dbf, species, phases, cond_dict, 'Y', data=multi_eqdata, per_phase=False, callables=None, parameters=params_dict, model=models)
+        #print('_pro',propdata.get_dataset())
+        #if 'vertex' in propdata.data_vars[output][0]:
+        #    raise ValueError(f"Property {output} cannot be used to calculate equilibrium thermochemical error because each phase has a unique value for this property.")
 
-        if 'vertex' in propdata.data_vars[output][0]:
-            raise ValueError(f"Property {output} cannot be used to calculate equilibrium thermochemical error because each phase has a unique value for this property.")
-
-        vals = getattr(propdata, output).flatten().tolist()
-        calculated_data.extend(vals)
+        calculated_data.extend(result)
 
     calculated_data = np.array(calculated_data, dtype=np.float_)
-
+    ind=[i for i,v in enumerate(samples) if v == None]
+    calculated_data=np.delete(calculated_data,ind)
+    samples=np.delete(samples,ind)
+    final_weights=[]
+    for i in weights:
+        final_weights.append([i]*len(sublattice))
+    final_weights=np.array(final_weights)
+    final_weights=np.delete(final_weights,ind)
     assert calculated_data.shape == samples.shape, f"Calculated data shape {calculated_data.shape} does not match samples shape {samples.shape}"
-    assert calculated_data.shape == weights.shape, f"Calculated data shape {calculated_data.shape} does not match weights shape {weights.shape}"
-    differences = calculated_data - samples
-    _log.debug('Output: %s differences: %s, weights: %s, reference: %s', output, differences, weights, eqpropdata.reference)
-    return differences, weights
+    assert calculated_data.shape == final_weights.shape, f"Calculated data shape {calculated_data.shape} does not match weights shape {weights.shape}"
+    samples = np.array(samples, dtype=np.float_)
+    differences = np.array(calculated_data - samples, dtype=np.float64)
+    _log.debug('Output: %s differences: %s, weights: %s, reference: %s', output, differences, final_weights, Ypropdata.reference)
+    return differences, final_weights
 
 
-def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Sequence[EqPropData],
+def calculate_Y_probability(Y_thermochemical_data: Sequence[YPropData],
                                                      parameters: np.ndarray,
                                                      approximate_equilibrium: Optional[bool] = False,
                                                      ) -> float:
@@ -245,8 +274,8 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
 
     Parameters
     ----------
-    eq_thermochemical_data : Sequence[EqPropData]
-        List of equilibrium thermochemical data corresponding to the datasets.
+    Y_thermochemical_data : Sequence[EqPropData]
+        List of site occupancy data corresponding to the datasets.
     parameters : np.ndarray
         Values of parameters for this iteration to be updated in PhaseRecords.
     approximate_equilibrium : Optional[bool], optional
@@ -259,13 +288,14 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
         Sum of log-probability for all thermochemical data.
 
     """
-    if len(eq_thermochemical_data) == 0:
+    if len(Y_thermochemical_data) == 0:
         return 0.0
 
     differences = []
     weights = []
-    for eqpropdata in eq_thermochemical_data:
-        diffs, wts = calc_prop_differences(eqpropdata, parameters, approximate_equilibrium)
+    for Ypropdata in Y_thermochemical_data:
+        diffs, wts = calculate_Y_probability_differences(Ypropdata, parameters, approximate_equilibrium)
+
         if np.any(np.isinf(diffs) | np.isnan(diffs)):
             # NaN or infinity are assumed calculation failures. If we are
             # calculating log-probability, just bail out and return -infinity.
@@ -277,3 +307,9 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
     weights = np.concatenate(weights, axis=0)
     probs = norm(loc=0.0, scale=weights).logpdf(differences)
     return np.sum(probs)
+
+
+
+
+
+

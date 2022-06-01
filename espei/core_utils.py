@@ -136,11 +136,15 @@ def ravel_conditions(values, *conditions, **kwargs):
     """
     # we have to parse the `zpf` kwarg manually because py27 does not allow named args after *args
     zpf = kwargs.get('zpf')
+    Y = kwargs.get('Y')
     if zpf:
         values_shape = _zpf_conditions_shape(values)
         # we have to make our integers tuples
         if not isinstance(values_shape, tuple):
             values_shape = tuple([values_shape])
+    if Y:
+        values_shape =np.array(values).shape
+        values_shape = values_shape[0:3]
     else:
         values_shape = np.array(values).shape
     ravelled_conditions = []
@@ -153,6 +157,7 @@ def ravel_conditions(values, *conditions, **kwargs):
                 x = x.repeat(dim_len, axis=shape_idx)
         ravelled_conditions.append(x.flatten())
     return tuple(ravelled_conditions)
+
 
 
 def ravel_zpf_values(desired_data, independent_comps, conditions=None):
