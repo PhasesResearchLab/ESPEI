@@ -1,0 +1,23 @@
+{
+    "components": [
+        "NB",
+        "NI"
+    ],
+    "phases": [
+        "MU_PHASE",
+        "DELTA"
+    ],
+    "broadcast_conditions": "false",
+    "output": "ZPF",
+    "conditions": {
+        "P": 101325,
+        "T": [
+            1242.7187553669528
+        ]
+    },
+    "values":[
+             [["MU_PHASE",["NI"],[0.5137527690759167]],["DELTA",["NI"],[null]]]
+        ],
+    "reference": "Murametsu-1972",
+    "weights": 10
+}

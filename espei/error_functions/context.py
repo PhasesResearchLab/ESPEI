@@ -6,7 +6,7 @@ import symengine
 from pycalphad import variables as v
 from pycalphad.codegen.callables import build_callables
 from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
-from espei.error_functions import get_zpf_data, get_thermochemical_data, get_equilibrium_thermochemical_data
+from espei.error_functions import get_zpf_data, get_thermochemical_data, get_equilibrium_thermochemical_data, get_Y_thermochemical_data
 from espei.utils import database_symbols_to_fit, get_model_dict
 
 _log = logging.getLogger(__name__)
@@ -82,6 +82,11 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
     _log.trace('Finished getting non-equilibrium thermochemical data (%0.2fs)', t2-t1)
     _log.trace('Getting equilibrium thermochemical data (this may take some time)')
     t1 = time.time()
+    Y_thermochemical_data = get_Y_thermochemical_data(dbf, comps, phases, datasets, model=model_dict, parameters=parameters, data_weight_dict=data_weights)
+    t2 = time.time()
+    _log.trace('Finished getting site fraction thermochemical data (%0.2fs)', t2-t1)
+    _log.trace('Getting site fraction thermochemical data (this may take some time)')    
+    t1 = time.time()
     eq_thermochemical_data = get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, model=model_dict, parameters=parameters, data_weight_dict=data_weights)
     t2 = time.time()
     _log.trace('Finished getting equilibrium thermochemical data (%0.2fs)', t2-t1)
@@ -111,9 +116,7 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
             'data_weight': data_weights.get('ACR', 1.0),
         },
         'Y_kwargs':{
-            'dbf': dbf, 'comps': comps, 'phases': phases, 'datasets': datasets,
-            'phase_models': models, 'callables': eq_callables,
-            'data_weight': data_weights.get('Y', 1.0),
+            'Y_thermochemical_data': Y_thermochemical_data,
         },
     }
     return error_context

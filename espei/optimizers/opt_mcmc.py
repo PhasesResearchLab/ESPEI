@@ -239,6 +239,8 @@ class EmceeOptimizer(OptimizerBase):
             ctx['zpf_kwargs']['approximate_equilibrium'] = approximate_equilibrium
         if 'equilibrium_thermochemical_kwargs' in ctx:
             ctx['equilibrium_thermochemical_kwargs']['approximate_equilibrium'] = approximate_equilibrium
+        if 'Y_kwargs' in ctx:
+            ctx['Y_kwargs']['approximate_equilibrium'] = approximate_equilibrium            
         # Run the initial parameters for guessing purposes:
         _log.trace("Probability for initial parameters")
         self.predict(initial_guess, **ctx)
@@ -314,7 +316,7 @@ class EmceeOptimizer(OptimizerBase):
         else:
             actvity_error = 0
         if Y_kwargs is not None:
-            Y_prob = calculate_Y_probability(parameters=parameters,**Y_kwargs)
+            Y_prob = calculate_Y_probability(parameters=params,**Y_kwargs)
         else:
             Y_prob = 0
         if non_equilibrium_thermochemical_kwargs is not None:
@@ -322,7 +324,7 @@ class EmceeOptimizer(OptimizerBase):
         else:
             non_eq_thermochemical_prob = 0
         total_error = multi_phase_error + eq_thermochemical_prob + non_eq_thermochemical_prob + actvity_error + Y_prob
-        _log.trace('Likelihood - %0.2fs - Non-equilibrium thermochemical: %0.3f. Equilibrium thermochemical: %0.3f. ZPF: %0.3f. Activity: %0.3f. Total: %0.3f.', time.time() - starttime, non_eq_thermochemical_prob, eq_thermochemical_prob, multi_phase_error, actvity_error, total_error)
+        _log.trace('Likelihood - %0.2fs - Non-equilibrium thermochemical: %0.3f. Equilibrium thermochemical: %0.3f. ZPF: %0.3f. Activity: %0.3f. Y: %0.3f. Total: %0.3f.', time.time() - starttime, non_eq_thermochemical_prob, eq_thermochemical_prob, multi_phase_error, actvity_error, Y_prob, total_error)
         lnlike = np.array(total_error, dtype=np.float64)
 
         lnprob = lnprior + lnlike

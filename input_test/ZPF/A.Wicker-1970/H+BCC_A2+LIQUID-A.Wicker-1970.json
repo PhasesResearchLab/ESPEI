@@ -1,0 +1,26 @@
+{
+    "components": [
+        "NB",
+        "NI"
+    ],
+    "phases": [
+        "BCC_A2",
+        "LIQUID"
+    ],
+    "broadcast_conditions": "false",
+    "output": "ZPF",
+    "conditions": {
+        "P": 101325,
+        "T": [
+            1871.0504587155956,
+            1772.9999999999995,
+            1671.509174311926
+        ]
+    },
+    "values":[
+             [["BCC_A2",["NB"],[0.9755143772994993]],["LIQUID",["NB"],[null]]],
+             [["BCC_A2",["NB"],[0.9783132530120481]],["LIQUID",["NB"],[null]]],
+             [["BCC_A2",["NB"],[0.9583942585545325]],["LIQUID",["NB"],[null]]]
+        ],
+    "reference": "A.Wicker-1970"
+}

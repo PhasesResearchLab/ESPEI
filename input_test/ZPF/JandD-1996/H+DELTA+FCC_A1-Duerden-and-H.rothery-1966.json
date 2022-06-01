@@ -1,0 +1,24 @@
+{
+    "components": [
+        "NB",
+        "NI"
+    ],
+    "phases": [
+        "DELTA",
+        "FCC_A1"
+    ],
+    "broadcast_conditions": "false",
+    "output": "ZPF",
+    "conditions": {
+        "P": 101325,
+        "T": [
+            1421.2038193822057,
+            1273.7066374571848
+        ]
+    },
+    "values":[
+             [["DELTA",["NB"],[0.23578561480533722]],["FCC_A1",["NB"],[null]]],
+             [["DELTA",["NB"],[0.23574721548692507]],["FCC_A1",["NB"],[null]]]
+        ],
+    "reference": "Duerden-and-H.rothery-1966"
+}

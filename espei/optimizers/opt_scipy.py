@@ -5,7 +5,7 @@ from scipy.optimize import minimize
 from espei.utils import unpack_piecewise
 from espei.error_functions.context import setup_context
 from espei.error_functions import calculate_activity_error, calculate_zpf_error, \
-    calculate_non_equilibrium_thermochemical_probability
+    calculate_non_equilibrium_thermochemical_probability, calculate_Y_probability
 from .opt_base import OptimizerBase
 from .graph import OptNode
 

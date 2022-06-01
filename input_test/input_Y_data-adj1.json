@@ -1,0 +1,23 @@
+
+{
+  "components": ["NB", "NI", "VA"],
+  "phases": ["MU_PHASE"],
+  "conditions": {
+    "P": 101325,
+    "T": 1273,
+    "X_NB": [0.496,0.518,0.53,0.553,0.569,0.518]
+  },
+
+  "output": "Y",
+    "values":   [[[
+      [0.67,null,0.85,null,0.95,null,0.13,null,0.74,null],
+      [0.89,null,1.00,null,0.89,null,0.07,null,0.77,null],
+      [0.78,null,0.94,null,1.00,null,0.10,null,0.84,null],
+      [0.85,null,0.99,null,1.00,null,0.12,null,0.81,null],
+      [0.81,null,1.00,null,1.00,null,0.16,null,0.81,null],
+      [null,null,null,null,0.89,null,null,null,null,null]
+    ]]],
+
+  "reference": "Joubert2002",
+  "comment": "text"
+}

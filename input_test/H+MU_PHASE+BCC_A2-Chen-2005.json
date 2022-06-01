@@ -1,0 +1,23 @@
+{
+    "components": [
+        "NB",
+        "NI"
+    ],
+    "phases": [
+        "MU_PHASE",
+        "BCC_A2"
+    ],
+    "broadcast_conditions": "false",
+    "output": "ZPF",
+    "conditions": {
+        "P": 101325,
+        "T": [
+            1322.3119266055041
+        ]
+    },
+    "values":[
+             [["MU_PHASE",["NB"],[0.5633738097869853]],["BCC_A2",["NB"],[null]]]
+        ],
+    "reference": "Chen-2005",
+    "weights": 50
+}

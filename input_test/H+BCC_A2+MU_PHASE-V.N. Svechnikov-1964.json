@@ -1,0 +1,24 @@
+{
+    "components": [
+        "NB",
+        "NI"
+    ],
+    "phases": [
+        "BCC_A2",
+        "MU_PHASE"
+    ],
+    "broadcast_conditions": "false",
+    "output": "ZPF",
+    "conditions": {
+        "P": 101325,
+        "T": [
+            1376.9083220077323,
+            1073.4139023982034
+        ]
+    },
+    "values":[
+             [["BCC_A2",["NB"],[0.9623652994229674]],["MU_PHASE",["NB"],[null]]],
+             [["BCC_A2",["NB"],[0.9828343008417637]],["MU_PHASE",["NB"],[null]]]
+        ],
+    "reference": "V.N. Svechnikov-1964"
+}

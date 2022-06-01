@@ -354,8 +354,9 @@ def test_Y_error(datasets_db):
     datasets_db.insert(NB_NI_Y_EXP)
 
     dbf = Database(NB_NI_TDB)
-    error = calculate_Y_probability(dbf, ['NB','NI','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {})
-    assert np.isclose(error, -29908.346595859857, rtol=1e-6)
+    Y_thermochemical_data = get_Y_thermochemical_data(dbf, ['NB','NI','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {})
+    error = calculate_Y_probability(Y_thermochemical_data,np.array([]))
+    assert np.isclose(error, -31533.7916795969, rtol=1e-6)
 
 
 
