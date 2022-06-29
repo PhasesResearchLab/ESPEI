@@ -10,7 +10,6 @@ from espei.priors import PriorSpec, build_prior_specs
 from espei.utils import unpack_piecewise, optimal_parameters
 from espei.error_functions.context import setup_context
 from .opt_base import OptimizerBase
-from .graph import OptNode
 
 _log = logging.getLogger(__name__)
 
@@ -221,7 +220,7 @@ class EmceeOptimizer(OptimizerBase):
 
         Returns
         -------
-        OptNode
+        Dict[str, float]
 
         """
         # Set NumPy print options so logged arrays print on one line. Reset at the end.
@@ -263,7 +262,7 @@ class EmceeOptimizer(OptimizerBase):
         _log.trace('Change in parameters: %s', np.abs(initial_guess - optimal_params) / initial_guess)
         parameters = dict(zip(symbols_to_fit, optimal_params))
         np.set_printoptions(linewidth=75)
-        return OptNode(parameters, ds)
+        return parameters
 
     @staticmethod
     def predict(params, **ctx):
