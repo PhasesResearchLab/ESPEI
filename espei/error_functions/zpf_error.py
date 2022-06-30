@@ -21,20 +21,19 @@ from typing import Sequence, Dict, Any, Union, List, Tuple, Type, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
-from scipy.stats import norm
-import tinydb
-
 from pycalphad import Database, Model, variables as v
 from pycalphad.codegen.callables import build_phase_records
 from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
 from pycalphad.core.phase_rec import PhaseRecord
-from espei.utils import PickleableTinyDB, database_symbols_to_fit
-from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters, constrained_equilibrium
 from pycalphad.core.calculate import _sample_phase_constitution
 from pycalphad.core.utils import point_sample
+from scipy.stats import norm
+import tinydb
 
 from espei.phase_models import PhaseModels
-from espei.constants import SymbolName
+from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters, constrained_equilibrium
+from espei.typing import SymbolName
+from espei.utils import PickleableTinyDB, database_symbols_to_fit
 from .residual_base import ResidualFunction, residual_function_registry
 
 _log = logging.getLogger(__name__)

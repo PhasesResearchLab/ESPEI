@@ -4,8 +4,8 @@ from numpy.typing import ArrayLike
 
 from pycalphad import Database
 
-from espei.constants import SymbolName
 from espei.phase_models import PhaseModels
+from espei.typing import SymbolName
 from espei.utils import PickleableTinyDB
 
 

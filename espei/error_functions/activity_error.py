@@ -19,10 +19,10 @@ from pycalphad.plot.eqplot import _map_coord_to_variable
 from pycalphad.core.utils import filter_phases, unpack_components
 from scipy.stats import norm
 
-from espei.constants import SymbolName
 from espei.core_utils import ravel_conditions
 from espei.error_functions.residual_base import ResidualFunction, residual_function_registry
 from espei.phase_models import PhaseModels
+from espei.typing import SymbolName
 from espei.utils import database_symbols_to_fit, PickleableTinyDB
 
 _log = logging.getLogger(__name__)

@@ -18,10 +18,10 @@ from pycalphad.codegen.callables import build_phase_records
 from pycalphad.core.utils import instantiate_models, filter_phases, extract_parameters, unpack_components, unpack_condition
 from pycalphad.core.phase_rec import PhaseRecord
 
-from espei.constants import SymbolName
 from espei.error_functions.residual_base import ResidualFunction, residual_function_registry
 from espei.phase_models import PhaseModels
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
+from espei.typing import SymbolName
 from espei.utils import PickleableTinyDB, database_symbols_to_fit
 
 _log = logging.getLogger(__name__)

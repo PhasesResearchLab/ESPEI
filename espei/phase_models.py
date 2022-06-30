@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Type
 from pydantic import BaseModel, PositiveFloat, PyObject
 from pycalphad import Model
 
-from espei.constants import ComponentName, PhaseName
+from espei.typing import ComponentName, PhaseName
 
 
 # TODO: validate that len(model) == len(coefficients)
