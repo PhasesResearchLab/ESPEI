@@ -9,6 +9,7 @@ from pycalphad import Database, variables as v
 from espei.error_functions.context import setup_context
 from espei.optimizers.opt_mcmc import EmceeOptimizer
 from espei.error_functions import get_zpf_data, get_thermochemical_data
+from espei.error_functions.zpf_error import ZPFResidual
 from espei.priors import rv_zero
 from .fixtures import datasets_db
 from .testing_data import *
@@ -24,12 +25,11 @@ def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
     orig_val = dbf.symbols[param].args[0]
     initial_params = {param: orig_val}
 
-    zpf_kwargs = {
-        'zpf_data': get_zpf_data(dbf, comps, phases, datasets_db, initial_params),
-        'data_weight': 1.0,
-    }
+    residual_objs = [
+        ZPFResidual(dbf, datasets_db, None, [param])
+    ]
     opt = EmceeOptimizer(dbf)
-    res = opt.predict([10], prior_rvs=[rv_zero()], symbols_to_fit=[param], zpf_kwargs=zpf_kwargs)
+    res = opt.predict([10], prior_rvs=[rv_zero()], symbols_to_fit=[param], residual_objs=residual_objs)
 
     assert np.isreal(res)
     assert not np.isinf(res)
@@ -37,7 +37,7 @@ def test_lnprob_calculates_multi_phase_probability_for_success(datasets_db):
 
     # The purpose of this part is to test that the driving forces (and probability)
     # are different than the case of VV0001 = 10.
-    res_2 = opt.predict([-10000000], prior_rvs=[rv_zero()], symbols_to_fit=[param], zpf_kwargs=zpf_kwargs)
+    res_2 = opt.predict([-10000000], prior_rvs=[rv_zero()], symbols_to_fit=[param], residual_objs=residual_objs)
 
     assert np.isreal(res_2)
     assert not np.isinf(res_2)
@@ -85,8 +85,11 @@ def test_lnprob_does_not_raise_on_LinAlgError(datasets_db):
     comps = ['CU', 'MG', 'VA']
     phases = ['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2']
     datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
-    zpf_kwargs = {'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(dbf, comps, phases, datasets_db, {'VV0001': 0.0}), 'data_weight': 1.0}
-    res = opt.predict([10], prior_rvs=[rv_zero()], symbols_to_fit=['VV0001'], zpf_kwargs=zpf_kwargs)
+    opt = EmceeOptimizer(dbf)
+    residual_objs = [
+        ZPFResidual(dbf, datasets_db, None, ["VV0001"])
+    ]
+    res = opt.predict([10], prior_rvs=[rv_zero()], symbols_to_fit=['VV0001'], residual_objs=residual_objs)
     assert np.isneginf(res)
 
 
@@ -99,8 +102,11 @@ def test_lnprob_does_not_raise_on_ValueError(datasets_db):
     comps = ['CU', 'MG', 'VA']
     phases = ['LIQUID', 'FCC_A1', 'HCP_A3', 'LAVES_C15', 'CUMG2']
     datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
-    zpf_kwargs = {'dbf': dbf, 'phases': phases, 'zpf_data': get_zpf_data(dbf, comps, phases, datasets_db, {'VV0001': 0.0}), 'data_weight': 1.0}
-    res = opt.predict([10], prior_rvs=[rv_zero()], symbols_to_fit=['VV0001'], zpf_kwargs=zpf_kwargs)
+    opt = EmceeOptimizer(dbf)
+    residual_objs = [
+        ZPFResidual(dbf, datasets_db, None, ["VV0001"])
+    ]
+    res = opt.predict([10], prior_rvs=[rv_zero()], symbols_to_fit=['VV0001'], residual_objs=residual_objs)
     assert np.isneginf(res)
 
 
@@ -155,12 +161,11 @@ def test_lnprob_calculates_associate_tdb(datasets_db):
     orig_val = dbf.symbols[param].args[0]
     initial_params = {param: orig_val}
 
-    zpf_kwargs = {
-        'zpf_data': get_zpf_data(dbf, comps, phases, datasets_db, initial_params),
-        'data_weight': 1.0,
-    }
+    residual_objs = [
+        ZPFResidual(dbf, datasets_db, None, [param])
+    ]
     opt = EmceeOptimizer(dbf)
-    res = opt.predict([10], prior_rvs=[rv_zero()], symbols_to_fit=[param], zpf_kwargs=zpf_kwargs)
+    res = opt.predict([10], prior_rvs=[rv_zero()], symbols_to_fit=[param], residual_objs=residual_objs)
 
     assert np.isreal(res)
     assert not np.isinf(res)
@@ -168,7 +173,7 @@ def test_lnprob_calculates_associate_tdb(datasets_db):
 
     # The purpose of this part is to test that the driving forces (and probability)
     # are different than the case of VV0001 = 10.
-    res_2 = opt.predict([-10000000], prior_rvs=[rv_zero()], symbols_to_fit=[param], zpf_kwargs=zpf_kwargs)
+    res_2 = opt.predict([-10000000], prior_rvs=[rv_zero()], symbols_to_fit=[param], residual_objs=residual_objs)
 
     assert np.isreal(res_2)
     assert not np.isinf(res_2)

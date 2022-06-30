@@ -28,10 +28,14 @@ from pycalphad import Database, Model, variables as v
 from pycalphad.codegen.callables import build_phase_records
 from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
 from pycalphad.core.phase_rec import PhaseRecord
-from espei.utils import PickleableTinyDB
+from espei.utils import PickleableTinyDB, database_symbols_to_fit
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters, constrained_equilibrium
 from pycalphad.core.calculate import _sample_phase_constitution
 from pycalphad.core.utils import point_sample
+
+from espei.phase_models import PhaseModels
+from espei.constants import SymbolName
+from .residual_base import ResidualFunction
 
 _log = logging.getLogger(__name__)
 
@@ -425,3 +429,39 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
     log_probabilites = norm.logpdf(driving_forces, loc=0, scale=1000/data_weight/weights)
     _log.debug('Data weight: %s, driving forces: %s, weights: %s, probabilities: %s', data_weight, driving_forces, weights, log_probabilites)
     return np.sum(log_probabilites)
+
+
+class ZPFResidual(ResidualFunction):
+    def __init__(
+        self,
+        database: Database,
+        datasets: PickleableTinyDB,
+        phase_models: Union[PhaseModels, None],
+        symbols_to_fit: Optional[List[SymbolName]] = None,
+        weight: Optional[float] = 1.0,
+        ):
+        super().__init__(database, datasets, phase_models, symbols_to_fit)
+        self.weight = weight
+        if phase_models is not None:
+            comps = sorted(phase_models.components)
+            model_dict = phase_models.get_model_dict()
+        else:
+            comps = sorted(database.elements)
+            model_dict = dict()
+        phases = sorted(filter_phases(database, unpack_components(database, comps), database.phases.keys()))
+        if symbols_to_fit is None:
+            symbols_to_fit = database_symbols_to_fit(database)
+        # okay if parameters are initialized to zero, we only need the symbol names
+        parameters = dict(zip(symbols_to_fit, [0]*len(symbols_to_fit)))
+        self.zpf_data = get_zpf_data(database, comps, phases, datasets, parameters, model_dict)
+
+    def get_residual(self, parameters: ArrayLike) -> float:
+        driving_forces, weights = calculate_zpf_driving_forces(self.zpf_data, parameters, short_circuit=True)
+        # Driving forces and weights are 2D ragged arrays with the shape (len(zpf_data), len(zpf_data['values']))
+        driving_forces = np.concatenate(driving_forces)
+        residual = np.sum(np.abs(driving_forces))
+        return residual
+
+    def get_likelihood(self, parameters) -> float:
+        likelihood = calculate_zpf_error(self.zpf_data, parameters, data_weight=self.weight)
+        return likelihood

@@ -33,19 +33,18 @@ class SciPyOptimizer(OptimizerBase):
     @staticmethod
     def predict(params, ctx):
         parameters = {param_name: param for param_name, param in zip(ctx['symbols_to_fit'], params)}
-        zpf_kwargs = ctx.get('zpf_kwargs')
+        residual_objs = ctx.get('residual_objs', [])
         activity_kwargs = ctx.get('activity_kwargs')
         thermochemical_kwargs = ctx.get('thermochemical_kwargs')
         starttime = time.time()
-        if zpf_kwargs is not None:
-            try:
-                multi_phase_error = calculate_zpf_error(parameters=parameters, **zpf_kwargs)
-            except (ValueError, np.linalg.LinAlgError) as e:
-                raise e
-                print(e)
-                multi_phase_error = -np.inf
-        else:
-            multi_phase_error = 0
+
+        lnlike = 0.0
+        likelihoods = {}
+        for residual_obj in ctx.get("residual_objs", []):
+            likelihood = residual_obj.get_likelihood(params)
+            likelihoods[type(residual_obj).__name__] = likelihood
+            lnlike += likelihood
+
         if activity_kwargs is not None:
             actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
         else:
@@ -54,7 +53,8 @@ class SciPyOptimizer(OptimizerBase):
             single_phase_error = calculate_non_equilibrium_thermochemical_probability(parameters=parameters, **thermochemical_kwargs)
         else:
             single_phase_error = 0
-        total_error = multi_phase_error + single_phase_error + actvity_error
-        _log.trace('Likelihood - %0.2fs - Thermochemical: %0.3f. ZPF: %0.3f. Activity: %0.3f. Total: %0.3f.', time.time() - starttime, single_phase_error, multi_phase_error, actvity_error, total_error)
+        total_error = lnlike + single_phase_error + actvity_error
+        like_str = ". ".join([f"{ky}: {vl:0.3f}" for ky, vl in likelihoods.items()])
+        _log.trace('Likelihood - %0.2fs - Thermochemical: %0.3f. Activity: %0.3f. %s. Total: %0.3f.', time.time() - starttime, single_phase_error, actvity_error, like_str, total_error)
         error = np.array(total_error, dtype=np.float64)
         return error

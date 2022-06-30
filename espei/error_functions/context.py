@@ -6,8 +6,9 @@ import symengine
 from pycalphad import variables as v
 from pycalphad.codegen.callables import build_callables
 from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
-from espei.error_functions import get_zpf_data, get_thermochemical_data, get_equilibrium_thermochemical_data
+from espei.error_functions import get_thermochemical_data, get_equilibrium_thermochemical_data
 from espei.utils import database_symbols_to_fit, get_model_dict
+from espei.error_functions.zpf_error import ZPFResidual
 
 _log = logging.getLogger(__name__)
 
@@ -85,20 +86,18 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
     eq_thermochemical_data = get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, model=model_dict, parameters=parameters, data_weight_dict=data_weights)
     t2 = time.time()
     _log.trace('Finished getting equilibrium thermochemical data (%0.2fs)', t2-t1)
-    _log.trace('Getting ZPF data (this may take some time)')
+    _log.trace('Getting ZPF residual object (this may take some time)')
     t1 = time.time()
-    zpf_data = get_zpf_data(dbf, comps, phases, datasets, model=model_dict, parameters=parameters)
+    zpf_residual = ZPFResidual(dbf, datasets, phase_models, symbols_to_fit, data_weights.get('ZPF', 1.0))
     t2 = time.time()
-    _log.trace('Finished getting ZPF data (%0.2fs)', t2-t1)
+    _log.trace('Finished getting ZPF residual object (%0.2fs)', t2-t1)
+
 
     # context for the log probability function
     # for all cases, parameters argument addressed in MCMC loop
     error_context = {
         'symbols_to_fit': symbols_to_fit,
-        'zpf_kwargs': {
-            'zpf_data': zpf_data,
-            'data_weight': data_weights.get('ZPF', 1.0),
-        },
+        "residual_objs": [zpf_residual],
         'equilibrium_thermochemical_kwargs': {
             'eq_thermochemical_data': eq_thermochemical_data,
         },

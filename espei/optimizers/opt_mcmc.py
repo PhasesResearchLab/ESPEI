@@ -232,8 +232,6 @@ class EmceeOptimizer(OptimizerBase):
 
         prior_dict = self.get_priors(prior, symbols_to_fit, initial_guess)
         ctx.update(prior_dict)
-        if 'zpf_kwargs' in ctx:
-            ctx['zpf_kwargs']['approximate_equilibrium'] = approximate_equilibrium
         if 'equilibrium_thermochemical_kwargs' in ctx:
             ctx['equilibrium_thermochemical_kwargs']['approximate_equilibrium'] = approximate_equilibrium
         # Run the initial parameters for guessing purposes:
@@ -287,20 +285,18 @@ class EmceeOptimizer(OptimizerBase):
 
         # lnlike
         parameters = {param_name: param for param_name, param in zip(ctx['symbols_to_fit'], params.tolist())}
-        zpf_kwargs = ctx.get('zpf_kwargs')
         activity_kwargs = ctx.get('activity_kwargs')
         non_equilibrium_thermochemical_kwargs = ctx.get('thermochemical_kwargs')
         equilibrium_thermochemical_kwargs = ctx.get('equilibrium_thermochemical_kwargs')
         starttime = time.time()
-        if zpf_kwargs is not None:
-            try:
-                multi_phase_error = calculate_zpf_error(parameters=params, **zpf_kwargs)
-            except (ValueError, np.linalg.LinAlgError) as e:
-                raise e
-                print(e)
-                multi_phase_error = -np.inf
-        else:
-            multi_phase_error = 0
+
+        lnlike = 0.0
+        likelihoods = {}
+        for residual_obj in ctx.get("residual_objs", []):
+            likelihood = residual_obj.get_likelihood(params)
+            likelihoods[type(residual_obj).__name__] = likelihood
+            lnlike += likelihood
+
         if equilibrium_thermochemical_kwargs is not None:
             eq_thermochemical_prob = calculate_equilibrium_thermochemical_probability(parameters=params, **equilibrium_thermochemical_kwargs)
         else:
@@ -313,9 +309,10 @@ class EmceeOptimizer(OptimizerBase):
             non_eq_thermochemical_prob = calculate_non_equilibrium_thermochemical_probability(parameters=params, **non_equilibrium_thermochemical_kwargs)
         else:
             non_eq_thermochemical_prob = 0
-        total_error = multi_phase_error + eq_thermochemical_prob + non_eq_thermochemical_prob + actvity_error
-        _log.trace('Likelihood - %0.2fs - Non-equilibrium thermochemical: %0.3f. Equilibrium thermochemical: %0.3f. ZPF: %0.3f. Activity: %0.3f. Total: %0.3f.', time.time() - starttime, non_eq_thermochemical_prob, eq_thermochemical_prob, multi_phase_error, actvity_error, total_error)
-        lnlike = np.array(total_error, dtype=np.float64)
+        total_error = eq_thermochemical_prob + non_eq_thermochemical_prob + actvity_error
+        like_str = ". ".join([f"{ky}: {vl:0.3f}" for ky, vl in likelihoods.items()])
+        _log.trace('Likelihood - %0.2fs - Non-equilibrium thermochemical: %0.3f. Equilibrium thermochemical: %0.3f. Activity: %0.3f. %s. Total: %0.3f.', time.time() - starttime, non_eq_thermochemical_prob, eq_thermochemical_prob, actvity_error, like_str, total_error)
+        lnlike = np.array(lnlike + total_error, dtype=np.float64)
 
         lnprob = lnprior + lnlike
         _log.trace('Proposal - lnprior: %0.4f, lnlike: %0.4f, lnprob: %0.4f', lnprior, lnlike, lnprob)
