@@ -88,7 +88,7 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
     _log.trace('Finished getting equilibrium thermochemical data (%0.2fs)', t2-t1)
     _log.trace('Getting ZPF residual object (this may take some time)')
     t1 = time.time()
-    zpf_residual = ZPFResidual(dbf, datasets, phase_models, symbols_to_fit, data_weights.get('ZPF', 1.0))
+    zpf_residual = ZPFResidual(dbf, datasets, phase_models, symbols_to_fit, data_weights)
     t2 = time.time()
     _log.trace('Finished getting ZPF residual object (%0.2fs)', t2-t1)
 

@@ -51,7 +51,7 @@ class ResidualFunction(Protocol):
         datasets: PickleableTinyDB,
         phase_models: PhaseModels,
         symbols_to_fit: Optional[List[SymbolName]],
-        weight: Optional[Union[float, Dict[str, float]]],
+        weight: Optional[Dict[str, float]],
         ):
         ...
 
@@ -94,3 +94,18 @@ class ResidualFunction(Protocol):
             Value of log-likelihood for the given set of parameters
         """
         ...
+
+
+class ResidualRegistry():
+    def __init__(self) -> None:
+        self._registered_residual_functions = []
+
+    def get_registered_residual_functions(self) -> List[ResidualFunction]:
+        return self._registered_residual_functions
+
+    def register(self, residual_function):
+        # Don't allow duplicates
+        if residual_function not in self._registered_residual_functions:
+            self._registered_residual_functions.append(residual_function)
+
+residual_function_registry = ResidualRegistry()

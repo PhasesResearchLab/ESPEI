@@ -438,10 +438,13 @@ class ZPFResidual(ResidualFunction):
         datasets: PickleableTinyDB,
         phase_models: Union[PhaseModels, None],
         symbols_to_fit: Optional[List[SymbolName]] = None,
-        weight: Optional[float] = 1.0,
+        weight: Optional[Dict[str, float]] = None,
         ):
         super().__init__(database, datasets, phase_models, symbols_to_fit)
-        self.weight = weight
+        if weight is not None:
+            self.weight = weight.get("ZPF", 1.0)
+        else:
+            self.weight = 1.0
         if phase_models is not None:
             comps = sorted(phase_models.components)
             model_dict = phase_models.get_model_dict()
