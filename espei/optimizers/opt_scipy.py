@@ -31,23 +31,14 @@ class SciPyOptimizer(OptimizerBase):
 
     @staticmethod
     def predict(params, ctx):
-        parameters = {param_name: param for param_name, param in zip(ctx['symbols_to_fit'], params)}
-        activity_kwargs = ctx.get('activity_kwargs')
         starttime = time.time()
-
         lnlike = 0.0
         likelihoods = {}
         for residual_obj in ctx.get("residual_objs", []):
             likelihood = residual_obj.get_likelihood(params)
             likelihoods[type(residual_obj).__name__] = likelihood
             lnlike += likelihood
-
-        if activity_kwargs is not None:
-            actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
-        else:
-            actvity_error = 0
-        total_error = lnlike + actvity_error
         like_str = ". ".join([f"{ky}: {vl:0.3f}" for ky, vl in likelihoods.items()])
-        _log.trace('Likelihood - %0.2fs - Activity: %0.3f. %s. Total: %0.3f.', time.time() - starttime, actvity_error, like_str, total_error)
-        error = np.array(total_error, dtype=np.float64)
+        _log.trace('Likelihood - %0.2fs. %s. Total: %0.3f.', time.time() - starttime, like_str, lnlike)
+        error = np.array(lnlike, dtype=np.float64)
         return error

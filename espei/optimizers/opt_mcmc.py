@@ -5,8 +5,7 @@ import warnings
 
 import numpy as np
 import emcee
-from espei.error_functions import calculate_activity_error, calculate_equilibrium_thermochemical_probability
-from espei.priors import PriorSpec, build_prior_specs
+from espei.priors import PriorSpec, build_prior_specs, rv_zero
 from espei.utils import unpack_piecewise, optimal_parameters
 from espei.error_functions.context import setup_context
 from .opt_base import OptimizerBase
@@ -275,7 +274,7 @@ class EmceeOptimizer(OptimizerBase):
         params = np.asarray(params, dtype=np.float_)
 
         # lnprior
-        prior_rvs = ctx['prior_rvs']
+        prior_rvs = ctx.get('prior_rvs', [rv_zero() for _ in range(params.size)])
         lnprior_multivariate = [rv.logpdf(theta) for rv, theta in zip(prior_rvs, params)]
         _log.debug('Priors: %s', lnprior_multivariate)
         lnprior = np.sum(lnprior_multivariate)
@@ -285,26 +284,18 @@ class EmceeOptimizer(OptimizerBase):
             return lnprior
 
         # lnlike
-        parameters = {param_name: param for param_name, param in zip(ctx['symbols_to_fit'], params.tolist())}
-        activity_kwargs = ctx.get('activity_kwargs')
         starttime = time.time()
-
         lnlike = 0.0
         likelihoods = {}
         for residual_obj in ctx.get("residual_objs", []):
             likelihood = residual_obj.get_likelihood(params)
             likelihoods[type(residual_obj).__name__] = likelihood
             lnlike += likelihood
+        liketime = time.time() - starttime
 
-        if activity_kwargs is not None:
-            actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
-        else:
-            actvity_error = 0
-
-        total_error = actvity_error
         like_str = ". ".join([f"{ky}: {vl:0.3f}" for ky, vl in likelihoods.items()])
-        lnlike = np.array(lnlike + total_error, dtype=np.float64)
-        _log.trace('Likelihood - %0.2fs - Equilibrium thermochemical: %0.3f. Activity: %0.3f. %s. Total: %0.3f.', time.time() - starttime, actvity_error, like_str, lnlike)
+        lnlike = np.array(lnlike, dtype=np.float64)
+        _log.trace('Likelihood - %0.2fs - %s. Total: %0.3f.', liketime, like_str, lnlike)
 
         lnprob = lnprior + lnlike
         _log.trace('Proposal - lnprior: %0.4f, lnlike: %0.4f, lnprob: %0.4f', lnprior, lnlike, lnprob)

@@ -1,17 +1,29 @@
 """
 Calculate error due to measured activities.
+
+The residual function implemented in this module needs to exist because it is
+currently not possible to compute activity as a property via equilibrium
+calculations because as PyCalphad does not yet have a suitable notion of a
+reference state that could be used for equilibrium chemical potentials.
+
 """
 
 import logging
+from typing import Dict, List, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 import tinydb
-from pycalphad import equilibrium, variables as v
+from pycalphad import Database, equilibrium, variables as v
 from pycalphad.plot.eqplot import _map_coord_to_variable
 from pycalphad.core.utils import filter_phases, unpack_components
 from scipy.stats import norm
 
+from espei.constants import SymbolName
 from espei.core_utils import ravel_conditions
+from espei.error_functions.residual_base import ResidualFunction, residual_function_registry
+from espei.phase_models import PhaseModels
+from espei.utils import database_symbols_to_fit, PickleableTinyDB
 
 _log = logging.getLogger(__name__)
 
@@ -171,3 +183,59 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
     if np.any(np.isnan(np.array([error], dtype=np.float64))):  # must coerce sympy.core.numbers.Float to float64
         return -np.inf
     return error
+
+
+# TODO: the __init__ method should pre-compute Model and PhaseRecord objects
+#       similar to the other residual functions, which will be much more performant.
+# TODO: it seems possible (likely?) that "global" callables that were used
+#       previously could be incorrect if there are activity datasets with
+#       different sets of active components. Usually models, callables, and
+#       phase records are tied 1:1 with a set of components. For now, callables
+#       will never be built, but this will almost certainly cause a performance
+#       regression. Model will also not be pre-built so we can properly use
+#       custom user models
+class ActivityResidual(ResidualFunction):
+    def __init__(
+        self,
+        database: Database,
+        datasets: PickleableTinyDB,
+        phase_models: Union[PhaseModels, None],
+        symbols_to_fit: Optional[List[SymbolName]] = None,
+        weight: Optional[Dict[str, float]] = None,
+        ):
+        super().__init__(database, datasets, phase_models, symbols_to_fit)
+
+        if weight is not None:
+            self.weight = weight.get("ACR", 1.0)
+        else:
+            self.weight = 1.0
+
+        if phase_models is not None:
+            comps = sorted(phase_models.components)
+            model_dict = phase_models.get_model_dict()
+        else:
+            comps = sorted(database.elements)
+            model_dict = dict()
+        phases = sorted(filter_phases(database, unpack_components(database, comps), database.phases.keys()))
+        if symbols_to_fit is None:
+            symbols_to_fit = database_symbols_to_fit(database)
+        self._symbols_to_fit = symbols_to_fit
+
+        self._activity_likelihood_kwargs = {
+            "dbf": database, "comps": comps, "phases": phases, "datasets": datasets,
+            "phase_models": model_dict,
+            "callables": None,
+            "data_weight": self.weight,
+        }
+
+    def get_residual(self, parameters: npt.ArrayLike) -> float:
+        # TODO: implement via refactoring calculate_activity_error
+        raise NotImplementedError("Getting residual for activity data not implemented.")
+
+    def get_likelihood(self, parameters: npt.NDArray) -> float:
+        parameters = {param_name: param for param_name, param in zip(self._symbols_to_fit, parameters.tolist())}
+        likelihood = calculate_activity_error(parameters=parameters, **self._activity_likelihood_kwargs)
+        return likelihood
+
+
+residual_function_registry.register(ActivityResidual)

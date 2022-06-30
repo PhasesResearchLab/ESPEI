@@ -68,6 +68,21 @@ def test_lnprob_calculates_single_phase_probability_for_success(datasets_db):
     assert np.isclose(res_1e5, -1359.1335466316268, rtol=1e-6)
 
 
+def test_optimizer_computes_probability_with_activity_data(datasets_db):
+    """EmceeOptimizer correctly computed probability with activity data
+
+    This test is mathematically redundant with test_error_functions.test_activity_error, but aims to test the functionality of using the Optimizer / ResidualFunction API
+    """
+    datasets_db.insert(CU_MG_EXP_ACTIVITY)
+    dbf = Database(CU_MG_TDB)
+    opt = EmceeOptimizer(dbf)
+    # Having no degrees of freedom isn't currently allowed by setup_context
+    # we use VV0000 and the current value in the database
+    ctx = setup_context(dbf, datasets_db, symbols_to_fit=["VV0000"])
+    error = opt.predict(np.array([-32429.6]), **ctx)
+    assert np.isclose(error, -257.41020886970756, rtol=1e-6)
+
+
 def _eq_LinAlgError(*args, **kwargs):
     raise LinAlgError()
 
