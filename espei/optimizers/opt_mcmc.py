@@ -3,9 +3,7 @@ import sys
 import time
 import numpy as np
 import emcee
-from espei.error_functions import calculate_zpf_error, calculate_activity_error, \
-    calculate_non_equilibrium_thermochemical_probability, \
-    calculate_equilibrium_thermochemical_probability
+from espei.error_functions import calculate_activity_error, calculate_equilibrium_thermochemical_probability
 from espei.priors import PriorSpec, build_prior_specs
 from espei.utils import unpack_piecewise, optimal_parameters
 from espei.error_functions.context import setup_context
@@ -286,7 +284,6 @@ class EmceeOptimizer(OptimizerBase):
         # lnlike
         parameters = {param_name: param for param_name, param in zip(ctx['symbols_to_fit'], params.tolist())}
         activity_kwargs = ctx.get('activity_kwargs')
-        non_equilibrium_thermochemical_kwargs = ctx.get('thermochemical_kwargs')
         equilibrium_thermochemical_kwargs = ctx.get('equilibrium_thermochemical_kwargs')
         starttime = time.time()
 
@@ -305,14 +302,11 @@ class EmceeOptimizer(OptimizerBase):
             actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
         else:
             actvity_error = 0
-        if non_equilibrium_thermochemical_kwargs is not None:
-            non_eq_thermochemical_prob = calculate_non_equilibrium_thermochemical_probability(parameters=params, **non_equilibrium_thermochemical_kwargs)
-        else:
-            non_eq_thermochemical_prob = 0
-        total_error = eq_thermochemical_prob + non_eq_thermochemical_prob + actvity_error
+
+        total_error = eq_thermochemical_prob + actvity_error
         like_str = ". ".join([f"{ky}: {vl:0.3f}" for ky, vl in likelihoods.items()])
-        _log.trace('Likelihood - %0.2fs - Non-equilibrium thermochemical: %0.3f. Equilibrium thermochemical: %0.3f. Activity: %0.3f. %s. Total: %0.3f.', time.time() - starttime, non_eq_thermochemical_prob, eq_thermochemical_prob, actvity_error, like_str, total_error)
         lnlike = np.array(lnlike + total_error, dtype=np.float64)
+        _log.trace('Likelihood - %0.2fs - Equilibrium thermochemical: %0.3f. Activity: %0.3f. %s. Total: %0.3f.', time.time() - starttime, eq_thermochemical_prob, actvity_error, like_str, lnlike)
 
         lnprob = lnprior + lnlike
         _log.trace('Proposal - lnprior: %0.4f, lnlike: %0.4f, lnprob: %0.4f', lnprior, lnlike, lnprob)

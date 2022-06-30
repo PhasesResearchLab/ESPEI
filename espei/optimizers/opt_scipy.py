@@ -4,8 +4,7 @@ import numpy as np
 from scipy.optimize import minimize
 from espei.utils import unpack_piecewise
 from espei.error_functions.context import setup_context
-from espei.error_functions import calculate_activity_error, calculate_zpf_error, \
-    calculate_non_equilibrium_thermochemical_probability
+from espei.error_functions import calculate_activity_error
 from .opt_base import OptimizerBase
 
 _log = logging.getLogger(__name__)
@@ -33,9 +32,7 @@ class SciPyOptimizer(OptimizerBase):
     @staticmethod
     def predict(params, ctx):
         parameters = {param_name: param for param_name, param in zip(ctx['symbols_to_fit'], params)}
-        residual_objs = ctx.get('residual_objs', [])
         activity_kwargs = ctx.get('activity_kwargs')
-        thermochemical_kwargs = ctx.get('thermochemical_kwargs')
         starttime = time.time()
 
         lnlike = 0.0
@@ -49,12 +46,8 @@ class SciPyOptimizer(OptimizerBase):
             actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
         else:
             actvity_error = 0
-        if thermochemical_kwargs is not None:
-            single_phase_error = calculate_non_equilibrium_thermochemical_probability(parameters=parameters, **thermochemical_kwargs)
-        else:
-            single_phase_error = 0
-        total_error = lnlike + single_phase_error + actvity_error
+        total_error = lnlike + actvity_error
         like_str = ". ".join([f"{ky}: {vl:0.3f}" for ky, vl in likelihoods.items()])
-        _log.trace('Likelihood - %0.2fs - Thermochemical: %0.3f. Activity: %0.3f. %s. Total: %0.3f.', time.time() - starttime, single_phase_error, actvity_error, like_str, total_error)
+        _log.trace('Likelihood - %0.2fs - Activity: %0.3f. %s. Total: %0.3f.', time.time() - starttime, actvity_error, like_str, total_error)
         error = np.array(total_error, dtype=np.float64)
         return error

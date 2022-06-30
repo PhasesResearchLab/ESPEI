@@ -77,13 +77,6 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
         eq_callables = None
     t2 = time.time()
     _log.trace('Finished building phase models (%0.2fs)', t2-t1)
-    _log.trace('Getting non-equilibrium thermochemical data (this may take some time)')
-    t1 = time.time()
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, model=model_dict, weight_dict=data_weights, symbols_to_fit=symbols_to_fit)
-
-    # fixed_config_residual = ZPFResidual(dbf, datasets, phase_models, symbols_to_fit, data_weights.get('ZPF', 1.0))
-    t2 = time.time()
-    _log.trace('Finished getting non-equilibrium thermochemical data (%0.2fs)', t2-t1)
     _log.trace('Getting equilibrium thermochemical data (this may take some time)')
     t1 = time.time()
     eq_thermochemical_data = get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, model=model_dict, parameters=parameters, data_weight_dict=data_weights)
@@ -104,12 +97,7 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
     error_context = {
         'symbols_to_fit': symbols_to_fit,
         "residual_objs": residual_objs,
-        'equilibrium_thermochemical_kwargs': {
-            'eq_thermochemical_data': eq_thermochemical_data,
-        },
-        'thermochemical_kwargs': {
-            'thermochemical_data': thermochemical_data,
-        },
+        'equilibrium_thermochemical_kwargs': {'eq_thermochemical_data': eq_thermochemical_data,},
         'activity_kwargs': {
             'dbf': dbf, 'comps': comps, 'phases': phases, 'datasets': datasets,
             'phase_models': models, 'callables': eq_callables,

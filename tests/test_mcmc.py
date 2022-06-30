@@ -54,17 +54,16 @@ def test_lnprob_calculates_single_phase_probability_for_success(datasets_db):
     orig_val = -14.0865
     opt = EmceeOptimizer(dbf)
 
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[param])
-    thermochemical_kwargs = {'thermochemical_data': thermochemical_data}
-    res_orig = opt.predict([orig_val], prior_rvs=[rv_zero()], symbols_to_fit=[param], thermochemical_kwargs=thermochemical_kwargs)
+    ctx = setup_context(dbf, datasets_db, symbols_to_fit=[param])
+    res_orig = opt.predict([orig_val], prior_rvs=[rv_zero()], **ctx)
     assert np.isreal(res_orig)
     assert np.isclose(res_orig, -9.119484935312146, rtol=1e-6)
 
-    res_10 = opt.predict([10.0], prior_rvs=[rv_zero()], symbols_to_fit=[param], thermochemical_kwargs=thermochemical_kwargs)
+    res_10 = opt.predict([10.0], prior_rvs=[rv_zero()], **ctx)
     assert np.isreal(res_10)
     assert np.isclose(res_10, -9.143559131626864, rtol=1e-6)
 
-    res_1e5 = opt.predict([1e5], prior_rvs=[rv_zero()], symbols_to_fit=[param], thermochemical_kwargs=thermochemical_kwargs)
+    res_1e5 = opt.predict([1e5], prior_rvs=[rv_zero()], **ctx)
     assert np.isreal(res_1e5)
     assert np.isclose(res_1e5, -1359.1335466316268, rtol=1e-6)
 
