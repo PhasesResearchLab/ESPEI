@@ -4,9 +4,10 @@ Calculate error due to equilibrium thermochemical properties.
 
 import logging
 from collections import OrderedDict
-from typing import NamedTuple, Sequence, Dict, Optional, Tuple, Type
+from typing import Dict, List, NamedTuple, Optional, Sequence, Tuple, Type, Union
 
 import numpy as np
+import numpy.typing as npt
 import tinydb
 from tinydb import where
 from scipy.stats import norm
@@ -17,8 +18,11 @@ from pycalphad.codegen.callables import build_phase_records
 from pycalphad.core.utils import instantiate_models, filter_phases, extract_parameters, unpack_components, unpack_condition
 from pycalphad.core.phase_rec import PhaseRecord
 
-from espei.utils import PickleableTinyDB
+from espei.constants import SymbolName
+from espei.error_functions.residual_base import ResidualFunction, residual_function_registry
+from espei.phase_models import PhaseModels
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
+from espei.utils import PickleableTinyDB, database_symbols_to_fit
 
 _log = logging.getLogger(__name__)
 
@@ -276,3 +280,53 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
     weights = np.concatenate(weights, axis=0)
     probs = norm(loc=0.0, scale=weights).logpdf(differences)
     return np.sum(probs)
+
+
+# TODO: refactor into one instance per property at the level of this object? We
+#       could approximate that kind of behavior by limiting the datasets to a
+#       subset of only one property at a time.
+class EquilibriumPropertyResidual(ResidualFunction):
+    def __init__(
+        self,
+        database: Database,
+        datasets: PickleableTinyDB,
+        phase_models: Union[PhaseModels, None],
+        symbols_to_fit: Optional[List[SymbolName]] = None,
+        weight: Optional[Dict[str, float]] = None,
+        ):
+        super().__init__(database, datasets, phase_models, symbols_to_fit)
+
+        if weight is not None:
+            self.weight = weight
+        else:
+            self.weight = {}
+
+        if phase_models is not None:
+            comps = sorted(phase_models.components)
+            model_dict = phase_models.get_model_dict()
+        else:
+            comps = sorted(database.elements)
+            model_dict = dict()
+        phases = sorted(filter_phases(database, unpack_components(database, comps), database.phases.keys()))
+        if symbols_to_fit is None:
+            symbols_to_fit = database_symbols_to_fit(database)
+        # okay if parameters are initialized to zero, we only need the symbol names
+        parameters = dict(zip(symbols_to_fit, [0]*len(symbols_to_fit)))
+        self.property_data = get_equilibrium_thermochemical_data(database, comps, phases, datasets, model_dict, parameters, data_weight_dict=self.weight)
+
+    def get_residual(self, parameters: npt.ArrayLike) -> float:
+        # TODO: residual probably not meaningful because the data have different scales
+        all_differences = []
+        for data in self.property_data:
+            differences, _weights = calc_prop_differences(data, parameters)
+            all_differences.append(differences)
+        differences = np.concatenate(all_differences, axis=0)
+        residual = np.sum(np.abs(differences))
+        return residual
+
+    def get_likelihood(self, parameters) -> float:
+        likelihood = calculate_equilibrium_thermochemical_probability(self.property_data, parameters)
+        return likelihood
+
+
+residual_function_registry.register(EquilibriumPropertyResidual)

@@ -1,6 +1,8 @@
 import logging
 import sys
 import time
+import warnings
+
 import numpy as np
 import emcee
 from espei.error_functions import calculate_activity_error, calculate_equilibrium_thermochemical_probability
@@ -228,10 +230,11 @@ class EmceeOptimizer(OptimizerBase):
         symbols_to_fit = ctx['symbols_to_fit']
         initial_guess = np.array([unpack_piecewise(self.dbf.symbols[s]) for s in symbols_to_fit])
 
+        if approximate_equilibrium:
+            warnings.warn(f"Approximate equilibrium is deprecated and will be removed in ESPEI 0.10. Got {approximate_equilibrium}.", DeprecationWarning)
+
         prior_dict = self.get_priors(prior, symbols_to_fit, initial_guess)
         ctx.update(prior_dict)
-        if 'equilibrium_thermochemical_kwargs' in ctx:
-            ctx['equilibrium_thermochemical_kwargs']['approximate_equilibrium'] = approximate_equilibrium
         # Run the initial parameters for guessing purposes:
         _log.trace("Probability for initial parameters")
         self.predict(initial_guess, **ctx)
@@ -284,7 +287,6 @@ class EmceeOptimizer(OptimizerBase):
         # lnlike
         parameters = {param_name: param for param_name, param in zip(ctx['symbols_to_fit'], params.tolist())}
         activity_kwargs = ctx.get('activity_kwargs')
-        equilibrium_thermochemical_kwargs = ctx.get('equilibrium_thermochemical_kwargs')
         starttime = time.time()
 
         lnlike = 0.0
@@ -294,19 +296,15 @@ class EmceeOptimizer(OptimizerBase):
             likelihoods[type(residual_obj).__name__] = likelihood
             lnlike += likelihood
 
-        if equilibrium_thermochemical_kwargs is not None:
-            eq_thermochemical_prob = calculate_equilibrium_thermochemical_probability(parameters=params, **equilibrium_thermochemical_kwargs)
-        else:
-            eq_thermochemical_prob = 0
         if activity_kwargs is not None:
             actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
         else:
             actvity_error = 0
 
-        total_error = eq_thermochemical_prob + actvity_error
+        total_error = actvity_error
         like_str = ". ".join([f"{ky}: {vl:0.3f}" for ky, vl in likelihoods.items()])
         lnlike = np.array(lnlike + total_error, dtype=np.float64)
-        _log.trace('Likelihood - %0.2fs - Equilibrium thermochemical: %0.3f. Activity: %0.3f. %s. Total: %0.3f.', time.time() - starttime, eq_thermochemical_prob, actvity_error, like_str, lnlike)
+        _log.trace('Likelihood - %0.2fs - Equilibrium thermochemical: %0.3f. Activity: %0.3f. %s. Total: %0.3f.', time.time() - starttime, actvity_error, like_str, lnlike)
 
         lnprob = lnprior + lnlike
         _log.trace('Proposal - lnprior: %0.4f, lnlike: %0.4f, lnprob: %0.4f', lnprior, lnlike, lnprob)
