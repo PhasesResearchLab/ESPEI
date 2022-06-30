@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Protocol
+from typing import Dict, List, Optional, Protocol, Union
 
 from numpy.typing import ArrayLike
 
@@ -41,7 +41,7 @@ class ResidualFunction(Protocol):
 
     Attributes
     ----------
-    weight : float
+    weight : Optional[Union[float, Dict[str, float]]]
 
     """
 
@@ -50,8 +50,8 @@ class ResidualFunction(Protocol):
         database: Database,
         datasets: PickleableTinyDB,
         phase_models: PhaseModels,
-        symbols_to_fit: Optional[List[SymbolName]] = None,
-        weight: Optional[float] = 1.0,
+        symbols_to_fit: Optional[List[SymbolName]],
+        weight: Optional[Union[float, Dict[str, float]]],
         ):
         ...
 
