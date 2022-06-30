@@ -30,14 +30,6 @@ espei.citing module
    :undoc-members:
    :show-inheritance:
 
-espei.constants module
-----------------------
-
-.. automodule:: espei.constants
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 espei.core\_utils module
 ------------------------
 
@@ -138,6 +130,14 @@ espei.sublattice\_tools module
 ------------------------------
 
 .. automodule:: espei.sublattice_tools
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+espei.typing module
+-------------------
+
+.. automodule:: espei.typing
    :members:
    :undoc-members:
    :show-inheritance:
