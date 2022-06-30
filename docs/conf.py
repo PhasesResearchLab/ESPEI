@@ -44,7 +44,7 @@ extensions = ['sphinx.ext.autodoc',
 # Allows for specifying ":issue:`123`" to link to GitHub.
 # https://www.sphinx-doc.org/en/master/usage/extensions/extlinks.html
 extlinks = {'issue': ('https://github.com/PhasesResearchLab/ESPEI/issues/%s',
-                      'issue ')}
+                      'issue %s')}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -77,7 +77,7 @@ release = espei_version
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.

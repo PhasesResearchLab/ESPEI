@@ -7,7 +7,6 @@ from espei.error_functions.context import setup_context
 from espei.error_functions import calculate_activity_error, calculate_zpf_error, \
     calculate_non_equilibrium_thermochemical_probability
 from .opt_base import OptimizerBase
-from .graph import OptNode
 
 _log = logging.getLogger(__name__)
 
@@ -29,7 +28,7 @@ class SciPyOptimizer(OptimizerBase):
         if verbose:
             print('Found', xs, 'in', int(time.time() - s), 's')
         parameters = dict(zip(symbols_to_fit, xs))
-        return OptNode(parameters, ds)
+        return parameters
 
     @staticmethod
     def predict(params, ctx):
@@ -59,4 +58,3 @@ class SciPyOptimizer(OptimizerBase):
         _log.trace('Likelihood - %0.2fs - Thermochemical: %0.3f. ZPF: %0.3f. Activity: %0.3f. Total: %0.3f.', time.time() - starttime, single_phase_error, multi_phase_error, actvity_error, total_error)
         error = np.array(total_error, dtype=np.float64)
         return error
-

@@ -4,14 +4,6 @@ espei.optimizers package
 Submodules
 ----------
 
-espei.optimizers.graph module
------------------------------
-
-.. automodule:: espei.optimizers.graph
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 espei.optimizers.opt\_base module
 ---------------------------------
 
