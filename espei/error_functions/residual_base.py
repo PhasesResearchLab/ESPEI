@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Protocol, Union
+from typing import Dict, List, Optional, Protocol, Type
 
 from numpy.typing import ArrayLike
 
@@ -98,12 +98,12 @@ class ResidualFunction(Protocol):
 
 class ResidualRegistry():
     def __init__(self) -> None:
-        self._registered_residual_functions = []
+        self._registered_residual_functions: Type[ResidualFunction] = []
 
-    def get_registered_residual_functions(self) -> List[ResidualFunction]:
+    def get_registered_residual_functions(self) -> List[Type[ResidualFunction]]:
         return self._registered_residual_functions
 
-    def register(self, residual_function):
+    def register(self, residual_function: Type[ResidualFunction]):
         # Don't allow duplicates
         if residual_function not in self._registered_residual_functions:
             self._registered_residual_functions.append(residual_function)

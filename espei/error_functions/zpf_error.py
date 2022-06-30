@@ -35,7 +35,7 @@ from pycalphad.core.utils import point_sample
 
 from espei.phase_models import PhaseModels
 from espei.constants import SymbolName
-from .residual_base import ResidualFunction
+from .residual_base import ResidualFunction, residual_function_registry
 
 _log = logging.getLogger(__name__)
 
@@ -468,3 +468,6 @@ class ZPFResidual(ResidualFunction):
     def get_likelihood(self, parameters) -> float:
         likelihood = calculate_zpf_error(self.zpf_data, parameters, data_weight=self.weight)
         return likelihood
+
+
+residual_function_registry.register(ZPFResidual)

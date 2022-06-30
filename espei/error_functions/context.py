@@ -8,6 +8,7 @@ from pycalphad.codegen.callables import build_callables
 from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
 from espei.error_functions import get_thermochemical_data, get_equilibrium_thermochemical_data
 from espei.utils import database_symbols_to_fit, get_model_dict
+from espei.error_functions.residual_base import residual_function_registry
 from espei.error_functions.zpf_error import ZPFResidual
 
 _log = logging.getLogger(__name__)
@@ -79,6 +80,8 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
     _log.trace('Getting non-equilibrium thermochemical data (this may take some time)')
     t1 = time.time()
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets, model=model_dict, weight_dict=data_weights, symbols_to_fit=symbols_to_fit)
+
+    # fixed_config_residual = ZPFResidual(dbf, datasets, phase_models, symbols_to_fit, data_weights.get('ZPF', 1.0))
     t2 = time.time()
     _log.trace('Finished getting non-equilibrium thermochemical data (%0.2fs)', t2-t1)
     _log.trace('Getting equilibrium thermochemical data (this may take some time)')
@@ -86,18 +89,21 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
     eq_thermochemical_data = get_equilibrium_thermochemical_data(dbf, comps, phases, datasets, model=model_dict, parameters=parameters, data_weight_dict=data_weights)
     t2 = time.time()
     _log.trace('Finished getting equilibrium thermochemical data (%0.2fs)', t2-t1)
-    _log.trace('Getting ZPF residual object (this may take some time)')
-    t1 = time.time()
-    zpf_residual = ZPFResidual(dbf, datasets, phase_models, symbols_to_fit, data_weights)
-    t2 = time.time()
-    _log.trace('Finished getting ZPF residual object (%0.2fs)', t2-t1)
+    residual_objs = []
+    for residual_func_class in residual_function_registry.get_registered_residual_functions():
+        _log.trace('Getting residual object for %s', residual_func_class.__qualname__)
+        t1 = time.time()
+        residual_obj = residual_func_class(dbf, datasets, phase_models, symbols_to_fit, data_weights)
+        residual_objs.append(residual_obj)
+        t2 = time.time()
+        _log.trace('Finished getting residual object for %s in %0.2f s', residual_func_class.__qualname__, t2-t1)
 
 
     # context for the log probability function
     # for all cases, parameters argument addressed in MCMC loop
     error_context = {
         'symbols_to_fit': symbols_to_fit,
-        "residual_objs": [zpf_residual],
+        "residual_objs": residual_objs,
         'equilibrium_thermochemical_kwargs': {
             'eq_thermochemical_data': eq_thermochemical_data,
         },
