@@ -19,7 +19,7 @@ from pycalphad.core.utils import instantiate_models, filter_phases, extract_para
 from pycalphad.core.phase_rec import PhaseRecord
 
 from espei.error_functions.residual_base import ResidualFunction, residual_function_registry
-from espei.phase_models import PhaseModels
+from espei.phase_models import PhaseModelSpecification
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
 from espei.typing import SymbolName
 from espei.utils import PickleableTinyDB, database_symbols_to_fit
@@ -290,7 +290,7 @@ class EquilibriumPropertyResidual(ResidualFunction):
         self,
         database: Database,
         datasets: PickleableTinyDB,
-        phase_models: Union[PhaseModels, None],
+        phase_models: Union[PhaseModelSpecification, None],
         symbols_to_fit: Optional[List[SymbolName]] = None,
         weight: Optional[Dict[str, float]] = None,
         ):

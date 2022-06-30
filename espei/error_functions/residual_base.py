@@ -4,7 +4,7 @@ from numpy.typing import ArrayLike
 
 from pycalphad import Database
 
-from espei.phase_models import PhaseModels
+from espei.phase_models import PhaseModelSpecification
 from espei.typing import SymbolName
 from espei.utils import PickleableTinyDB
 
@@ -49,7 +49,7 @@ class ResidualFunction(Protocol):
         self,
         database: Database,
         datasets: PickleableTinyDB,
-        phase_models: PhaseModels,
+        phase_models: PhaseModelSpecification,
         symbols_to_fit: Optional[List[SymbolName]],
         weight: Optional[Dict[str, float]],
         ):

@@ -21,7 +21,7 @@ from scipy.stats import norm
 
 from espei.core_utils import ravel_conditions
 from espei.error_functions.residual_base import ResidualFunction, residual_function_registry
-from espei.phase_models import PhaseModels
+from espei.phase_models import PhaseModelSpecification
 from espei.typing import SymbolName
 from espei.utils import database_symbols_to_fit, PickleableTinyDB
 
@@ -199,7 +199,7 @@ class ActivityResidual(ResidualFunction):
         self,
         database: Database,
         datasets: PickleableTinyDB,
-        phase_models: Union[PhaseModels, None],
+        phase_models: Union[PhaseModelSpecification, None],
         symbols_to_fit: Optional[List[SymbolName]] = None,
         weight: Optional[Dict[str, float]] = None,
         ):

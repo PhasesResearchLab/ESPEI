@@ -30,7 +30,7 @@ from pycalphad.core.utils import point_sample
 from scipy.stats import norm
 import tinydb
 
-from espei.phase_models import PhaseModels
+from espei.phase_models import PhaseModelSpecification
 from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters, constrained_equilibrium
 from espei.typing import SymbolName
 from espei.utils import PickleableTinyDB, database_symbols_to_fit
@@ -435,7 +435,7 @@ class ZPFResidual(ResidualFunction):
         self,
         database: Database,
         datasets: PickleableTinyDB,
-        phase_models: Union[PhaseModels, None],
+        phase_models: Union[PhaseModelSpecification, None],
         symbols_to_fit: Optional[List[SymbolName]] = None,
         weight: Optional[Dict[str, float]] = None,
         ):

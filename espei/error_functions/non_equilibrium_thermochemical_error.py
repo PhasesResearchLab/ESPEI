@@ -18,7 +18,7 @@ from pycalphad.core.utils import unpack_components, get_pure_elements, filter_ph
 
 from espei.datasets import Dataset
 from espei.core_utils import ravel_conditions, get_prop_data, filter_temperatures
-from espei.phase_models import PhaseModels
+from espei.phase_models import PhaseModelSpecification
 from espei.shadow_functions import calculate_, update_phase_record_parameters
 from espei.sublattice_tools import canonicalize, recursive_tuplify, tuplify
 from espei.typing import SymbolName
@@ -331,7 +331,7 @@ class FixedConfigurationPropertyResidual(ResidualFunction):
         self,
         database: Database,
         datasets: PickleableTinyDB,
-        phase_models: Union[PhaseModels, None],
+        phase_models: Union[PhaseModelSpecification, None],
         symbols_to_fit: Optional[List[SymbolName]] = None,
         weight: Optional[Dict[str, float]] = None,
         ):
