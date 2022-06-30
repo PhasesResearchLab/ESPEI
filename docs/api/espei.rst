@@ -30,6 +30,14 @@ espei.citing module
    :undoc-members:
    :show-inheritance:
 
+espei.constants module
+----------------------
+
+.. automodule:: espei.constants
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 espei.core\_utils module
 ------------------------
 
@@ -74,6 +82,14 @@ espei.paramselect module
 ------------------------
 
 .. automodule:: espei.paramselect
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+espei.phase\_models module
+--------------------------
+
+.. automodule:: espei.phase_models
    :members:
    :undoc-members:
    :show-inheritance:
