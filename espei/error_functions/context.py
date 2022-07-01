@@ -6,6 +6,7 @@ import time
 
 import symengine
 
+from espei.phase_models import PhaseModelSpecification
 from espei.utils import database_symbols_to_fit
 from espei.error_functions.residual_base import residual_function_registry
 
@@ -26,6 +27,9 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
         List of symbols in the Database that will be fit. If None (default) are
         passed, then all parameters prefixed with `VV` followed by a number,
         e.g. VV0001 will be fit.
+    phase_models : Optional[Dict[str, Any]]
+        Phase model dictionary that will be converted to PhaseModelSpecification
+        if it is provided.
 
     Returns
     -------
@@ -36,6 +40,8 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
     back to the original database, the dbf.symbols.update method should be used.
     """
     data_weights = data_weights if data_weights is not None else {}
+    if phase_models is not None:
+        phase_models = PhaseModelSpecification(**phase_models)
 
     # Copy the database because we replace Piecewise symbols and want to preserve the original database
     dbf = copy.deepcopy(dbf)

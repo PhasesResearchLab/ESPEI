@@ -15,38 +15,6 @@ class ModelMetadata(BaseModel):
 
 
 class PhaseModelSpecification(BaseModel):
-    """
-
-    Examples
-    --------
-    >>> from espei.phase_models import PhaseModelSpecification
-    >>> data = {
-    ...   "components": ["CU", "MG", "VA"],
-    ...   "phases": {
-    ...          "LIQUID" : {
-    ...             "sublattice_model": [["CU", "MG"]],
-    ...             "sublattice_site_ratios": [1],
-    ...             "model": "pycalphad.model.Model"
-    ...          },
-    ...          "FCC_A1": {
-    ...             "sublattice_model": [["CU", "MG"], ["VA"]],
-    ...             "sublattice_site_ratios": [1, 1]
-    ...          }
-    ...     }
-    ... }
-    ...
-    >>> phase_models = PhaseModelSpecification(**data)
-    >>> assert len(phase_models.phases) == 2
-    >>> assert phase_models.phases["LIQUID"].sublattice_model == [["CU", "MG"]]
-    >>> assert phase_models.phases["LIQUID"].sublattice_site_ratios == [1]
-    >>> assert type(phase_models.phases["LIQUID"].model) is type
-    >>> assert phase_models.phases["FCC_A1"].model is None
-    >>> assert "LIQUID" in phase_models.get_model_dict()
-    >>> assert len(phase_models.get_model_dict()) == 1
-    >>> assert phase_models.get_model_dict()["LIQUID"] == phase_models.phases["LIQUID"].model
-    >>> assert phase_models.phases["FCC_A1"].model is None
-
-    """
     components: List[ComponentName]
     phases: Dict[PhaseName, ModelMetadata]
 

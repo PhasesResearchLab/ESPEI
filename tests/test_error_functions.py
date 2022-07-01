@@ -19,7 +19,7 @@ from espei.error_functions import *
 from espei.error_functions.equilibrium_thermochemical_error import calc_prop_differences
 from espei.error_functions.zpf_error import calculate_zpf_driving_forces
 from espei.error_functions.context import setup_context
-from espei.utils import unpack_piecewise
+from espei.utils import unpack_piecewise, ModelTestException
 
 from .fixtures import datasets_db
 from .testing_data import *
@@ -450,6 +450,33 @@ def test_driving_force_miscibility_gap(datasets_db):
     assert prob < zero_error_prob
     prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=True)
     assert prob < zero_error_prob
+
+
+def test_setting_up_context_with_custom_models(datasets_db):
+    phase_models = {
+      "components": ["CU", "MG", "VA"],
+      "phases": {
+             "LIQUID" : {
+                "sublattice_model": [["CU", "MG"]],
+                "sublattice_site_ratios": [1],
+                "model": "espei.utils.ErrorModel"
+             },
+             "FCC_A1": {
+                "sublattice_model": [["CU", "MG"], ["VA"]],
+                "sublattice_site_ratios": [1, 1]
+             }
+        }
+    }
+
+    dbf = Database(CU_MG_TDB)
+
+    # Should work without error
+    ctx = setup_context(dbf, datasets_db, phase_models=phase_models)
+
+    # Once we have data, the ErrorModel should be built and raise
+    datasets_db.insert(CU_MG_DATASET_ZPF_ZERO_ERROR)
+    with pytest.raises(ModelTestException):
+        ctx = setup_context(dbf, datasets_db, phase_models=phase_models)
 
 
 def test_zpf_context_is_pickleable(datasets_db):
