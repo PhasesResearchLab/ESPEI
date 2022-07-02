@@ -255,7 +255,6 @@ def run_espei(run_settings):
                       mcmc_data_weights=data_weights,
                       approximate_equilibrium=approximate_equilibrium,
                       )
-        optimizer.commit()
 
         optimizer.dbf.to_file(output_settings['output_db'], if_exists='overwrite')
         # close the scheduler, if possible
