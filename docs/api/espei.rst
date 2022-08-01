@@ -78,6 +78,14 @@ espei.paramselect module
    :undoc-members:
    :show-inheritance:
 
+espei.phase\_models module
+--------------------------
+
+.. automodule:: espei.phase_models
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 espei.plot module
 -----------------
 
@@ -122,6 +130,14 @@ espei.sublattice\_tools module
 ------------------------------
 
 .. automodule:: espei.sublattice_tools
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+espei.typing module
+-------------------
+
+.. automodule:: espei.typing
    :members:
    :undoc-members:
    :show-inheritance:

@@ -1,12 +1,11 @@
 import logging
 import sys
 import time
+import warnings
+
 import numpy as np
 import emcee
-from espei.error_functions import calculate_zpf_error, calculate_activity_error, \
-    calculate_non_equilibrium_thermochemical_probability, \
-    calculate_equilibrium_thermochemical_probability
-from espei.priors import PriorSpec, build_prior_specs
+from espei.priors import PriorSpec, build_prior_specs, rv_zero
 from espei.utils import unpack_piecewise, optimal_parameters
 from espei.error_functions.context import setup_context
 from .opt_base import OptimizerBase
@@ -230,12 +229,11 @@ class EmceeOptimizer(OptimizerBase):
         symbols_to_fit = ctx['symbols_to_fit']
         initial_guess = np.array([unpack_piecewise(self.dbf.symbols[s]) for s in symbols_to_fit])
 
+        if approximate_equilibrium:
+            warnings.warn(f"Approximate equilibrium is deprecated and will be removed in ESPEI 0.10. Got {approximate_equilibrium}.", DeprecationWarning)
+
         prior_dict = self.get_priors(prior, symbols_to_fit, initial_guess)
         ctx.update(prior_dict)
-        if 'zpf_kwargs' in ctx:
-            ctx['zpf_kwargs']['approximate_equilibrium'] = approximate_equilibrium
-        if 'equilibrium_thermochemical_kwargs' in ctx:
-            ctx['equilibrium_thermochemical_kwargs']['approximate_equilibrium'] = approximate_equilibrium
         # Run the initial parameters for guessing purposes:
         _log.trace("Probability for initial parameters")
         self.predict(initial_guess, **ctx)
@@ -276,7 +274,7 @@ class EmceeOptimizer(OptimizerBase):
         params = np.asarray(params, dtype=np.float_)
 
         # lnprior
-        prior_rvs = ctx['prior_rvs']
+        prior_rvs = ctx.get('prior_rvs', [rv_zero() for _ in range(params.size)])
         lnprior_multivariate = [rv.logpdf(theta) for rv, theta in zip(prior_rvs, params)]
         _log.debug('Priors: %s', lnprior_multivariate)
         lnprior = np.sum(lnprior_multivariate)
@@ -286,36 +284,18 @@ class EmceeOptimizer(OptimizerBase):
             return lnprior
 
         # lnlike
-        parameters = {param_name: param for param_name, param in zip(ctx['symbols_to_fit'], params.tolist())}
-        zpf_kwargs = ctx.get('zpf_kwargs')
-        activity_kwargs = ctx.get('activity_kwargs')
-        non_equilibrium_thermochemical_kwargs = ctx.get('thermochemical_kwargs')
-        equilibrium_thermochemical_kwargs = ctx.get('equilibrium_thermochemical_kwargs')
         starttime = time.time()
-        if zpf_kwargs is not None:
-            try:
-                multi_phase_error = calculate_zpf_error(parameters=params, **zpf_kwargs)
-            except (ValueError, np.linalg.LinAlgError) as e:
-                raise e
-                print(e)
-                multi_phase_error = -np.inf
-        else:
-            multi_phase_error = 0
-        if equilibrium_thermochemical_kwargs is not None:
-            eq_thermochemical_prob = calculate_equilibrium_thermochemical_probability(parameters=params, **equilibrium_thermochemical_kwargs)
-        else:
-            eq_thermochemical_prob = 0
-        if activity_kwargs is not None:
-            actvity_error = calculate_activity_error(parameters=parameters, **activity_kwargs)
-        else:
-            actvity_error = 0
-        if non_equilibrium_thermochemical_kwargs is not None:
-            non_eq_thermochemical_prob = calculate_non_equilibrium_thermochemical_probability(parameters=params, **non_equilibrium_thermochemical_kwargs)
-        else:
-            non_eq_thermochemical_prob = 0
-        total_error = multi_phase_error + eq_thermochemical_prob + non_eq_thermochemical_prob + actvity_error
-        _log.trace('Likelihood - %0.2fs - Non-equilibrium thermochemical: %0.3f. Equilibrium thermochemical: %0.3f. ZPF: %0.3f. Activity: %0.3f. Total: %0.3f.', time.time() - starttime, non_eq_thermochemical_prob, eq_thermochemical_prob, multi_phase_error, actvity_error, total_error)
-        lnlike = np.array(total_error, dtype=np.float64)
+        lnlike = 0.0
+        likelihoods = {}
+        for residual_obj in ctx.get("residual_objs", []):
+            likelihood = residual_obj.get_likelihood(params)
+            likelihoods[type(residual_obj).__name__] = likelihood
+            lnlike += likelihood
+        liketime = time.time() - starttime
+
+        like_str = ". ".join([f"{ky}: {vl:0.3f}" for ky, vl in likelihoods.items()])
+        lnlike = np.array(lnlike, dtype=np.float64)
+        _log.trace('Likelihood - %0.2fs - %s. Total: %0.3f.', liketime, like_str, lnlike)
 
         lnprob = lnprior + lnlike
         _log.trace('Proposal - lnprior: %0.4f, lnlike: %0.4f, lnprob: %0.4f', lnprior, lnlike, lnprob)

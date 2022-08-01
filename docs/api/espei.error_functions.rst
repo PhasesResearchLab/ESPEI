@@ -36,6 +36,14 @@ espei.error\_functions.non\_equilibrium\_thermochemical\_error module
    :undoc-members:
    :show-inheritance:
 
+espei.error\_functions.residual\_base module
+--------------------------------------------
+
+.. automodule:: espei.error_functions.residual_base
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 espei.error\_functions.zpf\_error module
 ----------------------------------------
 

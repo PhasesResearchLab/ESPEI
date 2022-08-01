@@ -27,6 +27,7 @@ setup(
         'matplotlib',
         'numpy>=1.20',
         'pycalphad>=0.10.1',
+        'pydantic',
         'pyyaml',
         'setuptools_scm[toml]>=6.0',
         'scikit-learn>=1.0',

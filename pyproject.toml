@@ -15,3 +15,9 @@ testpaths = [
 ]
 
 [tool.setuptools_scm]
+
+[tool.coverage.run]
+# Only consider coverage for these packages:
+source_pkgs = [
+    "espei"
+]

@@ -4,26 +4,31 @@ Calculate error due to thermochemical quantities: heat capacity, entropy, enthal
 
 import logging
 from collections import OrderedDict
-from typing import List
+from typing import Any, Dict, List, NewType, Optional, Tuple, Union
 
 import symengine
 from scipy.stats import norm
 import numpy as np
+import numpy.typing as npt
 from tinydb import where
 
-from pycalphad import Model, ReferenceState, variables as v
-from pycalphad.core.utils import unpack_components, get_pure_elements
+from pycalphad import Database, Model, ReferenceState, variables as v
+from pycalphad.codegen.callables import build_phase_records
+from pycalphad.core.utils import unpack_components, get_pure_elements, filter_phases
 
 from espei.datasets import Dataset
 from espei.core_utils import ravel_conditions, get_prop_data, filter_temperatures
-from espei.utils import database_symbols_to_fit
-from espei.error_functions.zpf_error import update_phase_record_parameters
-from espei.shadow_functions import calculate_
+from espei.phase_models import PhaseModelSpecification
+from espei.shadow_functions import calculate_, update_phase_record_parameters
 from espei.sublattice_tools import canonicalize, recursive_tuplify, tuplify
-from pycalphad.codegen.callables import build_phase_records
+from espei.typing import SymbolName
+from espei.utils import database_symbols_to_fit, PickleableTinyDB
+from .residual_base import ResidualFunction, residual_function_registry
 
 _log = logging.getLogger(__name__)
 
+# TODO: make into an object similar to how ZPF data works?
+FixedConfigurationCalculationData = NewType("FixedConfigurationCalculationData", Dict[str, Any])
 
 def filter_sublattice_configurations(desired_data: List[Dataset], subl_model) -> List[Dataset]:  # TODO: symmetry support
     """Modify the desired_data to remove any configurations that cannot be represented by the sublattice model."""
@@ -270,7 +275,23 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
     return all_data_dicts
 
 
-def calculate_non_equilibrium_thermochemical_probability(thermochemical_data, parameters=None):
+
+def compute_fixed_configuration_property_differences(calc_data: FixedConfigurationCalculationData, parameters):
+    phase_name = calc_data['phase_name']
+    output = calc_data['output']
+    phase_records = calc_data['phase_records']
+    sample_values = calc_data['calculate_dict']['values']
+
+    update_phase_record_parameters(phase_records, parameters)
+    results = calculate_(calc_data['species'], [phase_name],
+                            calc_data['str_statevar_dict'], calc_data['model'],
+                            phase_records, output=output, broadcast=False,
+                            points=calc_data['calculate_dict']['points'])[output]
+    differences = results - sample_values
+    return differences
+
+
+def calculate_non_equilibrium_thermochemical_probability(thermochemical_data: List[FixedConfigurationCalculationData], parameters=None):
     """
     Calculate the weighted single phase error in the Database
 
@@ -293,18 +314,59 @@ def calculate_non_equilibrium_thermochemical_probability(thermochemical_data, pa
     prob_error = 0.0
     for data in thermochemical_data:
         phase_name = data['phase_name']
-        output = data['output']
-        phase_records = data['phase_records']
         sample_values = data['calculate_dict']['values']
-
-        update_phase_record_parameters(phase_records, parameters)
-        results = calculate_(data['species'], [phase_name],
-                             data['str_statevar_dict'], data['model'],
-                             phase_records, output=output, broadcast=False,
-                             points=data['calculate_dict']['points'])[output]
-        differences = results - sample_values
+        differences = compute_fixed_configuration_property_differences(data, parameters)
         probabilities = norm.logpdf(differences, loc=0, scale=data['weights'])
         prob_sum = np.sum(probabilities)
         _log.debug("%s(%s) - probability sum: %0.2f, data: %s, differences: %s, probabilities: %s, references: %s", data['prop'], phase_name, prob_sum, sample_values, differences, probabilities, data['calculate_dict']['references'])
         prob_error += prob_sum
     return prob_error
+
+
+class FixedConfigurationPropertyResidual(ResidualFunction):
+    def __init__(
+        self,
+        database: Database,
+        datasets: PickleableTinyDB,
+        phase_models: Union[PhaseModelSpecification, None],
+        symbols_to_fit: Optional[List[SymbolName]] = None,
+        weight: Optional[Dict[str, float]] = None,
+        ):
+        super().__init__(database, datasets, phase_models, symbols_to_fit)
+
+        if weight is not None:
+            self.weight = weight
+        else:
+            self.weight = {}
+
+        if phase_models is not None:
+            comps = sorted(phase_models.components)
+            model_dict = phase_models.get_model_dict()
+        else:
+            comps = sorted(database.elements)
+            model_dict = dict()
+        phases = sorted(filter_phases(database, unpack_components(database, comps), database.phases.keys()))
+        if symbols_to_fit is None:
+            symbols_to_fit = database_symbols_to_fit(database)
+        self.thermochemical_data = get_thermochemical_data(database, comps, phases, datasets, model_dict, weight_dict=self.weight, symbols_to_fit=symbols_to_fit)
+
+    def get_residuals(self, parameters: npt.ArrayLike) -> Tuple[List[float], List[float]]:
+        residuals = []
+        weights = []
+        for data in self.thermochemical_data:
+            dataset_residuals = compute_fixed_configuration_property_differences(data, parameters).tolist()
+            residuals.extend(dataset_residuals)
+            dataset_weights = np.asarray(data["weights"], dtype=float).flatten().tolist()
+            if len(dataset_weights) != len(dataset_residuals):
+                # we need to broadcast the residuals. For now, assume the weights are a scalar, since that's all that's supported
+                assert len(dataset_weights) == 1
+                dataset_weights = [float(dataset_weights[0]) for _ in range(len(dataset_residuals))]
+            weights.extend(dataset_weights)
+        return residuals, weights
+
+    def get_likelihood(self, parameters) -> float:
+        likelihood = calculate_non_equilibrium_thermochemical_probability(self.thermochemical_data, parameters)
+        return likelihood
+
+
+residual_function_registry.register(FixedConfigurationPropertyResidual)
