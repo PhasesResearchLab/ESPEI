@@ -131,6 +131,9 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
     if len(activity_datasets) == 0:
         return error
 
+    data_target_chempots = []
+    computed_chempots = []
+    weights = []
     for ds in activity_datasets:
         acr_component = ds['output'].split('_')[1]  # the component of interest
         # calculate the reference state equilibrium
@@ -168,11 +171,14 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
                                         model=phase_models, parameters=parameters,
                                         callables=callables)
             current_chempots.append(sample_eq_res.MU.sel(component=acr_component).values.flatten()[0])
+            computed_chempots.append(float(sample_eq_res.MU.sel(component=acr_component).values.flatten()[0]))
+            weights.append(std_dev / data_weight / ds.get("weight", 1.0))
         current_chempots = np.array(current_chempots)
 
         # calculate target chempots
         samples = np.array(ds['values']).flatten()
         target_chempots = target_chempots_from_activity(acr_component, samples, conditions[v.T], ref_result)
+        data_target_chempots.extend(np.asarray(target_chempots, dtype=float).tolist())
         # calculate the error
         weight = ds.get('weight', 1.0)
         pe = chempot_error(current_chempots, target_chempots, std_dev=std_dev/data_weight/weight)
@@ -182,7 +188,14 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
     # TODO: write a test for this
     if np.any(np.isnan(np.array([error], dtype=np.float64))):  # must coerce sympy.core.numbers.Float to float64
         return -np.inf
-    return error
+
+    assert len(data_target_chempots) == len(computed_chempots)
+    assert len(data_target_chempots) == len(weights)
+    residuals = np.asarray(data_target_chempots) - np.asarray(computed_chempots).tolist()
+
+    likelihood = np.sum(norm(0, scale=weights).logpdf(residuals))
+    assert np.isclose(likelihood, error)
+    return likelihood
 
 
 # TODO: the __init__ method should pre-compute Model and PhaseRecord objects
