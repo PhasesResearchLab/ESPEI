@@ -282,9 +282,6 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
     return np.sum(probs)
 
 
-# TODO: refactor into one instance per property at the level of this object? We
-#       could approximate that kind of behavior by limiting the datasets to a
-#       subset of only one property at a time.
 class EquilibriumPropertyResidual(ResidualFunction):
     def __init__(
         self,
