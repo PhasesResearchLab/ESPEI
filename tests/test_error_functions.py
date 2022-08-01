@@ -16,8 +16,10 @@ from pycalphad import Database, Model, variables as v
 
 from espei.paramselect import generate_parameters
 from espei.error_functions import *
-from espei.error_functions.equilibrium_thermochemical_error import calc_prop_differences
-from espei.error_functions.zpf_error import calculate_zpf_driving_forces
+from espei.error_functions.activity_error import ActivityResidual
+from espei.error_functions.equilibrium_thermochemical_error import calc_prop_differences, EquilibriumPropertyResidual
+from espei.error_functions.non_equilibrium_thermochemical_error import FixedConfigurationPropertyResidual
+from espei.error_functions.zpf_error import calculate_zpf_driving_forces, ZPFResidual
 from espei.error_functions.context import setup_context
 from espei.utils import unpack_piecewise, ModelTestException
 
@@ -33,6 +35,20 @@ def test_activity_error(datasets_db):
     dbf = Database(CU_MG_TDB)
     error = calculate_activity_error(dbf, ['CU','MG','VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {})
     assert np.isclose(error, -257.41020886970756, rtol=1e-6)
+
+
+def test_activity_residual_function(datasets_db):
+    dbf = Database(CU_MG_TDB)
+    datasets_db.insert(CU_MG_EXP_ACTIVITY)
+
+    residual_func = ActivityResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[])
+
+    # Regression test "truth" values - got values by running
+    residuals, weights = residual_func.get_residuals(np.asarray([]))
+    assert len(residuals) == len(weights)
+    assert np.allclose(residuals, [6522.652187085958, -1890.1414208991046, -4793.211215856485, -3018.311675280318, -1062.6724585088668, -2224.814500229084, -2256.9820026771777, -1735.8692674535414, -805.219891012428, 0.0])
+    likelihood = residual_func.get_likelihood(np.asarray([]))
+    assert np.isclose(likelihood, -257.41020886970756, rtol=1e-6)
 
 
 def test_subsystem_activity_probability(datasets_db):
@@ -68,6 +84,20 @@ def test_get_thermochemical_data_filters_invalid_sublattice_configurations(datas
 
     error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
     assert np.isclose(error, -14.28729)
+
+
+def test_fixed_configuration_residual_function(datasets_db):
+    dbf = Database(CU_MG_TDB)
+    datasets_db.insert(CU_MG_HM_MIX_CUMG2_ANTISITE)
+
+    residual_func = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[])
+
+    # Regression test "truth" values - got values by running
+    residuals, weights = residual_func.get_residuals(np.asarray([]))
+    assert len(residuals) == len(weights)
+    assert np.allclose(residuals, [-10.0, -100.0])
+    likelihood = residual_func.get_likelihood(np.asarray([]))
+    assert np.isclose(likelihood, -14.28729, rtol=1e-6)
 
 
 def test_get_thermochemical_data_filters_configurations_when_all_configurations_are_invalid(datasets_db):
@@ -263,6 +293,22 @@ def test_zpf_error_zero(datasets_db):
     assert np.isclose(error, zero_error_prob, rtol=1e-6)
 
 
+def test_zpf_residual_function(datasets_db):
+    dbf = Database(CU_MG_TDB)
+    datasets_db.insert(CU_MG_DATASET_ZPF_ZERO_ERROR)
+
+    residual_func = ZPFResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[])
+
+    # Regression test "truth" values - got values by running
+    residuals, weights = residual_func.get_residuals(np.asarray([]))
+    assert len(residuals) == len(weights)
+    assert np.allclose(residuals, [0.0, 0.0], atol=1e-3)  # looser tolerance due to numerical instabilities
+    likelihood = residual_func.get_likelihood(np.asarray([]))
+    # ZPF weight = 1 kJ and there are two points in the tieline
+    zero_error_prob = np.sum(scipy.stats.norm(loc=0, scale=1000.0).logpdf([0.0, 0.0]))
+    assert np.isclose(likelihood, zero_error_prob, rtol=1e-6)
+
+
 def test_subsystem_zpf_probability(datasets_db):
     """Test binary Cr-Ni data produces the same probability regardless of whether the main system is a binary or ternary."""
 
@@ -395,6 +441,20 @@ def test_equilibrium_thermochemical_error_unsupported_property(datasets_db):
     eqdata = get_equilibrium_thermochemical_data(dbf, ['CR', 'NI'], phases, datasets_db)
     errors_exact, weights = calc_prop_differences(eqdata[0], np.array([]))
     assert np.all(np.isclose(errors_exact, EXPECTED_VALUES, atol=1e-3))
+
+
+def test_equilibrium_property_residual_function(datasets_db):
+    dbf = Database(CR_NI_TDB)
+    datasets_db.insert(CR_NI_LIQUID_EQ_TC_DATA)
+
+    residual_func = EquilibriumPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[])
+
+    residuals, weights = residual_func.get_residuals(np.asarray([]))
+    assert len(residuals) == len(weights)
+    assert np.allclose(residuals, [374.6625, 0.0, 0.0])
+    # Regression test "truth" values - got values by running
+    likelihood = residual_func.get_likelihood(np.asarray([]))
+    assert np.isclose(likelihood, -70188.75126872442, rtol=1e-6)
 
 
 def test_equilibrium_thermochemical_error_computes_correct_probability(datasets_db):

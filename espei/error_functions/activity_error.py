@@ -216,6 +216,7 @@ class ActivityResidual(ResidualFunction):
         }
 
     def get_residuals(self, parameters: npt.ArrayLike) -> Tuple[List[float], List[float]]:
+        parameters = {param_name: param for param_name, param in zip(self._symbols_to_fit, parameters.tolist())}
         residuals, weights = calculate_activity_residuals(parameters=parameters, **self._activity_likelihood_kwargs)
         return residuals, weights
 

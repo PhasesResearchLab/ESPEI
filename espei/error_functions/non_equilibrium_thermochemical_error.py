@@ -3,8 +3,8 @@ Calculate error due to thermochemical quantities: heat capacity, entropy, enthal
 """
 
 import logging
-from collections import OrderedDict, defaultdict
-from typing import Any, Dict, List, Union, Optional, NewType
+from collections import OrderedDict
+from typing import Any, Dict, List, NewType, Optional, Tuple, Union
 
 import symengine
 from scipy.stats import norm
@@ -350,15 +350,20 @@ class FixedConfigurationPropertyResidual(ResidualFunction):
             symbols_to_fit = database_symbols_to_fit(database)
         self.thermochemical_data = get_thermochemical_data(database, comps, phases, datasets, model_dict, weight_dict=self.weight, symbols_to_fit=symbols_to_fit)
 
-    def get_residual(self, parameters: npt.ArrayLike) -> float:
+    def get_residuals(self, parameters: npt.ArrayLike) -> Tuple[List[float], List[float]]:
         # TODO: residual probably not meaningful because the data have different scales
-        all_differences = []
+        residuals = []
+        weights = []
         for data in self.thermochemical_data:
-            differences = compute_fixed_configuration_property_differences(data, parameters)
-            all_differences.append(differences)
-        differences = np.concatenate(all_differences)
-        residual = np.sum(np.abs(differences))
-        return residual
+            dataset_residuals = compute_fixed_configuration_property_differences(data, parameters).tolist()
+            residuals.extend(dataset_residuals)
+            dataset_weights = np.asarray(data["weights"], dtype=float).flatten().tolist()
+            if len(dataset_weights) != len(dataset_residuals):
+                # we need to broadcast the residuals. For now, assume the weights are a scalar, since that's all that's supported
+                assert len(dataset_weights) == 1
+                dataset_weights = [float(dataset_weights[0]) for _ in range(len(dataset_residuals))]
+            weights.extend(dataset_weights)
+        return residuals, weights
 
     def get_likelihood(self, parameters) -> float:
         likelihood = calculate_non_equilibrium_thermochemical_probability(self.thermochemical_data, parameters)

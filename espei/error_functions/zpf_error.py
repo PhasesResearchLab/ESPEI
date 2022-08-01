@@ -457,12 +457,12 @@ class ZPFResidual(ResidualFunction):
         parameters = dict(zip(symbols_to_fit, [0]*len(symbols_to_fit)))
         self.zpf_data = get_zpf_data(database, comps, phases, datasets, parameters, model_dict)
 
-    def get_residual(self, parameters: ArrayLike) -> float:
+    def get_residuals(self, parameters: ArrayLike) -> Tuple[List[float], List[float]]:
         driving_forces, weights = calculate_zpf_driving_forces(self.zpf_data, parameters, short_circuit=True)
         # Driving forces and weights are 2D ragged arrays with the shape (len(zpf_data), len(zpf_data['values']))
-        driving_forces = np.concatenate(driving_forces)
-        residual = np.sum(np.abs(driving_forces))
-        return residual
+        residuals = np.concatenate(driving_forces).tolist()
+        weights = np.concatenate(weights).tolist()
+        return residuals, weights
 
     def get_likelihood(self, parameters) -> float:
         likelihood = calculate_zpf_error(self.zpf_data, parameters, data_weight=self.weight)

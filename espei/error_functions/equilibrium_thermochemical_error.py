@@ -314,15 +314,15 @@ class EquilibriumPropertyResidual(ResidualFunction):
         parameters = dict(zip(symbols_to_fit, [0]*len(symbols_to_fit)))
         self.property_data = get_equilibrium_thermochemical_data(database, comps, phases, datasets, model_dict, parameters, data_weight_dict=self.weight)
 
-    def get_residual(self, parameters: npt.ArrayLike) -> float:
+    def get_residuals(self, parameters: npt.ArrayLike) -> Tuple[List[float], List[float]]:
         # TODO: residual probably not meaningful because the data have different scales
-        all_differences = []
+        residuals = []
+        weights = []
         for data in self.property_data:
-            differences, _weights = calc_prop_differences(data, parameters)
-            all_differences.append(differences)
-        differences = np.concatenate(all_differences, axis=0)
-        residual = np.sum(np.abs(differences))
-        return residual
+            dataset_residuals, dataset_weights = calc_prop_differences(data, parameters)
+            residuals.extend(dataset_residuals.tolist())
+            weights.extend(dataset_weights.tolist())
+        return residuals, weights
 
     def get_likelihood(self, parameters) -> float:
         likelihood = calculate_equilibrium_thermochemical_probability(self.property_data, parameters)
