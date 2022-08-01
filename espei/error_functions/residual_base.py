@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Protocol, Type
+from typing import Dict, List, Optional, Protocol, Tuple, Type
 
 from numpy.typing import ArrayLike
 
@@ -55,7 +55,7 @@ class ResidualFunction(Protocol):
         ):
         ...
 
-    def get_residual(self, parameters: ArrayLike) -> float:
+    def get_residuals(self, parameters: ArrayLike) -> Tuple[List[float], List[float]]:
         """
         Return the residual comparing the selected data to the set of parameters.
 
@@ -71,8 +71,8 @@ class ResidualFunction(Protocol):
 
         Returns
         -------
-        float
-            Value of the residual for the given set of parameters
+        Tuple[List[float], List[float]]
+            Tuple of (residuals, weights), which must obey len(residuals) == len(weights)
 
         """
         ...
