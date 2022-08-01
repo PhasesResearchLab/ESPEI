@@ -351,7 +351,6 @@ class FixedConfigurationPropertyResidual(ResidualFunction):
         self.thermochemical_data = get_thermochemical_data(database, comps, phases, datasets, model_dict, weight_dict=self.weight, symbols_to_fit=symbols_to_fit)
 
     def get_residuals(self, parameters: npt.ArrayLike) -> Tuple[List[float], List[float]]:
-        # TODO: residual probably not meaningful because the data have different scales
         residuals = []
         weights = []
         for data in self.thermochemical_data:

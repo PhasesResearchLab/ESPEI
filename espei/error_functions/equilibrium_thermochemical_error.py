@@ -312,7 +312,6 @@ class EquilibriumPropertyResidual(ResidualFunction):
         self.property_data = get_equilibrium_thermochemical_data(database, comps, phases, datasets, model_dict, parameters, data_weight_dict=self.weight)
 
     def get_residuals(self, parameters: npt.ArrayLike) -> Tuple[List[float], List[float]]:
-        # TODO: residual probably not meaningful because the data have different scales
         residuals = []
         weights = []
         for data in self.property_data:
