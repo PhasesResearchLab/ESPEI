@@ -323,9 +323,6 @@ def calculate_non_equilibrium_thermochemical_probability(thermochemical_data: Li
     return prob_error
 
 
-# TODO: refactor into one instance per property at the level of this object? We
-#       could approximate that kind of behavior by limiting the datasets to a
-#       subset of only one property at a time.
 class FixedConfigurationPropertyResidual(ResidualFunction):
     def __init__(
         self,
