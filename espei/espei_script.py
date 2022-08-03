@@ -57,11 +57,11 @@ parser.add_argument("--version", "-v", action='version',
 def log_version_info():
     """Print version info to the log"""
     _log.info('espei version       %s', espei.__version__)
-    _log.debug('pycalphad version   %s', pycalphad.__version__)
-    _log.debug('dask version        %s', dask.__version__)
-    _log.debug('distributed version %s', distributed.__version__)
-    _log.debug('symengine version   %s', symengine.__version__)
-    _log.debug('emcee version       %s', emcee.__version__)
+    _log.info('pycalphad version   %s', pycalphad.__version__)
+    _log.info('dask version        %s', dask.__version__)
+    _log.info('distributed version %s', distributed.__version__)
+    _log.info('symengine version   %s', symengine.__version__)
+    _log.info('emcee version       %s', emcee.__version__)
     _log.info("If you use ESPEI for work presented in a publication, we ask that you cite the following paper:\n    %s", espei.__citation__)
 
 
