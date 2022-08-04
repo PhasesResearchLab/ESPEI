@@ -163,14 +163,14 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
     ----------
     desired_data : List[Dataset]
         The selected data
-    independent_comps : list
+    independent_comps : List[str]
         List of indepdendent components. Used for mass balance component conversion
-    conditions : dict
+    conditions : Dict[str, Union[float, ArrayLike]]
         Conditions to filter for. Right now only considers fixed temperatures
 
     Returns
     -------
-    dict
+    Dict[int, List[List[Tuple[str, Dict[str, float], str]]] ]
         A dictonary of list of lists of tuples. Each dictionary key is the
         number of phases in equilibrium, e.g. a key "2" might have values
         [[(PHASE_NAME_1, {'C1': X1, 'C2': X2}, refkey), (PHASE_NAME_2, {'C1': X1, 'C2': X2}, refkey)], ...]
@@ -181,15 +181,24 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
     # integers are the number of equilibria in the phase that are lists of the individual points
     independent_comps = set(independent_comps)
     equilibria_dict = {}
-
     for data in desired_data:
         values = data['values']
-        T = ravel_conditions(data['values'], data['conditions']['T'], zpf=True)[0]
-
-        for equilbrium, temperature in zip(values, T):
+        data_temperatures = np.atleast_1d(data["conditions"]["T"])
+        if data_temperatures.squeeze().ndim == 0:
+            data_temperatures = np.asarray(len(data["values"]) * [data_temperatures[0]])
+        T = ravel_conditions(data['values'], data_temperatures.tolist(), zpf=True)[0]
+        data_pressures = np.atleast_1d(data["conditions"]["P"])
+        if data_pressures.squeeze().ndim == 0:
+            data_pressures = np.asarray(len(data["values"]) * [data_pressures[0]])
+        P = ravel_conditions(data['values'], data_pressures.tolist(), zpf=True)[0]
+        for equilbrium, temperature, pressure in zip(values, T, P):
             if conditions is not None:
                 # make sure that the conditions match
-                if temperature != conditions['T']:
+                temperature_condition = conditions.get('T')
+                if temperature_condition is not None and temperature != temperature_condition:
+                    continue
+                pressure_condition = conditions.get('P')
+                if pressure_condition is not None and pressure != pressure_condition:
                     continue
             # go through each equilibrium phase and ravel it correctly
             this_equilibrium = []
@@ -200,6 +209,9 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
 
                 # fix up any independent component issues and fill out the component dict
                 comp_dict = {}
+                # always add T and P
+                comp_dict['T'] = temperature
+                comp_dict['P'] = pressure
                 # assume that there are len(independent_comps)+1 components
                 # therefore mass balance applies
                 if independent_comps != set(components):
@@ -211,9 +223,7 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
                         c = list(independent_comps.difference(set(components)))[0]
                         x = None if any([xx is None for xx in compositions]) else 1 - sum(compositions)
                     comp_dict[c] = x
-                if conditions is None:
-                    # assume the other condition is temperature:
-                    comp_dict['T'] = temperature
+
                 this_equilibrium.append((phase_name, comp_dict, data['reference']))
 
             # add this set of equilibrium phases to the correct key in the equilibria dict

@@ -23,6 +23,7 @@ from espei.utils import build_sitefractions
 
 plot_mapping = {
     'T': 'Temperature (K)',
+    'P': 'Pressure (Pa)',
     'CPM': 'Heat Capacity (J/K-mol-atom)',
     'HM': 'Enthalpy (J/mol-atom)',
     'SM': 'Entropy (J/K-mol-atom)',
@@ -251,13 +252,11 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs
     legend_handles, phase_color_map = phase_legend(phases_without_hyperplane)
     # Force hyperplane color to black
     phase_color_map["__HYPERPLANE__"] = "black"
-    
+
     if projection is None:
         # TODO: There are lot of ways this could break in multi-component situations
-
-        # plot x vs. T
-        y = 'T'
-
+        # plot x (X) vs. y (T/P)
+        y = str(y)
         # handle plotting kwargs
         scatter_kwargs = {'markersize': 6, 'markeredgewidth': 1}
         # raise warnings if any of the aliased versions of the default values are used
@@ -267,7 +266,10 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs
                 warnings.warn("'{0}' passed as plotting keyword argument to dataplot, but the alias '{1}' is already set to '{2}'. Use the full version of the keyword argument '{1}' to override the default.".format(aliased_arg, actual_arg, scatter_kwargs.get(actual_arg)))
         scatter_kwargs.update(plot_kwargs)
 
-        eq_dict = ravel_zpf_values(desired_data, [x])
+        # fixed_pot_conds used to filter the ZPF values for ones that match the
+        # caller specified conditions (via floating point equality [==])
+        fixed_pot_conds = {str(key): val for key, val in conds.items() if ((key == v.T) or (key == v.P)) and len(np.atleast_1d(val)) == 1}
+        eq_dict = ravel_zpf_values(desired_data, [x], conditions=fixed_pot_conds)
         updated_tieline_plot_kwargs = {'linewidth':1, 'color':'k'}
         if tieline_plot_kwargs is not None:
             updated_tieline_plot_kwargs.update(tieline_plot_kwargs)
@@ -304,6 +306,10 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs
             if aliased_arg in plot_kwargs:
                 warnings.warn("'{0}' passed as plotting keyword argument to dataplot, but the alias '{1}' is already set to '{2}'. Use the full version of the keyword argument '{1}' to override the default.".format(aliased_arg, actual_arg, scatter_kwargs.get(actual_arg)))
         scatter_kwargs.update(plot_kwargs)
+
+        # Only T supported
+        if y is not v.T:
+            raise ValueError("Only fixed temperature currently supported for triangular projections")
 
         eq_dict = ravel_zpf_values(desired_data, [x, y], {'T': conds[v.T]})
 

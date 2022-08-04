@@ -1,11 +1,12 @@
 import numpy as np
 import tinydb
 
-from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter
+from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter, ravel_zpf_values
 from espei.datasets import recursive_map
 from espei.sublattice_tools import recursive_tuplify
 from espei.utils import PickleableTinyDB, MemoryStorage
 from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
+from .testing_data import dataset_multi_valid_ternary, dataset_multi_valid_ternary_fixedT_manyP, dataset_multi_valid_ternary_manyT_manyP
 
 
 def test_get_data_for_a_minimal_example():
@@ -149,3 +150,44 @@ def test_get_prop_samples_broadcasts_weights_correctly():
     print(calculate_dict)
     assert calculate_dict["values"].shape == (16,)
     assert calculate_dict["values"].size == len(calculate_dict["weights"])
+
+
+def test_ravel_zpf_values_for_T_and_P_conditions():
+    """Temperature and pressure conditions can be acquired from ZPF data"""
+
+    # 3 temperatures, 1 pressure
+    ravelled_zpf_data = ravel_zpf_values([dataset_multi_valid_ternary], ["CR", "NI"])
+    print(ravelled_zpf_data)
+    two_phase_equilibria = ravelled_zpf_data[2]
+    assert [len(phase_compositions) for phase_compositions in two_phase_equilibria] == [2, 2, 2]
+    # 3 sets of equilibria, where each has two phase compositions with conditions
+    assert np.all(np.asarray([phase_comp_conds["P"] for _, phase_comp_conds, _ in two_phase_equilibria[0]]) == np.asarray([101325.0, 101325.0]))
+    assert np.all(np.asarray([phase_comp_conds["P"] for _, phase_comp_conds, _ in two_phase_equilibria[1]]) == np.asarray([101325.0, 101325.0]))
+    assert np.all(np.asarray([phase_comp_conds["P"] for _, phase_comp_conds, _ in two_phase_equilibria[2]]) == np.asarray([101325.0, 101325.0]))
+    assert np.all(np.asarray([phase_comp_conds["T"] for _, phase_comp_conds, _ in two_phase_equilibria[0]]) == np.asarray([1348, 1348]))
+    assert np.all(np.asarray([phase_comp_conds["T"] for _, phase_comp_conds, _ in two_phase_equilibria[1]]) == np.asarray([1176, 1176]))
+    assert np.all(np.asarray([phase_comp_conds["T"] for _, phase_comp_conds, _ in two_phase_equilibria[2]]) == np.asarray([977, 977]))
+
+    # 1 temperature, 3 pressures
+    ravelled_zpf_data = ravel_zpf_values([dataset_multi_valid_ternary_fixedT_manyP], ["CR", "NI"])
+    two_phase_equilibria = ravelled_zpf_data[2]
+    assert [len(phase_compositions) for phase_compositions in two_phase_equilibria] == [2, 2, 2]
+    # 3 sets of equilibria, where each has two phase compositions with conditions
+    assert np.all(np.asarray([phase_comp_conds["P"] for _, phase_comp_conds, _ in two_phase_equilibria[0]]) == np.asarray([1e5, 1e5]))
+    assert np.all(np.asarray([phase_comp_conds["P"] for _, phase_comp_conds, _ in two_phase_equilibria[1]]) == np.asarray([2e5, 2e5]))
+    assert np.all(np.asarray([phase_comp_conds["P"] for _, phase_comp_conds, _ in two_phase_equilibria[2]]) == np.asarray([3e5, 3e5]))
+    assert np.all(np.asarray([phase_comp_conds["T"] for _, phase_comp_conds, _ in two_phase_equilibria[0]]) == np.asarray([1000.0, 1000.0]))
+    assert np.all(np.asarray([phase_comp_conds["T"] for _, phase_comp_conds, _ in two_phase_equilibria[1]]) == np.asarray([1000.0, 1000.0]))
+    assert np.all(np.asarray([phase_comp_conds["T"] for _, phase_comp_conds, _ in two_phase_equilibria[2]]) == np.asarray([1000.0, 1000.0]))
+
+    # 3 temperatures, 3 pressures
+    ravelled_zpf_data = ravel_zpf_values([dataset_multi_valid_ternary_manyT_manyP], ["CR", "NI"])
+    two_phase_equilibria = ravelled_zpf_data[2]
+    assert [len(phase_compositions) for phase_compositions in two_phase_equilibria] == [2, 2, 2]
+    # 3 sets of equilibria, where each has two phase compositions with conditions
+    assert np.all(np.asarray([phase_comp_conds["P"] for _, phase_comp_conds, _ in two_phase_equilibria[0]]) == np.asarray([1e5, 1e5]))
+    assert np.all(np.asarray([phase_comp_conds["P"] for _, phase_comp_conds, _ in two_phase_equilibria[1]]) == np.asarray([2e5, 2e5]))
+    assert np.all(np.asarray([phase_comp_conds["P"] for _, phase_comp_conds, _ in two_phase_equilibria[2]]) == np.asarray([3e5, 3e5]))
+    assert np.all(np.asarray([phase_comp_conds["T"] for _, phase_comp_conds, _ in two_phase_equilibria[0]]) == np.asarray([1348, 1348]))
+    assert np.all(np.asarray([phase_comp_conds["T"] for _, phase_comp_conds, _ in two_phase_equilibria[1]]) == np.asarray([1176, 1176]))
+    assert np.all(np.asarray([phase_comp_conds["T"] for _, phase_comp_conds, _ in two_phase_equilibria[2]]) == np.asarray([977, 977]))
