@@ -31,11 +31,11 @@ def test_dataplot_runs(datasets_db):
 def test_dataplot_runs_ternary_isothermal(datasets_db):
     """Test that dataplot runs without an error for a ternary isothermal case."""
 
-    datasets_db.insert(dataset_multi_valid_ternary)
+    datasets_db.insert(A_B_C_DATASET_TERNARY_PHASE_EQUILIBRIA)
 
-    comps = ['AL', 'CR', 'NI', 'VA']
-    phases = ['AL3NI2', 'BCC_B2']
-    conds = {v.P: 101325, v.T: 1348.0, v.X('CR'): (0, 1, 0.01), v.X('NI'): (0, 1, 0.01)}
+    comps = ['A', 'B', 'C', 'VA']
+    phases = ['PHASE_1', 'PHASE_2']
+    conds = {v.P: 101325, v.T: 300.0, v.X('B'): (0, 1, 0.01), v.X('C'): (0, 1, 0.01)}
     fig = plt.figure()
     dataplot(comps, phases, conds, datasets_db)
     # fig.savefig('test_dataplot_runs-figure.png')
