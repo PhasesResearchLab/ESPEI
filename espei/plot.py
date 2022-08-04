@@ -307,10 +307,7 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs
                 warnings.warn("'{0}' passed as plotting keyword argument to dataplot, but the alias '{1}' is already set to '{2}'. Use the full version of the keyword argument '{1}' to override the default.".format(aliased_arg, actual_arg, scatter_kwargs.get(actual_arg)))
         scatter_kwargs.update(plot_kwargs)
 
-        # Only T supported
-        if y is not v.T:
-            raise ValueError("Only fixed temperature currently supported for triangular projections")
-
+        # Only fixed T supported for isopotential ternary projections
         eq_dict = ravel_zpf_values(desired_data, [x, y], {'T': conds[v.T]})
 
         # two phase

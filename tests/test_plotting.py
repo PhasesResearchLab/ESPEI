@@ -28,6 +28,21 @@ def test_dataplot_runs(datasets_db):
     plt.close(fig)
 
 
+def test_dataplot_runs_ternary_isothermal(datasets_db):
+    """Test that dataplot runs without an error for a ternary isothermal case."""
+
+    datasets_db.insert(dataset_multi_valid_ternary)
+
+    comps = ['AL', 'CR', 'NI', 'VA']
+    phases = ['AL3NI2', 'BCC_B2']
+    conds = {v.P: 101325, v.T: 1348.0, v.X('CR'): (0, 1, 0.01), v.X('NI'): (0, 1, 0.01)}
+    fig = plt.figure()
+    dataplot(comps, phases, conds, datasets_db)
+    # fig.savefig('test_dataplot_runs-figure.png')
+    plt.close(fig)
+
+
+
 def test_plot_interaction_runs(datasets_db):
     """Test that plot_interaction runs without an error."""
     dbf = Database(CU_MG_TDB)
