@@ -5,6 +5,19 @@ Changelog
 |version| (development)
 =======================
 
+0.8.9 (2022-08-04)
+==================
+
+Improvements
+============
+* Support varying pressure and P-X plots in dataplot() and ravel_zpf_values() (`@bocklund`_ - :issue:`240`)
+* MCMC: Refactor residual/likelihood functions to better support custom user data types and likelihood functions (`@bocklund`_ - :issue:`236`)
+
+Deprecations
+============
+* Drop Python 3.7 (following NEP-29) (`@bocklund`_ - :issue:`237`)
+* Remove custom graph of optimizer history (`@bocklund`_ - :issue:`235`)
+
 0.8.8 (2022-05-22)
 ==================
 
