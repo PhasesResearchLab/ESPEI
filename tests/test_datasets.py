@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from espei.datasets import DatasetError, check_dataset, clean_dataset, apply_tags
 
-from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, LI_SN_LIQUID_DATA
+from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, LI_SN_LIQUID_DATA, dataset_multi_valid_ternary
 from .fixtures import datasets_db
 
 dataset_single_valid = {
@@ -66,20 +66,6 @@ dataset_multi_valid = {
     ],
 }
 
-dataset_multi_valid_ternary = {
-    "components": ["AL", "CR", "NI", "VA"],
-    "phases": ["AL3NI2", "BCC_B2"],
-    "conditions": {
-        "P": 101325,
-        "T": [1348, 1176, 977]
-    },
-    "output": "ZPF",
-    "values": [
-        [["AL3NI2", ["CR", "NI"], [0.2, 0.4083]], ["BCC_B2", ["CR", "NI"], [None, None]]],
-        [["AL3NI2", ["CR", "NI"], [0.2, 0.4114]], ["BCC_B2", ["CR", "NI"], [0.2, 0.4456]]],
-        [["AL3NI2", ["CR", "NI"], [0.2, 0.4114]], ["BCC_B2", ["CR", "NI"], [0.2, 0.4532]]]
-    ],
-}
 
 dataset_multi_misaligned = {
     "components": ["AL", "NI"],

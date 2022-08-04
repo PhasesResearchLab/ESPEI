@@ -1388,3 +1388,54 @@ SGTE91_PURE_ELEMENTS = (
       'SM', 'SN', 'SR', 'TA', 'TB', 'TC', 'TE', 'TH', 'TI', 'TL', 'TM', 'U',
       'V', 'W', 'Y', 'YB', 'ZN', 'ZR',
 )
+
+
+dataset_multi_valid_ternary = {
+    "components": ["AL", "CR", "NI", "VA"],
+    "phases": ["AL3NI2", "BCC_B2"],
+    "conditions": {
+        "P": 101325,
+        "T": [1348, 1176, 977]
+    },
+    "output": "ZPF",
+    "values": [
+        [["AL3NI2", ["CR", "NI"], [0.2, 0.4083]], ["BCC_B2", ["CR", "NI"], [None, None]]],
+        [["AL3NI2", ["CR", "NI"], [0.2, 0.4114]], ["BCC_B2", ["CR", "NI"], [0.2, 0.4456]]],
+        [["AL3NI2", ["CR", "NI"], [0.2, 0.4114]], ["BCC_B2", ["CR", "NI"], [0.2, 0.4532]]]
+    ],
+    "reference": "testreference",
+}
+
+
+dataset_multi_valid_ternary_fixedT_manyP = {
+    "components": ["AL", "CR", "NI", "VA"],
+    "phases": ["AL3NI2", "BCC_B2"],
+    "conditions": {
+        "P": [1e5, 2e5, 3e5],
+        "T": [1000.0]
+    },
+    "output": "ZPF",
+    "values": [
+        [["AL3NI2", ["CR", "NI"], [0.2, 0.4083]], ["BCC_B2", ["CR", "NI"], [None, None]]],
+        [["AL3NI2", ["CR", "NI"], [0.2, 0.4114]], ["BCC_B2", ["CR", "NI"], [0.2, 0.4456]]],
+        [["AL3NI2", ["CR", "NI"], [0.2, 0.4114]], ["BCC_B2", ["CR", "NI"], [0.2, 0.4532]]]
+    ],
+    "reference": "testreference",
+}
+
+
+dataset_multi_valid_ternary_manyT_manyP = {
+    "components": ["AL", "CR", "NI", "VA"],
+    "phases": ["AL3NI2", "BCC_B2"],
+    "conditions": {
+        "P": [1e5, 2e5, 3e5],
+        "T": [1348, 1176, 977]
+    },
+    "output": "ZPF",
+    "values": [
+        [["AL3NI2", ["CR", "NI"], [0.2, 0.4083]], ["BCC_B2", ["CR", "NI"], [None, None]]],
+        [["AL3NI2", ["CR", "NI"], [0.2, 0.4114]], ["BCC_B2", ["CR", "NI"], [0.2, 0.4456]]],
+        [["AL3NI2", ["CR", "NI"], [0.2, 0.4114]], ["BCC_B2", ["CR", "NI"], [0.2, 0.4532]]]
+    ],
+    "reference": "testreference",
+}
