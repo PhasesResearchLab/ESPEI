@@ -274,7 +274,16 @@ def main():
     # if desired, check datasets and return
     if args.check_datasets:
         dataset_filenames = sorted(recursive_glob(args.check_datasets, '*.json'))
+        
+        #if the path is a file, add that file to the list (test single dataset case!)
+        if(os.path.isfile(args.check_datasets)):
+            dataset_filenames.append(os.path.normpath(args.check_datasets))
+            
+        #if there are no input files, warn the user they may have typed the wrong path
         errors = []
+        if(len(dataset_filenames) == 0):
+            errors.append(OSError("No input .json files detected at "+str(os.path.normpath(args.check_datasets))+", is your path correct?"))
+        
         for dataset in dataset_filenames:
             try:
                 load_datasets([dataset])
