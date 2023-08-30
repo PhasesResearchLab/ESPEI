@@ -11,7 +11,7 @@ class ModelMetadata(BaseModel):
     sublattice_model: List[List[ComponentName]]
     sublattice_site_ratios: List[PositiveFloat]
     # Fully qualified import path for a Python class that follows the pycalphad.Model API
-    model: Optional[PyObject]
+    model: Optional[PyObject] = None
 
 
 class PhaseModelSpecification(BaseModel):
