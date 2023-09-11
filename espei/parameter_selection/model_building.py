@@ -86,23 +86,44 @@ def build_feature_sets(temperature_features, interaction_features):
     return candidate_models
 
 
-def build_candidate_models(configuration, features):
+def build_redlich_kister_candidate_models(configuration, *noninteraction_features, max_binary_redlich_kister_order=3, ternary_symmetric_parameter=True, ternary_asymmetric_parameters=True):
     """
-    Return a dictionary of features and candidate models
+    Return a list of candidate symbolic models for a string configuration and
+    set of symbolic features. The candidate models are a Cartesian product of
+    the successive non-mixing features and successive Redlich-Kister-Muggianu
+    mixing features.
+
+    Here "successive" means that we take the features and (exhaustively)
+    generate models of increasing complexity. For example, if we have non-mixing
+    features [1, T, T**2, T**3], then we generate 4 candidates of increasing
+    complexity: [1], [1, T], [1, T, T**2], and [1, T, T**2, T**3]. For a max
+    Redlich-Kister order of 2, we have [L0, L1, L2] candidates and there will be
+    3 candidate features sets of increasing complexity for mixing: [L0],
+    [L0, L1], and [L0, L1, L2].
 
     Parameters
     ----------
-    configuration : tuple
+    configuration : Tuple[str]
         Configuration tuple, e.g. (('A', 'B', 'C'), 'A')
-    features : dict
-        Dictionary of {str: list} of generic features for a model, not
-        considering the configuration. For example:
-        {'CPM_FORM': [symengine.S.One, v.T, v.T**2, v.T**3]}
+    noninteraction_features : List[Symbol]
+        Each entry is a list of non-mixing features, for example: temperature
+        features [symengine.S.One, v.T, v.T**2, v.T**3] or pressure features
+        [symengine.S.One, v.P, v.P**3, v.P**3]. Note that only one set of
+        non-mixing features are currently allowed.
+    max_binary_redlich_kister_order : int
+        For binary mixing configurations: highest order Redlich-Kister
+        interaction parameter to generate. 0 gives L0, 1 gives L0 and L1, etc.
+    ternary_symmetric_parameter : bool
+        For ternary mixing configurations: if true (the default), add a
+        symmetric interaction parameter.
+    ternary_asymmetric_parameters : bool
+        For ternary mixing configurations: if true (the default), add asymmetric
+        interaction parameters.
 
     Returns
     -------
-    dict
-        Dictionary of {feature: [candidate_models])
+    List[List[Symbol]]
+        List of candidate models
 
     Notes
     -----
@@ -118,43 +139,45 @@ def build_candidate_models(configuration, features):
     L0: A
     L1: A + BT
     """
-    feature_candidate_models = {}
+    # TODO: generalize build_feature_sets to enable multiple sets of non-mixing features
+    # suggested API: build_feature_sets(interaction_features, *noninteraction_features)
+    assert len(noninteraction_features) == 1, f"Exactly one set of non-mixing features is allowed. Got {len(noninteraction_features)}: {noninteraction_features}"
     if not interaction_test(configuration):  # endmembers only
-        for feature_name, temperature_features in features.items():
-            interaction_features = (symengine.S.One,)
-            feature_candidate_models[feature_name] = build_feature_sets(temperature_features, interaction_features)
+        interaction_features = (symengine.S.One,)
+        return build_feature_sets(*noninteraction_features, interaction_features)
     elif interaction_test(configuration, 2):  # has a binary interaction
         YS = symengine.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
         Z = symengine.Symbol('Z')
-        for feature_name, temperature_features in features.items():
+        if max_binary_redlich_kister_order >= 0:
             # generate increasingly complex interactions (power of Z is Redlich-Kister order)
-            interaction_features = (YS, YS*Z, YS*(Z**2), YS*(Z**3))  # L0, L1, L2, L3
-            feature_candidate_models[feature_name] = build_feature_sets(temperature_features, interaction_features)
+            interaction_features = [YS*(Z**order) for order in range(0, max_binary_redlich_kister_order + 1)]
+        else:
+            interaction_features = []
+        return build_feature_sets(*noninteraction_features, interaction_features)
     elif interaction_test(configuration, 3):  # has a ternary interaction
         # Ternaries interactions should have exactly two interaction sets:
         # 1. a single symmetric ternary parameter (YS)
         YS = symengine.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
         # 2. L0, L1, and L2 parameters
         V_I, V_J, V_K = symengine.Symbol('V_I'), symengine.Symbol('V_J'), symengine.Symbol('V_K')
-        symmetric_interactions = (YS,) # symmetric L0
-        for feature_name, temperature_features in features.items():
+        ternary_feature_sets = []
+        if ternary_symmetric_parameter:
+            ternary_feature_sets += build_feature_sets(*noninteraction_features, (YS,))
+        if ternary_asymmetric_parameters:
             # We are ignoring cases where we have L0 == L1 != L2 (and like
             # permutations) because these cases (where two elements exactly the
-            # same behavior) don't exist in reality. Tthe symmetric case is
+            # same behavior) don't exist in reality. The symmetric case is
             # mainly for small corrections and dimensionality reduction.
             # Because we don't want our parameter interactions to be successive
             # (i.e. products of symmetric and asymmetric terms), we'll candidates in two steps
-            tern_ix_cands = []
-            tern_ix_cands += build_feature_sets(temperature_features, symmetric_interactions)
             # special handling for asymmetric features, we don't want a successive V_I, V_J, V_K, but all three should be present
             asym_feats = (
-                build_feature_sets(temperature_features, (YS * V_I,)), # asymmetric L0
-                build_feature_sets(temperature_features, (YS * V_J,)), # asymmetric L1
-                build_feature_sets(temperature_features, (YS * V_K,)), # asymmetric L2
-            )                
+                build_feature_sets(*noninteraction_features, (YS * V_I,)), # asymmetric L0
+                build_feature_sets(*noninteraction_features, (YS * V_J,)), # asymmetric L1
+                build_feature_sets(*noninteraction_features, (YS * V_K,)), # asymmetric L2
+            )
             for v_i_feats, v_j_feats, v_k_feats in zip(*asym_feats):
-                tern_ix_cands.append(v_i_feats + v_j_feats + v_k_feats)
-            feature_candidate_models[feature_name] = tern_ix_cands
+                ternary_feature_sets.append(v_i_feats + v_j_feats + v_k_feats)
+        return ternary_feature_sets
     else:
         raise ValueError(f"Interaction order not known for configuration {configuration}")
-    return feature_candidate_models

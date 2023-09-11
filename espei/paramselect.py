@@ -33,7 +33,7 @@ import espei.refdata
 from espei.database_utils import initialize_database
 from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter
 from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
-from espei.parameter_selection.model_building import build_candidate_models
+from espei.parameter_selection.model_building import build_redlich_kister_candidate_models
 from espei.parameter_selection.selection import select_model
 from espei.parameter_selection.utils import get_data_quantities, feature_transforms, _get_sample_condition_dicts
 from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
@@ -167,7 +167,9 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                                 ("HM_FORM", (symengine.S.One,)),
                                 ])
     # dict of {feature, [candidate_models]}
-    candidate_models_features = build_candidate_models(configuration, features)
+    candidate_models_features = {}
+    for feature_name, noninteraction_features in features.items():
+        candidate_models_features[feature_name] = build_redlich_kister_candidate_models(configuration, noninteraction_features)
 
     # All possible parameter values that could be taken on. This is some legacy
     # code from before there were many candidate models built. For very large
