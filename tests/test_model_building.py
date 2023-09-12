@@ -7,7 +7,7 @@ from collections import OrderedDict
 import symengine
 from pycalphad import variables as v
 
-from espei.parameter_selection.model_building import build_feature_sets, build_redlich_kister_candidate_models
+from espei.parameter_selection.model_building import build_feature_sets, build_redlich_kister_candidate_models, make_successive
 from espei.sublattice_tools import generate_symmetric_group, sorted_interactions
 
 
@@ -15,9 +15,9 @@ def test_build_feature_sets_generates_desired_binary_features_for_cp_like():
     """Binary feature sets can be correctly generated for heat capacity-like features"""
     YS = symengine.Symbol("YS")
     Z = symengine.Symbol("Z")
-    temp_features = [v.T, v.T**2, 1/v.T, v.T**3]
+    temp_feature_sets = make_successive([v.T, v.T**2, 1/v.T, v.T**3])
     excess_features= [YS, YS*Z, YS*Z**2, YS*Z**3]
-    feat_sets = build_feature_sets(temp_features, excess_features)
+    feat_sets = build_feature_sets(temp_feature_sets, excess_features)
     assert len(feat_sets) == 340
     assert feat_sets[0] == [v.T*YS]
     assert feat_sets[5] == [v.T*YS, v.T*YS*Z, v.T**2*YS*Z]
@@ -33,8 +33,8 @@ def test_binary_candidate_models_are_constructed_correctly():
     """Candidate models should be generated for all valid combinations of possible models in the binary case"""
     YS = symengine.Symbol('YS')
     Z = symengine.Symbol('Z')
-    CPM_FORM_features = (v.T*symengine.log(v.T), v.T**2)
-    candidate_models = build_redlich_kister_candidate_models((('A', 'B'), 'A'), CPM_FORM_features)
+    CPM_FORM_feature_sets = make_successive([v.T*symengine.log(v.T), v.T**2])
+    candidate_models = build_redlich_kister_candidate_models((('A', 'B'), 'A'), CPM_FORM_feature_sets)
     assert candidate_models == [
             [v.T*YS*symengine.log(v.T)],
             [v.T*YS*symengine.log(v.T), v.T**2*YS],
@@ -67,16 +67,16 @@ def test_binary_candidate_models_are_constructed_correctly():
             [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*symengine.log(v.T)],
             [v.T*YS*symengine.log(v.T), v.T**2*YS, v.T*YS*Z*symengine.log(v.T), v.T**2*YS*Z, v.T*YS*Z**2*symengine.log(v.T), v.T**2*YS*Z**2, v.T*YS*Z**3*symengine.log(v.T), v.T**2*YS*Z**3]
     ]
-    SM_FORM_features = (v.T,)
-    candidate_models = build_redlich_kister_candidate_models((('A', 'B'), 'A'), SM_FORM_features)
+    SM_FORM_feature_sets = make_successive([v.T,])
+    candidate_models = build_redlich_kister_candidate_models((('A', 'B'), 'A'), SM_FORM_feature_sets)
     assert candidate_models == [
             [v.T*YS],
             [v.T*YS, v.T*YS*Z],
             [v.T*YS, v.T*YS*Z, v.T*YS*Z**2],
             [v.T*YS, v.T*YS*Z, v.T*YS*Z**2, v.T*YS*Z**3]
     ]
-    HM_FORM_features = (symengine.S.One,)
-    candidate_models = build_redlich_kister_candidate_models((('A', 'B'), 'A'), HM_FORM_features)
+    HM_FORM_feature_sets = make_successive([symengine.S.One,])
+    candidate_models = build_redlich_kister_candidate_models((('A', 'B'), 'A'), HM_FORM_feature_sets)
     assert candidate_models == [
             [YS],
             [YS, YS*Z],
@@ -90,22 +90,22 @@ def test_ternary_candidate_models_are_constructed_correctly():
     YS = symengine.Symbol('YS')
     V_I, V_J, V_K = symengine.Symbol('V_I'), symengine.Symbol('V_J'), symengine.Symbol('V_K')
 
-    CPM_FEATURES = [v.T*symengine.log(v.T), v.T**2]
-    CPM_candidate_models = build_redlich_kister_candidate_models((('A', 'B', 'C'), 'A'), CPM_FEATURES)
+    CPM_FEATURE_SETS = make_successive([v.T*symengine.log(v.T), v.T**2])
+    CPM_candidate_models = build_redlich_kister_candidate_models((('A', 'B', 'C'), 'A'), CPM_FEATURE_SETS)
     assert CPM_candidate_models == [
             [v.T*YS*symengine.log(v.T)],
             [v.T*YS*symengine.log(v.T), v.T**2*YS],
             [v.T*V_I*YS*symengine.log(v.T), v.T*V_J*YS*symengine.log(v.T), v.T*V_K*YS*symengine.log(v.T)],
             [v.T*V_I*YS*symengine.log(v.T), v.T**2*V_I*YS, v.T*V_J*YS*symengine.log(v.T), v.T**2*V_J*YS, v.T*V_K*YS*symengine.log(v.T), v.T**2*V_K*YS],
         ]
-    SM_FEATURES = [v.T]
-    SM_candidate_models = build_redlich_kister_candidate_models((('A', 'B', 'C'), 'A'), SM_FEATURES)
+    SM_FEATURE_SETS = make_successive([v.T])
+    SM_candidate_models = build_redlich_kister_candidate_models((('A', 'B', 'C'), 'A'), SM_FEATURE_SETS)
     assert SM_candidate_models == [
             [v.T*YS],
             [v.T*V_I*YS, v.T*V_J*YS, v.T*V_K*YS]
         ]
-    HM_FEATURES = [symengine.S.One]
-    HM_candidate_models = build_redlich_kister_candidate_models((('A', 'B', 'C'), 'A'), HM_FEATURES)
+    HM_FEATURE_SETS = make_successive([symengine.S.One])
+    HM_candidate_models = build_redlich_kister_candidate_models((('A', 'B', 'C'), 'A'), HM_FEATURE_SETS)
     assert HM_candidate_models == [
             [YS],
             [V_I*YS, V_J*YS, V_K*YS]
