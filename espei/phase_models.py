@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional, Type
 
-from pydantic import BaseModel, PositiveFloat, PyObject
+from pydantic import BaseModel, PositiveFloat
+from pydantic.types import ImportString
 from pycalphad import Model
 
 from espei.typing import ComponentName, PhaseName
@@ -11,7 +12,7 @@ class ModelMetadata(BaseModel):
     sublattice_model: List[List[ComponentName]]
     sublattice_site_ratios: List[PositiveFloat]
     # Fully qualified import path for a Python class that follows the pycalphad.Model API
-    model: Optional[PyObject] = None
+    model: Optional[ImportString] = None
 
 
 class PhaseModelSpecification(BaseModel):
