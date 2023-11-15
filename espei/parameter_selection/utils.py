@@ -19,7 +19,9 @@ feature_transforms = {"CPM_FORM": lambda GM: -v.T*symengine.diff(GM, v.T, 2),
                       "SM": lambda GM: -symengine.diff(GM, v.T),
                       "HM_FORM": lambda GM: GM - v.T*symengine.diff(GM, v.T),
                       "HM_MIX": lambda GM: GM - v.T*symengine.diff(GM, v.T),
-                      "HM": lambda GM: GM - v.T*symengine.diff(GM, v.T)}
+                      "HM": lambda GM: GM - v.T*symengine.diff(GM, v.T),
+                      "IDENTITY": lambda x: x,
+                      }
 
 
 def shift_reference_state(desired_data, feature_transform, fixed_model, mole_atoms_per_mole_formula_unit):
@@ -65,12 +67,26 @@ def shift_reference_state(desired_data, feature_transform, fixed_model, mole_ato
             if dataset['output'].endswith('_FORM'):
                 pass
             elif dataset['output'].endswith('_MIX'):
+                # TODO: Gibbs energy assumption!
                 if occupancy is None:
                     raise ValueError('Cannot have a _MIX property without sublattice occupancies.')
                 else:
-                    values[..., config_idx] += feature_transform(fixed_model.models['ref'])*mole_atoms_per_mole_formula_unit
+                    # values[..., config_idx] += feature_transform(fixed_model.models['ref'])*mole_atoms_per_mole_formula_unit
+                    # TODO: experimental V0 assumption
+                    values[..., config_idx] += feature_transform(fixed_model.V0)*mole_atoms_per_mole_formula_unit
+
             else:
-                raise ValueError(f'Unknown property to shift: {dataset["output"]}')
+                # TODO: hacking in a `pass` for new types of data.
+                # For traditional ESPEI fitting, we pass on _FORM data because ESPEI has GHSER symbols that are zeroed out and therefore we have no additions/subtractions to make.
+                # however, for new types of data, we want to be able to fit absolute values, which means that there isn't this special case.
+                # we probably need to add some kind of protection here so that this code still raises an error if a user tries to use this function with an energy derivative used for Gibbs energy fitting (GM, HM, SM, CPM) without a reference state.
+                pass
+                # raise ValueError(f'Unknown property to shift: {dataset["output"]}')
+            # TODO: we need to be really careful about excluded model contributions.
+            # This is fundamentally a Gibbs energy assumption. That is, if we're
+            # fitting a v0 model and have idmix model contribution excluded,
+            # that's going to be added even though idmix isn't a contribution to
+            # that type of model.
             for excluded_contrib in unique_excluded_contributions:
                 values[..., config_idx] += feature_transform(fixed_model.models[excluded_contrib])*mole_atoms_per_mole_formula_unit
         total_response.append(values.flatten())
@@ -124,7 +140,8 @@ def get_data_quantities(desired_property, fixed_model, fixed_portions, data, sam
     feat_transform = feature_transforms[desired_property]
     data_qtys = np.concatenate(shift_reference_state(data, feat_transform, fixed_model, mole_atoms_per_mole_formula_unit), axis=-1)
     # Remove existing partial model contributions from the data, convert to per mole-formula units
-    data_qtys = data_qtys - feat_transform(fixed_model.ast)*mole_atoms_per_mole_formula_unit
+    # TODO: assumption of Gibbs energy fitting here - assumes that we're always fitting against the existing ast/GM.
+    data_qtys = data_qtys - feat_transform(fixed_model.V0)*mole_atoms_per_mole_formula_unit
     # Subtract out high-order (in T) parameters we've already fit, already in per mole-formula units
     data_qtys = data_qtys - feat_transform(sum(fixed_portions))
     # if any site fractions show up in our data_qtys that aren't in this datasets site fractions, set them to zero.
