@@ -23,7 +23,10 @@ feature_transforms = {"CPM_FORM": lambda GM: -v.T*symengine.diff(GM, v.T, 2),
                       "IDENTITY": lambda x: x,
                       }
 
-
+# TODO: this function actually does 2 things that should be split up into separate functions:
+# 1. Extract data from Dataset objects into an array of raw values
+# 2. Shifts the reference state of the values
+#    For Gibbs energy (and derivatives), we always shift to _FORM reference state
 def shift_reference_state(desired_data, feature_transform, fixed_model, mole_atoms_per_mole_formula_unit):
     """
     Shift _MIX or _FORM data to a common reference state in per mole-atom units.
