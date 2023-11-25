@@ -72,6 +72,7 @@ def shift_reference_state(desired_data, feature_transform, fixed_model, mole_ato
             elif dataset['output'].endswith('_MIX'):
                 # TODO: Gibbs energy assumption!
                 if occupancy is None:
+                    # TODO: try to assert this at the dataset ingestion level. Try to not make it the business of this function if the data is right.
                     raise ValueError('Cannot have a _MIX property without sublattice occupancies.')
                 else:
                     # values[..., config_idx] += feature_transform(fixed_model.models['ref'])*mole_atoms_per_mole_formula_unit
