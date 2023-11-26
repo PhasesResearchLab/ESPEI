@@ -60,7 +60,7 @@ def filter_temperatures(desired_data: List[Dataset]) -> List[Dataset]:
 
     """
     for data in desired_data:
-        temp_filter = np.atleast_1d(data['conditions']['T']) >= 200.15  # TODO: no commmit, just testing
+        temp_filter = np.atleast_1d(data['conditions']['T']) >= 298.15
         data['conditions']['T'] = np.atleast_1d(data['conditions']['T'])[temp_filter]
         data['values'] = np.array(data['values'], dtype=np.float_)[..., temp_filter, :].tolist()
     return desired_data
