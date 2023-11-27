@@ -27,19 +27,18 @@ import symengine
 from symengine import Symbol
 from tinydb import where
 import tinydb
-from pycalphad import Database, Model, variables as v
+from pycalphad import Database, variables as v
 
 import espei.refdata
 from espei.database_utils import initialize_database
 from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter
 from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
-from espei.parameter_selection.model_building import build_redlich_kister_candidate_models, make_successive
+from espei.parameter_selection.model_building import build_redlich_kister_candidate_models
 from espei.parameter_selection.selection import select_model
-from espei.parameter_selection.utils import feature_transforms, _get_sample_condition_dicts
+from espei.parameter_selection.utils import _get_sample_condition_dicts
 from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
     tuplify, recursive_tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
 from espei.utils import PickleableTinyDB, sigfigs, extract_aliases
-from espei.parameter_selection.fitting_steps import StepHM
 from espei.parameter_selection.fitting_descriptions import gibbs_energy_fitting_description
 
 _log = logging.getLogger(__name__)
@@ -115,7 +114,7 @@ def _build_feature_matrix(sample_condition_dicts: List[Dict[Symbol, float]], sym
     return feature_matrix
 
 
-def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, ridge_alpha=None, aicc_phase_penalty=None, features=None):
+def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, ridge_alpha=None, aicc_phase_penalty=None, fitting_descrption=gibbs_energy_fitting_description):
     """
     Find suitable linear model parameters for the given phase.
     We do this by successively fitting heat capacities, entropies and
@@ -154,62 +153,55 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
 
     """
     aicc_feature_factors = aicc_phase_penalty if aicc_phase_penalty is not None else {}
+    solver_qry = (where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
+    config_tup = tuple(map(tuplify, configuration))
     if interaction_test(configuration):
         _log.debug('ENDMEMBERS FROM INTERACTION: %s', endmembers_from_interaction(configuration))
-
-    parameters = {}
-
-    # These is our previously fit partial model from previous steps
+    # fixed_model is our previously fit partial model from previous steps
     # Subtract out all of these contributions (zero out reference state because these are formation properties)
     fixed_model = None  # Profiling suggests we delay instantiation
     fixed_portions = [0]
-    fitting_descrption = gibbs_energy_fitting_description
+    parameters = {}
     for fitting_step in fitting_descrption.fitting_steps:
-        # TODO: maybe we're losing "_FORM" vs. "_FORM"+"_MIX" data here, not sure if that matters, used to be set in desired props
-        # is it okay if we also grab "_MIX" data for endmember fitting? It should get filtered out by some configuration filter late I think
+        # Search for relevant data
         desired_props = [fitting_step.data_types_read + refstate for refstate in fitting_step.supported_reference_states]
-        feature_type = fitting_step.data_types_read
-        aicc_factor = aicc_feature_factors.get(feature_type, 1.0)
-        solver_qry = (where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
         desired_data = get_prop_data(comps, phase_name, desired_props, datasets, additional_query=solver_qry)
         desired_data = filter_configurations(desired_data, configuration, symmetry)
         desired_data = filter_temperatures(desired_data)
         _log.trace('%s: datasets found: %s', desired_props, len(desired_data))
-        if len(desired_data) > 0:
-            if fixed_model is None:
-                fixed_model = fitting_descrption.model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
-            config_tup = tuple(map(tuplify, configuration))
-            calculate_dict = get_prop_samples(desired_data, config_tup)
-            sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, phase_name)
-            weights = calculate_dict['weights']
-            assert len(sample_condition_dicts) == len(weights)
+        if len(desired_data) == 0:
+            # we didn't find any data, go on to the next fitting step
+            continue
 
-            # We assume all properties in the same fitting step have the same
-            # features (all CPM, all HM, etc., but different ref states).
-            # data quantities are the same for each candidate model and can be computed up front
-            data_qtys = StepHM.get_data_quantities(feature_type, fixed_model, fixed_portions, desired_data, sample_condition_dicts)
+        # Build the candidate model feature matricies and response vector (A, b in Ax=b)
+        if fixed_model is None:
+            fixed_model = fitting_descrption.model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
+        # TODO: can we maybe refactor calculate_dict and sample_condition dicts
+        # to only be in the fitting_step.get_data_quantities?
+        # We also need a way to access the weights, and i think it could be
+        # helpful to assert that the weights are the same dimension as
+        # sample_condition_dicts in that function.
+        calculate_dict = get_prop_samples(desired_data, config_tup)
+        sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, phase_name)
+        response_vector = fitting_step.get_data_quantities(fitting_step.data_types_read, fixed_model, fixed_portions, desired_data, sample_condition_dicts)
+        candidate_models = []
+        feature_sets = build_redlich_kister_candidate_models(configuration, fitting_step.get_feature_sets())
+        for features in feature_sets:
+            feature_matrix = _build_feature_matrix(sample_condition_dicts, list(map(fitting_step.transform_feature, features)))
+            candidate_model = (features, feature_matrix, response_vector)
+            candidate_models.append(candidate_model)
 
-            # build the candidate model transformation matrix and response vector (A, b in Ax=b)
-            feature_matricies = []
-            data_quantities = []
-            feature_sets = build_redlich_kister_candidate_models(configuration, fitting_step.get_feature_sets())
-            for candidate_coefficients in feature_sets:
-                # Map coeffiecients in G to coefficients in the feature_type (H, S, CP)
-                transformed_coefficients = list(map(feature_transforms[feature_type], candidate_coefficients))
-                if interaction_test(configuration, 3):
-                    feature_matricies.append(_build_feature_matrix(sample_condition_dicts, transformed_coefficients))
-                else:
-                    feature_matricies.append(_build_feature_matrix(sample_condition_dicts, transformed_coefficients))
-                data_quantities.append(data_qtys)
-
-            # provide candidate models and get back a selected model.
-            selected_model = select_model(zip(feature_sets, feature_matricies, data_quantities), ridge_alpha, weights=weights, aicc_factor=aicc_factor)
-            selected_features, selected_values = selected_model
-            parameters.update(zip(*(selected_features, selected_values)))
-            # Add these parameters to be fixed for the next fitting step
-            fixed_portion = np.array(selected_features, dtype=np.object_)
-            fixed_portion = np.dot(fixed_portion, selected_values)
-            fixed_portions.append(fixed_portion)
+        # Fit and select a model from the candidates
+        aicc_factor = aicc_feature_factors.get(fitting_step.data_types_read, 1.0)
+        weights = calculate_dict['weights']
+        assert len(sample_condition_dicts) == len(weights)
+        selected_model = select_model(candidate_models, ridge_alpha, weights=weights, aicc_factor=aicc_factor)
+        selected_features, selected_values = selected_model
+        parameters.update(zip(*(selected_features, selected_values)))
+        # Add these parameters to be fixed for the next fitting step
+        fixed_portion = np.array(selected_features, dtype=np.object_)
+        fixed_portion = np.dot(fixed_portion, selected_values)
+        fixed_portions.append(fixed_portion)
     return parameters
 
 

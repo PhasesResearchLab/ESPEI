@@ -43,8 +43,8 @@ class FittingStep():
     def transform_data(d: ArrayLike, model: Optional[Model] = None) -> ArrayLike:  # data may be muddied with symbols from Model
         return d
 
-    @staticmethod
-    def transform_feature(f: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
+    @classmethod
+    def transform_feature(cls, f: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
         return f
 
     @classmethod
@@ -202,6 +202,11 @@ class StepHM(FittingStep):
     data_types_read = "HM"
     supported_reference_states = ["_MIX", "_FORM"]
     features = [symengine.S.One]
+
+    @classmethod
+    def transform_feature(cls, f: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
+        transform = feature_transforms[cls.data_types_read]
+        return transform(f)
 
     # TODO: this function actually does 2 things that should be split up into separate functions:
     # 1. Extract data from Dataset objects into an array of raw values
