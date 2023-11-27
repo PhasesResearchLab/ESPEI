@@ -199,7 +199,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                 fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
             config_tup = tuple(map(tuplify, configuration))
             calculate_dict = get_prop_samples(desired_data, config_tup)
-            sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, list(map(len, config_tup)))
+            sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, phase_name)
             weights = calculate_dict['weights']
             assert len(sample_condition_dicts) == len(weights)
 

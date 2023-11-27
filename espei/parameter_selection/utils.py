@@ -2,7 +2,7 @@
 Tools used across parameter selection modules
 """
 
-from typing import List, Dict
+from typing import Any, List, Dict, Tuple, Union
 import itertools
 import numpy as np
 import symengine
@@ -144,7 +144,8 @@ def get_data_quantities(desired_property, fixed_model, fixed_portions, data, sam
     return data_qtys
 
 
-def _get_sample_condition_dicts(calculate_dict, sublattice_dof) -> List[Dict[Symbol, float]]:
+def _get_sample_condition_dicts(calculate_dict: Dict[Any, Any], configuration_tuple: Tuple[Union[str, Tuple[str]]], phase_name: str) -> List[Dict[Symbol, float]]:
+    sublattice_dof = list(map(len, configuration_tuple))
     sample_condition_dicts = []
     for sample_idx in range(calculate_dict["values"].size):
         cond_dict = {}
@@ -162,8 +163,11 @@ def _get_sample_condition_dicts(calculate_dict, sublattice_dof) -> List[Dict[Sym
         # Required so we can identify which sublattices have interactions
         points_idxs = [0] + np.cumsum(sublattice_dof).tolist()
         site_fractions = []
-        for i in range(len(points_idxs)-1):
-            site_fractions.append(points[points_idxs[i]:points_idxs[i+1]].tolist())
+        for subl_idx in range(len(points_idxs)-1):
+            subl_site_fractions = points[points_idxs[subl_idx]:points_idxs[subl_idx+1]]
+            for species_name, site_frac in zip(configuration_tuple[subl_idx], subl_site_fractions):
+                cond_dict[v.Y(phase_name, subl_idx, species_name)] = site_frac
+            site_fractions.append(subl_site_fractions.tolist())
 
         # Z (binary) or V_I, V_J, V_K (ternary) interaction products
         interaction_product = calc_interaction_product(site_fractions)
