@@ -4,9 +4,9 @@ Test the utilities for parameter generation
 import numpy as np
 from pycalphad import Database, Model, variables as v
 from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
-from espei.parameter_selection.utils import get_data_quantities, _get_sample_condition_dicts
+from espei.parameter_selection.utils import _get_sample_condition_dicts
+from espei.parameter_selection.fitting_steps import StepHM
 from espei.sublattice_tools import interaction_test
-
 
 def test_interaction_detection():
     """interaction_test should correctly calculate interactions for different candidate configurations"""
@@ -104,7 +104,7 @@ def test_get_data_quantities_AL_NI_VA_interaction():
     config_tup = (('AL',), ('NI', 'VA'), ('VA',))
     calculate_dict = get_prop_samples(data, config_tup)
     sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, mod.phase_name)
-    qty = get_data_quantities('HM_FORM', mod, [0], data, sample_condition_dicts)
+    qty = StepHM.get_data_quantities('HM_FORM', mod, [0], data, sample_condition_dicts)
     print(qty)
     assert np.all(np.isclose([-6254.7802775, -5126.1206475, -7458.3974225, -6358.04118875], qty))
 
@@ -127,7 +127,7 @@ def test_get_data_quantities_mixing_entropy():
     config_tup = (('AL',), ('AL', 'CR'))
     calculate_dict = get_prop_samples(data, config_tup)
     sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, mod.phase_name)
-    qty = get_data_quantities('SM_MIX', mod, [0], data, sample_condition_dicts)
+    qty = StepHM.get_data_quantities('SM_MIX', mod, [0], data, sample_condition_dicts)
     print(qty)
     assert np.all(np.isclose([7.27266667], qty))
 
@@ -146,7 +146,7 @@ def test_get_data_quantities_magnetic_energy():
     CONSTITUENT ALCR2 :AL,CR:AL,CR: !
     """)
     mod_nomag = Model(dbf_nomag, ['AL', 'CR'], 'ALCR2')
-    qty_nomag = get_data_quantities('SM_FORM', mod_nomag, [0], data, sample_condition_dicts)
+    qty_nomag = StepHM.get_data_quantities('SM_FORM', mod_nomag, [0], data, sample_condition_dicts)
     print(qty_nomag)
     assert np.all(np.isclose([16.78896], qty_nomag))
 
@@ -174,6 +174,6 @@ def test_get_data_quantities_magnetic_energy():
     PARAMETER BMAGN(ALCR2,AL,CR:CR;0)      298.15 -.92; 6000 N REF0 !
     """)
     mod = Model(dbf, ['AL', 'CR'], 'ALCR2')
-    qty = get_data_quantities('SM_FORM', mod, [0], data, sample_condition_dicts)
+    qty = StepHM.get_data_quantities('SM_FORM', mod, [0], data, sample_condition_dicts)
     print(qty)
     assert np.all(np.isclose([16.78896], qty))

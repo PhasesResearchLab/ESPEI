@@ -30,3 +30,5 @@ class ElasticModel(Model):
             setattr(self, prop, prop_val)
 
 elastic_fitting_description = ModelFittingDescription([StepElasticC11, StepElasticC12, StepElasticC44], model=ElasticModel)
+
+gibbs_energy_fitting_description = ModelFittingDescription([StepHM, StepSM, StepCPM])

@@ -13,7 +13,10 @@ from espei.parameter_selection.utils import build_sitefractions
 
 __all__ = [
     "FittingStep",
-    "StepGenericRKMProperty",
+    "AbstractRKMPropertyStep",
+    "StepHM",
+    "StepSM",
+    "StepCPM",
     "StepElasticC11",
     "StepElasticC12",
     "StepElasticC44",
@@ -82,7 +85,7 @@ class FittingStep():
         raise NotImplementedError()
 
 
-class StepGenericRKMProperty(FittingStep):
+class AbstractRKMPropertyStep(FittingStep):
     """
     This class is a base class for generic Redlich-Kister-Muggianu (RKM) properties.
 
@@ -188,19 +191,139 @@ class StepGenericRKMProperty(FittingStep):
         rhs = np.asarray(rhs, dtype=np.float_)
         return rhs
 
-class StepElasticC11(StepGenericRKMProperty):
+
+# Legacy imports while we're transitioning, fix these
+from espei.parameter_selection.utils import feature_transforms
+# TODO: support fitting GM_MIX and GM_FORM directly from DFT?
+# TODO: for HM, SM, and CPM, refactor to stop using the transforms and build the transforms into the subclasses
+# Maybe this is where we introduce the data and feature transforms class methods?
+class StepHM(FittingStep):
+    parameter_name = "GM"
+    data_types_read = ["HM"]
+    supported_reference_states = ["_MIX", "_FORM"]
+    features: [symengine.S.One]
+
+    # TODO: this function actually does 2 things that should be split up into separate functions:
+    # 1. Extract data from Dataset objects into an array of raw values
+    # 2. Shifts the reference state of the values
+    #    For Gibbs energy (and derivatives), we always shift to _FORM reference state
+    # This is the original s_r_s method from ESPEI
+    @classmethod
+    def shift_reference_state(cls, desired_data, feature_transform, fixed_model, mole_atoms_per_mole_formula_unit):
+        """
+        Shift _MIX or _FORM data to a common reference state in per mole-atom units.
+
+        Parameters
+        ----------
+        desired_data : List[Dict[str, Any]]
+            ESPEI single phase dataset
+        feature_transform : Callable
+            Function to transform an AST for the GM property to the property of
+            interest, i.e. entropy would be ``lambda GM: -symengine.diff(GM, v.T)``
+        fixed_model : pycalphad.Model
+            Model with all lower order (in composition) terms already fit. Pure
+            element reference state (GHSER functions) should be set to zero.
+        mole_atoms_per_mole_formula_unit : float
+            Number of moles of atoms in every mole atom unit.
+
+        Returns
+        -------
+        np.ndarray
+            Data for this feature in [qty]/mole-formula in a common reference state.
+
+        Raises
+        ------
+        ValueError
+
+        Notes
+        -----
+        pycalphad Model parameters are stored as per mole-formula quantites, but
+        the calculated properties and our data are all in [qty]/mole-atoms. We
+        multiply by mole-atoms/mole-formula to convert the units to
+        [qty]/mole-formula.
+
+        """
+        total_response = []
+        for dataset in desired_data:
+            values = np.asarray(dataset['values'], dtype=np.object_)*mole_atoms_per_mole_formula_unit
+            unique_excluded_contributions = set(dataset.get('excluded_model_contributions', []))
+            for config_idx in range(len(dataset['solver']['sublattice_configurations'])):
+                occupancy = dataset['solver'].get('sublattice_occupancies', None)
+                if dataset['output'].endswith('_FORM'):
+                    pass
+                elif dataset['output'].endswith('_MIX'):
+                    if occupancy is None:
+                        raise ValueError('Cannot have a _MIX property without sublattice occupancies.')
+                    else:
+                        values[..., config_idx] += feature_transform(fixed_model.models['ref'])*mole_atoms_per_mole_formula_unit
+                else:
+                    raise ValueError(f'Unknown property to shift: {dataset["output"]}')
+                for excluded_contrib in unique_excluded_contributions:
+                    values[..., config_idx] += feature_transform(fixed_model.models[excluded_contrib])*mole_atoms_per_mole_formula_unit
+            total_response.append(values.flatten())
+        return total_response
+
+
+    @classmethod
+    def get_data_quantities(cls, desired_property, fixed_model, fixed_portions, data, sample_condition_dicts):
+        mole_atoms_per_mole_formula_unit = fixed_model._site_ratio_normalization
+        # Define site fraction symbols that will be reused
+        phase_name = fixed_model.phase_name
+
+        # Construct flattened list of site fractions corresponding to the ravelled data (from shift_reference_state)
+        site_fractions = []
+        for ds in data:
+            for _ in ds['conditions']['T']:
+                sf = build_sitefractions(phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies', np.ones((len(ds['solver']['sublattice_configurations']), len(ds['solver']['sublattice_configurations'][0])), dtype=np.float_)))
+                site_fractions.append(sf)
+        site_fractions = list(itertools.chain(*site_fractions))
+
+        feat_transform = feature_transforms[desired_property]
+        data_qtys = np.concatenate(cls.shift_reference_state(data, feat_transform, fixed_model, mole_atoms_per_mole_formula_unit), axis=-1)
+        # Remove existing partial model contributions from the data, convert to per mole-formula units
+        data_qtys = data_qtys - feat_transform(fixed_model.ast)*mole_atoms_per_mole_formula_unit
+        # Subtract out high-order (in T) parameters we've already fit, already in per mole-formula units
+        data_qtys = data_qtys - feat_transform(sum(fixed_portions))
+        # if any site fractions show up in our data_qtys that aren't in this datasets site fractions, set them to zero.
+        for sf, i, cond_dict in zip(site_fractions, data_qtys, sample_condition_dicts):
+            missing_variables = symengine.S(i).atoms(v.SiteFraction) - set(sf.keys())
+            sf.update({x: 0. for x in missing_variables})
+            # The equations we have just have the site fractions as YS
+            # and interaction products as Z, so take the product of all
+            # the site fractions that we see in our data qtys
+            sf.update(cond_dict)
+        data_qtys = [symengine.S(i).xreplace(sf).evalf() for i, sf in zip(data_qtys, site_fractions)]
+        data_qtys = np.asarray(data_qtys, dtype=np.float_)
+        return data_qtys
+
+
+# TODO: does it make sense to inherit from HM? Do we need an abstract class? Or does fixing the transforms issue and having each implementation be separate be correct?
+# TODO: support "" (absolute) entropy reference state?
+class StepSM(StepHM):
+    data_types_read = ["SM"]
+    features: [v.T]
+
+
+# TODO: support "" (absolute) heat capacity reference state?
+class StepCPM(StepHM):
+    data_types_read = ["CPM"]
+    features: [v.T * symengine.log(v.T), v.T**2, v.T**-1, v.T**3]
+
+
+
+class StepElasticC11(AbstractRKMPropertyStep):
     parameter_name = "C11"
     data_types_read = ["C11"]
 
-class StepElasticC12(StepGenericRKMProperty):
+class StepElasticC12(AbstractRKMPropertyStep):
     parameter_name = "C12"
     data_types_read = ["C12"]
 
-class StepElasticC44(StepGenericRKMProperty):
+class StepElasticC44(AbstractRKMPropertyStep):
     parameter_name = "C44"
     data_types_read = ["C44"]
 
-class StepV0(StepGenericRKMProperty):
+class StepV0(AbstractRKMPropertyStep):
     parameter_name = "V0"
     data_types_read = ["V0"]
     features = [symengine.S.One]
@@ -288,7 +411,7 @@ class StepLogVA(FittingStep):
             total_response.append(values.flatten())
         return total_response
 
-    # TODO: maybe we could refactor the existing StepGenericRKMProperty to use
+    # TODO: maybe we could refactor the existing AbstractRKMPropertyStep to use
     # the cls.transform_data method, as that's really the only difference
     # # between this function and the V0 function.
     @classmethod
