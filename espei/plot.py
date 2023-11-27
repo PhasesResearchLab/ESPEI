@@ -18,7 +18,7 @@ from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_
 from espei.utils import bib_marker_map
 from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter, ravel_zpf_values
 from espei.parameter_selection.utils import _get_sample_condition_dicts
-from espei.sublattice_tools import recursive_tuplify, endmembers_from_interaction
+from espei.sublattice_tools import canonicalize, recursive_tuplify, endmembers_from_interaction
 from espei.utils import build_sitefractions
 
 plot_mapping = {
@@ -581,7 +581,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     constituents = [[sp.name for sp in sorted(subl_constituents.intersection(species))] for subl_constituents in phase_constituents]
     subl_dof = list(map(len, constituents))
     calculate_dict = get_prop_samples(desired_data, constituents)
-    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, subl_dof)
+    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, canonicalize(constituents, symmetry), phase_name)
     interacting_subls = [c for c in recursive_tuplify(configuration) if isinstance(c, tuple)]
     if (len(set(interacting_subls)) == 1) and (len(interacting_subls[0]) == 2):
         # This configuration describes all sublattices with the same two elements interacting
@@ -789,7 +789,8 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
     constituents = [[sp.name for sp in sorted(subl_constituents.intersection(species))] for subl_constituents in phase_constituents]
     subl_dof = list(map(len, constituents))
     calculate_dict = get_prop_samples(desired_data, constituents)
-    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, subl_dof)
+    # we don't take in symmetry here, so we we can't consider equivalent sublattices when canonicalizing
+    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, canonicalize(constituents, None), phase_name)
     endpoints = endmembers_from_interaction(configuration)
     interacting_subls = [c for c in recursive_tuplify(configuration) if isinstance(c, tuple)]
     disordered_config = False

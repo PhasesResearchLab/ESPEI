@@ -103,7 +103,7 @@ def test_get_data_quantities_AL_NI_VA_interaction():
     print(mod.HM)
     config_tup = (('AL',), ('NI', 'VA'), ('VA',))
     calculate_dict = get_prop_samples(data, config_tup)
-    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, list(map(len, config_tup)))
+    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, mod.phase_name)
     qty = get_data_quantities('HM_FORM', mod, [0], data, sample_condition_dicts)
     print(qty)
     assert np.all(np.isclose([-6254.7802775, -5126.1206475, -7458.3974225, -6358.04118875], qty))
@@ -126,7 +126,7 @@ def test_get_data_quantities_mixing_entropy():
     # desired_property, fixed_model, fixed_portions, data, samples
     config_tup = (('AL',), ('AL', 'CR'))
     calculate_dict = get_prop_samples(data, config_tup)
-    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, list(map(len, config_tup)))
+    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, mod.phase_name)
     qty = get_data_quantities('SM_MIX', mod, [0], data, sample_condition_dicts)
     print(qty)
     assert np.all(np.isclose([7.27266667], qty))
@@ -136,7 +136,7 @@ def test_get_data_quantities_magnetic_energy():
     data = [{"components": ["AL", "CR"], "phases": ["ALCR2"], "solver": {"mode": "manual", "sublattice_site_ratios": [1.0, 2.0], "sublattice_configurations": [["AL", "CR"]]}, "conditions": {"P": [101325], "T": [300]}, "excluded_model_contributions": ["idmix", "mag"], "output": "SM_FORM", "values": [[[5.59631999999999]]]}]
     config_tup = (('AL',), ('CR',))
     calculate_dict = get_prop_samples(data, config_tup)
-    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, list(map(len, config_tup)))
+    sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, "ALCR2")
     # First test without any magnetic parameters
     dbf_nomag = Database("""
     ELEMENT AL FCC_A1 26.982 4577.3 28.322 !
