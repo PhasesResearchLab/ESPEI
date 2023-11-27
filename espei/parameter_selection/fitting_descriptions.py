@@ -9,6 +9,13 @@ from espei.parameter_selection.fitting_steps import *
 # one. We'd need to be able to resolve what happens if there are different model
 # objects used.
 class ModelFittingDescription():
+    """
+
+    Attributes
+    ----------
+    fitting_steps: [FittingStep]
+    model: Type[Model]
+    """
     def __init__(self, fitting_steps: [FittingStep], model: Optional[Type[Model]] = Model) -> None:
         self.fitting_steps = fitting_steps
         self.model = model
@@ -31,4 +38,4 @@ class ElasticModel(Model):
 
 elastic_fitting_description = ModelFittingDescription([StepElasticC11, StepElasticC12, StepElasticC44], model=ElasticModel)
 
-gibbs_energy_fitting_description = ModelFittingDescription([StepHM, StepSM, StepCPM])
+gibbs_energy_fitting_description = ModelFittingDescription([StepCPM, StepSM, StepHM])

@@ -40,6 +40,7 @@ from espei.sublattice_tools import generate_symmetric_group, generate_interactio
     tuplify, recursive_tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
 from espei.utils import PickleableTinyDB, sigfigs, extract_aliases
 from espei.parameter_selection.fitting_steps import StepHM
+from espei.parameter_selection.fitting_descriptions import gibbs_energy_fitting_description
 
 _log = logging.getLogger(__name__)
 
@@ -155,40 +156,19 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
     aicc_feature_factors = aicc_phase_penalty if aicc_phase_penalty is not None else {}
     if interaction_test(configuration):
         _log.debug('ENDMEMBERS FROM INTERACTION: %s', endmembers_from_interaction(configuration))
-        fitting_steps = (["CPM_FORM", "CPM_MIX"], ["SM_FORM", "SM_MIX"], ["HM_FORM", "HM_MIX"])
 
-    else:
-        # We are only fitting an endmember; no mixing data needed
-        fitting_steps = (["CPM_FORM"], ["SM_FORM"], ["HM_FORM"])
-
-    # create the candidate models and fitting steps
-    if features is None:
-        features = OrderedDict([("CPM_FORM", (v.T * symengine.log(v.T), v.T**2, v.T**-1, v.T**3)),
-                                ("SM_FORM", (v.T,)),
-                                ("HM_FORM", (symengine.S.One,)),
-                                ])
-    # dict of {feature, [candidate_models]}
-    candidate_models_features = {}
-    for feature_name, potential_features in features.items():
-        candidate_models_features[feature_name] = build_redlich_kister_candidate_models(configuration, make_successive(potential_features))
-
-    # All possible parameter values that could be taken on. This is some legacy
-    # code from before there were many candidate models built. For very large
-    # sets of candidate models, this could be quite slow.
-    # TODO: we might be able to remove this initialization for clarity, depends on fixed poritions
     parameters = {}
-    for candidate_models in candidate_models_features.values():
-        for model in candidate_models:
-            for coef in model:
-                parameters[coef] = 0
 
     # These is our previously fit partial model from previous steps
     # Subtract out all of these contributions (zero out reference state because these are formation properties)
     fixed_model = None  # Profiling suggests we delay instantiation
     fixed_portions = [0]
-
-    for desired_props in fitting_steps:
-        feature_type = desired_props[0].split('_')[0]  # HM_FORM -> HM
+    fitting_descrption = gibbs_energy_fitting_description
+    for fitting_step in fitting_descrption.fitting_steps:
+        # TODO: maybe we're losing "_FORM" vs. "_FORM"+"_MIX" data here, not sure if that matters, used to be set in desired props
+        # is it okay if we also grab "_MIX" data for endmember fitting? It should get filtered out by some configuration filter late I think
+        desired_props = [fitting_step.data_types_read + refstate for refstate in fitting_step.supported_reference_states]
+        feature_type = fitting_step.data_types_read
         aicc_factor = aicc_feature_factors.get(feature_type, 1.0)
         solver_qry = (where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
         desired_data = get_prop_data(comps, phase_name, desired_props, datasets, additional_query=solver_qry)
@@ -197,7 +177,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         _log.trace('%s: datasets found: %s', desired_props, len(desired_data))
         if len(desired_data) > 0:
             if fixed_model is None:
-                fixed_model = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
+                fixed_model = fitting_descrption.model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
             config_tup = tuple(map(tuplify, configuration))
             calculate_dict = get_prop_samples(desired_data, config_tup)
             sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, phase_name)
@@ -212,7 +192,8 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
             # build the candidate model transformation matrix and response vector (A, b in Ax=b)
             feature_matricies = []
             data_quantities = []
-            for candidate_coefficients in candidate_models_features[desired_props[0]]:
+            feature_sets = build_redlich_kister_candidate_models(configuration, fitting_step.get_feature_sets())
+            for candidate_coefficients in feature_sets:
                 # Map coeffiecients in G to coefficients in the feature_type (H, S, CP)
                 transformed_coefficients = list(map(feature_transforms[feature_type], candidate_coefficients))
                 if interaction_test(configuration, 3):
@@ -222,7 +203,7 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
                 data_quantities.append(data_qtys)
 
             # provide candidate models and get back a selected model.
-            selected_model = select_model(zip(candidate_models_features[desired_props[0]], feature_matricies, data_quantities), ridge_alpha, weights=weights, aicc_factor=aicc_factor)
+            selected_model = select_model(zip(feature_sets, feature_matricies, data_quantities), ridge_alpha, weights=weights, aicc_factor=aicc_factor)
             selected_features, selected_values = selected_model
             parameters.update(zip(*(selected_features, selected_values)))
             # Add these parameters to be fixed for the next fitting step
