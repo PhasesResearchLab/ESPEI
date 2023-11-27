@@ -28,8 +28,8 @@ Dataset = Dict[str, Any]  # Typing stub
 
 class FittingStep():
     parameter_name: str
-    # TODO: does it make sense for one fitting step to use multiple data types? Does this actually happen anywhere?
-    data_types_read: [str]
+    # TODO: can we think of a situtation where it makes sense to go to multilpe data types read in a single step?
+    data_types_read: str
     features: [symengine.Expr]
     # TODO: does a reference state support list here make sense?
     # If we instead make shift_reference_state a part of the API, it would be
@@ -199,9 +199,9 @@ from espei.parameter_selection.utils import feature_transforms
 # Maybe this is where we introduce the data and feature transforms class methods?
 class StepHM(FittingStep):
     parameter_name = "GM"
-    data_types_read = ["HM"]
+    data_types_read = "HM"
     supported_reference_states = ["_MIX", "_FORM"]
-    features: [symengine.S.One]
+    features = [symengine.S.One]
 
     # TODO: this function actually does 2 things that should be split up into separate functions:
     # 1. Extract data from Dataset objects into an array of raw values
@@ -300,39 +300,39 @@ class StepHM(FittingStep):
 # TODO: does it make sense to inherit from HM? Do we need an abstract class? Or does fixing the transforms issue and having each implementation be separate be correct?
 # TODO: support "" (absolute) entropy reference state?
 class StepSM(StepHM):
-    data_types_read = ["SM"]
-    features: [v.T]
+    data_types_read = "SM"
+    features = [v.T]
 
 
 # TODO: support "" (absolute) heat capacity reference state?
 class StepCPM(StepHM):
-    data_types_read = ["CPM"]
-    features: [v.T * symengine.log(v.T), v.T**2, v.T**-1, v.T**3]
+    data_types_read = "CPM"
+    features = [v.T * symengine.log(v.T), v.T**2, v.T**-1, v.T**3]
 
 
 
 class StepElasticC11(AbstractRKMPropertyStep):
     parameter_name = "C11"
-    data_types_read = ["C11"]
+    data_types_read = "C11"
 
 class StepElasticC12(AbstractRKMPropertyStep):
     parameter_name = "C12"
-    data_types_read = ["C12"]
+    data_types_read = "C12"
 
 class StepElasticC44(AbstractRKMPropertyStep):
     parameter_name = "C44"
-    data_types_read = ["C44"]
+    data_types_read = "C44"
 
 class StepV0(AbstractRKMPropertyStep):
     parameter_name = "V0"
-    data_types_read = ["V0"]
+    data_types_read = "V0"
     features = [symengine.S.One]
 
 class StepLogVA(FittingStep):
     # V = V0*exp(VA), to linearize in terms of VA features, we want to fit
     # VA = ln(V/V0)
     parameter_name = "VA"
-    data_types_read = ["VM"]
+    data_types_read = "VM"
     features = [v.T, v.T**2, v.T**3, v.T**(-1)]
     supported_reference_states = ["", "_MIX"]  # TODO: add formation support
 
