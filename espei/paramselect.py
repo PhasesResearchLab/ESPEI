@@ -135,12 +135,17 @@ def get_next_symbol(dbf):
     return symbol_name
 
 
-def insert_parameter(dbf, phase_name, configuration, parameters, symmetry):
+def insert_parameter(dbf, phase_name, configuration, parameter_name, parameters, symmetry):
     numdigits = 6  # number of significant figures, might cause rounding errors
     # Organize parameters by polynomial degree
     degree_polys = np.zeros(10, dtype=np.object_)
     YS = Symbol('YS')
     is_endmember = not interaction_test(configuration)
+    if parameter_name == "G" and not is_endmember:
+        # Special case for Gibbs parameters. "G" would still work
+        # for databases, but "L" is backwards compatible and
+        # slightly more readable.
+        parameter_name = "L"
     # asymmetric parameters should have Mugiannu V_I/V_J/V_K, while symmetric just has YS
     is_asymmetric_ternary = any([(ky.has(Symbol('V_I'))) and (vl != 0) for ky, vl in parameters.items()])
     for degree in reversed(range(10)):
@@ -182,8 +187,8 @@ def insert_parameter(dbf, phase_name, configuration, parameters, symmetry):
         if is_endmember:
             break  # we forced a degree=0, any continued iterations is duplicated work.
     _log.trace('Polynomial coefs: %s', degree_polys)
-    if is_endmember:
-        # We need to add GHSER functions
+    if is_endmember and parameter_name == "G":
+        # We need to add GHSER functions IFF we're fitting a Gibbs energy parameter
         site_ratios = dbf.phases[phase_name].sublattices
         for subl, ratio in zip(configuration, site_ratios):
             if subl == "VA":
@@ -196,11 +201,7 @@ def insert_parameter(dbf, phase_name, configuration, parameters, symmetry):
     for degree in np.arange(degree_polys.shape[0]):
         if degree_polys[degree] != 0:
             for symmetric_config in symmetric_configurations:
-                if is_endmember:
-                    paramtype = "G"
-                else:
-                    paramtype = "L"
-                dbf.add_parameter(paramtype, phase_name, tuple(map(tuplify, symmetric_config)), degree, degree_polys[degree])
+                dbf.add_parameter(parameter_name, phase_name, tuple(map(tuplify, symmetric_config)), degree, degree_polys[degree])
 
 
 def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ridge_alpha=None, aicc_phase_penalty=None, fitting_descrption=gibbs_energy_fitting_description):
@@ -301,7 +302,7 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
             # we're either on the last fitting step or the next step is a
             # different parameter type, so we insert and reset the state.
             parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=_stable_sort_key)])
-            insert_parameter(dbf, phase_name, configuration, parameters, symmetry)
+            insert_parameter(dbf, phase_name, configuration, fitting_step.parameter_name, parameters, symmetry)
             fixed_model = None
             fixed_portions = [0]
 

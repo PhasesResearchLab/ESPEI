@@ -198,7 +198,7 @@ from espei.parameter_selection.utils import feature_transforms
 # TODO: for HM, SM, and CPM, refactor to stop using the transforms and build the transforms into the subclasses
 # Maybe this is where we introduce the data and feature transforms class methods?
 class StepHM(FittingStep):
-    parameter_name = "GM"
+    parameter_name = "G"
     data_types_read = "HM"
     supported_reference_states = ["_MIX", "_FORM"]
     features = [symengine.S.One]
