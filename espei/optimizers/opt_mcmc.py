@@ -96,6 +96,7 @@ class EmceeOptimizer(OptimizerBase):
         # apply a Gaussian random to each parameter with std dev of std_deviation*parameter
         tiled_parameters = np.tile(params, (nchains, 1))
         chains = rng.normal(tiled_parameters, np.abs(tiled_parameters * std_deviation))
+        chains[0] = params #Ensure the initial guess is always included in the set, as the std_deviation may be too large to generate feasible points around a "good" initial point.
         return chains
 
     @staticmethod
