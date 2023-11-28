@@ -203,7 +203,7 @@ def insert_parameter(dbf, phase_name, configuration, parameters, symmetry):
                 dbf.add_parameter(paramtype, phase_name, tuple(map(tuplify, symmetric_config)), degree, degree_polys[degree])
 
 
-def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, ridge_alpha=None, aicc_phase_penalty=None, fitting_descrption=gibbs_energy_fitting_description):
+def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ridge_alpha=None, aicc_phase_penalty=None, fitting_descrption=gibbs_energy_fitting_description):
     """
     Find suitable linear model parameters for the given phase.
     We do this by successively fitting heat capacities, entropies and
@@ -291,7 +291,8 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         fixed_portion = np.array(selected_features, dtype=np.object_)
         fixed_portion = np.dot(fixed_portion, selected_values)
         fixed_portions.append(fixed_portion)
-    return parameters
+    parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=_stable_sort_key)])
+    insert_parameter(dbf, phase_name, configuration, parameters, symmetry)
 
 
 def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=None, aliases=None):
@@ -379,9 +380,7 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                     dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, fit_eq)
         if fit_eq is None:
             # No reference lattice stability data -- we have to fit it
-            parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
-            parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=str)])
-            insert_parameter(dbf, phase_name, endmember, parameters, symmetry)
+            fit_parameters(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
 
     for interaction_order in (2, 3):
         _log.trace('FITTING INTERACTIONS OF ORDER %s', interaction_order)
@@ -394,9 +393,7 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                 continue
             else:
                 _log.trace('INTERACTION: %s', interaction)
-            parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, interaction, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
-            parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=_stable_sort_key)])
-            insert_parameter(dbf, phase_name, interaction, parameters, symmetry)
+            fit_parameters(dbf, sorted(dbf.elements), phase_name, interaction, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
 
     if hasattr(dbf, 'varcounter'):
         del dbf.varcounter

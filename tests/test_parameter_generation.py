@@ -85,9 +85,9 @@ def test_formation_energies_are_fit(datasets_db):
     assert dbf.elements == {'CU', 'MG'}
     assert set(dbf.phases.keys()) == {'CUMG2'}
     assert len(dbf._parameters.search((where('parameter_type') == 'G') & (where('phase_name') == 'CUMG2'))) == 1
-    assert dbf.symbols['VV0000'] == -15268.3  # enthalpy
-    assert dbf.symbols['VV0001'] == -0.9  # heat capacity
-    assert dbf.symbols['VV0002'] == 12.0278  # entropy
+    assert dbf.symbols['VV0000'] == -0.9  # heat capacity
+    assert dbf.symbols['VV0001'] == 12.0278  # entropy
+    assert dbf.symbols['VV0002'] == -15268.3  # enthalpy
 
 
 def test_mixing_energies_are_fit(datasets_db):
