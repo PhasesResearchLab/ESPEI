@@ -608,3 +608,45 @@ def test_weighting_invariance():
     # assert len(params) == 2
     assert np.isclose(dbf.symbols['VV0000'], 1000*32/3)  # L1
     # assert np.isclose(dbf.symbols['VV0001'], 0)  # L0
+
+
+# TODO: take care when skipping parameter fitting in espei.paramselect.phase_fit
+# because our fitting description might not have the parameters we want to fit
+# in it. That is, we might have G parameters from a lattice stability, but don't
+# have V0/VM parameters (and vice-versa, make sure we aren't fitting non-G
+# parameters if we have them in the input TDB already).
+def test_G_lattice_stabilities_do_not_prevent_fitting_other_parameters(datasets_db):
+    # This also should act as a test for fitting G and non-G parameters at the same time
+    raise NotImplementedError()
+
+
+def test_volume_parameters_are_not_fit_if_present_in_database(datasets_db):
+    # Use Lu 2005 digitized data as an input_db and provide some unary volume
+    # data and make sure parameters aren't fit.
+    raise NotImplementedError()
+
+
+def test_elastic_fitting_description_works(datasets_db):
+    # Ti-Mo-Sn unary and binary tests from notebook
+    raise NotImplementedError()
+
+
+def test_property_models_for_phases_with_more_than_one_mole_formula_fit_correctly(datasets_db):
+    # Test that phases that have more than one mole of formula units fit
+    # correctly normalized parameters.
+    # Might be missing some normalizations for some properties.
+    raise NotImplementedError()
+
+def test_molar_volume_model_fits(datasets_db):
+    # test V0, VM unary, binary, and ternary parameters from the notebook work
+    # TODO: performance of mixing models with lots of features is really bad
+    #   (CPM, AbstractRKMProperty, VA parameters). Think if we can find a
+    #   solution to that. Maybe some code in the feature generation to take only
+    #   the first N features for mixing or something? Maybe limiting the number
+    #   of non-mixing features to 2 to limit combinatorics? Can it be tuned by users?
+    raise NotImplementedError()
+
+
+def test_integration_of_qualified_fitting_descrption_in_schema():
+    # test that using a fully qualified import path works to run ESPEI via the high level API in the schema
+    raise NotImplementedError()
