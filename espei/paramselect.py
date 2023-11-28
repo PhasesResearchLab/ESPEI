@@ -114,6 +114,72 @@ def _build_feature_matrix(sample_condition_dicts: List[Dict[Symbol, float]], sym
     return feature_matrix
 
 
+def get_next_symbol(dbf):
+    """
+    Return a string name of the next free symbol to set
+
+    Parameters
+    ----------
+    dbf : Database
+        pycalphad Database. Must have the ``varcounter`` attribute set to an integer.
+
+    Returns
+    -------
+    str
+    """
+    # TODO: PEP-572 optimization
+    symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+    while dbf.symbols.get(symbol_name, None) is not None:
+        dbf.varcounter += 1
+        symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
+    return symbol_name
+
+
+def insert_parameter(dbf, phase_name, configuration, parameters, symmetry):
+    numdigits = 6  # number of significant figures, might cause rounding errors
+    # Organize parameters by polynomial degree
+    degree_polys = np.zeros(10, dtype=np.object_)
+    YS = Symbol('YS')
+    # asymmetric parameters should have Mugiannu V_I/V_J/V_K, while symmetric just has YS
+    is_asymmetric_ternary = any([(ky.has(Symbol('V_I'))) and (vl != 0) for ky, vl in parameters.items()])
+    for degree in reversed(range(10)):
+        if is_asymmetric_ternary:
+            if degree == 0:
+                check_symbol = YS*Symbol('V_I')
+            elif degree == 1:
+                check_symbol = YS*Symbol('V_J')
+            elif degree == 2:
+                check_symbol = YS*Symbol('V_K')
+            else:
+                # don't do anything unless degree is 0, 1, or 2.
+                continue
+        else:
+            check_symbol = Symbol('YS') * Symbol('Z')**degree
+        keys_to_remove = []
+        for key, value in parameters.items():
+            if has_symbol(key, check_symbol):
+                if value != 0:
+                    symbol_name = get_next_symbol(dbf)
+                    dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
+                    parameters[key] = Symbol(symbol_name)
+                coef = parameters[key] * (key / check_symbol)
+                try:
+                    coef = float(coef)
+                except RuntimeError:
+                    pass
+                degree_polys[degree] += coef
+                keys_to_remove.append(key)
+        for key in keys_to_remove:
+            parameters.pop(key)
+    _log.trace('Polynomial coefs: %s', degree_polys)
+    # Insert into database
+    symmetric_interactions = generate_symmetric_group(configuration, symmetry)
+    for degree in np.arange(degree_polys.shape[0]):
+        if degree_polys[degree] != 0:
+            for syminter in symmetric_interactions:
+                dbf.add_parameter('L', phase_name, tuple(map(tuplify, syminter)), degree, degree_polys[degree])
+
+
 def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, ridge_alpha=None, aicc_phase_penalty=None, fitting_descrption=gibbs_energy_fitting_description):
     """
     Find suitable linear model parameters for the given phase.
@@ -203,100 +269,6 @@ def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datase
         fixed_portion = np.dot(fixed_portion, selected_values)
         fixed_portions.append(fixed_portion)
     return parameters
-
-
-def get_next_symbol(dbf):
-    """
-    Return a string name of the next free symbol to set
-
-    Parameters
-    ----------
-    dbf : Database
-        pycalphad Database. Must have the ``varcounter`` attribute set to an integer.
-
-    Returns
-    -------
-    str
-    """
-    # TODO: PEP-572 optimization
-    symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
-    while dbf.symbols.get(symbol_name, None) is not None:
-        dbf.varcounter += 1
-        symbol_name = 'VV' + str(dbf.varcounter).zfill(4)
-    return symbol_name
-
-
-def fit_ternary_interactions(dbf, phase_name, symmetry, endmembers, datasets, ridge_alpha=None, aicc_phase_penalty=None):
-    """
-    Fit ternary interactions for a database in place
-
-    Parameters
-    ----------
-    dbf : Database
-        pycalphad Database to add parameters to
-    phase_name : str
-        Name of the phase to fit
-    symmetry : list
-        List of symmetric sublattices, e.g. [[0, 1, 2], [3, 4]]
-    endmembers : list
-        List of endmember tuples, e.g. [('CU', 'MG')]
-    datasets : PickleableTinyDB
-        TinyDB database of datasets
-    ridge_alpha : float
-        Value of the :math:`\\alpha` hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
-        with ordinary least squares regression. For now, the parameter is applied to all features.
-
-    Returns
-    -------
-    None
-        Modified the Database in place
-    """
-    numdigits = 6  # number of significant figures, might cause rounding errors
-    interactions = generate_interactions(endmembers, order=3, symmetry=symmetry)
-    _log.trace('%s distinct ternary interactions', len(interactions))
-    for interaction in interactions:
-        ixx = interaction
-        config = tuple(map(tuplify, ixx))
-        if _param_present_in_database(dbf, phase_name, config, 'L'):
-            _log.warning('INTERACTION: %s already in Database. Skipping.', ixx)
-            continue
-        else:
-            _log.trace('INTERACTION: %s', ixx)
-        parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
-        parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=str)])  # SymPy performance mitigation
-        # Organize parameters by polynomial degree
-        degree_polys = np.zeros(3, dtype=np.object_)
-        YS = Symbol('YS')
-        # asymmetric parameters should have Mugiannu V_I/V_J/V_K, while symmetric just has YS
-        is_asymmetric = any([(ky.has(Symbol('V_I'))) and (vl != 0) for ky, vl in parameters.items()])
-        if is_asymmetric:
-            params = [(2, YS*Symbol('V_K')), (1, YS*Symbol('V_J')), (0, YS*Symbol('V_I'))]  # (excess parameter degree, symbol) tuples
-        else:
-            params = [(0, YS)]  # (excess parameter degree, symbol) tuples
-        for degree, check_symbol in params:
-            keys_to_remove = []
-            for key, value in parameters.items():
-                if has_symbol(key, check_symbol):
-                    if value != 0:
-                        symbol_name = get_next_symbol(dbf)
-                        dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
-                        parameters[key] = Symbol(symbol_name)
-                    coef = parameters[key] * (key / check_symbol)
-                    try:
-                        coef = float(coef)
-                    except RuntimeError:
-                        pass
-                    degree_polys[degree] += coef
-                    keys_to_remove.append(key)
-            for key in keys_to_remove:
-                parameters.pop(key)
-        _log.trace('Polynomial coefs: %s', degree_polys)
-        # Insert into database
-        symmetric_interactions = generate_symmetric_group(interaction, symmetry)
-        for degree in np.arange(degree_polys.shape[0]):
-            if degree_polys[degree] != 0:
-                for syminter in symmetric_interactions:
-                    dbf.add_parameter('L', phase_name, tuple(map(tuplify, syminter)), degree, degree_polys[degree])
 
 
 def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=None, aliases=None):
@@ -405,55 +377,21 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
             em_dict[em] = fit_eq
             dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, fit_eq)
 
-    _log.trace('FITTING BINARY INTERACTIONS')
-    bin_interactions = generate_interactions(all_endmembers, order=2, symmetry=symmetry)
-    _log.trace('%s distinct binary interactions', len(bin_interactions))
-    for interaction in bin_interactions:
-        ixx = []
-        for i in interaction:
-            if isinstance(i, (tuple, list)):
-                ixx.append(tuple(i))
+    for interaction_order in (2, 3):
+        _log.trace('FITTING INTERACTIONS OF ORDER %s', interaction_order)
+        interactions = generate_interactions(all_endmembers, order=interaction_order, symmetry=symmetry)
+        _log.trace('%s distinct order %s interactions', len(interactions), interaction_order)
+        for interaction in interactions:
+            config = tuple(map(tuplify, interaction))
+            if _param_present_in_database(dbf, phase_name, config, 'L'):
+                _log.trace('INTERACTION: %s already in Database. Skipping.', interaction)
+                continue
             else:
-                ixx.append(i)
-        ixx = tuple(ixx)
-        config = tuple(map(tuplify, ixx))
-        if _param_present_in_database(dbf, phase_name, config, 'L'):
-            _log.trace('INTERACTION: %s already in Database', ixx)
-            continue
-        else:
-            _log.trace('INTERACTION: %s', ixx)
-        parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, ixx, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
-        parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=_stable_sort_key)])  # SymPy performance mitigation
-        # Organize parameters by polynomial degree
-        degree_polys = np.zeros(10, dtype=np.object_)
-        for degree in reversed(range(10)):
-            check_symbol = Symbol('YS') * Symbol('Z')**degree
-            keys_to_remove = []
-            for key, value in parameters.items():
-                if has_symbol(key, check_symbol):
-                    if value != 0:
-                        symbol_name = get_next_symbol(dbf)
-                        dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
-                        parameters[key] = Symbol(symbol_name)
-                    coef = parameters[key] * (key / check_symbol)
-                    try:
-                        coef = float(coef)
-                    except RuntimeError:
-                        pass
-                    degree_polys[degree] += coef
-                    keys_to_remove.append(key)
-            for key in keys_to_remove:
-                parameters.pop(key)
-        _log.trace('Polynomial coefs: %s', degree_polys.tolist())
-        # Insert into database
-        symmetric_interactions = generate_symmetric_group(interaction, symmetry)
-        for degree in np.arange(degree_polys.shape[0]):
-            if degree_polys[degree] != 0:
-                for syminter in symmetric_interactions:
-                    dbf.add_parameter('L', phase_name, tuple(map(tuplify, syminter)), degree, degree_polys[degree])
+                _log.trace('INTERACTION: %s', interaction)
+            parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, interaction, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
+            parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=_stable_sort_key)])
+            insert_parameter(dbf, phase_name, interaction, parameters, symmetry)
 
-    _log.trace('FITTING TERNARY INTERACTIONS')
-    fit_ternary_interactions(dbf, phase_name, symmetry, all_endmembers, datasets, aicc_phase_penalty=aicc_phase_penalty)
     if hasattr(dbf, 'varcounter'):
         del dbf.varcounter
 
