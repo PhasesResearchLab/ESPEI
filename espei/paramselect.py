@@ -140,10 +140,17 @@ def insert_parameter(dbf, phase_name, configuration, parameters, symmetry):
     # Organize parameters by polynomial degree
     degree_polys = np.zeros(10, dtype=np.object_)
     YS = Symbol('YS')
+    is_endmember = not interaction_test(configuration)
     # asymmetric parameters should have Mugiannu V_I/V_J/V_K, while symmetric just has YS
     is_asymmetric_ternary = any([(ky.has(Symbol('V_I'))) and (vl != 0) for ky, vl in parameters.items()])
     for degree in reversed(range(10)):
-        if is_asymmetric_ternary:
+        if is_endmember:
+            # shortcut because we know higher order degrees are impossible.
+            # must be paired with a forced break at the end of the first
+            # iteration to prevent duplicated work.
+            degree = 0
+            check_symbol = symengine.S.One
+        elif is_asymmetric_ternary:
             if degree == 0:
                 check_symbol = YS*Symbol('V_I')
             elif degree == 1:
@@ -157,11 +164,12 @@ def insert_parameter(dbf, phase_name, configuration, parameters, symmetry):
             check_symbol = Symbol('YS') * Symbol('Z')**degree
         keys_to_remove = []
         for key, value in parameters.items():
-            if has_symbol(key, check_symbol):
-                if value != 0:
-                    symbol_name = get_next_symbol(dbf)
-                    dbf.symbols[symbol_name] = sigfigs(parameters[key], numdigits)
-                    parameters[key] = Symbol(symbol_name)
+            if value == 0:
+                continue
+            if has_symbol(key, check_symbol) or is_endmember:
+                symbol_name = get_next_symbol(dbf)
+                dbf.symbols[symbol_name] = sigfigs(value, numdigits)
+                parameters[key] = Symbol(symbol_name)
                 coef = parameters[key] * (key / check_symbol)
                 try:
                     coef = float(coef)
@@ -171,13 +179,28 @@ def insert_parameter(dbf, phase_name, configuration, parameters, symmetry):
                 keys_to_remove.append(key)
         for key in keys_to_remove:
             parameters.pop(key)
+        if is_endmember:
+            break  # we forced a degree=0, any continued iterations is duplicated work.
     _log.trace('Polynomial coefs: %s', degree_polys)
+    if is_endmember:
+        # We need to add GHSER functions
+        site_ratios = dbf.phases[phase_name].sublattices
+        for subl, ratio in zip(configuration, site_ratios):
+            if subl == "VA":
+                continue
+            subl = (subl.upper()*2)[:2]  # TODO: pure element assumption
+            degree = 0  # always 0 because short-circuit in the previous loop
+            degree_polys[degree] += ratio * Symbol(f"GHSER{subl}")
     # Insert into database
-    symmetric_interactions = generate_symmetric_group(configuration, symmetry)
+    symmetric_configurations = generate_symmetric_group(configuration, symmetry)
     for degree in np.arange(degree_polys.shape[0]):
         if degree_polys[degree] != 0:
-            for syminter in symmetric_interactions:
-                dbf.add_parameter('L', phase_name, tuple(map(tuplify, syminter)), degree, degree_polys[degree])
+            for symmetric_config in symmetric_configurations:
+                if is_endmember:
+                    paramtype = "G"
+                else:
+                    paramtype = "L"
+                dbf.add_parameter(paramtype, phase_name, tuple(map(tuplify, symmetric_config)), degree, degree_polys[degree])
 
 
 def fit_formation_energy(dbf, comps, phase_name, configuration, symmetry, datasets, ridge_alpha=None, aicc_phase_penalty=None, fitting_descrption=gibbs_energy_fitting_description):
@@ -312,9 +335,6 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
     # First fit endmembers
     all_em_count = len(generate_endmembers(subl_model))  # number of total endmembers
     endmembers = generate_endmembers(subl_model, symmetry)
-    # Number of significant figures in parameters, might cause rounding errors
-    numdigits = 6
-    em_dict = {}
     # TODO: use the global aliases dictionary passed in as-is instead of converting it to a phase-local dict
     # TODO: use the aliases dictionary in dataset queries to find relevant data
     if aliases is None:
@@ -355,27 +375,13 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                 fit_eq = num_moles * Symbol(sym_name)
                 _log.trace("Found lattice stability: %s", sym_name)
                 _log.debug("%s = %s", sym_name, dbf.symbols[sym_name])
+                for em in symmetric_endmembers:
+                    dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, fit_eq)
         if fit_eq is None:
             # No reference lattice stability data -- we have to fit it
             parameters = fit_formation_energy(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
-            for key, value in sorted(parameters.items(), key=str):
-                if value == 0:
-                    continue
-                symbol_name = get_next_symbol(dbf)
-                dbf.symbols[symbol_name] = sigfigs(value, numdigits)
-                parameters[key] = Symbol(symbol_name)
-            fit_eq = symengine.Add(*[value * key for key, value in parameters.items()])
-            ref = 0
-            for subl, ratio in zip(endmember, site_ratios):
-                if subl == 'VA':
-                    continue
-                subl = (subl.upper()*2)[:2]
-                ref = ref + ratio * Symbol('GHSER'+subl)
-            fit_eq += ref
-        _log.trace('SYMMETRIC_ENDMEMBERS: %s', symmetric_endmembers)
-        for em in symmetric_endmembers:
-            em_dict[em] = fit_eq
-            dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, fit_eq)
+            parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=str)])
+            insert_parameter(dbf, phase_name, endmember, parameters, symmetry)
 
     for interaction_order in (2, 3):
         _log.trace('FITTING INTERACTIONS OF ORDER %s', interaction_order)
