@@ -251,48 +251,59 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
     fixed_model = None  # Profiling suggests we delay instantiation
     fixed_portions = [0]
     parameters = {}
-    for fitting_step in fitting_descrption.fitting_steps:
+    # non-idiomatic loop so we can look ahead and see if we should write parameters or not
+    for i in range(len(fitting_descrption.fitting_steps)):
+        fitting_step = fitting_descrption.fitting_steps[i]
         # Search for relevant data
         desired_props = [fitting_step.data_types_read + refstate for refstate in fitting_step.supported_reference_states]
         desired_data = get_prop_data(comps, phase_name, desired_props, datasets, additional_query=solver_qry)
         desired_data = filter_configurations(desired_data, configuration, symmetry)
         desired_data = filter_temperatures(desired_data)
         _log.trace('%s: datasets found: %s', desired_props, len(desired_data))
-        if len(desired_data) == 0:
-            # we didn't find any data, go on to the next fitting step
-            continue
+        if len(desired_data) > 0:
+            # Build the candidate model feature matricies and response vector (A, b in Ax=b)
+            if fixed_model is None:
+                fixed_model = fitting_descrption.model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
+            # TODO: can we maybe refactor calculate_dict and sample_condition dicts
+            # to only be in the fitting_step.get_data_quantities?
+            # We also need a way to access the weights, and i think it could be
+            # helpful to assert that the weights are the same dimension as
+            # sample_condition_dicts in that function.
+            calculate_dict = get_prop_samples(desired_data, config_tup)
+            sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, phase_name)
+            response_vector = fitting_step.get_data_quantities(fitting_step.data_types_read, fixed_model, fixed_portions, desired_data, sample_condition_dicts)
+            candidate_models = []
+            feature_sets = build_redlich_kister_candidate_models(configuration, fitting_step.get_feature_sets())
+            for features in feature_sets:
+                feature_matrix = _build_feature_matrix(sample_condition_dicts, list(map(fitting_step.transform_feature, features)))
+                candidate_model = (features, feature_matrix, response_vector)
+                candidate_models.append(candidate_model)
 
-        # Build the candidate model feature matricies and response vector (A, b in Ax=b)
-        if fixed_model is None:
-            fixed_model = fitting_descrption.model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
-        # TODO: can we maybe refactor calculate_dict and sample_condition dicts
-        # to only be in the fitting_step.get_data_quantities?
-        # We also need a way to access the weights, and i think it could be
-        # helpful to assert that the weights are the same dimension as
-        # sample_condition_dicts in that function.
-        calculate_dict = get_prop_samples(desired_data, config_tup)
-        sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, phase_name)
-        response_vector = fitting_step.get_data_quantities(fitting_step.data_types_read, fixed_model, fixed_portions, desired_data, sample_condition_dicts)
-        candidate_models = []
-        feature_sets = build_redlich_kister_candidate_models(configuration, fitting_step.get_feature_sets())
-        for features in feature_sets:
-            feature_matrix = _build_feature_matrix(sample_condition_dicts, list(map(fitting_step.transform_feature, features)))
-            candidate_model = (features, feature_matrix, response_vector)
-            candidate_models.append(candidate_model)
+            # Fit and select a model from the candidates
+            aicc_factor = aicc_feature_factors.get(fitting_step.data_types_read, 1.0)
+            weights = calculate_dict['weights']
+            assert len(sample_condition_dicts) == len(weights)
+            selected_model = select_model(candidate_models, ridge_alpha, weights=weights, aicc_factor=aicc_factor)
+            selected_features, selected_values = selected_model
+            parameters.update(zip(*(selected_features, selected_values)))
+            fixed_portion = np.array(selected_features, dtype=np.object_)
+            fixed_portion = np.dot(fixed_portion, selected_values)
+            fixed_portions.append(fixed_portion)
 
-        # Fit and select a model from the candidates
-        aicc_factor = aicc_feature_factors.get(fitting_step.data_types_read, 1.0)
-        weights = calculate_dict['weights']
-        assert len(sample_condition_dicts) == len(weights)
-        selected_model = select_model(candidate_models, ridge_alpha, weights=weights, aicc_factor=aicc_factor)
-        selected_features, selected_values = selected_model
-        parameters.update(zip(*(selected_features, selected_values)))
-        # Add these parameters to be fixed for the next fitting step
-        fixed_portion = np.array(selected_features, dtype=np.object_)
-        fixed_portion = np.dot(fixed_portion, selected_values)
-        fixed_portions.append(fixed_portion)
-    parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=_stable_sort_key)])
-    insert_parameter(dbf, phase_name, configuration, parameters, symmetry)
+        # If we have a Gibbs energy type model, each step contributes to the
+        # same parameter type, so we can't insert_parameter during each step.
+        # Well... we could, but then we'd have duplicate parameters (e.g.
+        # `L(PHASE,A,B;0)`) with different order interactions. That's okay by
+        # pycalphad, but not other software so we preserve the legacy fixed
+        # portions behavior to allow the values to accumulate. There may be
+        # other alternatives to explore.
+        if (i == len(fitting_descrption.fitting_steps) - 1) or (fitting_step.parameter_name != fitting_descrption.fitting_steps[i+1].parameter_name):
+            # we're either on the last fitting step or the next step is a
+            # different parameter type, so we insert and reset the state.
+            parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=_stable_sort_key)])
+            insert_parameter(dbf, phase_name, configuration, parameters, symmetry)
+            fixed_model = None
+            fixed_portions = [0]
 
 
 def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=None, aliases=None):
