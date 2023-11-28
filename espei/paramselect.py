@@ -204,7 +204,7 @@ def insert_parameter(dbf, phase_name, configuration, parameter_name, parameters,
                 dbf.add_parameter(parameter_name, phase_name, tuple(map(tuplify, symmetric_config)), degree, degree_polys[degree])
 
 
-def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ridge_alpha=None, aicc_phase_penalty=None, fitting_descrption=gibbs_energy_fitting_description):
+def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ridge_alpha=None, aicc_phase_penalty=None, fitting_description=gibbs_energy_fitting_description):
     """
     Find suitable linear model parameters for the given phase.
     We do this by successively fitting heat capacities, entropies and
@@ -235,6 +235,8 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
         Maps "property" to a list of features for the linear model.
         These will be transformed from "GM" coefficients
         e.g., {"CPM_FORM": (v.T*symengine.log(v.T), v.T**2, v.T**-1, v.T**3)} (Default value = None)
+    fitting_description : Type[ModelFittingDescription]
+        ModelFittingDescription object describing the fitting steps and model
 
     Returns
     -------
@@ -253,8 +255,8 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
     fixed_portions = [0]
     parameters = {}
     # non-idiomatic loop so we can look ahead and see if we should write parameters or not
-    for i in range(len(fitting_descrption.fitting_steps)):
-        fitting_step = fitting_descrption.fitting_steps[i]
+    for i in range(len(fitting_description.fitting_steps)):
+        fitting_step = fitting_description.fitting_steps[i]
         # Search for relevant data
         desired_props = [fitting_step.data_types_read + refstate for refstate in fitting_step.supported_reference_states]
         desired_data = get_prop_data(comps, phase_name, desired_props, datasets, additional_query=solver_qry)
@@ -264,7 +266,7 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
         if len(desired_data) > 0:
             # Build the candidate model feature matricies and response vector (A, b in Ax=b)
             if fixed_model is None:
-                fixed_model = fitting_descrption.model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
+                fixed_model = fitting_description.model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
             # TODO: can we maybe refactor calculate_dict and sample_condition dicts
             # to only be in the fitting_step.get_data_quantities?
             # We also need a way to access the weights, and i think it could be
@@ -298,7 +300,7 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
         # pycalphad, but not other software so we preserve the legacy fixed
         # portions behavior to allow the values to accumulate. There may be
         # other alternatives to explore.
-        if (i == len(fitting_descrption.fitting_steps) - 1) or (fitting_step.parameter_name != fitting_descrption.fitting_steps[i+1].parameter_name):
+        if (i == len(fitting_description.fitting_steps) - 1) or (fitting_step.parameter_name != fitting_description.fitting_steps[i+1].parameter_name):
             # we're either on the last fitting step or the next step is a
             # different parameter type, so we insert and reset the state.
             parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=_stable_sort_key)])
@@ -307,7 +309,7 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
             fixed_portions = [0]
 
 
-def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=None, aliases=None):
+def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=None, aliases=None, fitting_description=gibbs_energy_fitting_description):
     """Generate an initial CALPHAD model for a given phase and sublattice model.
 
     Parameters
@@ -330,6 +332,8 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
         Map of phase name to feature to a multiplication factor for the AICc's parameter penalty.
     aliases : Dict[str, str]
         Mapping of possible aliases to the Database phase names.
+    fitting_description : Type[ModelFittingDescription]
+        ModelFittingDescription object describing the fitting steps and model
 
     Returns
     -------
@@ -392,7 +396,7 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                     dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, fit_eq)
         if fit_eq is None:
             # No reference lattice stability data -- we have to fit it
-            fit_parameters(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
+            fit_parameters(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty, fitting_description=fitting_description)
 
     for interaction_order in (2, 3):
         _log.trace('FITTING INTERACTIONS OF ORDER %s', interaction_order)
@@ -405,13 +409,13 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                 continue
             else:
                 _log.trace('INTERACTION: %s', interaction)
-            fit_parameters(dbf, sorted(dbf.elements), phase_name, interaction, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty)
+            fit_parameters(dbf, sorted(dbf.elements), phase_name, interaction, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty, fitting_description=fitting_description)
 
     if hasattr(dbf, 'varcounter'):
         del dbf.varcounter
 
 
-def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_alpha=None, aicc_penalty_factor=None, dbf=None):
+def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_alpha=None, aicc_penalty_factor=None, dbf=None, fitting_description=gibbs_energy_fitting_description):
     """Generate parameters from given phase models and datasets
 
     Parameters
@@ -432,6 +436,8 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
         Map of phase name to feature to a multiplication factor for the AICc's parameter penalty.
     dbf : Database
         Initial pycalphad Database that can have parameters that would not be fit by ESPEI
+    fitting_description : Type[ModelFittingDescription]
+        ModelFittingDescription object describing the fitting steps and model
 
     Returns
     -------
@@ -457,7 +463,7 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
                 & dataset.solver.exists()
             )
             phase_filtered_datasets.insert_multiple(datasets.search(single_phase_thermochemical_query))
-            phase_fit(dbf, phase_name, symmetry, phase_filtered_datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases)
+            phase_fit(dbf, phase_name, symmetry, phase_filtered_datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases, fitting_description=fitting_description)
     _log.info('Finished generating parameters.')
     np.set_printoptions(linewidth=75)
     return dbf

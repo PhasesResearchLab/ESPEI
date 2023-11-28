@@ -5,6 +5,7 @@ Tests for input file validation
 import pytest
 import yaml
 from espei.espei_script import get_run_settings
+from espei.parameter_selection.fitting_descriptions import gibbs_energy_fitting_description
 
 FULL_RUN_DICT = {
     'generate_parameters':
@@ -158,6 +159,7 @@ def test_correct_defaults_are_applied_from_minimal_specification():
     assert len(d['output']) == 0
     assert d['generate_parameters'].pop('ridge_alpha') is None
     assert d['generate_parameters'].pop('aicc_penalty_factor') is None
+    assert d['generate_parameters'].pop('fitting_description') is gibbs_energy_fitting_description
     assert len(d['generate_parameters']) == 2
     assert d['mcmc'].pop('save_interval') == 1
     assert d['mcmc'].pop('scheduler') == 'dask'
