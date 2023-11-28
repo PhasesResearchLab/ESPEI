@@ -186,7 +186,8 @@ class AbstractRKMPropertyStep(FittingStep):
             missing_variables = symengine.S(value_with_symbols).atoms(v.SiteFraction) - set(sf.keys())
             sf.update({x: 0. for x in missing_variables})
             sf.update(cond_dict)
-        rhs = [symengine.S(value_with_symbols).xreplace(sf).evalf() for value_with_symbols, sf in zip(rhs, site_fractions)]
+        # also replace with database symbols in case we did higher order fitting
+        rhs = [fixed_model.symbol_replace(symengine.S(value_with_symbols).xreplace(sf), fixed_model._symbols).evalf() for value_with_symbols, sf in zip(rhs, site_fractions)]
         # cast to float, confirming that these are concrete values with no sybolics
         rhs = np.asarray(rhs, dtype=np.float_)
         return rhs
@@ -297,7 +298,8 @@ class StepHM(FittingStep):
             # and interaction products as Z, so take the product of all
             # the site fractions that we see in our data qtys
             sf.update(cond_dict)
-        data_qtys = [symengine.S(i).xreplace(sf).evalf() for i, sf in zip(data_qtys, site_fractions)]
+        # also replace with database symbols in case we did higher order fitting
+        data_qtys = [fixed_model.symbol_replace(symengine.S(i).xreplace(sf), fixed_model._symbols).evalf() for i, sf in zip(data_qtys, site_fractions)]
         data_qtys = np.asarray(data_qtys, dtype=np.float_)
         return data_qtys
 
@@ -504,7 +506,7 @@ class StepLogVA(FittingStep):
             # and interaction products as Z, so take the product of all
             # the site fractions that we see in our data qtys
             sf.update(cond_dict)
-        rhs = [symengine.S(value_with_symbols).xreplace(sf).evalf() for value_with_symbols, sf in zip(rhs, site_fractions)]
+        rhs = [fixed_model.symbol_replace(symengine.S(value_with_symbols).xreplace(sf), fixed_model._symbols).evalf() for value_with_symbols, sf in zip(rhs, site_fractions)]
         # cast to float, confirming that these are concrete values with no sybolics
         rhs = np.asarray(rhs, dtype=np.float_)
         return rhs
