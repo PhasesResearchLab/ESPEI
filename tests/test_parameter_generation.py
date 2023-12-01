@@ -664,14 +664,80 @@ def test_volume_parameters_are_not_fit_if_present_in_database(datasets_db):
     }
 
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', dbf=dbf, fitting_description=molar_volume_gibbs_energy_fitting_description)
-    print(dbf._parameters.all())
     assert len(dbf._parameters.search(where('parameter_type') == 'G')) == 2 # pure element lattice stability added
     assert len(dbf._parameters.search(where('parameter_type') == 'V0')) == 3 # 2 volume parameters already exist in database, 1 added
 
 
 def test_elastic_fitting_description_works(datasets_db):
-    # Ti-Mo-Sn unary and binary tests from notebook
-    raise NotImplementedError()
+    # We can implement and pass a custom model and fitting description to generate parameters
+    # Essentially matches the tutorial
+    import tinydb
+    from pycalphad import Model
+
+    class ElasticModel(Model):
+        def build_phase(self, dbe):
+            phase = dbe.phases[self.phase_name]
+            param_search = dbe.search
+            for prop in ['C11', 'C12', 'C44']:
+                prop_param_query = (
+                    (tinydb.where('phase_name') == phase.name) & \
+                    (tinydb.where('parameter_type') == prop) & \
+                    (tinydb.where('constituent_array').test(self._array_validity))
+                    )
+                prop_val = self.redlich_kister_sum(phase, param_search, prop_param_query).subs(dbe.symbols)
+                setattr(self, prop, prop_val)
+
+    from espei.parameter_selection.fitting_descriptions import ModelFittingDescription
+    from espei.parameter_selection.fitting_steps import AbstractRKMPropertyStep
+
+    class StepElasticC11(AbstractRKMPropertyStep):
+        parameter_name = "C11"
+        data_types_read = "C11"
+
+    class StepElasticC12(AbstractRKMPropertyStep):
+        parameter_name = "C12"
+        data_types_read = "C12"
+
+    class StepElasticC44(AbstractRKMPropertyStep):
+        parameter_name = "C44"
+        data_types_read = "C44"
+
+    elastic_fitting_description = ModelFittingDescription([StepElasticC11, StepElasticC12, StepElasticC44], model=ElasticModel)
+
+    datasets_db.insert({
+    "components": ["TI", "VA"], "phases": ["BCC_A2"],
+    "output": "C12", "values": [[[115]]],
+    "conditions": {"T": 298.15, "P": 101325},
+    "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3], "sublattice_configurations": [["TI", "VA"]], "sublattice_occupancies": [[1.0, 1.0]]},
+    "reference": "Marker (2018)", "bibtex": "marker2018binary_elastic", "comment": "Values pulled from Table 4 (DFT calculations).",
+    })
+    datasets_db.insert({
+    "components": ["MO", "VA"], "phases": ["BCC_A2"],
+    "output": "C12", "values": [[[164]]],
+    "conditions": {"T": 298.15, "P": 101325},
+    "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3], "sublattice_configurations": [["MO", "VA"]], "sublattice_occupancies": [[1.0, 1.0]]},
+    "reference": "Marker (2018)", "bibtex": "marker2018binary_elastic", "comment": "Values pulled from Table 4 (DFT calculations).",
+    })
+    datasets_db.insert({
+    "components": ["MO", "TI", "VA"], "phases": ["BCC_A2"],
+    "output": "C12", "values": [[[111, 113, 123, 136, 146, 158, 163]]],
+    "conditions": {"T": 298.15, "P": 101325},
+    "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3], "sublattice_configurations": [[["MO", "TI"], "VA"], [["MO", "TI"], "VA"], [["MO", "TI"], "VA"], [["MO", "TI"], "VA"], [["MO", "TI"], "VA"], [["MO", "TI"], "VA"], [["MO", "TI"], "VA"]], "sublattice_occupancies": [[[0.06, 0.94], 1.0], [[0.13, 0.87], 1.0], [[0.25, 0.75], 1.0], [[0.50, 0.50], 1.0], [[0.75, 0.25], 1.0], [[0.94, 0.06], 1.0], [[0.98, 0.02], 1.0]]},
+    "reference": "Marker (2018)", "bibtex": "marker2018binary_elastic", "comment": "Values pulled from Table 4 (DFT calculations).",
+    })
+
+    phase_models = {
+        "components": ["MO", "TI", "VA"],
+        "phases": {"BCC_A2" : {"sublattice_model": [["MO", "TI"], ["VA"]], "sublattice_site_ratios": [1, 3]}}
+    }
+
+    config_logger(3)
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=elastic_fitting_description)
+    assert len(dbf._parameters.search(where('parameter_type') == 'C12')) == 3 # 3 added
+    assert dbf.symbols['VV0000'] == 164.0
+    assert dbf.symbols['VV0001'] == 115.0
+    assert dbf.symbols['VV0002'] == -27.9687
+    assert len(dbf._parameters.all()) == 3 # nothing else added
 
 
 def test_property_models_for_phases_with_more_than_one_mole_formula_fit_correctly(datasets_db):
