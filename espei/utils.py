@@ -8,6 +8,7 @@ from typing import Any, Dict, Type
 import importlib
 import itertools
 import re
+import sys
 import warnings
 from collections import namedtuple
 
@@ -392,6 +393,14 @@ def import_qualified_object(obj_path: str) -> Any:
     >>> from pycalphad.model import Model
     >>> assert Mod is Model
     """
+    # We want users to be able to use local modules when they extend ESPEI,
+    # so we ensure that working directory is on the path.
+    # We append because we want any installed packages to take precedent in the
+    # case that a user _doesn't_ have local packages on their path already,
+    # otherwise a user naming a module something like "espei" (wouldn't be
+    # surprising) could cause things to break.
+    if "." not in sys.path:
+        sys.path.append(".")
     split_path = obj_path.split('.')
     module_import_path = '.'.join(split_path[:-1])
     obj_name = split_path[-1]
