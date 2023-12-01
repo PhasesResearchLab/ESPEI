@@ -257,6 +257,13 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
     # non-idiomatic loop so we can look ahead and see if we should write parameters or not
     for i in range(len(fitting_description.fitting_steps)):
         fitting_step = fitting_description.fitting_steps[i]
+        if _param_present_in_database(dbf, phase_name, configuration, fitting_step.parameter_name):
+            _log.trace('Parameter %s already in the database for configuration %s. Skipping.', fitting_step.parameter_name, configuration)
+            continue
+        elif fitting_step.parameter_name == "G" and _param_present_in_database(dbf, phase_name, configuration, "L"):
+            # special case for Gibbs energy parameters as L is valid for interactions
+            _log.trace('Parameter L already in the database for configuration %s. Skipping.', configuration)
+            continue
         # Search for relevant data
         desired_props = [fitting_step.data_types_read + refstate for refstate in fitting_step.supported_reference_states]
         desired_data = get_prop_data(comps, phase_name, desired_props, datasets, additional_query=solver_qry)
@@ -361,54 +368,57 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
     _log.info('FITTING: %s', phase_name)
     _log.trace('%s endmembers (%s distinct by symmetry)', all_em_count, len(endmembers))
 
+    parameter_types_to_fit = sorted(set([step.parameter_name for step in fitting_description.fitting_steps]))
+    # Special case Gibbs energy fitting as we need to do things like add lattice stabilities
+    if "G" in parameter_types_to_fit:
+        parameter_types_to_fit.append("L")  # G and L are both valid for interactions
+        has_gibbs_fitting_step = True
+    else:
+        has_gibbs_fitting_step = False
+
     all_endmembers = []
     for endmember in endmembers:
         symmetric_endmembers = generate_symmetric_group(endmember, symmetry)
         all_endmembers.extend(symmetric_endmembers)
-        if _param_present_in_database(dbf, phase_name, endmember, 'G'):
-            _log.trace('ENDMEMBER: %s already in Database. Skipping.', endmember)
-            continue
-        else:
-            _log.trace('ENDMEMBER: %s', endmember)
-        # Some endmembers are fixed by our choice of standard lattice stabilities, e.g., SGTE91
-        # If a (phase, pure component endmember) tuple is fixed, we should use that value instead of fitting
-        endmember_comps = list(set(endmember))
+        _log.trace('ENDMEMBER: %s', endmember)
         fit_eq = None
-        # only one non-VA component, or two components but the other is VA and its only the last sublattice
-        if ((len(endmember_comps) == 1) and (endmember_comps[0] != 'VA')) or\
-                ((len(endmember_comps) == 2) and (endmember[-1] == 'VA') and (len(set(endmember[:-1])) == 1)):
-            # this is a "pure component endmember"
-            # try all phase name aliases until we get run out or get a hit
-            em_comp = list(set(endmember_comps) - {'VA'})[0]
-            sym_name = None
-            for name in aliases:
-                sym_name = 'G'+name[:3].upper()+em_comp.upper()
-                stability = refdata.get((em_comp.upper(), name.upper()), None)
-                if stability is not None:
-                    dbf.symbols[sym_name] = stability
-                    break
-            if dbf.symbols.get(sym_name, None) is not None:
-                num_moles = sum([sites for elem, sites in zip(endmember, site_ratios) if elem != 'VA'])
-                fit_eq = num_moles * Symbol(sym_name)
-                _log.trace("Found lattice stability: %s", sym_name)
-                _log.debug("%s = %s", sym_name, dbf.symbols[sym_name])
-                for em in symmetric_endmembers:
-                    dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, fit_eq)
-        if fit_eq is None:
-            # No reference lattice stability data -- we have to fit it
-            fit_parameters(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty, fitting_description=fitting_description)
+        if has_gibbs_fitting_step:
+            # Special case to add pure element lattice stabilities IFF we fit G parameters
+            if _param_present_in_database(dbf, phase_name, endmember, "G"):
+                _log.trace('Parameter G already in the database for configuration %s. Skipping.', endmember)
+                continue
+            # Some endmembers are fixed by our choice of standard lattice stabilities, e.g., SGTE91
+            # If a (phase, pure component endmember) tuple is fixed, we should use that value instead of fitting
+            endmember_comps = list(set(endmember))
+            # only one non-VA component, or two components but the other is VA and its only the last sublattice
+            if ((len(endmember_comps) == 1) and (endmember_comps[0] != 'VA')) or\
+                    ((len(endmember_comps) == 2) and (endmember[-1] == 'VA') and (len(set(endmember[:-1])) == 1)):
+                # this is a "pure component endmember"
+                # try all phase name aliases until we get run out or get a hit
+                em_comp = list(set(endmember_comps) - {'VA'})[0]
+                sym_name = None
+                for name in aliases:
+                    sym_name = 'G'+name[:3].upper()+em_comp.upper()
+                    stability = refdata.get((em_comp.upper(), name.upper()), None)
+                    if stability is not None:
+                        dbf.symbols[sym_name] = stability
+                        break
+                if dbf.symbols.get(sym_name, None) is not None:
+                    num_moles = sum([sites for elem, sites in zip(endmember, site_ratios) if elem != 'VA'])
+                    fit_eq = num_moles * Symbol(sym_name)
+                    _log.trace("Found lattice stability: %s", sym_name)
+                    _log.debug("%s = %s", sym_name, dbf.symbols[sym_name])
+                    for em in symmetric_endmembers:
+                        dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, fit_eq)
+        # fit_parameters knows how to skip endmember Gibbs energies if we added a lattice stability parameter
+        fit_parameters(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty, fitting_description=fitting_description)
 
     for interaction_order in (2, 3):
         _log.trace('FITTING INTERACTIONS OF ORDER %s', interaction_order)
         interactions = generate_interactions(all_endmembers, order=interaction_order, symmetry=symmetry)
         _log.trace('%s distinct order %s interactions', len(interactions), interaction_order)
         for interaction in interactions:
-            config = tuple(map(tuplify, interaction))
-            if _param_present_in_database(dbf, phase_name, config, 'L'):
-                _log.trace('INTERACTION: %s already in Database. Skipping.', interaction)
-                continue
-            else:
-                _log.trace('INTERACTION: %s', interaction)
+            _log.trace('INTERACTION: %s', interaction)
             fit_parameters(dbf, sorted(dbf.elements), phase_name, interaction, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty, fitting_description=fitting_description)
 
     if hasattr(dbf, 'varcounter'):
