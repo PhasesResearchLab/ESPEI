@@ -17,9 +17,6 @@ __all__ = [
     "StepHM",
     "StepSM",
     "StepCPM",
-    "StepElasticC11",
-    "StepElasticC12",
-    "StepElasticC44",
     "StepV0",
     "StepLogVA",
 ]
@@ -316,19 +313,6 @@ class StepCPM(StepHM):
     data_types_read = "CPM"
     features = [v.T * symengine.log(v.T), v.T**2, v.T**-1, v.T**3]
 
-
-
-class StepElasticC11(AbstractRKMPropertyStep):
-    parameter_name = "C11"
-    data_types_read = "C11"
-
-class StepElasticC12(AbstractRKMPropertyStep):
-    parameter_name = "C12"
-    data_types_read = "C12"
-
-class StepElasticC44(AbstractRKMPropertyStep):
-    parameter_name = "C44"
-    data_types_read = "C44"
 
 class StepV0(AbstractRKMPropertyStep):
     parameter_name = "V0"
