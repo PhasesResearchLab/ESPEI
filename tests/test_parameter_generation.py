@@ -640,7 +640,33 @@ def test_G_lattice_stabilities_do_not_prevent_fitting_other_parameters(datasets_
 def test_volume_parameters_are_not_fit_if_present_in_database(datasets_db):
     # Use Lu 2005 digitized data as an input_db and provide some unary volume
     # data and make sure parameters aren't fit.
-    raise NotImplementedError()
+    datasets_db.insert({
+        "components": ["HF"], "phases": ["HCP_A3"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [["HF"]], "sublattice_occupancies": [[1.0]]},
+        "output": "V0", "values": [[[10.1092e-6]]],
+        "reference": "Lu (2005)", "bibtex": "lu2005", "comment": "From Table 1",
+    })
+
+    # fake data
+    datasets_db.insert({
+        "components": ["HF", "ZR"], "phases": ["HCP_A3"],
+        "conditions": {"T": 298.15, "P": 101325},
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["HF", "ZR"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+        "output": "V0_MIX", "values": [[[1.0e-05]]],  # "fixed" value (absolute value from mix data with calphd reference state) extracted manually from above
+    })
+
+    dbf = Database(dbf_vol)
+
+    phase_models = {
+        "components": ["HF"],
+        "phases": {"HCP_A3" : {"sublattice_model": [["HF"]], "sublattice_site_ratios": [1]}}
+    }
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', dbf=dbf, fitting_description=molar_volume_gibbs_energy_fitting_description)
+    print(dbf._parameters.all())
+    assert len(dbf._parameters.search(where('parameter_type') == 'G')) == 2 # pure element lattice stability added
+    assert len(dbf._parameters.search(where('parameter_type') == 'V0')) == 3 # 2 volume parameters already exist in database, 1 added
 
 
 def test_elastic_fitting_description_works(datasets_db):
