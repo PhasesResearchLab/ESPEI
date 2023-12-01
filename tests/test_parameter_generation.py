@@ -11,6 +11,7 @@ from symengine import Symbol
 from espei.logger import config_logger
 from espei.paramselect import generate_parameters
 from espei.utils import PickleableTinyDB
+from espei.parameter_selection.fitting_descriptions import molar_volume_gibbs_energy_fitting_description
 from .testing_data import *
 from .fixtures import datasets_db
 
@@ -610,14 +611,30 @@ def test_weighting_invariance():
     # assert np.isclose(dbf.symbols['VV0001'], 0)  # L0
 
 
-# TODO: take care when skipping parameter fitting in espei.paramselect.phase_fit
-# because our fitting description might not have the parameters we want to fit
-# in it. That is, we might have G parameters from a lattice stability, but don't
-# have V0/VM parameters (and vice-versa, make sure we aren't fitting non-G
-# parameters if we have them in the input TDB already).
 def test_G_lattice_stabilities_do_not_prevent_fitting_other_parameters(datasets_db):
+    # ESPEI skips adding G/L parameters if a lattice stability or an input
+    # database is provided that has those parameters already. The presence of G
+    # parameters (or any parameter X) should not prevent other parameters to be
+    # fit as long as the fitting step parameter name != G (or != X).
     # This also should act as a test for fitting G and non-G parameters at the same time
-    raise NotImplementedError()
+
+    datasets_db.insert({
+        "components": ["HF"], "phases": ["HCP_A3"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [["HF"]], "sublattice_occupancies": [[1.0]]},
+        "output": "V0", "values": [[[10.1092e-6]]],
+        "reference": "Lu (2005)", "bibtex": "lu2005", "comment": "From Table 1",
+    })
+
+    phase_models = {
+        "components": ["HF"],
+        "phases": {"HCP_A3" : {"sublattice_model": [["HF"]], "sublattice_site_ratios": [1]}}
+    }
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=molar_volume_gibbs_energy_fitting_description)
+    print(dbf._parameters.all())
+    assert len(dbf._parameters.search(where('parameter_type') == 'G')) == 1 # pure element lattice stability added
+    assert len(dbf._parameters.search(where('parameter_type') == 'V0')) == 1 # volume parameter added
 
 
 def test_volume_parameters_are_not_fit_if_present_in_database(datasets_db):
