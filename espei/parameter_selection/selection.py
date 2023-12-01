@@ -91,7 +91,7 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     else:
         correction = (2.0 * p**2 * k**2 + 2.0 * pk) / (n - pk - 1.0)
     aicc = aic + correction  # model score
-    _log.trace('%s rss: %s, AIC: %s, AICc: %s', feature_list, rss, aic, aicc)
+    _log.debug('%s rss: %s, AIC: %s, AICc: %s', feature_list, rss, aic, aicc)
     return aicc
 
 
@@ -124,4 +124,5 @@ def select_model(candidate_models, ridge_alpha, weights, aicc_factor=None):
         if model_score < opt_model_score:
             opt_model_score = model_score
             opt_model = (feature_list, model_coefficients)
+    _log.trace('selected model features: %s, cofficients: %s, model score: %s', opt_model[0], list(opt_model[1]), opt_model_score)
     return opt_model

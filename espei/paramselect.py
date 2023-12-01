@@ -381,7 +381,6 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
         symmetric_endmembers = generate_symmetric_group(endmember, symmetry)
         all_endmembers.extend(symmetric_endmembers)
         _log.trace('ENDMEMBER: %s', endmember)
-        fit_eq = None
         if has_gibbs_fitting_step:
             # Special case to add pure element lattice stabilities IFF we fit G parameters
             if _param_present_in_database(dbf, phase_name, endmember, "G"):
@@ -405,16 +404,15 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
                         break
                 if dbf.symbols.get(sym_name, None) is not None:
                     num_moles = sum([sites for elem, sites in zip(endmember, site_ratios) if elem != 'VA'])
-                    fit_eq = num_moles * Symbol(sym_name)
                     _log.trace("Found lattice stability: %s", sym_name)
                     _log.debug("%s = %s", sym_name, dbf.symbols[sym_name])
                     for em in symmetric_endmembers:
-                        dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, fit_eq)
+                        dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, num_moles * Symbol(sym_name))
         # fit_parameters knows how to skip endmember Gibbs energies if we added a lattice stability parameter
         fit_parameters(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty, fitting_description=fitting_description)
 
-    for interaction_order in (2, 3):
-        _log.trace('FITTING INTERACTIONS OF ORDER %s', interaction_order)
+    for interaction_order, order_name in ((2, "BINARY"), (3, "TERNARY")):
+        _log.trace('FITTING %s INTERACTIONS', order_name)
         interactions = generate_interactions(all_endmembers, order=interaction_order, symmetry=symmetry)
         _log.trace('%s distinct order %s interactions', len(interactions), interaction_order)
         for interaction in interactions:
