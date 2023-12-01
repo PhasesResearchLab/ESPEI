@@ -754,8 +754,3 @@ def test_molar_volume_model_fits(datasets_db):
     #   the first N features for mixing or something? Maybe limiting the number
     #   of non-mixing features to 2 to limit combinatorics? Can it be tuned by users?
     raise NotImplementedError()
-
-
-def test_integration_of_qualified_fitting_descrption_in_schema():
-    # test that using a fully qualified import path works to run ESPEI via the high level API in the schema
-    raise NotImplementedError()
