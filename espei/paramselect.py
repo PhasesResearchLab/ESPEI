@@ -257,6 +257,7 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
     # non-idiomatic loop so we can look ahead and see if we should write parameters or not
     for i in range(len(fitting_description.fitting_steps)):
         fitting_step = fitting_description.fitting_steps[i]
+        _log.debug('Fitting step: %s', fitting_step)
         if _param_present_in_database(dbf, phase_name, configuration, fitting_step.parameter_name):
             _log.trace('Parameter %s already in the database for configuration %s. Skipping.', fitting_step.parameter_name, configuration)
             continue
