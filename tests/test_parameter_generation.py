@@ -653,7 +653,7 @@ def test_volume_parameters_are_not_fit_if_present_in_database(datasets_db):
         "components": ["HF", "ZR"], "phases": ["HCP_A3"],
         "conditions": {"T": 298.15, "P": 101325},
         "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["HF", "ZR"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
-        "output": "V0_MIX", "values": [[[1.0e-05]]],  # "fixed" value (absolute value from mix data with calphd reference state) extracted manually from above
+        "output": "V0_MIX", "values": [[[1.0e-05]]],
     })
 
     dbf = Database(dbf_vol)
@@ -666,6 +666,7 @@ def test_volume_parameters_are_not_fit_if_present_in_database(datasets_db):
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', dbf=dbf, fitting_description=molar_volume_gibbs_energy_fitting_description)
     assert len(dbf._parameters.search(where('parameter_type') == 'G')) == 2 # pure element lattice stability added
     assert len(dbf._parameters.search(where('parameter_type') == 'V0')) == 3 # 2 volume parameters already exist in database, 1 added
+    assert dbf.symbols['VV0000'] == 4.0e-05  # 0.5 * 0.5 * 1.0e-5
 
 
 def test_elastic_fitting_description_works(datasets_db):
@@ -731,7 +732,6 @@ def test_elastic_fitting_description_works(datasets_db):
         "phases": {"BCC_A2" : {"sublattice_model": [["MO", "TI"], ["VA"]], "sublattice_site_ratios": [1, 3]}}
     }
 
-    config_logger(3)
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=elastic_fitting_description)
     assert len(dbf._parameters.search(where('parameter_type') == 'C12')) == 3 # 3 added
     assert dbf.symbols['VV0000'] == 164.0
