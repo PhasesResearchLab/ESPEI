@@ -778,10 +778,71 @@ def test_property_models_for_phases_with_more_than_one_mole_formula_fit_correctl
 
 
 def test_molar_volume_model_fits(datasets_db):
-    # test V0, VM unary, binary, and ternary parameters from the notebook work
-    # TODO: performance of mixing models with lots of features is really bad
-    #   (CPM, AbstractRKMProperty, VA parameters). Think if we can find a
-    #   solution to that. Maybe some code in the feature generation to take only
-    #   the first N features for mixing or something? Maybe limiting the number
-    #   of non-mixing features to 2 to limit combinatorics? Can it be tuned by users?
-    raise NotImplementedError()
+    # integration test that we can fit different kinds of data and parameters
+    # mixing V0 (binary)
+    datasets_db.insert({
+        "components": ["TA", "W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "V0_MIX", "values": [[[-1.00257453e-07]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["TA", "W"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+    })
+    # absolute value VA (binary)
+    datasets_db.insert({
+        "components": ["TA", "W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "VM", "values": [[[1.02e-5]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["TA", "W"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+    })
+    # absolute value V0 ternary
+    datasets_db.insert({
+        "components": ["MO", "TA", "W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "V0", "values": [[[0.99e-5]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["MO", "TA", "W"]]], "sublattice_occupancies": [[[0.333333, 0.333333, 0.333333]]]},
+    })
+    # mixing VA ternary
+    datasets_db.insert({
+        "components": ["MO", "TA", "W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "VM_MIX", "values": [[[1e-6]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["MO", "TA", "W"]]], "sublattice_occupancies": [[[0.333333, 0.333333, 0.333333]]]},
+    })
+
+    phase_models = {
+        "components": ["MO", "TA", "W"],
+        "phases": {"BCC_A2" : {"sublattice_model": [["MO", "TA", "W"]], "sublattice_site_ratios": [1]}}
+    }
+
+    # the performance of mixing VA parameters is quite poor due to the number of
+    # features and the combinatorics of temperature + mixing features.
+    # this test only utilizes some basic features, so we'll strip down StepLogVA
+    # features for performance.
+    from espei.parameter_selection.fitting_steps import StepV0, StepLogVA
+    from espei.parameter_selection.fitting_descriptions import ModelFittingDescription
+    class SimpleStepLogVA(StepLogVA):
+        features = [v.T, v.T**2]
+    test_VM_fit_desc = ModelFittingDescription([StepV0, SimpleStepLogVA])
+
+    dbf = Database(dbf_lu2005)  # use Lu 2005 as a starting point, we tested unary fitting above
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', dbf=dbf, fitting_description=test_VM_fit_desc)
+    mod = Model(dbf, ["MO", "TA", "W"], "BCC_A2")
+
+    bin_Ta50_W50 = {v.Y("BCC_A2", 0, "MO"): 0.0, v.Y("BCC_A2", 0, "TA"): 0.5, v.Y("BCC_A2", 0, "W"): 0.5}
+    tern_Mo33_Ta33_W33 = {v.Y("BCC_A2", 0, "MO"): 0.333333, v.Y("BCC_A2", 0, "TA"): 0.333333, v.Y("BCC_A2", 0, "W"): 0.333333}
+
+    # we need to test both V0 and VM because testing only VM could lead to some nonsense that VM is overfitting using VA parmaeters.
+    V0_bin_em_mix = float(mod.V0.subs({v.T: 298.15, **bin_Ta50_W50, **mod._symbols}).evalf()) - float(mod.endmember_reference_model.V0.subs({v.T: 298.15, **bin_Ta50_W50, **mod._symbols}).evalf())
+    V0_bin_em_mix_truth = -1.00257453e-07  # from data
+    assert np.isclose(V0_bin_em_mix, V0_bin_em_mix_truth, atol=1e-14)
+
+    VM_bin = float(mod.VM.subs({v.T: 298.15, **bin_Ta50_W50, **mod._symbols}).evalf())
+    VM_bin_truth = 1.02e-5  # from data
+    assert np.isclose(VM_bin, VM_bin_truth, atol=1e-14)
+
+    V0_tern = float(mod.V0.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf())
+    V0_tern_truth = 0.99e-5  # from data
+    assert np.isclose(V0_tern, V0_tern_truth, atol=1e-14)
+
+    VM_tern_em_mix = float(mod.VM.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf()) - float(mod.endmember_reference_model.VM.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf())
+    VM_tern_em_mix_truth = 1.0e-6  # from data
+    assert np.isclose(VM_tern_em_mix, VM_tern_em_mix_truth, atol=1e-14)

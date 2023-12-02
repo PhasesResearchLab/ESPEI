@@ -1,5 +1,11 @@
 # TODO: do all typing before merging
 
+# TODO: performance of mixing models with lots of features is really bad
+#   (CPM, AbstractRKMProperty, VA parameters). Think if we can find a
+#   solution to that. Maybe some code in the feature generation to take only
+#   the first N features for mixing or something? Maybe limiting the number
+#   of non-mixing features to 2 to limit combinatorics? Can it be tuned by users?
+
 from typing import Any, Dict, Optional
 import itertools
 from numpy.typing import ArrayLike
