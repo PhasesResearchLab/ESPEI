@@ -165,7 +165,7 @@ class AbstractRKMPropertyStep(FittingStep):
         # subtract off lower order contributions.
         for i in range(rhs.shape[0]):
             rhs[i] -= getattr(fixed_model, cls.parameter_name)
-            # convert to moles_per_formula_unit
+            # Convert the quantity per-mole-atoms to per-mole-formula
             rhs[i] *= mole_atoms_per_mole_formula_unit
 
         # Previous steps may have introduced some symbolic terms.
@@ -360,23 +360,17 @@ class StepLogVA(FittingStep):
             Model with all lower order (in composition) terms already fit. Pure
             element reference state (GHSER functions) should be set to zero.
         mole_atoms_per_mole_formula_unit : float
-            Number of moles of atoms in every mole atom unit.
+            Number of moles of atoms in every mole atom unit. Not used here as
+            our input and output are both in terms of moles of atoms.
 
         Returns
         -------
         np.ndarray
-            Data for this feature in [qty]/mole-formula in a common reference state.
+            Data for this feature in [qty]/mole-atoms in a common reference state.
 
         Raises
         ------
         ValueError
-
-        Notes
-        -----
-        pycalphad Model parameters are stored as per mole-formula quantites, but
-        the calculated properties and our data are all in [qty]/mole-atoms. We
-        multiply by mole-atoms/mole-formula to convert the units to
-        [qty]/mole-formula.
 
         """
         # Because of the log transform used to linearize the data it must be
@@ -385,7 +379,7 @@ class StepLogVA(FittingStep):
         # The solution is to shift other reference states into absolute volume.
         total_response = []
         for dataset in desired_data:
-            values = np.asarray(dataset['values'], dtype=np.object_)*mole_atoms_per_mole_formula_unit
+            values = np.asarray(dataset['values'], dtype=np.object_)
             for config_idx in range(len(dataset['solver']['sublattice_configurations'])):
                 occupancy = dataset['solver'].get('sublattice_occupancies', None)
                 if dataset['output'].endswith('_FORM'):
@@ -432,20 +426,14 @@ class StepLogVA(FittingStep):
         units to [qty]/mole-formula.
 
         """
+        mole_atoms_per_mole_formula_unit = fixed_model._site_ratio_normalization
+
         # VM (VA parameters) can't easily fit excess volumes with _MIX or _FORM
         #   reference states because the excess volume might be negative and our
         #   linearization transformation would take the log of a negative
         #   value for `log(V_xs / V0)`. We use shift_reference_state to work in
         #   terms of total volume, which should always be positive.
-
-        # TODO: make sure to normalize per mole of formula correctly!
-        #   For this fitting step, everything we are working with from model
-        #   should be per mole of atoms (except the volume_data, that
-        #   shift_reference_state shifts).If we modify our internal
-        #   shift_reference_state, we might be able to just normalize per mole
-        #   of formula units at the end.
-        mole_atoms_per_mole_formula_unit = fixed_model._site_ratio_normalization
-        # This function takes Dataset objects (`data`) -> values array
+        # volume_data returned per mole of atoms
         volume_data = np.concatenate(cls.shift_reference_state(data, fixed_model, mole_atoms_per_mole_formula_unit), axis=-1)
 
         # Now we start to build the rhs:
@@ -459,7 +447,7 @@ class StepLogVA(FittingStep):
             # In this fitting step, all \(V_0\) are fixed, so that's always just a constant.
             # We start to linearize by
             # \[ V_A = \log(V / V_0) \]
-            rhs[i] = symengine.log( volume_data[i] / fixed_model.V0 )
+            rhs[i] = symengine.log( volume_data[i] / (fixed_model.V0) )
             # We are fitting V_A parameters here, but remember that there may be
             # lower order V_A parameters already in the model.
             # \[ V_A^{\mathrm{prev. fit}} + V_A^{\mathrm{curr. fit}} = \log(V / V_0) \]
@@ -467,6 +455,8 @@ class StepLogVA(FittingStep):
             # we can express as an Ax = b form:
             # \[ V_A^{\mathrm{curr. fit}} = \log(V / V_0) - V_A^{\mathrm{prev. fit}} \]
             rhs[i] -= fixed_model.VA
+            # Convert the quantity per-mole-atoms to per-mole-formula
+            rhs[i] *= mole_atoms_per_mole_formula_unit
 
         # TODO: there shouldn't really YS and Z here since all the symbols come
         # from the existing model. The comment below inside the for loop is from
