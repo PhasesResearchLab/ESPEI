@@ -4,7 +4,7 @@ import copy
 from tinydb import where
 from tinydb.storages import MemoryStorage
 import numpy as np
-from pycalphad import Database, variables as v
+from pycalphad import Database, Model, variables as v
 import scipy
 from symengine import Symbol
 
@@ -744,7 +744,38 @@ def test_property_models_for_phases_with_more_than_one_mole_formula_fit_correctl
     # Test that phases that have more than one mole of formula units fit
     # correctly normalized parameters.
     # Might be missing some normalizations for some properties.
-    raise NotImplementedError()
+    datasets_db.insert({
+        "components": ["CR"], "phases": ["SIGMA_D8B"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "solver": {"mode": "manual", "sublattice_site_ratios": [10, 4, 16], "sublattice_configurations": [["CR", "CR", "CR"]], "sublattice_occupancies": [[1.0, 1.0, 1.0]]},
+        "output": "V0", "values": [[[1e-5]]],
+    })
+
+    # VM calculated from 1.0e-5 * math.exp(5e-5*1000)
+    # i.e. with V0 = 1e-5, we expect VA = 5e-5 * T (per mole atoms)
+    datasets_db.insert({
+        "components": ["CR"], "phases": ["SIGMA_D8B"],
+        "conditions": {"P": 101315, "T": 1000},
+        "solver": {"mode": "manual", "sublattice_site_ratios": [10, 4, 16], "sublattice_configurations": [["CR", "CR", "CR"]], "sublattice_occupancies": [[1.0, 1.0, 1.0]]},
+        "output": "VM", "values": [[[1.0512710963760243e-05]]],
+    })
+
+    phase_models = {
+        "components": ["CR"],
+        "phases": {"SIGMA_D8B" : {"sublattice_model": [["CR"], ["CR"], ["CR"]], "sublattice_site_ratios": [10, 4, 16]}}
+    }
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=molar_volume_gibbs_energy_fitting_description)
+    mod = Model(dbf, ["CR"], "SIGMA_D8B")
+    print(dbf._parameters.search(where('parameter_type') == 'V0'))
+    print(dbf._parameters.search(where('parameter_type') == 'VA'))
+    assert len(dbf._parameters.search(where('parameter_type') == 'V0')) == 1 # 1 V0 parameter fit
+    assert len(dbf._parameters.search(where('parameter_type') == 'VA')) == 1 # 1 VA parameter fit
+    VM_1000K = float(mod.VM.subs({v.T: 1000, v.Y("SIGMA_D8B", 0, "CR"): 1.0, v.Y("SIGMA_D8B", 1, "CR"): 1.0, v.Y("SIGMA_D8B", 2, "CR"): 1.0, **mod._symbols}).evalf())
+    assert np.isclose(VM_1000K, 1.0512710963760243e-05, atol=1e-14)
+    assert np.isclose(dbf.symbols['VV0000'], 1.0e-05 * 30, atol=1e-14)  # per mole of formula
+    assert np.isclose(dbf.symbols['VV0001'], 5.0e-05 * 30, atol=1e-14)  # per mole of formula
+
 
 def test_molar_volume_model_fits(datasets_db):
     # test V0, VM unary, binary, and ternary parameters from the notebook work
