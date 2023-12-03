@@ -1,13 +1,7 @@
 from typing import Optional, Type
 from pycalphad import Model
-import tinydb
 from espei.parameter_selection.fitting_steps import *
 
-# TODO: would it make sense to have ModelFittingDescription.fitting_steps to
-# have type [Union[ModelFittingDescription, FittingStep]]? The idea being
-# that we could compose multiple individual fitting descriptions into a larger
-# one. We'd need to be able to resolve what happens if there are different model
-# objects used.
 class ModelFittingDescription():
     """
 
