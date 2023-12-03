@@ -277,7 +277,7 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
                 fixed_model = fitting_description.model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
             calculate_dict = get_prop_samples(desired_data, config_tup)
             sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, phase_name)
-            response_vector = fitting_step.get_data_quantities(fitting_step.data_types_read, fixed_model, fixed_portions, desired_data, sample_condition_dicts)
+            response_vector = fitting_step.get_response_vector(fixed_model, fixed_portions, desired_data, sample_condition_dicts)
             candidate_models = []
             feature_sets = build_redlich_kister_candidate_models(configuration, fitting_step.get_feature_sets())
             for features in feature_sets:

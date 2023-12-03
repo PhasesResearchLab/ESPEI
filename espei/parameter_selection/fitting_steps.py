@@ -46,15 +46,15 @@ class FittingStep():
     def get_feature_sets(cls):
         return make_successive(cls.features)
 
-    # TODO: rename, maybe get_regression_rhs (and build_feature_matrix => get_regression_matrix)
     @classmethod
-    def get_data_quantities(cls, desired_property, fixed_model, fixed_portions, data, sample_condition_dicts):
+    def get_response_vector(cls, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], sample_condition_dicts: [Dict[str, Any]]):
         """
+        Get the response vector, b, for the a linear models in Ax=b with
+        features, A, and coefficients, x, in units of [qty]/mole-formula.
+
         Parameters
         ----------
-        desired_property : str
-            String property corresponding to the features that could be fit, e.g. HM, SM_FORM, CPM_MIX
-        fixed_model : pycalphad.Model
+        fixed_model : Model
             Model with all lower order (in composition) terms already fit. Pure
             element reference state (GHSER functions) should be set to zero.
         fixed_portions : [symengine.Basic]
@@ -122,32 +122,7 @@ class AbstractRKMPropertyStep(FittingStep):
         return total_response
 
     @classmethod
-    def get_data_quantities(cls, desired_property: str, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], sample_condition_dicts):
-        """
-        Parameters
-        ----------
-        desired_property : str
-            String property corresponding to the features that could be fit, e.g. HM, SM_FORM, CPM_MIX
-        fixed_model : pycalphad.Model
-            Model with all lower order (in composition) terms already fit.
-        fixed_portions : [symengine.Basic]
-            API compatibility. Not used for this method.
-        data : [Dict[str, Any]]
-            ESPEI single phase datasets for this property.
-
-        Returns
-        -------
-        np.ndarray[:]
-            Ravelled data quantities in [qty]/mole-formula
-
-        Notes
-        -----
-        pycalphad Model parameters (and therefore fixed_portions) are stored as per
-        mole-formula quantites, but the calculated properties and our data are all
-        in [qty]/mole-atoms. We multiply by mole-atoms/mole-formula to convert the
-        units to [qty]/mole-formula.
-
-        """
+    def get_response_vector(cls, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], sample_condition_dicts: [Dict[str, Any]]):
         mole_atoms_per_mole_formula_unit = fixed_model._site_ratio_normalization
         # This function takes Dataset objects (`data`) -> values array (of np.object_)
         rhs = np.concatenate(cls.shift_reference_state(data, fixed_model, None), axis=-1)
@@ -260,7 +235,7 @@ class StepHM(FittingStep):
 
 
     @classmethod
-    def get_data_quantities(cls, desired_property, fixed_model, fixed_portions, data, sample_condition_dicts):
+    def get_response_vector(cls, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], sample_condition_dicts: [Dict[str, Any]]):
         mole_atoms_per_mole_formula_unit = fixed_model._site_ratio_normalization
         # Define site fraction symbols that will be reused
         phase_name = fixed_model.phase_name
@@ -273,7 +248,7 @@ class StepHM(FittingStep):
                 site_fractions.append(sf)
         site_fractions = list(itertools.chain(*site_fractions))
 
-        feat_transform = feature_transforms[desired_property]
+        feat_transform = feature_transforms[cls.data_types_read]
         data_qtys = np.concatenate(cls.shift_reference_state(data, feat_transform, fixed_model, mole_atoms_per_mole_formula_unit), axis=-1)
         # Remove existing partial model contributions from the data, convert to per mole-formula units
         data_qtys = data_qtys - feat_transform(fixed_model.ast)*mole_atoms_per_mole_formula_unit
@@ -319,7 +294,7 @@ class StepLogVA(FittingStep):
     features = [v.T, v.T**2, v.T**3, v.T**(-1)]
     supported_reference_states = ["", "_MIX"]  # TODO: add formation support
 
-    # TODO: This is probably deprecated now that we have a get_data_quantities implemented in this class
+    # TODO: This is probably deprecated now that we have a get_response_vector implemented in this class
     @staticmethod
     def transform_data(d, model: Model) -> ArrayLike:
         # We are given samples of volume (V) as our data (d).
@@ -392,32 +367,7 @@ class StepLogVA(FittingStep):
     # the cls.transform_data method, as that's really the only difference
     # # between this function and the V0 function.
     @classmethod
-    def get_data_quantities(cls, desired_property, fixed_model, fixed_portions, data, sample_condition_dicts):
-        """
-        Parameters
-        ----------
-        desired_property : str
-            String property corresponding to the features that could be fit, e.g. HM, SM_FORM, CPM_MIX
-        fixed_model : pycalphad.Model
-            Model with all lower order (in composition) terms already fit.
-        fixed_portions : [symengine.Basic]
-            API compatibility. Not used for this method.
-        data : [Dict[str, Any]]
-            ESPEI single phase datasets for this property.
-
-        Returns
-        -------
-        np.ndarray[:]
-            Ravelled data quantities in [qty]/mole-formula
-
-        Notes
-        -----
-        pycalphad Model parameters (and therefore fixed_portions) are stored as per
-        mole-formula quantites, but the calculated properties and our data are all
-        in [qty]/mole-atoms. We multiply by mole-atoms/mole-formula to convert the
-        units to [qty]/mole-formula.
-
-        """
+    def get_response_vector(cls, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], sample_condition_dicts: [Dict[str, Any]]):
         mole_atoms_per_mole_formula_unit = fixed_model._site_ratio_normalization
 
         # VM (VA parameters) can't easily fit excess volumes with _MIX or _FORM
@@ -452,7 +402,7 @@ class StepLogVA(FittingStep):
 
         # TODO: there shouldn't really YS and Z here since all the symbols come
         # from the existing model. The comment below inside the for loop is from
-        # copy and pasted from get_data_quantities in the ESPEI source, and the
+        # copy and pasted from get_response_vector in the ESPEI source, and the
         # comments may be incorrect (in this context) and maybe can be removed?
 
         # Now we remove all the symbols:

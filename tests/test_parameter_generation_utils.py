@@ -5,7 +5,7 @@ import numpy as np
 from pycalphad import Database, Model, variables as v
 from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
 from espei.parameter_selection.utils import _get_sample_condition_dicts
-from espei.parameter_selection.fitting_steps import StepHM
+from espei.parameter_selection.fitting_steps import StepHM, StepSM
 from espei.sublattice_tools import interaction_test
 
 def test_interaction_detection():
@@ -54,7 +54,7 @@ def test_interaction_detection():
         assert interaction_test(config, 2) == False
         assert interaction_test(config, 3) == True
 
-def test_get_data_quantities_AL_NI_VA_interaction():
+def test_get_response_vector_AL_NI_VA_interaction():
     """Test that an interaction with a VA produces the correct data quantities
 
     We just have a template database that has the phase defined. We then hot
@@ -104,12 +104,12 @@ def test_get_data_quantities_AL_NI_VA_interaction():
     config_tup = (('AL',), ('NI', 'VA'), ('VA',))
     calculate_dict = get_prop_samples(data, config_tup)
     sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, mod.phase_name)
-    qty = StepHM.get_data_quantities('HM_FORM', mod, [0], data, sample_condition_dicts)
+    qty = StepHM.get_response_vector(mod, [0], data, sample_condition_dicts)
     print(qty)
     assert np.all(np.isclose([-6254.7802775, -5126.1206475, -7458.3974225, -6358.04118875], qty))
 
 
-def test_get_data_quantities_mixing_entropy():
+def test_get_response_vector_mixing_entropy():
     """Test that mixing entropy produces correct data quantities with excluded idmix model contribution
     """
     data = [{'components': ['AL', 'CR'], 'phases': ['AL11CR2'], 'solver': {'mode': 'manual', 'sublattice_site_ratios': [10.0, 2.0], 'sublattice_configurations': (('AL', ('AL', 'CR')),), 'sublattice_occupancies': [[1.0, [0.5, 0.5]]]}, 'conditions': {'P': 101325.0, 'T': np.array([300.])}, 'output': 'SM_MIX', 'values': np.array([[[0.60605556]]]), 'reference': 'text 1 to write down reference for this work', 'comment': 'test 2 to write down comment for this work', 'excluded_model_contributions': ['idmix']}]
@@ -127,12 +127,13 @@ def test_get_data_quantities_mixing_entropy():
     config_tup = (('AL',), ('AL', 'CR'))
     calculate_dict = get_prop_samples(data, config_tup)
     sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, mod.phase_name)
-    qty = StepHM.get_data_quantities('SM_MIX', mod, [0], data, sample_condition_dicts)
+    # the transform isn't property tested here (i.e. any StepHM/SM/CPM works)
+    qty = StepSM.get_response_vector(mod, [0], data, sample_condition_dicts)
     print(qty)
     assert np.all(np.isclose([7.27266667], qty))
 
 
-def test_get_data_quantities_magnetic_energy():
+def test_get_response_vector_magnetic_energy():
     data = [{"components": ["AL", "CR"], "phases": ["ALCR2"], "solver": {"mode": "manual", "sublattice_site_ratios": [1.0, 2.0], "sublattice_configurations": [["AL", "CR"]]}, "conditions": {"P": [101325], "T": [300]}, "excluded_model_contributions": ["idmix", "mag"], "output": "SM_FORM", "values": [[[5.59631999999999]]]}]
     config_tup = (('AL',), ('CR',))
     calculate_dict = get_prop_samples(data, config_tup)
@@ -146,7 +147,8 @@ def test_get_data_quantities_magnetic_energy():
     CONSTITUENT ALCR2 :AL,CR:AL,CR: !
     """)
     mod_nomag = Model(dbf_nomag, ['AL', 'CR'], 'ALCR2')
-    qty_nomag = StepHM.get_data_quantities('SM_FORM', mod_nomag, [0], data, sample_condition_dicts)
+    # the transform isn't property tested here (i.e. any StepHM/SM/CPM works)
+    qty_nomag = StepSM.get_response_vector(mod_nomag, [0], data, sample_condition_dicts)
     print(qty_nomag)
     assert np.all(np.isclose([16.78896], qty_nomag))
 
@@ -174,6 +176,7 @@ def test_get_data_quantities_magnetic_energy():
     PARAMETER BMAGN(ALCR2,AL,CR:CR;0)      298.15 -.92; 6000 N REF0 !
     """)
     mod = Model(dbf, ['AL', 'CR'], 'ALCR2')
-    qty = StepHM.get_data_quantities('SM_FORM', mod, [0], data, sample_condition_dicts)
+    # the transform isn't property tested here (i.e. any StepHM/SM/CPM works)
+    qty = StepSM.get_response_vector(mod, [0], data, sample_condition_dicts)
     print(qty)
     assert np.all(np.isclose([16.78896], qty))
