@@ -125,7 +125,6 @@ def get_run_settings(input_dict):
         raise ValueError(schema.errors)
     if run_settings.get("generate_parameters") is not None:
         # load the fitting description object
-        # TODO: better error message if failure
         run_settings["generate_parameters"]["fitting_description"] = import_qualified_object(run_settings["generate_parameters"]["fitting_description"])
     return run_settings
 
