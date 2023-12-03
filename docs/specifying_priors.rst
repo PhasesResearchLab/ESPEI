@@ -28,10 +28,10 @@ There is also a special (improper) ``zero`` prior that always gives :math:`\ln p
 Each ``scipy.stats`` prior is typically specified using several keyword argument
 parameters, e.g. ``loc`` and ``scale``, which have special meaning for the
 different distribution functions.
-In order to be flexible to specifying these arguments when the CALPHAD
+In order to be flexible to specifying these arguments when the Calphad
 parameters they will be used for are not known beforehand, ESPEI uses a small
 language to specify how the distribution hyperparameters can be set relative to
-the CALPHAD parameters.
+the Calphad parameters.
 
 Basically, the ``PriorSpec`` objects are created with the name of the distribution
 and the hyperparameters that are modified with
@@ -39,7 +39,7 @@ one of the modifier types: ``absolute``, ``relative``, ``shift_absolute``, or ``
 For example, the ``loc`` parameter might become ``loc_relative`` and ``scale`` might
 become ``scale_shift_relative``.
 
-Here are some examples of how the modifier parameters of value ``v`` modify the hyperparameters when given a CALPHAD parameter of value ``p``:
+Here are some examples of how the modifier parameters of value ``v`` modify the hyperparameters when given a Calphad parameter of value ``p``:
 
 * ``_absolute=v`` always take the exact value passed in, ``v``; ``loc_absolute=-20`` gives a value of ``loc=-20``.
 * ``_relative=v`` gives , ``v*p``; ``scale_absolute=0.1`` with ``p=10000`` gives a value of ``scale=10000*0.1=1000``.

@@ -4,7 +4,7 @@ Quickstart
 ESPEI has two different fitting modes: parameter generation and Bayesian parameter estimation, which uses Markov Chain Monte Carlo (MCMC).
 You can run either of these modes or both of them sequentially.
 
-To run either of the modes, you need to have a phase models file that describes the phases in the system using the standard CALPHAD approach within the compound energy formalism.
+To run either of the modes, you need to have a phase models file that describes the phases in the system using the standard Calphad approach within the compound energy formalism.
 You also need to describe the data that ESPEI should fit to.
 You will need single-phase and multi-phase data for a full run.
 Fit settings and all datasets are stored as JSON files and described in detail at the :ref:`Input data` page.
@@ -151,7 +151,7 @@ You can install git using ``conda install git`` on Windows.
 Q: I have a large database, can I use ESPEI to optimize parameters in only a subsystem?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A: Yes, if you have a multicomponent CALPHAD database, but want to optimize or
+A: Yes, if you have a multicomponent Calphad database, but want to optimize or
 determine the uncertainty for a constituent unary, binary or ternary subsystem
 that you have data for, you can do that without any extra effort.
 
