@@ -689,17 +689,17 @@ def test_elastic_fitting_description_works(datasets_db):
                 setattr(self, prop, prop_val)
 
     from espei.parameter_selection.fitting_descriptions import ModelFittingDescription
-    from espei.parameter_selection.fitting_steps import AbstractRKMPropertyStep
+    from espei.parameter_selection.fitting_steps import AbstractLinearPropertyStep
 
-    class StepElasticC11(AbstractRKMPropertyStep):
+    class StepElasticC11(AbstractLinearPropertyStep):
         parameter_name = "C11"
         data_types_read = "C11"
 
-    class StepElasticC12(AbstractRKMPropertyStep):
+    class StepElasticC12(AbstractLinearPropertyStep):
         parameter_name = "C12"
         data_types_read = "C12"
 
-    class StepElasticC44(AbstractRKMPropertyStep):
+    class StepElasticC44(AbstractLinearPropertyStep):
         parameter_name = "C44"
         data_types_read = "C44"
 

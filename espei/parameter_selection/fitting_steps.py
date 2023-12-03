@@ -18,7 +18,7 @@ from espei.parameter_selection.utils import build_sitefractions
 
 __all__ = [
     "FittingStep",
-    "AbstractRKMPropertyStep",
+    "AbstractLinearPropertyStep",
     "StepHM",
     "StepSM",
     "StepCPM",
@@ -76,9 +76,9 @@ class FittingStep():
         raise NotImplementedError()
 
 
-class AbstractRKMPropertyStep(FittingStep):
+class AbstractLinearPropertyStep(FittingStep):
     """
-    This class is a base class for generic Redlich-Kister-Muggianu (RKM) properties.
+    This class is a base class for generic linear properties.
 
     "Generic" meaning, essentially, that
     `property_name == parameter_name == data_type` and PyCalphad models
@@ -86,10 +86,17 @@ class AbstractRKMPropertyStep(FittingStep):
     ```python
     self.<parameter_name> = self.redlich_kister_sum(phase, param_search, <param_name>_query)
     ```
+    Note that `redlich_kister_sum` specifically is an implementation detail and
+    isn't relevant for this class in particular. Any mixing model could work,
+    although ESPEI currently only generates features by
+    `build_redlich_kister_candidate_models`.
 
     Fitting steps that want to use this base class should need to subclass this
     class, override the `parameter_name` and `data_type_read` (typically these
     match), and optionally override the `features` if a desired.
+
+    For models that are 'nearly linear', and the `transform_data` method can be
+    overriden to try to linearize the data with respect to the model parameters.
     """
     features = [symengine.S.One, v.T, v.T**2, v.T**3, v.T**(-1)]
     supported_reference_states = ["", "_MIX"]  # TODO: add _FORM support
@@ -287,12 +294,12 @@ class StepCPM(StepHM):
     features = [v.T * symengine.log(v.T), v.T**2, v.T**-1, v.T**3]
 
 
-class StepV0(AbstractRKMPropertyStep):
+class StepV0(AbstractLinearPropertyStep):
     parameter_name = "V0"
     data_types_read = "V0"
     features = [symengine.S.One]
 
-class StepLogVA(AbstractRKMPropertyStep):
+class StepLogVA(AbstractLinearPropertyStep):
     parameter_name = "VA"
     data_types_read = "VM"
     features = [v.T, v.T**2, v.T**3, v.T**(-1)]
