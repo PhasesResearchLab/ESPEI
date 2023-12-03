@@ -35,8 +35,8 @@ class FittingStep():
     supported_reference_states: [str]
 
     @classmethod
-    def transform_feature(cls, f: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
-        return f
+    def transform_feature(cls, expr: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
+        return expr
 
     @classmethod
     def get_feature_sets(cls):
@@ -170,9 +170,6 @@ class AbstractLinearPropertyStep(FittingStep):
         return rhs
 
 
-# Legacy imports while we're transitioning, fix these
-from espei.parameter_selection.utils import feature_transforms
-# TODO: support fitting GM_MIX and GM_FORM directly from DFT?
 # TODO: for HM, SM, and CPM, refactor to stop using the transforms and build the transforms into the subclasses
 # Maybe this is where we introduce the data and feature transforms class methods?
 class StepHM(FittingStep):
@@ -182,9 +179,10 @@ class StepHM(FittingStep):
     features = [symengine.S.One]
 
     @classmethod
-    def transform_feature(cls, f: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
-        transform = feature_transforms[cls.data_types_read]
-        return transform(f)
+    def transform_feature(cls, expr: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
+        # expr is the AST for GM, so we need to transform GM features into HM
+        # H = G + T*S, with S = -dG/dT
+        return expr - v.T*symengine.diff(expr, v.T)
 
     # TODO: this function actually does 2 things that should be split up into separate functions:
     # 1. Extract data from Dataset objects into an array of raw values
@@ -192,7 +190,7 @@ class StepHM(FittingStep):
     #    For Gibbs energy (and derivatives), we always shift to _FORM reference state
     # This is the original s_r_s method from ESPEI
     @classmethod
-    def shift_reference_state(cls, desired_data, feature_transform, fixed_model, mole_atoms_per_mole_formula_unit):
+    def shift_reference_state(cls, desired_data, fixed_model, mole_atoms_per_mole_formula_unit):
         """
         Shift _MIX or _FORM data to a common reference state in per mole-atom units.
 
@@ -200,9 +198,6 @@ class StepHM(FittingStep):
         ----------
         desired_data : List[Dict[str, Any]]
             ESPEI single phase dataset
-        feature_transform : Callable
-            Function to transform an AST for the GM property to the property of
-            interest, i.e. entropy would be ``lambda GM: -symengine.diff(GM, v.T)``
         fixed_model : pycalphad.Model
             Model with all lower order (in composition) terms already fit. Pure
             element reference state (GHSER functions) should be set to zero.
@@ -238,11 +233,11 @@ class StepHM(FittingStep):
                     if occupancy is None:
                         raise ValueError('Cannot have a _MIX property without sublattice occupancies.')
                     else:
-                        values[..., config_idx] += feature_transform(fixed_model.models['ref'])*mole_atoms_per_mole_formula_unit
+                        values[..., config_idx] += cls.transform_feature(fixed_model.models['ref'])*mole_atoms_per_mole_formula_unit
                 else:
                     raise ValueError(f'Unknown property to shift: {dataset["output"]}')
                 for excluded_contrib in unique_excluded_contributions:
-                    values[..., config_idx] += feature_transform(fixed_model.models[excluded_contrib])*mole_atoms_per_mole_formula_unit
+                    values[..., config_idx] += cls.transform_feature(fixed_model.models[excluded_contrib])*mole_atoms_per_mole_formula_unit
             total_response.append(values.flatten())
         return total_response
 
@@ -261,12 +256,11 @@ class StepHM(FittingStep):
                 site_fractions.append(sf)
         site_fractions = list(itertools.chain(*site_fractions))
 
-        feat_transform = feature_transforms[cls.data_types_read]
-        data_qtys = np.concatenate(cls.shift_reference_state(data, feat_transform, fixed_model, mole_atoms_per_mole_formula_unit), axis=-1)
+        data_qtys = np.concatenate(cls.shift_reference_state(data, fixed_model, mole_atoms_per_mole_formula_unit), axis=-1)
         # Remove existing partial model contributions from the data, convert to per mole-formula units
-        data_qtys = data_qtys - feat_transform(fixed_model.ast)*mole_atoms_per_mole_formula_unit
+        data_qtys = data_qtys - cls.transform_feature(fixed_model.ast)*mole_atoms_per_mole_formula_unit
         # Subtract out high-order (in T) parameters we've already fit, already in per mole-formula units
-        data_qtys = data_qtys - feat_transform(sum(fixed_portions))
+        data_qtys = data_qtys - cls.transform_feature(sum(fixed_portions))
         # if any site fractions show up in our data_qtys that aren't in this datasets site fractions, set them to zero.
         for sf, i, cond_dict in zip(site_fractions, data_qtys, sample_condition_dicts):
             missing_variables = symengine.S(i).atoms(v.SiteFraction) - set(sf.keys())
@@ -287,11 +281,23 @@ class StepSM(StepHM):
     data_types_read = "SM"
     features = [v.T]
 
+    @classmethod
+    def transform_feature(cls, expr: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
+        # expr is the AST for GM, so we need to transform GM features into SM
+        # S = -dG/dT
+        return -symengine.diff(expr, v.T)
+
 
 # TODO: support "" (absolute) heat capacity reference state?
 class StepCPM(StepHM):
     data_types_read = "CPM"
     features = [v.T * symengine.log(v.T), v.T**2, v.T**-1, v.T**3]
+
+    @classmethod
+    def transform_feature(cls, expr: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
+        # expr is the AST for GM, so we need to transform GM features into CPM
+        # CP = T * dS/dT = - T * d^2G / dT^2
+        return -v.T*symengine.diff(expr, v.T, 2)
 
 
 class StepV0(AbstractLinearPropertyStep):
