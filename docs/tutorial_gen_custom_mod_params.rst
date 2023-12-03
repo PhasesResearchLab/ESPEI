@@ -59,21 +59,21 @@ There's a 1:1 relationship between a concrete ``FittingStep`` and a data type.
 Fitting steps also have a 1:1 relationship with a parameter type, but note that multiple fitting steps can be used to different data types to a single parameter type.
 For example, Gibbs energy parameters (``G``) are fit in three fitting steps: heat capacity data (``CPM``), then entropy data (``SM``), then enthalpy data (``HM``).
 Below are the implementations for each of the three elastic parameters and data.
-We are using the ``AbstractRKMPropertyStep`` helper class from ESPEI, which is a convience class to make it easier to define ``FittingStep`` classes that are 1:1 mappings between a data type and a parameter type and don't require and linearization or data/model transformation steps.
+We are using the ``AbstractLinearPropertyStep`` helper class from ESPEI, which is a convience class to make it easier to define ``FittingStep`` classes that are 1:1 mappings between a data type and a parameter type and don't require and linearization or data/model transformation steps.
 
 .. code-block:: python
 
-   from espei.parameter_selection.fitting_steps import AbstractRKMPropertyStep
+   from espei.parameter_selection.fitting_steps import AbstractLinearPropertyStep
 
-   class StepElasticC11(AbstractRKMPropertyStep):
+   class StepElasticC11(AbstractLinearPropertyStep):
        parameter_name = "C11"
        data_types_read = "C11"
 
-   class StepElasticC12(AbstractRKMPropertyStep):
+   class StepElasticC12(AbstractLinearPropertyStep):
        parameter_name = "C12"
        data_types_read = "C12"
 
-   class StepElasticC44(AbstractRKMPropertyStep):
+   class StepElasticC44(AbstractLinearPropertyStep):
        parameter_name = "C44"
        data_types_read = "C44"
 
