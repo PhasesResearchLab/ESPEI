@@ -1,5 +1,3 @@
-# TODO: do all typing before merging
-
 # TODO: performance of mixing models with lots of features is really bad
 #   (CPM, AbstractRKMProperty, VA parameters). Think if we can find a
 #   solution to that. Maybe some code in the feature generation to take only
@@ -39,11 +37,11 @@ class FittingStep():
         return expr
 
     @classmethod
-    def get_feature_sets(cls):
+    def get_feature_sets(cls) -> [[symengine.Expr]]:
         return make_successive(cls.features)
 
     @classmethod
-    def get_response_vector(cls, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], sample_condition_dicts: [Dict[str, Any]]):
+    def get_response_vector(cls, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], sample_condition_dicts: [Dict[str, Any]]) -> ArrayLike:  # np.float_
         """
         Get the response vector, b, for the a linear models in Ax=b with
         features, A, and coefficients, x, in units of [qty]/mole-formula.
@@ -98,11 +96,11 @@ class AbstractLinearPropertyStep(FittingStep):
     For models that are 'nearly linear', and the `transform_data` method can be
     overriden to try to linearize the data with respect to the model parameters.
     """
-    features = [symengine.S.One, v.T, v.T**2, v.T**3, v.T**(-1)]
-    supported_reference_states = ["", "_MIX"]  # TODO: add _FORM support
+    features: [symengine.Expr] = [symengine.S.One, v.T, v.T**2, v.T**3, v.T**(-1)]
+    supported_reference_states: [str] = ["", "_MIX"]  # TODO: add _FORM support
 
     @staticmethod
-    def transform_data(d: ArrayLike, model: Optional[Model] = None) -> ArrayLike:  # data may be muddied with symbols from Model
+    def transform_data(d: ArrayLike, model: Optional[Model] = None) -> ArrayLike:  # np.object_
         """Helper function to linearize data in terms of the model parameters.
 
         If data is already linear w.r.t. the parameters, the default
@@ -111,7 +109,7 @@ class AbstractLinearPropertyStep(FittingStep):
         return d
 
     @classmethod
-    def shift_reference_state(cls, desired_data, fixed_model, _):
+    def shift_reference_state(cls, desired_data: [Dataset], fixed_model: Model) -> ArrayLike:  # np.object_
         # Shift all data into absolute values.
         # Old versions of this code used to shift to units of per-mole-formula,
         # but we no longer do that here.
@@ -134,10 +132,10 @@ class AbstractLinearPropertyStep(FittingStep):
         return total_response
 
     @classmethod
-    def get_response_vector(cls, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], sample_condition_dicts: [Dict[str, Any]]):
+    def get_response_vector(cls, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], sample_condition_dicts: [Dict[str, Any]]) -> ArrayLike:  # np.float_
         mole_atoms_per_mole_formula_unit = fixed_model._site_ratio_normalization
         # This function takes Dataset objects (`data`) -> values array (of np.object_)
-        rhs = np.concatenate(cls.shift_reference_state(data, fixed_model, None), axis=-1)
+        rhs = np.concatenate(cls.shift_reference_state(data, fixed_model), axis=-1)
         rhs = cls.transform_data(rhs, fixed_model)
 
         # RKM models are already liner in the parameters, so we don't need to
@@ -173,10 +171,10 @@ class AbstractLinearPropertyStep(FittingStep):
 # TODO: for HM, SM, and CPM, refactor to stop using the transforms and build the transforms into the subclasses
 # Maybe this is where we introduce the data and feature transforms class methods?
 class StepHM(FittingStep):
-    parameter_name = "G"
-    data_types_read = "HM"
-    supported_reference_states = ["_MIX", "_FORM"]
-    features = [symengine.S.One]
+    parameter_name: str = "G"
+    data_types_read: str = "HM"
+    supported_reference_states: [str] = ["_MIX", "_FORM"]
+    features: [symengine.Expr] = [symengine.S.One]
 
     @classmethod
     def transform_feature(cls, expr: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
@@ -190,7 +188,7 @@ class StepHM(FittingStep):
     #    For Gibbs energy (and derivatives), we always shift to _FORM reference state
     # This is the original s_r_s method from ESPEI
     @classmethod
-    def shift_reference_state(cls, desired_data, fixed_model, mole_atoms_per_mole_formula_unit):
+    def shift_reference_state(cls, desired_data: [Dataset], fixed_model: Model, mole_atoms_per_mole_formula_unit: symengine.Expr) -> ArrayLike:  # np.object_
         """
         Shift _MIX or _FORM data to a common reference state in per mole-atom units.
 
@@ -243,7 +241,7 @@ class StepHM(FittingStep):
 
 
     @classmethod
-    def get_response_vector(cls, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], sample_condition_dicts: [Dict[str, Any]]):
+    def get_response_vector(cls, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], sample_condition_dicts: [Dict[str, Any]]) -> ArrayLike:  # np.float_
         mole_atoms_per_mole_formula_unit = fixed_model._site_ratio_normalization
         # Define site fraction symbols that will be reused
         phase_name = fixed_model.phase_name
@@ -278,8 +276,8 @@ class StepHM(FittingStep):
 # TODO: does it make sense to inherit from HM? Do we need an abstract class? Or does fixing the transforms issue and having each implementation be separate be correct?
 # TODO: support "" (absolute) entropy reference state?
 class StepSM(StepHM):
-    data_types_read = "SM"
-    features = [v.T]
+    data_types_read: str = "SM"
+    features: [symengine.Expr] = [v.T]
 
     @classmethod
     def transform_feature(cls, expr: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
@@ -290,8 +288,8 @@ class StepSM(StepHM):
 
 # TODO: support "" (absolute) heat capacity reference state?
 class StepCPM(StepHM):
-    data_types_read = "CPM"
-    features = [v.T * symengine.log(v.T), v.T**2, v.T**-1, v.T**3]
+    data_types_read: str = "CPM"
+    features: [symengine.Expr] = [v.T * symengine.log(v.T), v.T**2, v.T**-1, v.T**3]
 
     @classmethod
     def transform_feature(cls, expr: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
@@ -301,18 +299,18 @@ class StepCPM(StepHM):
 
 
 class StepV0(AbstractLinearPropertyStep):
-    parameter_name = "V0"
-    data_types_read = "V0"
-    features = [symengine.S.One]
+    parameter_name: str = "V0"
+    data_types_read: str = "V0"
+    features: [symengine.Expr] = [symengine.S.One]
 
 class StepLogVA(AbstractLinearPropertyStep):
-    parameter_name = "VA"
-    data_types_read = "VM"
-    features = [v.T, v.T**2, v.T**3, v.T**(-1)]
-    supported_reference_states = ["", "_MIX"]  # TODO: add formation support
+    parameter_name: str = "VA"
+    data_types_read: str = "VM"
+    features: [symengine.Expr] = [v.T, v.T**2, v.T**3, v.T**(-1)]
+    supported_reference_states: [str] = ["", "_MIX"]  # TODO: add formation support
 
     @staticmethod
-    def transform_data(d, model: Model) -> ArrayLike:
+    def transform_data(d: ArrayLike, model: Model) -> ArrayLike:  # np.object_
         # We are given samples of volume (VM) as our data (d) with the model:
         # \[ V_0 * exp( V_A ) = VM \]
         # We linearize in terms of the parameter that we want to fit (VA) by:
@@ -324,7 +322,7 @@ class StepLogVA(AbstractLinearPropertyStep):
         return d
 
     @classmethod
-    def get_feature_sets(cls):
+    def get_feature_sets(cls) -> [[symengine.Expr]]:
         # All combinations of features
         # TODO: this might be what is expensive when we're generating interaction parameters
         return list(itertools.chain(*(itertools.combinations(cls.features, n) for n in range(1, len(cls.features)+1))))
