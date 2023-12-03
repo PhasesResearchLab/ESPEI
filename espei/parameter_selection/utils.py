@@ -13,16 +13,6 @@ from pycalphad import variables as v
 from espei.utils import build_sitefractions
 from espei.parameter_selection.redlich_kister import calc_interaction_product
 
-feature_transforms = {"CPM_FORM": lambda GM: -v.T*symengine.diff(GM, v.T, 2),
-                      "CPM_MIX": lambda GM: -v.T*symengine.diff(GM, v.T, 2),
-                      "CPM": lambda GM: -v.T*symengine.diff(GM, v.T, 2),
-                      "SM_FORM": lambda GM: -symengine.diff(GM, v.T),
-                      "SM_MIX": lambda GM: -symengine.diff(GM, v.T),
-                      "SM": lambda GM: -symengine.diff(GM, v.T),
-                      "HM_FORM": lambda GM: GM - v.T*symengine.diff(GM, v.T),
-                      "HM_MIX": lambda GM: GM - v.T*symengine.diff(GM, v.T),
-                      "HM": lambda GM: GM - v.T*symengine.diff(GM, v.T)}
-
 
 def _get_sample_condition_dicts(calculate_dict: Dict[Any, Any], configuration_tuple: Tuple[Union[str, Tuple[str]]], phase_name: str) -> List[Dict[Symbol, float]]:
     sublattice_dof = list(map(len, configuration_tuple))
