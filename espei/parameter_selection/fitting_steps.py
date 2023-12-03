@@ -14,7 +14,6 @@ import symengine
 from pycalphad import Model, variables as v
 from espei.parameter_selection.model_building import make_successive
 from espei.parameter_selection.utils import build_sitefractions
-# from espei.paramselect import *
 
 
 __all__ = [
@@ -31,15 +30,8 @@ Dataset = Dict[str, Any]  # Typing stub
 
 class FittingStep():
     parameter_name: str
-    # TODO: can we think of a situtation where it makes sense to go to multilpe data types read in a single step?
     data_types_read: str
     features: [symengine.Expr]
-    # TODO: does a reference state support list here make sense?
-    # If we instead make shift_reference_state a part of the API, it would be
-    # more Pythonic to raise errors, but what would be better for end users?
-    # Presumably front-facing APIs could use something like this to check
-    # reference state support at dataset creation time, but maybe that couples
-    # too many things.
     supported_reference_states: [str]
 
     @staticmethod
@@ -156,12 +148,6 @@ class AbstractRKMPropertyStep(FittingStep):
         units to [qty]/mole-formula.
 
         """
-        # TODO: make sure to normalize per mole of formula correctly!
-        #   For this fitting step, everything we are working with from model
-        #   should be per mole of atoms (except the volume_data, that
-        #   shift_reference_state shifts).If we modify our internal
-        #   shift_reference_state, we might be able to just normalize per mole
-        #   of formula units at the end.
         mole_atoms_per_mole_formula_unit = fixed_model._site_ratio_normalization
         # This function takes Dataset objects (`data`) -> values array (of np.object_)
         rhs = np.concatenate(cls.shift_reference_state(data, fixed_model, None), axis=-1)

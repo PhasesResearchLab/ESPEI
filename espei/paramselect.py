@@ -275,11 +275,6 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
             # Build the candidate model feature matricies and response vector (A, b in Ax=b)
             if fixed_model is None:
                 fixed_model = fitting_description.model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
-            # TODO: can we maybe refactor calculate_dict and sample_condition dicts
-            # to only be in the fitting_step.get_data_quantities?
-            # We also need a way to access the weights, and i think it could be
-            # helpful to assert that the weights are the same dimension as
-            # sample_condition_dicts in that function.
             calculate_dict = get_prop_samples(desired_data, config_tup)
             sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, phase_name)
             response_vector = fitting_step.get_data_quantities(fitting_step.data_types_read, fixed_model, fixed_portions, desired_data, sample_condition_dicts)
