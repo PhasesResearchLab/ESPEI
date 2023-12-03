@@ -1,9 +1,3 @@
-# TODO: performance of mixing models with lots of features is really bad
-#   (CPM, AbstractRKMProperty, VA parameters). Think if we can find a
-#   solution to that. Maybe some code in the feature generation to take only
-#   the first N features for mixing or something? Maybe limiting the number
-#   of non-mixing features to 2 to limit combinatorics? Can it be tuned by users?
-
 from typing import Any, Dict, Optional
 import itertools
 from numpy.typing import ArrayLike
@@ -13,6 +7,7 @@ from pycalphad import Model, variables as v
 from espei.parameter_selection.model_building import make_successive
 from espei.utils import build_sitefractions
 
+Dataset = Dict[str, Any]  # Typing stub
 
 __all__ = [
     "FittingStep",
@@ -24,7 +19,6 @@ __all__ = [
     "StepLogVA",
 ]
 
-Dataset = Dict[str, Any]  # Typing stub
 
 class FittingStep():
     parameter_name: str
@@ -97,7 +91,7 @@ class AbstractLinearPropertyStep(FittingStep):
     overriden to try to linearize the data with respect to the model parameters.
     """
     features: [symengine.Expr] = [symengine.S.One, v.T, v.T**2, v.T**3, v.T**(-1)]
-    supported_reference_states: [str] = ["", "_MIX"]  # TODO: add _FORM support
+    supported_reference_states: [str] = ["", "_MIX"]
 
     @staticmethod
     def transform_data(d: ArrayLike, model: Optional[Model] = None) -> ArrayLike:  # np.object_
@@ -168,8 +162,6 @@ class AbstractLinearPropertyStep(FittingStep):
         return rhs
 
 
-# TODO: for HM, SM, and CPM, refactor to stop using the transforms and build the transforms into the subclasses
-# Maybe this is where we introduce the data and feature transforms class methods?
 class StepHM(FittingStep):
     parameter_name: str = "G"
     data_types_read: str = "HM"
@@ -182,11 +174,6 @@ class StepHM(FittingStep):
         # H = G + T*S, with S = -dG/dT
         return expr - v.T*symengine.diff(expr, v.T)
 
-    # TODO: this function actually does 2 things that should be split up into separate functions:
-    # 1. Extract data from Dataset objects into an array of raw values
-    # 2. Shifts the reference state of the values
-    #    For Gibbs energy (and derivatives), we always shift to _FORM reference state
-    # This is the original s_r_s method from ESPEI
     @classmethod
     def shift_reference_state(cls, desired_data: [Dataset], fixed_model: Model, mole_atoms_per_mole_formula_unit: symengine.Expr) -> ArrayLike:  # np.object_
         """
@@ -273,8 +260,6 @@ class StepHM(FittingStep):
         return data_qtys
 
 
-# TODO: does it make sense to inherit from HM? Do we need an abstract class? Or does fixing the transforms issue and having each implementation be separate be correct?
-# TODO: support "" (absolute) entropy reference state?
 class StepSM(StepHM):
     data_types_read: str = "SM"
     features: [symengine.Expr] = [v.T]
@@ -286,7 +271,6 @@ class StepSM(StepHM):
         return -symengine.diff(expr, v.T)
 
 
-# TODO: support "" (absolute) heat capacity reference state?
 class StepCPM(StepHM):
     data_types_read: str = "CPM"
     features: [symengine.Expr] = [v.T * symengine.log(v.T), v.T**2, v.T**-1, v.T**3]
@@ -307,7 +291,7 @@ class StepLogVA(AbstractLinearPropertyStep):
     parameter_name: str = "VA"
     data_types_read: str = "VM"
     features: [symengine.Expr] = [v.T, v.T**2, v.T**3, v.T**(-1)]
-    supported_reference_states: [str] = ["", "_MIX"]  # TODO: add formation support
+    supported_reference_states: [str] = ["", "_MIX"]
 
     @staticmethod
     def transform_data(d: ArrayLike, model: Model) -> ArrayLike:  # np.object_
@@ -324,5 +308,4 @@ class StepLogVA(AbstractLinearPropertyStep):
     @classmethod
     def get_feature_sets(cls) -> [[symengine.Expr]]:
         # All combinations of features
-        # TODO: this might be what is expensive when we're generating interaction parameters
         return list(itertools.chain(*(itertools.combinations(cls.features, n) for n in range(1, len(cls.features)+1))))
