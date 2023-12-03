@@ -13,7 +13,7 @@ import numpy as np
 import symengine
 from pycalphad import Model, variables as v
 from espei.parameter_selection.model_building import make_successive
-from espei.parameter_selection.utils import build_sitefractions
+from espei.utils import build_sitefractions
 
 
 __all__ = [
