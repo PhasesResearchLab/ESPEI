@@ -122,6 +122,7 @@ Documentation
 
 
    cu-mg-example
+   tutorial_gen_custom_mod_params
 
 .. raw:: latex
 
@@ -222,6 +223,7 @@ References
 .. [Coughanowr1991] Coughanowr *et al.*, Assessment of the Cu-Mg system. Zeitschrift f{ü}r Met. 82, 574–581 (1991).
 .. [Dinsdale1991] Dinsdale, Calphad 15(4) (1991) 317-425, doi:`10.1016/0364-5916(91)90030-N <https://doi.org/10.1016/0364-5916(91)90030-N>`_
 .. [Lukas2007] Lukas, Fries, and Sundman, Computational Thermodynamics: The Calphad Method. (Cambridge University Press, 2007). doi:`10.1017/CBO9780511804137 <https://doi.org/10.1017/CBO9780511804137>`_
+.. [Marker2018] Marker *et al.*, Computational Materials Science 142 (2018) 215-226. <https://doi.org/10.1016/j.commatsci.2017.10.016>_
 .. [Otis2016] Otis, Ph.D. Dissertation, The Pennsylvania State University (2016). https://etda.libraries.psu.edu/catalog/s1784k73d
 .. [Otis2017] Otis *et al.*, JOM 69 (2017) doi:`10.1007/s11837-017-2318-6 <http://doi.org/10.1007/s11837-017-2318-6>`_
 .. [Roslyakova2016] Roslyakova *et al.*, Calphad 55 (2016) 165–180. doi:`10.1016/j.calphad.2016.09.001 <https://doi.org/10.1016/j.calphad.2016.09.001>`_

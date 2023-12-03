@@ -46,6 +46,7 @@ All of the possible keys are
      ridge_alpha
      aicc_penalty_factor
      input_db
+     fitting_description
 
    mcmc:
      iterations
@@ -77,7 +78,7 @@ phase_models
 :type: string
 :default: required
 
-The JSON file describing the CALPHAD models for each phase.
+The JSON file describing the Calphad models for each phase.
 See :ref:`input_phase_descriptions` for an example of how to write this file.
 
 datasets
@@ -270,6 +271,35 @@ regardless of whether or not parameters were passed in for that phase. You must
 be careful to only add initial parameters that do not have data that ESPEI will
 try to fit. For example, do not include liquid enthalpy of mixing data for
 ESPEI to fit if you are providing an initial set of parameters.
+
+
+fitting_description
+-------------------
+
+:type: string
+:default: espei.parameter_selection.fitting_descriptions.gibbs_energy_fitting_description
+
+This is a string for the fully qualified import path for a ``ModelFittingDescription`` instance.
+ESPEI currently provides three built-in fitting descriptions that are available to use:
+
+.. code-block:: yaml
+
+   # the default, fit Gibbs energy (G/L) parameters to HM/SM/CPM data:
+   fitting-description: espei.parameter_selection.fitting_descriptions.gibbs_energy_fitting_description
+   # fit molar volume (V0 and VA) parameters to V0/VM data:
+   fitting-description: espei.parameter_selection.fitting_descriptions.molar_volume_fitting_description
+   # a combination that fits volume and Gibbs energy parameters
+   fitting-description: espei.parameter_selection.fitting_descriptions.molar_volume_gibbs_energy_fitting_description
+
+The ``ModelFittingDescription`` instance can be from any module that is importable from the Python environment where ESPEI is installed.
+For example, the Gibbs energy fitting description is importable as:
+
+.. code-block:: python
+
+   from espei.parameter_selection.fitting_descriptions import gibbs_energy_fitting_description
+
+Because the fitting description given can be in *any* importable module, users can provide their own fitting descriptions that use ESPEI's built-in `FittingStep` objects, custom fitting steps, or a combination ESPEI's fitting steps and custom fitting steps.
+The :ref:`Generating Custom Model Parameters` tutorial gives an example of how to fit a custom PyCalphad model that uses custom parameters for BCC elastic constants.
 
 
 mcmc
