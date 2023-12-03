@@ -34,10 +34,6 @@ class FittingStep():
     features: [symengine.Expr]
     supported_reference_states: [str]
 
-    @staticmethod
-    def transform_data(d: ArrayLike, model: Optional[Model] = None) -> ArrayLike:  # data may be muddied with symbols from Model
-        return d
-
     @classmethod
     def transform_feature(cls, f: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
         return f
@@ -98,6 +94,15 @@ class AbstractRKMPropertyStep(FittingStep):
     features = [symengine.S.One, v.T, v.T**2, v.T**3, v.T**(-1)]
     supported_reference_states = ["", "_MIX"]  # TODO: add _FORM support
 
+    @staticmethod
+    def transform_data(d: ArrayLike, model: Optional[Model] = None) -> ArrayLike:  # data may be muddied with symbols from Model
+        """Helper function to linearize data in terms of the model parameters.
+
+        If data is already linear w.r.t. the parameters, the default
+        implementation of identity (`return d` can be preserved).
+        """
+        return d
+
     @classmethod
     def shift_reference_state(cls, desired_data, fixed_model, _):
         # Shift all data into absolute values.
@@ -115,7 +120,7 @@ class AbstractRKMPropertyStep(FittingStep):
                     # state (i.e. where the property of interest is zero for all
                     # the endmembers). To shift our VM_MIX data into VM, we need
                     # to add the VM computed from the endmember reference model.
-                    values[..., config_idx] += getattr(fixed_model.endmember_reference_model, cls.parameter_name)
+                    values[..., config_idx] += getattr(fixed_model.endmember_reference_model, cls.data_types_read)
                 else:
                     pass
             total_response.append(values.flatten())
@@ -126,6 +131,7 @@ class AbstractRKMPropertyStep(FittingStep):
         mole_atoms_per_mole_formula_unit = fixed_model._site_ratio_normalization
         # This function takes Dataset objects (`data`) -> values array (of np.object_)
         rhs = np.concatenate(cls.shift_reference_state(data, fixed_model, None), axis=-1)
+        rhs = cls.transform_data(rhs, fixed_model)
 
         # RKM models are already liner in the parameters, so we don't need to
         # do anything too special here.
@@ -286,19 +292,18 @@ class StepV0(AbstractRKMPropertyStep):
     data_types_read = "V0"
     features = [symengine.S.One]
 
-class StepLogVA(FittingStep):
-    # V = V0*exp(VA), to linearize in terms of VA features, we want to fit
-    # VA = ln(V/V0)
+class StepLogVA(AbstractRKMPropertyStep):
     parameter_name = "VA"
     data_types_read = "VM"
     features = [v.T, v.T**2, v.T**3, v.T**(-1)]
     supported_reference_states = ["", "_MIX"]  # TODO: add formation support
 
-    # TODO: This is probably deprecated now that we have a get_response_vector implemented in this class
     @staticmethod
     def transform_data(d, model: Model) -> ArrayLike:
-        # We are given samples of volume (V) as our data (d).
-        # ln(V/V0) = VA
+        # We are given samples of volume (VM) as our data (d) with the model:
+        # \[ V_0 * exp( V_A ) = VM \]
+        # We linearize in terms of the parameter that we want to fit (VA) by:
+        # \[ V_A = \log(VM / V_0) \]
         # cast to object_ because the real type may become a symengine.Expr
         d = np.asarray(d, dtype=np.object_)
         for i in range(d.shape[0]):
@@ -310,119 +315,3 @@ class StepLogVA(FittingStep):
         # All combinations of features
         # TODO: this might be what is expensive when we're generating interaction parameters
         return list(itertools.chain(*(itertools.combinations(cls.features, n) for n in range(1, len(cls.features)+1))))
-
-    @classmethod
-    def shift_reference_state(cls, desired_data, fixed_model, mole_atoms_per_mole_formula_unit):
-        """
-        Shift _MIX or _FORM data to a common reference state in per mole-atom units.
-
-        Parameters
-        ----------
-        desired_data : [Dict[str, Any]]
-            ESPEI single phase dataset
-        feature_transform : Callable
-            Function to transform an AST for the GM property to the property of
-            interest, i.e. entropy would be ``lambda GM: -symengine.diff(GM, v.T)``
-        fixed_model : pycalphad.Model
-            Model with all lower order (in composition) terms already fit. Pure
-            element reference state (GHSER functions) should be set to zero.
-        mole_atoms_per_mole_formula_unit : float
-            Number of moles of atoms in every mole atom unit. Not used here as
-            our input and output are both in terms of moles of atoms.
-
-        Returns
-        -------
-        np.ndarray
-            Data for this feature in [qty]/mole-atoms in a common reference state.
-
-        Raises
-        ------
-        ValueError
-
-        """
-        # Because of the log transform used to linearize the data it must be
-        # satisfied that \( V/V0 > 0 \). It's therefore not easy to work with
-        # excess volumes (which may be positive or negative).
-        # The solution is to shift other reference states into absolute volume.
-        total_response = []
-        for dataset in desired_data:
-            values = np.asarray(dataset['values'], dtype=np.object_)
-            for config_idx in range(len(dataset['solver']['sublattice_configurations'])):
-                occupancy = dataset['solver'].get('sublattice_occupancies', None)
-                if dataset['output'].endswith('_FORM'):
-                    raise NotImplementedError(f"The formation reference state for data type {dataset['output']} is not yet supported for {cls.parameter_name} parameters.")
-                elif dataset['output'].endswith('_MIX'):
-                    # for backwards compatibility, we treat this using the
-                    # special "endmember" reference state (i.e. where the
-                    # property of interest is zero for all the endmembers).
-                    # To shift our VM_MIX data into VM, we need to add the VM
-                    # computed from the endmember reference model.
-                    values[..., config_idx] += fixed_model.endmember_reference_model.VM
-                else:
-                    pass
-            total_response.append(values.flatten())
-        return total_response
-
-    # TODO: maybe we could refactor the existing AbstractRKMPropertyStep to use
-    # the cls.transform_data method, as that's really the only difference
-    # # between this function and the V0 function.
-    @classmethod
-    def get_response_vector(cls, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], sample_condition_dicts: [Dict[str, Any]]):
-        mole_atoms_per_mole_formula_unit = fixed_model._site_ratio_normalization
-
-        # VM (VA parameters) can't easily fit excess volumes with _MIX or _FORM
-        #   reference states because the excess volume might be negative and our
-        #   linearization transformation would take the log of a negative
-        #   value for `log(V_xs / V0)`. We use shift_reference_state to work in
-        #   terms of total volume, which should always be positive.
-        # volume_data returned per mole of atoms
-        volume_data = np.concatenate(cls.shift_reference_state(data, fixed_model, mole_atoms_per_mole_formula_unit), axis=-1)
-
-        # Now we start to build the rhs:
-        # cast to np.object_ so we can do symengine ops inplace
-        # the rhs may contain some symbolic terms during the intermediate steps,
-        # which we will remove later
-        rhs = np.empty_like(volume_data, dtype=np.object_)
-        for i in range(volume_data.shape[0]):
-            # Our model is of the form:
-            # \[ V_0 * exp( V_A ) = V \]
-            # In this fitting step, all \(V_0\) are fixed, so that's always just a constant.
-            # We start to linearize by
-            # \[ V_A = \log(V / V_0) \]
-            rhs[i] = symengine.log( volume_data[i] / (fixed_model.V0) )
-            # We are fitting V_A parameters here, but remember that there may be
-            # lower order V_A parameters already in the model.
-            # \[ V_A^{\mathrm{prev. fit}} + V_A^{\mathrm{curr. fit}} = \log(V / V_0) \]
-            # We subtract those off to get the final linearized form of the rhs that
-            # we can express as an Ax = b form:
-            # \[ V_A^{\mathrm{curr. fit}} = \log(V / V_0) - V_A^{\mathrm{prev. fit}} \]
-            rhs[i] -= fixed_model.VA
-            # Convert the quantity per-mole-atoms to per-mole-formula
-            rhs[i] *= mole_atoms_per_mole_formula_unit
-
-        # TODO: there shouldn't really YS and Z here since all the symbols come
-        # from the existing model. The comment below inside the for loop is from
-        # copy and pasted from get_response_vector in the ESPEI source, and the
-        # comments may be incorrect (in this context) and maybe can be removed?
-
-        # Now we remove all the symbols:
-        # Construct flattened list of site fractions corresponding to the ravelled data
-        site_fractions = []
-        for ds in data:
-            for _ in ds['conditions']['T']:
-                sf = build_sitefractions(fixed_model.phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies', np.ones((len(ds['solver']['sublattice_configurations']), len(ds['solver']['sublattice_configurations'][0])), dtype=np.float_)))
-                site_fractions.append(sf)
-        site_fractions = list(itertools.chain(*site_fractions))
-
-        # if any site fractions show up in our data_qtys that aren't in these datasets' site fractions, set them to zero.
-        for sf, value_with_symbols, cond_dict in zip(site_fractions, rhs, sample_condition_dicts):
-            missing_variables = symengine.S(value_with_symbols).atoms(v.SiteFraction) - set(sf.keys())
-            sf.update({x: 0. for x in missing_variables})
-            # The equations we have just have the site fractions as YS
-            # and interaction products as Z, so take the product of all
-            # the site fractions that we see in our data qtys
-            sf.update(cond_dict)
-        rhs = [fixed_model.symbol_replace(symengine.S(value_with_symbols).xreplace(sf), fixed_model._symbols).evalf() for value_with_symbols, sf in zip(rhs, site_fractions)]
-        # cast to float, confirming that these are concrete values with no sybolics
-        rhs = np.asarray(rhs, dtype=np.float_)
-        return rhs
