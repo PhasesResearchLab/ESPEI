@@ -149,8 +149,10 @@ class AbstractLinearPropertyStep(FittingStep):
                 sf = build_sitefractions(fixed_model.phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies', np.ones((len(ds['solver']['sublattice_configurations']), len(ds['solver']['sublattice_configurations'][0])), dtype=np.float_)))
                 site_fractions.append(sf)
         site_fractions = list(itertools.chain(*site_fractions))
-        # if any site fractions show up in our data_qtys that aren't in these datasets' site fractions, set them to zero.
-        # TODO: when does this (^) actually happen?
+        # If any site fractions show up in our rhs that aren't in these
+        # datasets' site fractions, set them to zero. This can happen if we're
+        # fitting a multi-component model that has site fractions from
+        # components that aren't in a particular dataset
         for sf, value_with_symbols, cond_dict in zip(site_fractions, rhs, sample_condition_dicts):
             missing_variables = symengine.S(value_with_symbols).atoms(v.SiteFraction) - set(sf.keys())
             sf.update({x: 0. for x in missing_variables})
@@ -213,6 +215,9 @@ class StepHM(FittingStep):
             for config_idx in range(len(dataset['solver']['sublattice_configurations'])):
                 occupancy = dataset['solver'].get('sublattice_occupancies', None)
                 if dataset['output'].endswith('_FORM'):
+                    # we don't shift the reference state because we assume our
+                    # models are already in the formation reference state (by us
+                    # setting GHSERXX functions to zero explictly)
                     pass
                 elif dataset['output'].endswith('_MIX'):
                     if occupancy is None:
@@ -246,13 +251,13 @@ class StepHM(FittingStep):
         data_qtys = data_qtys - cls.transform_feature(fixed_model.ast)*mole_atoms_per_mole_formula_unit
         # Subtract out high-order (in T) parameters we've already fit, already in per mole-formula units
         data_qtys = data_qtys - cls.transform_feature(sum(fixed_portions))
-        # if any site fractions show up in our data_qtys that aren't in this datasets site fractions, set them to zero.
+        # If any site fractions show up in our rhs that aren't in these
+        # datasets' site fractions, set them to zero. This can happen if we're
+        # fitting a multi-component model that has site fractions from
+        # components that aren't in a particular dataset
         for sf, i, cond_dict in zip(site_fractions, data_qtys, sample_condition_dicts):
             missing_variables = symengine.S(i).atoms(v.SiteFraction) - set(sf.keys())
             sf.update({x: 0. for x in missing_variables})
-            # The equations we have just have the site fractions as YS
-            # and interaction products as Z, so take the product of all
-            # the site fractions that we see in our data qtys
             sf.update(cond_dict)
         # also replace with database symbols in case we did higher order fitting
         data_qtys = [fixed_model.symbol_replace(symengine.S(i).xreplace(sf), fixed_model._symbols).evalf() for i, sf in zip(data_qtys, site_fractions)]
