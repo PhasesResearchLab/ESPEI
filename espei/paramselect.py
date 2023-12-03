@@ -32,10 +32,9 @@ from pycalphad import Database, variables as v
 import espei.refdata
 from espei.database_utils import initialize_database
 from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter
-from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
+from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples, get_sample_condition_dicts
 from espei.parameter_selection.model_building import build_redlich_kister_candidate_models
 from espei.parameter_selection.selection import select_model
-from espei.parameter_selection.utils import _get_sample_condition_dicts
 from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
     tuplify, recursive_tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
 from espei.utils import PickleableTinyDB, sigfigs, extract_aliases
@@ -276,7 +275,7 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
             if fixed_model is None:
                 fixed_model = fitting_description.model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
             calculate_dict = get_prop_samples(desired_data, config_tup)
-            sample_condition_dicts = _get_sample_condition_dicts(calculate_dict, config_tup, phase_name)
+            sample_condition_dicts = get_sample_condition_dicts(calculate_dict, config_tup, phase_name)
             response_vector = fitting_step.get_response_vector(fixed_model, fixed_portions, desired_data, sample_condition_dicts)
             candidate_models = []
             feature_sets = build_redlich_kister_candidate_models(configuration, fitting_step.get_feature_sets())

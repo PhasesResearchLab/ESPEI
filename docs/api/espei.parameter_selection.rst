@@ -4,6 +4,22 @@ espei.parameter\_selection package
 Submodules
 ----------
 
+espei.parameter\_selection.fitting\_descriptions module
+-------------------------------------------------------
+
+.. automodule:: espei.parameter_selection.fitting_descriptions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+espei.parameter\_selection.fitting\_steps module
+------------------------------------------------
+
+.. automodule:: espei.parameter_selection.fitting_steps
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 espei.parameter\_selection.model\_building module
 -------------------------------------------------
 
@@ -24,14 +40,6 @@ espei.parameter\_selection.selection module
 -------------------------------------------
 
 .. automodule:: espei.parameter_selection.selection
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-espei.parameter\_selection.utils module
----------------------------------------
-
-.. automodule:: espei.parameter_selection.utils
    :members:
    :undoc-members:
    :show-inheritance:

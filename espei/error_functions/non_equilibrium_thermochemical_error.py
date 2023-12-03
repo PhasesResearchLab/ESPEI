@@ -10,6 +10,7 @@ import symengine
 from scipy.stats import norm
 import numpy as np
 import numpy.typing as npt
+from symengine import Symbol
 from tinydb import where
 
 from pycalphad import Database, Model, ReferenceState, variables as v
@@ -18,6 +19,7 @@ from pycalphad.core.utils import unpack_components, get_pure_elements, filter_ph
 
 from espei.datasets import Dataset
 from espei.core_utils import ravel_conditions, get_prop_data, filter_temperatures
+from espei.parameter_selection.redlich_kister import calc_interaction_product
 from espei.phase_models import PhaseModelSpecification
 from espei.shadow_functions import calculate_, update_phase_record_parameters
 from espei.sublattice_tools import canonicalize, recursive_tuplify, tuplify
@@ -159,6 +161,46 @@ def get_prop_samples(desired_data, constituents):
         calculate_dict['weights'].extend(weights.flatten())
         calculate_dict['references'].extend([datum.get('reference', "") for _ in range(values.flatten().size)])
     return calculate_dict
+
+
+def get_sample_condition_dicts(calculate_dict: Dict[Any, Any], configuration_tuple: Tuple[Union[str, Tuple[str]]], phase_name: str) -> List[Dict[Symbol, float]]:
+    sublattice_dof = list(map(len, configuration_tuple))
+    sample_condition_dicts = []
+    for sample_idx in range(calculate_dict["values"].size):
+        cond_dict = {}
+        points = calculate_dict["points"][sample_idx, :]
+
+        # T and P
+        cond_dict[v.T] = calculate_dict["T"][sample_idx]
+        cond_dict[v.P] = calculate_dict["P"][sample_idx]
+
+        # YS site fraction product
+        site_fraction_product = np.prod(points)
+        cond_dict[Symbol("YS")] = site_fraction_product
+
+        # Reconstruct site fractions in sublattice form from points
+        # Required so we can identify which sublattices have interactions
+        points_idxs = [0] + np.cumsum(sublattice_dof).tolist()
+        site_fractions = []
+        for subl_idx in range(len(points_idxs)-1):
+            subl_site_fractions = points[points_idxs[subl_idx]:points_idxs[subl_idx+1]]
+            for species_name, site_frac in zip(configuration_tuple[subl_idx], subl_site_fractions):
+                cond_dict[v.Y(phase_name, subl_idx, species_name)] = site_frac
+            site_fractions.append(subl_site_fractions.tolist())
+
+        # Z (binary) or V_I, V_J, V_K (ternary) interaction products
+        interaction_product = calc_interaction_product(site_fractions)
+        if hasattr(interaction_product, "__len__"):
+            # Ternary interaction
+            assert len(interaction_product) == 3
+            cond_dict[Symbol("V_I")] = interaction_product[0]
+            cond_dict[Symbol("V_J")] = interaction_product[1]
+            cond_dict[Symbol("V_K")] = interaction_product[2]
+        else:
+            cond_dict[Symbol("Z")] = interaction_product
+
+        sample_condition_dicts.append(cond_dict)
+    return sample_condition_dicts
 
 
 def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dict=None, symbols_to_fit=None):
