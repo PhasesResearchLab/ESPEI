@@ -773,8 +773,8 @@ def test_property_models_for_phases_with_more_than_one_mole_formula_fit_correctl
     assert len(dbf._parameters.search(where('parameter_type') == 'VA')) == 1 # 1 VA parameter fit
     VM_1000K = float(mod.VM.subs({v.T: 1000, v.Y("SIGMA_D8B", 0, "CR"): 1.0, v.Y("SIGMA_D8B", 1, "CR"): 1.0, v.Y("SIGMA_D8B", 2, "CR"): 1.0, **mod._symbols}).evalf())
     assert np.isclose(VM_1000K, 1.0512710963760243e-05, atol=1e-14)
-    assert np.isclose(dbf.symbols['VV0000'], 1.0e-05 * 30, atol=1e-14)  # per mole of formula
-    assert np.isclose(dbf.symbols['VV0001'], 5.0e-05 * 30, atol=1e-14)  # per mole of formula
+    assert np.isclose(dbf.symbols['VV0000'], 1.0e-05 * 30, atol=1e-14)  # V0 per mole of formula
+    assert np.isclose(dbf.symbols['VV0001'], 5.0e-05, atol=1e-14)  # VA per mole of atoms (unusual, but matches pycalphad and TC behavior)
 
 
 def test_molar_volume_model_fits(datasets_db):
