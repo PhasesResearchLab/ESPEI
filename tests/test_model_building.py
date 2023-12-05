@@ -7,7 +7,7 @@ from collections import OrderedDict
 import symengine
 from pycalphad import variables as v
 
-from espei.parameter_selection.model_building import build_feature_sets, build_redlich_kister_candidate_models, make_successive
+from espei.parameter_selection.model_building import build_candidate_models, build_redlich_kister_candidate_models, make_successive
 from espei.sublattice_tools import generate_symmetric_group, sorted_interactions
 
 
@@ -17,7 +17,7 @@ def test_build_feature_sets_generates_desired_binary_features_for_cp_like():
     Z = symengine.Symbol("Z")
     temp_feature_sets = make_successive([v.T, v.T**2, 1/v.T, v.T**3])
     excess_features= [YS, YS*Z, YS*Z**2, YS*Z**3]
-    feat_sets = build_feature_sets(temp_feature_sets, excess_features)
+    feat_sets = build_candidate_models(temp_feature_sets, excess_features)
     assert len(feat_sets) == 340
     assert feat_sets[0] == [v.T*YS]
     assert feat_sets[5] == [v.T*YS, v.T*YS*Z, v.T**2*YS*Z]
