@@ -89,9 +89,14 @@ class AbstractLinearPropertyStep(FittingStep):
 
     For models that are 'nearly linear', and the `transform_data` method can be
     overriden to try to linearize the data with respect to the model parameters.
+
+    Most parameters are fit per mole of formula units, but there are some
+    exceptions (e.g. VA parameters). The `normalize_parameter_per_mole_formula`
+    attribute handles normalization.
     """
     features: [symengine.Expr] = [symengine.S.One, v.T, v.T**2, v.T**3, v.T**(-1)]
     supported_reference_states: [str] = ["", "_MIX"]
+    normalize_parameter_per_mole_formula: bool = True
 
     @staticmethod
     def transform_data(d: ArrayLike, model: Optional[Model] = None) -> ArrayLike:  # np.object_
@@ -137,8 +142,9 @@ class AbstractLinearPropertyStep(FittingStep):
         # subtract off lower order contributions.
         for i in range(rhs.shape[0]):
             rhs[i] -= getattr(fixed_model, cls.parameter_name)
-            # Convert the quantity per-mole-atoms to per-mole-formula
-            rhs[i] *= mole_atoms_per_mole_formula_unit
+            if cls.normalize_parameter_per_mole_formula:
+                # Convert the quantity per-mole-atoms to per-mole-formula
+                rhs[i] *= mole_atoms_per_mole_formula_unit
 
         # Previous steps may have introduced some symbolic terms.
         # Now we remove all the symbols:
@@ -297,6 +303,7 @@ class StepLogVA(AbstractLinearPropertyStep):
     data_types_read: str = "VM"
     features: [symengine.Expr] = [v.T, v.T**2, v.T**3, v.T**(-1)]
     supported_reference_states: [str] = ["", "_MIX"]
+    normalize_parameter_per_mole_formula: bool = False
 
     @staticmethod
     def transform_data(d: ArrayLike, model: Model) -> ArrayLike:  # np.object_
