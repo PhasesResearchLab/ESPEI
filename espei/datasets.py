@@ -360,7 +360,7 @@ def recursive_glob(start, pattern='*.json'):
 
     """
     matches = []
-    for root, dirnames, filenames in os.walk(start):
+    for root, dirnames, filenames in os.walk(start, followlinks=True):
         for filename in fnmatch.filter(filenames, pattern):
             matches.append(os.path.join(root, filename))
     return sorted(matches)
