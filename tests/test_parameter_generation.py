@@ -11,7 +11,7 @@ from symengine import Symbol
 from espei.logger import config_logger
 from espei.paramselect import generate_parameters
 from espei.utils import PickleableTinyDB
-from espei.parameter_selection.fitting_descriptions import molar_volume_gibbs_energy_fitting_description
+from espei.parameter_selection.fitting_descriptions import molar_volume_gibbs_energy_fitting_description, molar_volume_fitting_description
 from .testing_data import *
 from .fixtures import datasets_db
 
@@ -846,3 +846,54 @@ def test_molar_volume_model_fits(datasets_db):
     VM_tern_em_mix = float(mod.VM.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf()) - float(mod.endmember_reference_model.VM.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf())
     VM_tern_em_mix_truth = 1.0e-6  # from data
     assert np.isclose(VM_tern_em_mix, VM_tern_em_mix_truth, atol=1e-14)
+
+
+def test_molar_volume_mixing_and_absolute_value_produce_the_same_parameter(datasets_db):
+    unary_TA = {
+        "components": ["TA"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "V0", "values": [[[1e-5]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [["TA"]], "sublattice_occupancies": [[1.0]]},
+    }
+    unary_W = {
+        "components": ["W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "V0", "values": [[[2e-5]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [["W"]], "sublattice_occupancies": [[1.0]]},
+    }
+    binary_TaW_absolute = {
+        "components": ["TA", "W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "V0", "values": [[[1.45e-5]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["TA", "W"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+    }
+    binary_TaW_mixing = {
+        "components": ["TA", "W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "V0_MIX", "values": [[[-0.05e-5]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["TA", "W"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+    }
+
+    phase_models = {
+        "components": ["MO", "TA", "W"],
+        "phases": {"BCC_A2" : {"sublattice_model": [["MO", "TA", "W"]], "sublattice_site_ratios": [1]}}
+    }
+
+    # absolute value first
+    datasets_db.insert(unary_TA)
+    datasets_db.insert(unary_W)
+    datasets_db.insert(binary_TaW_absolute)
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=molar_volume_fitting_description)
+    assert np.isclose(dbf.symbols['VV0000'], 1e-5, atol=1e-14)
+    assert np.isclose(dbf.symbols['VV0001'], 2e-5, atol=1e-14)
+    assert np.isclose(dbf.symbols['VV0002'], 4 * -0.05e-5, atol=1e-14)
+
+    # mixing
+    datasets_db.drop_tables()
+    datasets_db.insert(unary_TA)
+    datasets_db.insert(unary_W)
+    datasets_db.insert(binary_TaW_mixing)
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=molar_volume_fitting_description)
+    assert np.isclose(dbf.symbols['VV0000'], 1e-5, atol=1e-14)
+    assert np.isclose(dbf.symbols['VV0001'], 2e-5, atol=1e-14)
+    assert np.isclose(dbf.symbols['VV0002'], 4 * -0.05e-5, atol=1e-14)
