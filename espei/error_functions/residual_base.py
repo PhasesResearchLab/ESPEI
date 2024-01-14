@@ -50,8 +50,8 @@ class ResidualFunction(Protocol):
         database: Database,
         datasets: PickleableTinyDB,
         phase_models: PhaseModelSpecification,
-        symbols_to_fit: Optional[List[SymbolName]],
-        weight: Optional[Dict[str, float]],
+        symbols_to_fit: Optional[List[SymbolName]] = None,
+        weight: Optional[Dict[str, float]] = None,
         ):
         ...
 
