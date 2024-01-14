@@ -42,6 +42,65 @@ def test_dataplot_runs_ternary_isothermal(datasets_db):
     plt.close(fig)
 
 
+def test_comprehensive_binary_dataplot_test(datasets_db):
+    """Test that dataplot runs for a large variety of cases."""
+    datasets_db.insert_multiple([
+        {"reference": "One-phase", "comment": "", "components": ["A", "B"], "phases": ["ALPHA"], "conditions": {"P": 101325,"T": 300}, "output": "ZPF", "values": [[["ALPHA", ["B"], [0.5]]]]},
+        {"reference": "One-phase w/ HYPERPLANE", "comment": "", "components": ["A", "B"], "phases": ["ALPHA"], "conditions": {"P": 101325,"T": 400}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B"], [0.5]], ["ALPHA", ["B"], [0.5]]]]},
+        {"reference": "One-phase (null) w/ HYPERPLANE", "comment": "", "components": ["A", "B"], "phases": ["ALPHA"], "conditions": {"P": 101325,"T": 500}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B"], [0.5]], ["ALPHA", ["B"], [None]]]]},
+        {"reference": "Two-phase", "comment": "", "components": ["A", "B"], "phases": ["ALPHA", "BETA"], "conditions": {"P": 101325,"T": 600}, "output": "ZPF", "values": [[["ALPHA", ["B"], [0.25]], ["BETA", ["B"], [0.75]]]]},
+        {"reference": "Two-phase (1 null)", "comment": "", "components": ["A", "B"], "phases": ["ALPHA", "BETA"], "conditions": {"P": 101325,"T": 700}, "output": "ZPF", "values": [[["ALPHA", ["B"], [None]], ["BETA", ["B"], [0.75]]]]},
+        {"reference": "Two-phase w/ HYPERPLANE", "comment": "", "components": ["A", "B"], "phases": ["ALPHA", "BETA"], "conditions": {"P": 101325,"T": 800}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B"], [0.5]], ["ALPHA", ["B"], [0.25]], ["BETA", ["B"], [0.75]]]]},
+        {"reference": "Two-phase (1 null) w/ HYPERPLANE", "comment": "", "components": ["A", "B"], "phases": ["ALPHA", "BETA"], "conditions": {"P": 101325,"T": 900}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B"], [0.5]], ["ALPHA", ["B"], [None]], ["BETA", ["B"], [0.75]]]]},
+        {"reference": "Two-phase (2 null) w/ HYPERPLANE", "comment": "", "components": ["A", "B"], "phases": ["ALPHA", "BETA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B"], [0.5]], ["ALPHA", ["B"], [None]], ["BETA", ["B"], [None]]]]},
+        {"reference": "Three-phase", "comment": "", "components": ["A", "B"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1100}, "output": "ZPF", "values": [[["ALPHA", ["B"], [0.25]], ["BETA", ["B"], [0.625]], ["GAMMA", ["B"], [0.75]]]]},
+        {"reference": "Three-phase (1 null)", "comment": "", "components": ["A", "B"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1100}, "output": "ZPF", "values": [[["ALPHA", ["B"], [None]], ["BETA", ["B"], [0.625]], ["GAMMA", ["B"], [0.75]]]]},
+        {"reference": "Three-phase (2 null)", "comment": "", "components": ["A", "B"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1200}, "output": "ZPF", "values": [[["ALPHA", ["B"], [None]], ["BETA", ["B"], [None]], ["GAMMA", ["B"], [0.75]]]]},
+        {"reference": "Three-phase w/ HYPERPLANE", "comment": "", "components": ["A", "B"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1300}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B"], [0.5]], ["ALPHA", ["B"], [0.25]], ["BETA", ["B"], [0.625]], ["GAMMA", ["B"], [0.75]]]]},
+        {"reference": "Three-phase (1 null) w/ HYPERPLANE", "comment": "", "components": ["A", "B"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1400}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B"], [0.5]], ["ALPHA", ["B"], [None]], ["BETA", ["B"], [0.625]], ["GAMMA", ["B"], [0.75]]]]},
+        {"reference": "Three-phase (2 null) w/ HYPERPLANE", "comment": "", "components": ["A", "B"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1500}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B"], [0.5]], ["ALPHA", ["B"], [None]], ["BETA", ["B"], [None]], ["GAMMA", ["B"], [0.75]]]]},
+        {"reference": "Three-phase (3 null) w/ HYPERPLANE", "comment": "", "components": ["A", "B"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1600}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B"], [0.5]], ["ALPHA", ["B"], [None]], ["BETA", ["B"], [None]], ["GAMMA", ["B"], [None]]]]},
+    ])
+
+    comps = ["A", "B"]
+    phases = ["ALPHA", "BETA", "GAMMA"]
+    conds = {v.P: 101325, v.T: (200, 1700, 10), v.X('B'): (0, 1, 0.01)}
+    fig, ax = plt.subplots()
+    dataplot(comps, phases, conds, datasets_db, ax=ax)
+    # fig.savefig('test_comprehensive_binary_dataplot_test.png', bbox_inches="tight")
+    plt.close(fig)
+
+
+def test_comprehensive_ternary_dataplot_test(datasets_db):
+    """Test that dataplot runs for a large variety of cases."""
+    datasets_db.insert_multiple([
+        {"reference": "One-phase", "comment": "", "components": ["A", "B", "C"], "phases": ["ALPHA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["ALPHA", ["B", "C"], [0.05, 0.05]]]]},
+        {"reference": "One-phase w/ HYPERPLANE", "comment": "", "components": ["A", "B", "C"], "phases": ["ALPHA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B", "C"], [0.10, 0.05]], ["ALPHA", ["B", "C"], [0.10, 0.05]]]]},
+        {"reference": "One-phase (null) w/ HYPERPLANE", "comment": "", "components": ["A", "B", "C"], "phases": ["ALPHA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B", "C"], [0.05, 0.10]], ["ALPHA", ["B", "C"], [None, None]]]]},
+
+        {"reference": "Two-phase", "comment": "", "components": ["A", "B", "C"], "phases": ["ALPHA", "BETA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["ALPHA", ["B", "C"], [0.30, 0.05]], ["BETA", ["B", "C"], [0.60, 0.05]]]]},
+        {"reference": "Two-phase (1 null)", "comment": "", "components": ["A", "B", "C"], "phases": ["ALPHA", "BETA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["ALPHA", ["B", "C"], [None, None]], ["BETA", ["B", "C"], [0.40, 0.10]]]]},
+        {"reference": "Two-phase w/ HYPERPLANE", "comment": "", "components": ["A", "B", "C"], "phases": ["ALPHA", "BETA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B", "C"], [0.4, 0.15]], ["ALPHA", ["B", "C"], [0.10, 0.15]], ["BETA", ["B", "C"], [0.70, 0.15]]]]},
+        {"reference": "Two-phase (1 null) w/ HYPERPLANE", "comment": "", "components": ["A", "B", "C"], "phases": ["ALPHA", "BETA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B", "C"], [0.35, 0.20]], ["ALPHA", ["B", "C"], [None, None]], ["BETA", ["B", "C"], [0.5, 0.20]]]]},
+        {"reference": "Two-phase (2 null) w/ HYPERPLANE", "comment": "", "components": ["A", "B", "C"], "phases": ["ALPHA", "BETA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B", "C"], [0.3, 0.25]], ["ALPHA", ["B", "C"], [None, None]], ["BETA", ["B", "C"], [None, None]]]]},
+
+        {"reference": "Three-phase", "comment": "", "components": ["A", "B", "C"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["ALPHA", ["B", "C"], [0.2, 0.40]], ["BETA", ["B", "C"], [0.5, 0.40]], ["GAMMA", ["B", "C"], [0.275, 0.45]]]]},
+        {"reference": "Three-phase (1 null)", "comment": "Doesn't plot", "components": ["A", "B", "C"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["ALPHA", ["B", "C"], [None, None]], ["BETA", ["B", "C"], [0.1, 0.45]], ["GAMMA", ["B", "C"], [0.3, 0.45]]]]},
+        {"reference": "Three-phase (2 null)", "comment": "Doesn't plot", "components": ["A", "B", "C"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["ALPHA", ["B", "C"], [None, None]], ["BETA", ["B", "C"], [None, None]], ["GAMMA", ["B", "C"], [0.40, 0.50]]]]},
+        {"reference": "Three-phase w/ HYPERPLANE", "comment": "", "components": ["A", "B", "C"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B", "C"], [0.10, 0.775]], ["ALPHA", ["B", "C"], [0.05, 0.75]], ["BETA", ["B", "C"], [0.15, 0.75]], ["GAMMA", ["B", "C"], [0.10, 0.80]]]]},
+        {"reference": "Three-phase (1 null) w/ HYPERPLANE", "comment": "Doesn't plot", "components": ["A", "B", "C"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B", "C"], [0.5, 0.80]], ["ALPHA", ["B", "C"], [None, None]], ["BETA", ["B", "C"], [0.10, 0.80]], ["GAMMA", ["B", "C"], [0.15, 0.80]]]]},
+        {"reference": "Three-phase (2 null) w/ HYPERPLANE", "comment": "Doesn't plot", "components": ["A", "B", "C"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B", "C"], [0.05, 0.85]], ["ALPHA", ["B", "C"], [None, None]], ["BETA", ["B", "C"], [None, None]], ["GAMMA", ["B", "C"], [0.10, 0.85]]]]},
+        {"reference": "Three-phase (3 null) w/ HYPERPLANE", "comment": "Doesn't plot", "components": ["A", "B", "C"], "phases": ["ALPHA", "BETA", "GAMMA"], "conditions": {"P": 101325,"T": 1000}, "output": "ZPF", "values": [[["__HYPERPLANE__", ["B", "C"], [0.05, 0.90]], ["ALPHA", ["B", "C"], [None, None]], ["BETA", ["B", "C"], [None, None]], ["GAMMA", ["B", "C"], [None, None]]]]},
+    ])
+
+    comps = ["A", "B", "C"]
+    phases = ["ALPHA", "BETA", "GAMMA"]
+    conds = {v.P: 101325, v.T: 1000, v.X('B'): (0, 1, 0.01), v.X('C'): (0, 1, 0.01)}
+    fig, ax = plt.subplots(subplot_kw=dict(projection="triangular"))
+    dataplot(comps, phases, conds, datasets_db, ax=ax)
+    # fig.savefig('test_comprehensive_ternary_dataplot_test.png', bbox_inches="tight")
+    plt.close(fig)
+
 
 def test_plot_interaction_runs(datasets_db):
     """Test that plot_interaction runs without an error."""

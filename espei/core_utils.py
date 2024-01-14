@@ -227,7 +227,8 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
                 this_equilibrium.append((phase_name, comp_dict, data['reference']))
 
             # add this set of equilibrium phases to the correct key in the equilibria dict
-            n_phases_in_equilibrium = len(equilbrium)
+            # don't count __HYPERPLANE__ meta phases towards dimensionality of tie-region
+            n_phases_in_equilibrium = len(list(filter(lambda eq: eq[0] != "__HYPERPLANE__", equilbrium)))
             list_of_n_phase_equilibria = equilibria_dict.get(n_phases_in_equilibrium, [])
             list_of_n_phase_equilibria.append(this_equilibrium)
             equilibria_dict[n_phases_in_equilibrium] = list_of_n_phase_equilibria
