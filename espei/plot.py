@@ -346,6 +346,9 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs
             # plot the scatter points for the right phases
             x_points, y_points = [], []
             for phase_name, comp_dict, ref_key in eq:
+                if phase_name == "__HYPERPLANE__":
+                    # Don't plot the overall compositions for tie-triangles
+                    continue
                 x_val, y_val = comp_dict[x], comp_dict[y]
                 x_points.append(x_val)
                 y_points.append(y_val)

@@ -374,7 +374,7 @@ class FixedConfigurationPropertyResidual(ResidualFunction):
         symbols_to_fit: Optional[List[SymbolName]] = None,
         weight: Optional[Dict[str, float]] = None,
         ):
-        super().__init__(database, datasets, phase_models, symbols_to_fit)
+        super().__init__(database, datasets, phase_models, symbols_to_fit, weight)
 
         if weight is not None:
             self.weight = weight
