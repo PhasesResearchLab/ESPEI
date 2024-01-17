@@ -84,6 +84,18 @@ def test_binary_candidate_models_are_constructed_correctly():
             [YS, YS*Z, YS*Z**2, YS*Z**3]
         ]
 
+def test_simplified_candidate_model_generation():
+    # this uses the feature sets as above, but
+    YS = symengine.Symbol('YS')
+    Z = symengine.Symbol('Z')
+    CPM_FORM_feature_sets = make_successive([v.T*symengine.log(v.T), v.T**2])
+    interaction_features = [YS*(Z**order) for order in range(0, 4)] # L0-L3
+    candidate_models = build_candidate_models(CPM_FORM_feature_sets, interaction_features)
+    assert len(candidate_models) == 30  # tested in detail in test_binary_candidate_models_are_constructed_correctly
+    # now we limit the number of candidate models and test that fewer are generated
+    candidate_models = build_candidate_models(CPM_FORM_feature_sets, interaction_features, complex_algorithm_candidate_limit=29)
+    assert len(candidate_models) == len(CPM_FORM_feature_sets) * len(interaction_features)
+
 
 def test_ternary_candidate_models_are_constructed_correctly():
     """Candidate models should be generated for all valid combinations of possible models in the ternary case"""
