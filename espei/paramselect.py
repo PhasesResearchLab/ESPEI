@@ -25,6 +25,7 @@ from collections import OrderedDict
 import numpy as np
 import symengine
 from symengine import Symbol
+from symengine.lib.symengine_wrapper import ImmutableDenseMatrix
 from tinydb import where
 import tinydb
 from pycalphad import Database, variables as v
@@ -107,9 +108,16 @@ def _build_feature_matrix(sample_condition_dicts: List[Dict[Symbol, float]], sym
     M = len(sample_condition_dicts)
     N = len(symbolic_coefficients)
     feature_matrix = np.empty((M, N))
+    coeffs = ImmutableDenseMatrix(symbolic_coefficients)
     for i in range(M):
-        for j in range(N):
-            feature_matrix[i, j] = symbolic_coefficients[j].subs(sample_condition_dicts[i])
+        # Profiling-guided optimization
+        # At the time, we got a 3x performance speedup compared to calling subs
+        # on individual elements of symbolic_coefficients:
+        #     symbolic_coefficients[j].subs(sample_condition_dicts[i])
+        # The biggest speedup was moving the inner loop to the IDenseMatrix,
+        # while dump_real avoids allocating an extra list because you cannot
+        # assign feature_matrix[i, :] to the result of coeffs.xreplace
+        coeffs.xreplace(sample_condition_dicts[i]).dump_real(feature_matrix[i, :])
     return feature_matrix
 
 

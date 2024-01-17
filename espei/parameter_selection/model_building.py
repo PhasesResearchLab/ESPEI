@@ -31,7 +31,7 @@ def make_successive(xs: List[object]):
 
 
 @cacheit  # This can be expensive if run from an inner loop, so it is cached
-def build_feature_sets(feature_sets: List[List[symengine.Symbol]], interaction_features: List[symengine.Symbol]):
+def build_candidate_models(feature_sets: List[List[symengine.Symbol]], interaction_features: List[symengine.Symbol], complex_algorithm_candidate_limit=1000):
     """
     Return a list of broadcasted features
 
@@ -41,6 +41,11 @@ def build_feature_sets(feature_sets: List[List[symengine.Symbol]], interaction_f
         List of (non-composition) feature sets, such as [[TlogT], [TlogT, T**(-1)], [TlogT, T**(-1), T**2]]
     interaction_features : List[symengine.Symbol]
         List of interaction features that will become a successive_list, such as [YS, YS*Z, YS*Z**2]
+    complex_algorithm_candidate_limit : int
+        If the complex algorithm (described in the Notes section) will generate
+        at least this many candidates then switch to the simple algorithm for
+        building candidates. The simple algorithm produces a total of N*M
+        feature sets from a cartesian product.
 
     Returns
     -------
@@ -49,10 +54,10 @@ def build_feature_sets(feature_sets: List[List[symengine.Symbol]], interaction_f
     Notes
     -----
     This takes two sets of features, e.g. [TlogT, T-1, T2] and [YS, YS*Z, YS*Z**2]
-    and generates a list of feature sets where combined potential and
+    and generates a list of candidate models where combined potential and
     interaction features are broadcasted successively.
 
-    Generates candidate feature sets like:
+    Generates candidate models like:
     L0: A + BT,  L1: A
     L0: A     ,  L1: A + BT
 
@@ -72,17 +77,31 @@ def build_feature_sets(feature_sets: List[List[symengine.Symbol]], interaction_f
     number of feature sets should be :math:`N(1-N^M)/(1-N)`. If :math:`N=1`, then there
     are :math:`M` total feature sets.
 
+    Using this more complex algorithm generates significantly more candidates
+    for typical usage where M=4 (L0, L1, L2, L3). Typically we are performance
+    limited at the espei.paramselect._build_feature_matrix step where we use
+    symengine to xreplace the symbolic features generated here with concrete
+    values. Significant performance gains in that function should allow us to
+    raise the `complex_algorithm_candidate_limit` ceiling.
+
     """
-    # [ [feature_sets for L0], [feature_sets for L1], [feature_sets for L2], ...]
-    feats = [list(itertools.product(feature_sets, [inter])) for inter in interaction_features]
-    # [ [temps for L0], [temps for L0 and L1], [temps for L0, L1 and L2], ...
-    model_sets = make_successive(feats)
-    # models that are not distributed or summed
-    candidate_feature_sets = list(itertools.chain(*[list(itertools.product(*model_set)) for model_set in model_sets]))
-    candidate_models = []
-    for feat_set in candidate_feature_sets:
-        # multiply the interactions through and flatten the feature list
-        candidate_models.append(list(itertools.chain(*[[param_order[1]*temp_feat for temp_feat in param_order[0]] for param_order in feat_set])))
+    N = len(feature_sets)
+    M = len(interaction_features)
+    if N > 1 and (N * (1 - N**M) / (1 - N) > complex_algorithm_candidate_limit):
+        # use the simple algorithm
+        model_sets = list(itertools.product(feature_sets, make_successive(interaction_features)))
+        candidate_models = [[tfeat * yfeat for tfeat, yfeat in itertools.product(temp_features, intr_features)] for temp_features, intr_features in model_sets]
+    else:
+        # [ [feature_sets for L0], [feature_sets for L1], [feature_sets for L2], ...]
+        feats = [list(itertools.product(feature_sets, [inter])) for inter in interaction_features]
+        # [ [temps for L0], [temps for L0 and L1], [temps for L0, L1 and L2], ...
+        model_sets = make_successive(feats)
+        # models that are not distributed or summed
+        candidate_feature_sets = list(itertools.chain(*[list(itertools.product(*model_set)) for model_set in model_sets]))
+        candidate_models = []
+        for feat_set in candidate_feature_sets:
+            # multiply the interactions through and flatten the feature list
+            candidate_models.append(list(itertools.chain(*[[param_order[1]*temp_feat for temp_feat in param_order[0]] for param_order in feat_set])))
     return candidate_models
 
 
@@ -147,7 +166,7 @@ def build_redlich_kister_candidate_models(
     """
     if not interaction_test(configuration):  # endmembers only
         interaction_features = (symengine.S.One,)
-        return build_feature_sets(feature_sets, interaction_features)
+        return build_candidate_models(feature_sets, interaction_features)
     elif interaction_test(configuration, 2):  # has a binary interaction
         YS = symengine.Symbol('YS')  # Product of all nonzero site fractions in all sublattices
         Z = symengine.Symbol('Z')
@@ -156,7 +175,7 @@ def build_redlich_kister_candidate_models(
             interaction_features = [YS*(Z**order) for order in range(0, max_binary_redlich_kister_order + 1)]
         else:
             interaction_features = []
-        return build_feature_sets(feature_sets, interaction_features)
+        return build_candidate_models(feature_sets, interaction_features)
     elif interaction_test(configuration, 3):  # has a ternary interaction
         # Ternaries interactions should have exactly two interaction sets:
         # 1. a single symmetric ternary parameter (YS)
@@ -165,7 +184,7 @@ def build_redlich_kister_candidate_models(
         V_I, V_J, V_K = symengine.Symbol('V_I'), symengine.Symbol('V_J'), symengine.Symbol('V_K')
         ternary_feature_sets = []
         if ternary_symmetric_parameter:
-            ternary_feature_sets += build_feature_sets(feature_sets, (YS,))
+            ternary_feature_sets += build_candidate_models(feature_sets, (YS,))
         if ternary_asymmetric_parameters:
             # We are ignoring cases where we have L0 == L1 != L2 (and like
             # permutations) because these cases (where two elements exactly the
@@ -175,9 +194,9 @@ def build_redlich_kister_candidate_models(
             # (i.e. products of symmetric and asymmetric terms), we'll candidates in two steps
             # special handling for asymmetric features, we don't want a successive V_I, V_J, V_K, but all three should be present
             asym_feats = (
-                build_feature_sets(feature_sets, (YS * V_I,)), # asymmetric L0
-                build_feature_sets(feature_sets, (YS * V_J,)), # asymmetric L1
-                build_feature_sets(feature_sets, (YS * V_K,)), # asymmetric L2
+                build_candidate_models(feature_sets, (YS * V_I,)), # asymmetric L0
+                build_candidate_models(feature_sets, (YS * V_J,)), # asymmetric L1
+                build_candidate_models(feature_sets, (YS * V_K,)), # asymmetric L2
             )
             for v_i_feats, v_j_feats, v_k_feats in zip(*asym_feats):
                 ternary_feature_sets.append(v_i_feats + v_j_feats + v_k_feats)
