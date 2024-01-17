@@ -12,8 +12,8 @@ The goal is to make it clear how different modules in ESPEI fit together and whe
 
 ESPEI provides tools to
 
-1. Parameterize CALPHAD models by optimizing the compromise between model accuracy and complexity. We typically call this parameter generation or model selection.
-2. Fit parameterized CALPHAD models to thermochemical and phase boundary data or other custom data with uncertainty quantification via Markov chain Monte Carlo
+1. Parameterize Calphad models by optimizing the compromise between model accuracy and complexity. We typically call this parameter generation or model selection.
+2. Fit parameterized Calphad models to thermochemical and phase boundary data or other custom data with uncertainty quantification via Markov chain Monte Carlo
 
 API
 ---
@@ -47,7 +47,7 @@ Parameter selection
 -------------------
 
 Parameter selection goes through the ``generate_parameters`` function in the ``espei.paramselect`` module.
-The goal of parameter selection is go through each phase (one at a time) and fit a CALPHAD model to the data.
+The goal of parameter selection is go through each phase (one at a time) and fit a Calphad model to the data.
 
 For each phase, the endmembers are fit first, followed by binary and ternary interactions.
 For each individual endmember or interaction to fit, a series of candidate models are generated that have increasing

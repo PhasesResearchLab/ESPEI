@@ -38,7 +38,7 @@ ESPEI-datasets repository so that others may benefit from this data as you have.
 You may then add your name to the CONTRIBUTORS file as described in the README.
 
 
-Phases and CALPHAD models
+Phases and Calphad models
 =========================
 
 The Cu-Mg system contains five stable phases: Liquid, disordered fcc and hcp,
@@ -200,7 +200,7 @@ MCMC optimization
 With the data in the CU-MG input data, ESPEI generated 18 parameters to fit. For
 systems with more components, solution phases, and input data, may more
 parameters could be required to describe the thermodynamics of the specific
-system well. Because they describe Gibbs free energies, parameters in CALPHAD
+system well. Because they describe Gibbs free energies, parameters in Calphad
 models are highly correlated in both single-phase descriptions and for
 describing equilibria between phases. For large systems, global numerical
 optimization of many parameters simultaneously is computationally intractable.
@@ -391,7 +391,7 @@ the diagonal and covariances between them under the diagonal. A more
 circular covariance means that parameters are not correlated to each
 other, while elongated shapes indicate that the two parameters are
 correlated. Strongly correlated parameters are expected for some
-parameters in CALPHAD models within phases or for phases in equilibrium,
+parameters in Calphad models within phases or for phases in equilibrium,
 because increasing one parameter while decreasing another would give a
 similar error.
 

@@ -63,6 +63,10 @@ generate_parameters:
       default: null
     input_db: # TDB file used to start the parameter generation run
       type: string
+    fitting_description:
+      required: True
+      type: string  # fully qualified import path for a ModelFittingDescription
+      default: espei.parameter_selection.fitting_descriptions.gibbs_energy_fitting_description
 
 
 ## if present, will run mcmc fitting

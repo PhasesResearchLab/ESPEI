@@ -263,7 +263,7 @@ the diagonal and covariances between them under the diagonal. A more
 circular covariance means that parameters are not correlated to each
 other, while elongated shapes indicate that the two parameters are
 correlated. Strongly correlated parameters are expected for some
-parameters in CALPHAD models within phases or for phases in equilibrium,
+parameters in Calphad models within phases or for phases in equilibrium,
 because increasing one parameter while decreasing another would give a
 similar likelihood.
 

@@ -4,13 +4,14 @@ import copy
 from tinydb import where
 from tinydb.storages import MemoryStorage
 import numpy as np
-from pycalphad import Database, variables as v
+from pycalphad import Database, Model, variables as v
 import scipy
 from symengine import Symbol
 
 from espei.logger import config_logger
 from espei.paramselect import generate_parameters
 from espei.utils import PickleableTinyDB
+from espei.parameter_selection.fitting_descriptions import molar_volume_gibbs_energy_fitting_description, molar_volume_fitting_description
 from .testing_data import *
 from .fixtures import datasets_db
 
@@ -85,9 +86,9 @@ def test_formation_energies_are_fit(datasets_db):
     assert dbf.elements == {'CU', 'MG'}
     assert set(dbf.phases.keys()) == {'CUMG2'}
     assert len(dbf._parameters.search((where('parameter_type') == 'G') & (where('phase_name') == 'CUMG2'))) == 1
-    assert dbf.symbols['VV0000'] == -15268.3  # enthalpy
-    assert dbf.symbols['VV0001'] == -0.9  # heat capacity
-    assert dbf.symbols['VV0002'] == 12.0278  # entropy
+    assert dbf.symbols['VV0000'] == -0.9  # heat capacity
+    assert dbf.symbols['VV0001'] == 12.0278  # entropy
+    assert dbf.symbols['VV0002'] == -15268.3  # enthalpy
 
 
 def test_mixing_energies_are_fit(datasets_db):
@@ -608,3 +609,291 @@ def test_weighting_invariance():
     # assert len(params) == 2
     assert np.isclose(dbf.symbols['VV0000'], 1000*32/3)  # L1
     # assert np.isclose(dbf.symbols['VV0001'], 0)  # L0
+
+
+def test_G_lattice_stabilities_do_not_prevent_fitting_other_parameters(datasets_db):
+    # ESPEI skips adding G/L parameters if a lattice stability or an input
+    # database is provided that has those parameters already. The presence of G
+    # parameters (or any parameter X) should not prevent other parameters to be
+    # fit as long as the fitting step parameter name != G (or != X).
+    # This also should act as a test for fitting G and non-G parameters at the same time
+
+    datasets_db.insert({
+        "components": ["HF"], "phases": ["HCP_A3"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [["HF"]], "sublattice_occupancies": [[1.0]]},
+        "output": "V0", "values": [[[10.1092e-6]]],
+        "reference": "Lu (2005)", "bibtex": "lu2005", "comment": "From Table 1",
+    })
+
+    phase_models = {
+        "components": ["HF"],
+        "phases": {"HCP_A3" : {"sublattice_model": [["HF"]], "sublattice_site_ratios": [1]}}
+    }
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=molar_volume_gibbs_energy_fitting_description)
+    print(dbf._parameters.all())
+    assert len(dbf._parameters.search(where('parameter_type') == 'G')) == 1 # pure element lattice stability added
+    assert len(dbf._parameters.search(where('parameter_type') == 'V0')) == 1 # volume parameter added
+
+
+def test_volume_parameters_are_not_fit_if_present_in_database(datasets_db):
+    # Use Lu 2005 digitized data as an input_db and provide some unary volume
+    # data and make sure parameters aren't fit.
+    datasets_db.insert({
+        "components": ["HF"], "phases": ["HCP_A3"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [["HF"]], "sublattice_occupancies": [[1.0]]},
+        "output": "V0", "values": [[[10.1092e-6]]],
+        "reference": "Lu (2005)", "bibtex": "lu2005", "comment": "From Table 1",
+    })
+
+    # fake data
+    datasets_db.insert({
+        "components": ["HF", "ZR"], "phases": ["HCP_A3"],
+        "conditions": {"T": 298.15, "P": 101325},
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["HF", "ZR"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+        "output": "V0_MIX", "values": [[[1.0e-05]]],
+    })
+
+    dbf = Database(dbf_vol)
+
+    phase_models = {
+        "components": ["HF"],
+        "phases": {"HCP_A3" : {"sublattice_model": [["HF"]], "sublattice_site_ratios": [1]}}
+    }
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', dbf=dbf, fitting_description=molar_volume_gibbs_energy_fitting_description)
+    assert len(dbf._parameters.search(where('parameter_type') == 'G')) == 2 # pure element lattice stability added
+    assert len(dbf._parameters.search(where('parameter_type') == 'V0')) == 3 # 2 volume parameters already exist in database, 1 added
+    assert dbf.symbols['VV0000'] == 4.0e-05  # 0.5 * 0.5 * 1.0e-5
+
+
+def test_elastic_fitting_description_works(datasets_db):
+    # We can implement and pass a custom model and fitting description to generate parameters
+    # Essentially matches the tutorial
+    import tinydb
+    from pycalphad import Model
+
+    class ElasticModel(Model):
+        def build_phase(self, dbe):
+            phase = dbe.phases[self.phase_name]
+            param_search = dbe.search
+            for prop in ['C11', 'C12', 'C44']:
+                prop_param_query = (
+                    (tinydb.where('phase_name') == phase.name) & \
+                    (tinydb.where('parameter_type') == prop) & \
+                    (tinydb.where('constituent_array').test(self._array_validity))
+                    )
+                prop_val = self.redlich_kister_sum(phase, param_search, prop_param_query).subs(dbe.symbols)
+                setattr(self, prop, prop_val)
+
+    from espei.parameter_selection.fitting_descriptions import ModelFittingDescription
+    from espei.parameter_selection.fitting_steps import AbstractLinearPropertyStep
+
+    class StepElasticC11(AbstractLinearPropertyStep):
+        parameter_name = "C11"
+        data_types_read = "C11"
+
+    class StepElasticC12(AbstractLinearPropertyStep):
+        parameter_name = "C12"
+        data_types_read = "C12"
+
+    class StepElasticC44(AbstractLinearPropertyStep):
+        parameter_name = "C44"
+        data_types_read = "C44"
+
+    elastic_fitting_description = ModelFittingDescription([StepElasticC11, StepElasticC12, StepElasticC44], model=ElasticModel)
+
+    datasets_db.insert({
+    "components": ["TI", "VA"], "phases": ["BCC_A2"],
+    "output": "C12", "values": [[[115]]],
+    "conditions": {"T": 298.15, "P": 101325},
+    "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3], "sublattice_configurations": [["TI", "VA"]], "sublattice_occupancies": [[1.0, 1.0]]},
+    "reference": "Marker (2018)", "bibtex": "marker2018binary_elastic", "comment": "Values pulled from Table 4 (DFT calculations).",
+    })
+    datasets_db.insert({
+    "components": ["MO", "VA"], "phases": ["BCC_A2"],
+    "output": "C12", "values": [[[164]]],
+    "conditions": {"T": 298.15, "P": 101325},
+    "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3], "sublattice_configurations": [["MO", "VA"]], "sublattice_occupancies": [[1.0, 1.0]]},
+    "reference": "Marker (2018)", "bibtex": "marker2018binary_elastic", "comment": "Values pulled from Table 4 (DFT calculations).",
+    })
+    datasets_db.insert({
+    "components": ["MO", "TI", "VA"], "phases": ["BCC_A2"],
+    "output": "C12", "values": [[[111, 113, 123, 136, 146, 158, 163]]],
+    "conditions": {"T": 298.15, "P": 101325},
+    "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3], "sublattice_configurations": [[["MO", "TI"], "VA"], [["MO", "TI"], "VA"], [["MO", "TI"], "VA"], [["MO", "TI"], "VA"], [["MO", "TI"], "VA"], [["MO", "TI"], "VA"], [["MO", "TI"], "VA"]], "sublattice_occupancies": [[[0.06, 0.94], 1.0], [[0.13, 0.87], 1.0], [[0.25, 0.75], 1.0], [[0.50, 0.50], 1.0], [[0.75, 0.25], 1.0], [[0.94, 0.06], 1.0], [[0.98, 0.02], 1.0]]},
+    "reference": "Marker (2018)", "bibtex": "marker2018binary_elastic", "comment": "Values pulled from Table 4 (DFT calculations).",
+    })
+
+    phase_models = {
+        "components": ["MO", "TI", "VA"],
+        "phases": {"BCC_A2" : {"sublattice_model": [["MO", "TI"], ["VA"]], "sublattice_site_ratios": [1, 3]}}
+    }
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=elastic_fitting_description)
+    assert len(dbf._parameters.search(where('parameter_type') == 'C12')) == 3 # 3 added
+    assert dbf.symbols['VV0000'] == 164.0
+    assert dbf.symbols['VV0001'] == 115.0
+    assert dbf.symbols['VV0002'] == -27.9687
+    assert len(dbf._parameters.all()) == 3 # nothing else added
+
+
+def test_property_models_for_phases_with_more_than_one_mole_formula_fit_correctly(datasets_db):
+    # Test that phases that have more than one mole of formula units fit
+    # correctly normalized parameters.
+    # Might be missing some normalizations for some properties.
+    datasets_db.insert({
+        "components": ["CR"], "phases": ["SIGMA_D8B"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "solver": {"mode": "manual", "sublattice_site_ratios": [10, 4, 16], "sublattice_configurations": [["CR", "CR", "CR"]], "sublattice_occupancies": [[1.0, 1.0, 1.0]]},
+        "output": "V0", "values": [[[1e-5]]],
+    })
+
+    # VM calculated from 1.0e-5 * math.exp(5e-5*1000)
+    # i.e. with V0 = 1e-5, we expect VA = 5e-5 * T (per mole atoms)
+    datasets_db.insert({
+        "components": ["CR"], "phases": ["SIGMA_D8B"],
+        "conditions": {"P": 101315, "T": 1000},
+        "solver": {"mode": "manual", "sublattice_site_ratios": [10, 4, 16], "sublattice_configurations": [["CR", "CR", "CR"]], "sublattice_occupancies": [[1.0, 1.0, 1.0]]},
+        "output": "VM", "values": [[[1.0512710963760243e-05]]],
+    })
+
+    phase_models = {
+        "components": ["CR"],
+        "phases": {"SIGMA_D8B" : {"sublattice_model": [["CR"], ["CR"], ["CR"]], "sublattice_site_ratios": [10, 4, 16]}}
+    }
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=molar_volume_gibbs_energy_fitting_description)
+    mod = Model(dbf, ["CR"], "SIGMA_D8B")
+    print(dbf._parameters.search(where('parameter_type') == 'V0'))
+    print(dbf._parameters.search(where('parameter_type') == 'VA'))
+    assert len(dbf._parameters.search(where('parameter_type') == 'V0')) == 1 # 1 V0 parameter fit
+    assert len(dbf._parameters.search(where('parameter_type') == 'VA')) == 1 # 1 VA parameter fit
+    VM_1000K = float(mod.VM.subs({v.T: 1000, v.Y("SIGMA_D8B", 0, "CR"): 1.0, v.Y("SIGMA_D8B", 1, "CR"): 1.0, v.Y("SIGMA_D8B", 2, "CR"): 1.0, **mod._symbols}).evalf())
+    assert np.isclose(VM_1000K, 1.0512710963760243e-05, atol=1e-14)
+    assert np.isclose(dbf.symbols['VV0000'], 1.0e-05 * 30, atol=1e-14)  # V0 per mole of formula
+    assert np.isclose(dbf.symbols['VV0001'], 5.0e-05, atol=1e-14)  # VA per mole of atoms (unusual, but matches pycalphad and TC behavior)
+
+
+def test_molar_volume_model_fits(datasets_db):
+    # integration test that we can fit different kinds of data and parameters
+    # mixing V0 (binary)
+    datasets_db.insert({
+        "components": ["TA", "W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "V0_MIX", "values": [[[-1.00257453e-07]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["TA", "W"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+    })
+    # absolute value VA (binary)
+    datasets_db.insert({
+        "components": ["TA", "W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "VM", "values": [[[1.02e-5]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["TA", "W"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+    })
+    # absolute value V0 ternary
+    datasets_db.insert({
+        "components": ["MO", "TA", "W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "V0", "values": [[[0.99e-5]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["MO", "TA", "W"]]], "sublattice_occupancies": [[[0.333333, 0.333333, 0.333333]]]},
+    })
+    # mixing VA ternary
+    datasets_db.insert({
+        "components": ["MO", "TA", "W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "VM_MIX", "values": [[[1e-6]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["MO", "TA", "W"]]], "sublattice_occupancies": [[[0.333333, 0.333333, 0.333333]]]},
+    })
+
+    phase_models = {
+        "components": ["MO", "TA", "W"],
+        "phases": {"BCC_A2" : {"sublattice_model": [["MO", "TA", "W"]], "sublattice_site_ratios": [1]}}
+    }
+
+    # the performance of mixing VA parameters is quite poor due to the number of
+    # features and the combinatorics of temperature + mixing features.
+    # this test only utilizes some basic features, so we'll strip down StepLogVA
+    # features for performance.
+    from espei.parameter_selection.fitting_steps import StepV0, StepLogVA
+    from espei.parameter_selection.fitting_descriptions import ModelFittingDescription
+    class SimpleStepLogVA(StepLogVA):
+        features = [v.T, v.T**2]
+    test_VM_fit_desc = ModelFittingDescription([StepV0, SimpleStepLogVA])
+
+    dbf = Database(dbf_lu2005)  # use Lu 2005 as a starting point, we tested unary fitting above
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', dbf=dbf, fitting_description=test_VM_fit_desc)
+    mod = Model(dbf, ["MO", "TA", "W"], "BCC_A2")
+
+    bin_Ta50_W50 = {v.Y("BCC_A2", 0, "MO"): 0.0, v.Y("BCC_A2", 0, "TA"): 0.5, v.Y("BCC_A2", 0, "W"): 0.5}
+    tern_Mo33_Ta33_W33 = {v.Y("BCC_A2", 0, "MO"): 0.333333, v.Y("BCC_A2", 0, "TA"): 0.333333, v.Y("BCC_A2", 0, "W"): 0.333333}
+
+    # we need to test both V0 and VM because testing only VM could lead to some nonsense that VM is overfitting using VA parmaeters.
+    V0_bin_em_mix = float(mod.V0.subs({v.T: 298.15, **bin_Ta50_W50, **mod._symbols}).evalf()) - float(mod.endmember_reference_model.V0.subs({v.T: 298.15, **bin_Ta50_W50, **mod._symbols}).evalf())
+    V0_bin_em_mix_truth = -1.00257453e-07  # from data
+    assert np.isclose(V0_bin_em_mix, V0_bin_em_mix_truth, atol=1e-14)
+
+    VM_bin = float(mod.VM.subs({v.T: 298.15, **bin_Ta50_W50, **mod._symbols}).evalf())
+    VM_bin_truth = 1.02e-5  # from data
+    assert np.isclose(VM_bin, VM_bin_truth, atol=1e-14)
+
+    V0_tern = float(mod.V0.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf())
+    V0_tern_truth = 0.99e-5  # from data
+    assert np.isclose(V0_tern, V0_tern_truth, atol=1e-14)
+
+    VM_tern_em_mix = float(mod.VM.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf()) - float(mod.endmember_reference_model.VM.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf())
+    VM_tern_em_mix_truth = 1.0e-6  # from data
+    assert np.isclose(VM_tern_em_mix, VM_tern_em_mix_truth, atol=1e-14)
+
+
+def test_molar_volume_mixing_and_absolute_value_produce_the_same_parameter(datasets_db):
+    unary_TA = {
+        "components": ["TA"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "V0", "values": [[[1e-5]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [["TA"]], "sublattice_occupancies": [[1.0]]},
+    }
+    unary_W = {
+        "components": ["W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "V0", "values": [[[2e-5]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [["W"]], "sublattice_occupancies": [[1.0]]},
+    }
+    binary_TaW_absolute = {
+        "components": ["TA", "W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "V0", "values": [[[1.45e-5]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["TA", "W"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+    }
+    binary_TaW_mixing = {
+        "components": ["TA", "W"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "V0_MIX", "values": [[[-0.05e-5]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["TA", "W"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+    }
+
+    phase_models = {
+        "components": ["MO", "TA", "W"],
+        "phases": {"BCC_A2" : {"sublattice_model": [["MO", "TA", "W"]], "sublattice_site_ratios": [1]}}
+    }
+
+    # absolute value first
+    datasets_db.insert(unary_TA)
+    datasets_db.insert(unary_W)
+    datasets_db.insert(binary_TaW_absolute)
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=molar_volume_fitting_description)
+    assert np.isclose(dbf.symbols['VV0000'], 1e-5, atol=1e-14)
+    assert np.isclose(dbf.symbols['VV0001'], 2e-5, atol=1e-14)
+    assert np.isclose(dbf.symbols['VV0002'], 4 * -0.05e-5, atol=1e-14)
+
+    # mixing
+    datasets_db.drop_tables()
+    datasets_db.insert(unary_TA)
+    datasets_db.insert(unary_W)
+    datasets_db.insert(binary_TaW_mixing)
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=molar_volume_fitting_description)
+    assert np.isclose(dbf.symbols['VV0000'], 1e-5, atol=1e-14)
+    assert np.isclose(dbf.symbols['VV0001'], 2e-5, atol=1e-14)
+    assert np.isclose(dbf.symbols['VV0002'], 4 * -0.05e-5, atol=1e-14)

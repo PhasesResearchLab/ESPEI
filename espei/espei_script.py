@@ -27,7 +27,7 @@ from pycalphad import Database
 import espei
 from espei.validation import schema
 from espei import generate_parameters
-from espei.utils import ImmediateClient, database_symbols_to_fit
+from espei.utils import ImmediateClient, database_symbols_to_fit, import_qualified_object
 from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags
 from espei.optimizers.opt_mcmc import EmceeOptimizer
 
@@ -123,6 +123,9 @@ def get_run_settings(input_dict):
             run_settings['mcmc']['scheduler'] = None
     if not schema.validate(run_settings):
         raise ValueError(schema.errors)
+    if run_settings.get("generate_parameters") is not None:
+        # load the fitting description object
+        run_settings["generate_parameters"]["fitting_description"] = import_qualified_object(run_settings["generate_parameters"]["fitting_description"])
     return run_settings
 
 
@@ -172,11 +175,12 @@ def run_espei(run_settings):
         ridge_alpha = generate_parameters_settings['ridge_alpha']
         aicc_penalty = generate_parameters_settings['aicc_penalty_factor']
         input_dbf = generate_parameters_settings.get('input_db', None)
+        fitting_description = generate_parameters_settings['fitting_description']
         if input_dbf is not None:
             input_dbf = Database(input_dbf)
         dbf = generate_parameters(phase_models, datasets, refdata, excess_model,
                                   ridge_alpha=ridge_alpha, dbf=input_dbf,
-                                  aicc_penalty_factor=aicc_penalty,)
+                                  aicc_penalty_factor=aicc_penalty, fitting_description=fitting_description)
         dbf.to_file(output_settings['output_db'], if_exists='overwrite')
 
     if mcmc_settings is not None:
@@ -274,16 +278,16 @@ def main():
     # if desired, check datasets and return
     if args.check_datasets:
         dataset_filenames = sorted(recursive_glob(args.check_datasets, '*.json'))
-        
+
         #if the path is a file, add that file to the list (test single dataset case!)
         if(os.path.isfile(args.check_datasets)):
             dataset_filenames.append(os.path.normpath(args.check_datasets))
-            
+
         #if there are no input files, warn the user they may have typed the wrong path
         errors = []
         if(len(dataset_filenames) == 0):
             errors.append(OSError("No input .json files detected at "+str(os.path.normpath(args.check_datasets))+", is your path correct?"))
-        
+
         for dataset in dataset_filenames:
             try:
                 load_datasets([dataset])

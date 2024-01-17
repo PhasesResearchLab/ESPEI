@@ -35,7 +35,7 @@ To check the datasets at path ``my-input-data/`` you can run ``espei --check-dat
 Phase Descriptions
 ==================
 
-The JSON file for describing CALPHAD phases is conceptually similar to a setup file in Thermo-Calc's PARROT module.
+The JSON file for describing Calphad phases is conceptually similar to a setup file in Thermo-Calc's PARROT module.
 At the top of the file there is the ``refdata`` key that describes which reference state you would like to choose.
 Currently the reference states are strings referring to dictionaries in ``pycalphad.refdata`` only ``"SGTE91"`` is implemented.
 
@@ -131,7 +131,7 @@ Two examples follow. The first dataset has some data for the formation heat capa
 * The ``conditions`` describe temperatures (``T``) and pressures (``P``) as either scalars or one-dimensional lists.
 * The type of quantity is expressed using the ``output`` key. This can in principle be any thermodynamic quantity, but currently only ``CPM*``, ``SM*``, and ``HM*`` (where ``*`` is either nothing, ``_MIX`` or ``_FORM``) are supported. Support for changing reference states is planned but not yet implemented, so all thermodynamic quantities must be formation quantities (e.g. ``HM_FORM`` or ``HM_MIX``, etc.). This is tracked by :issue:`85` on GitHub.
 * ``values`` is a 3-dimensional array where each value is the ``output`` for a specific condition of pressure, temperature, and sublattice configurations from outside to inside. Alternatively, the size of the array must be ``(len(P), len(T), len(subl_config))``. In the example below, the shape of the ``values`` array is (1, 12, 1) as there is one pressure scalar, one sublattice configuration, and 12 temperatures.
-* There is also a key, ``excluded_model_contributions``, which will make those contributions of pycalphad's ``Model`` not be fit to when doing parameter selection or MCMC. This is useful for cases where the type of data used does not include some specific ``Model`` contributions that parameters may already exist for. For example, DFT formation energies do not include ideal mixing or (CALPHAD-type) magnetic model contributions, but formation energies from experiments would include these contributions so experimental formation energies should not be excluded.
+* There is also a key, ``excluded_model_contributions``, which will make those contributions of pycalphad's ``Model`` not be fit to when doing parameter selection or MCMC. This is useful for cases where the type of data used does not include some specific ``Model`` contributions that parameters may already exist for. For example, DFT formation energies do not include ideal mixing or (Calphad-type) magnetic model contributions, but formation energies from experiments would include these contributions so experimental formation energies should not be excluded.
 
 .. code-block:: JSON
 
@@ -359,7 +359,7 @@ Tags are a flexible method to adjust many ESPEI datasets simultaneously and driv
 Each dataset can have a ``"tags"`` key, with a corresponding value of a list of tags, e.g. ``["dft"]``.
 Any tag modifications present in the input YAML file are applied to the datasets before ESPEI is run.
 
-They can be used in many creative ways, but some suggested ways include to add weights or to exclude model contributions, e.g. for DFT data that should not have contributions for a CALPHAD magnetic model or ideal mixing energy.
+They can be used in many creative ways, but some suggested ways include to add weights or to exclude model contributions, e.g. for DFT data that should not have contributions for a Calphad magnetic model or ideal mixing energy.
 An example of using the tags in an input file looks like:
 
 .. code-block:: JSON
