@@ -26,7 +26,7 @@ setup(
         'importlib_metadata',  # drop for Python>=3.8
         'matplotlib',
         'numpy>=1.20',
-        'pycalphad>=0.10.1',
+        'pycalphad>=0.10.4',
         'pydantic>2.0',
         'pyyaml',
         'setuptools_scm[toml]>=6.0',
@@ -53,7 +53,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
 
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Physics',
@@ -65,6 +65,7 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
     entry_points={'console_scripts': [
                   'espei = espei.espei_script:main']}
