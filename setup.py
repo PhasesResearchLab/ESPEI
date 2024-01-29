@@ -23,7 +23,6 @@ setup(
         'dask[complete]>=2',
         'distributed>=2',
         'emcee<3',
-        'importlib_metadata',  # drop for Python>=3.8
         'matplotlib',
         'numpy>=1.20',
         'pycalphad>=0.10.4',
@@ -66,6 +65,7 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
     ],
     entry_points={'console_scripts': [
                   'espei = espei.espei_script:main']}
