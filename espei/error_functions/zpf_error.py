@@ -131,7 +131,13 @@ def _subsample_phase_points(phase_record, phase_points, target_composition, addi
 
     # Find the points indicdes where the mass is within the radius of minimum distance + additional_distance_radius
     distances = np.mean(np.abs(phase_compositions - target_composition), axis=1)
-    idxs = np.nonzero(distances < (distances.min() + additional_distance_radius))[0]
+    # site fractions that are on the edge of composition space can sometimes
+    # break the minimizer because a single phase composition set on the edge of
+    # site fraction space won't move off the edge.
+    # filter out those points here and hope that the minimizer can do the right
+    # thing
+    all_nonzero_sitefracs = np.all(phase_points > 1e-14, axis=1)
+    idxs = np.nonzero((distances < (distances.min() + additional_distance_radius)) & (all_nonzero_sitefracs))[0]
 
     # Return the sub-space of points where this condition holds valid
     return phase_points[idxs]
@@ -171,7 +177,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         models = instantiate_models(dbf, species, data_phases, model=model, parameters=parameters)
         # assumed N, P, T state variables
         phase_recs = build_phase_records(dbf, species, data_phases, {v.N, v.P, v.T}, models, parameters=parameters, build_gradients=True, build_hessians=True)
-        all_phase_points = {phase_name: _sample_phase_constitution(models[phase_name], point_sample, True, 50) for phase_name in data_phases}
+        all_phase_points = {phase_name: _sample_phase_constitution(models[phase_name], point_sample, True, 500) for phase_name in data_phases}
         all_regions = data['values']
         conditions = data['conditions']
         phase_regions = []
@@ -258,7 +264,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
             str_statevar_dict = OrderedDict([(str(key), cond_dict[key]) for key in sorted(phase_region.potential_conds.keys(), key=str)])
-            grid = calculate_(species, phases, str_statevar_dict, models, phase_records, pdens=50, fake_points=True)
+            grid = calculate_(species, phases, str_statevar_dict, models, phase_records, pdens=500, fake_points=True)
             multi_eqdata = _equilibrium(phase_records, cond_dict, grid)
             target_hyperplane_phases.append(multi_eqdata.Phase.squeeze())
             # Does there exist only a single phase in the result with zero internal degrees of freedom?
@@ -292,7 +298,7 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
         # We don't have the phase composition here, so we estimate the driving force.
         # Can happen if one of the composition conditions is unknown or if the phase is
         # stoichiometric and the user did not specify a valid phase composition.
-        single_eqdata = calculate_(species, [current_phase], str_statevar_dict, models, phase_records, pdens=50)
+        single_eqdata = calculate_(species, [current_phase], str_statevar_dict, models, phase_records, pdens=500)
         df = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(df.max())
     elif vertex.is_disordered:
@@ -323,7 +329,7 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
         driving_force = float(np.squeeze(driving_force))
     else:
         # Extract energies from single-phase calculations
-        grid = calculate_(species, [current_phase], str_statevar_dict, models, phase_records, points=phase_points, pdens=50, fake_points=True)
+        grid = calculate_(species, [current_phase], str_statevar_dict, models, phase_records, points=phase_points, pdens=500, fake_points=True)
         # TODO: consider enabling approximate for this?
         converged, energy = constrained_equilibrium(phase_records, cond_dict, grid)
         if not converged:
