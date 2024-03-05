@@ -211,7 +211,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                 else:
                     has_missing_comp_cond = False
                     # Only sample points that have an average mass residual within tol
-                    tol = 0.02
+                    tol = 0.05
                     phase_points = _subsample_phase_points(phase_recs[phase_name], all_phase_points[phase_name], composition, tol)
                     assert phase_points.shape[0] > 0, f"phase {phase_name} must have at least one set of points within the target tolerance {pot_conds} {comp_conds}"
                 vtx = RegionVertex(phase_name, composition, comp_conds, phase_points, phase_recs, disordered_flag, has_missing_comp_cond)
