@@ -32,7 +32,7 @@ def filter_configurations(desired_data: List[Dataset], configuration, symmetry) 
                                      for sblconf in data['solver']['sublattice_configurations']])
         matching_configs = np.arange(len(data['solver']['sublattice_configurations']))[matching_configs]
         # Rewrite output values with filtered data
-        data['values'] = np.array(data['values'], dtype=np.float_)[..., matching_configs]
+        data['values'] = np.array(data['values'], dtype=np.float64)[..., matching_configs]
         data['solver']['sublattice_configurations'] = recursive_tuplify(np.array(data['solver']['sublattice_configurations'], dtype=np.object_)[matching_configs].tolist())
         if 'sublattice_occupancies' in data['solver']:
             data['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'], dtype=np.object_)[matching_configs].tolist()
@@ -62,7 +62,7 @@ def filter_temperatures(desired_data: List[Dataset]) -> List[Dataset]:
     for data in desired_data:
         temp_filter = np.atleast_1d(data['conditions']['T']) >= 298.15
         data['conditions']['T'] = np.atleast_1d(data['conditions']['T'])[temp_filter]
-        data['values'] = np.array(data['values'], dtype=np.float_)[..., temp_filter, :].tolist()
+        data['values'] = np.array(data['values'], dtype=np.float64)[..., temp_filter, :].tolist()
     return desired_data
 
 

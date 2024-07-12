@@ -104,7 +104,7 @@ def _phase_is_stoichiometric(mod):
 def _compute_vertex_composition(comps: Sequence[str], comp_conds: Dict[str, float]):
     """Compute the overall composition in a vertex assuming an N=1 normalization condition"""
     pure_elements = sorted(c for c in comps if c != 'VA')
-    vertex_composition = np.empty(len(pure_elements), dtype=np.float_)
+    vertex_composition = np.empty(len(pure_elements), dtype=np.float64)
     unknown_indices = []
     for idx, el in enumerate(pure_elements):
         amt = comp_conds.get(v.X(el), None)
@@ -271,7 +271,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
                 target_hyperplane_chempots.append(np.full_like(MU_values, np.nan))
             else:
                 target_hyperplane_chempots.append(MU_values)
-    target_hyperplane_mean_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float_)
+    target_hyperplane_mean_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float64)
     return target_hyperplane_mean_chempots
 
 
@@ -301,7 +301,7 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
         # Compute residual driving force
         # TODO: Check that it actually makes sense to declare this phase 'disordered'
         num_dof = sum([len(subl) for subl in models[current_phase].constituents])
-        desired_sitefracs = np.ones(num_dof, dtype=np.float_)
+        desired_sitefracs = np.ones(num_dof, dtype=np.float64)
         dof_idx = 0
         for subl in models[current_phase].constituents:
             dof = sorted(subl, key=str)
@@ -313,7 +313,7 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
                 else:
                     sitefracs_to_add = [1.0]
             else:
-                sitefracs_to_add = np.array([cond_dict.get(v.X(d)) for d in dof], dtype=np.float_)
+                sitefracs_to_add = np.array([cond_dict.get(v.X(d)) for d in dof], dtype=np.float64)
                 # Fix composition of dependent component
                 sitefracs_to_add[np.isnan(sitefracs_to_add)] = 1 - np.nansum(sitefracs_to_add)
             desired_sitefracs[dof_idx:dof_idx + num_subl_dof] = sitefracs_to_add

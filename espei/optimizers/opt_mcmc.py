@@ -272,7 +272,7 @@ class EmceeOptimizer(OptimizerBase):
 
         # Important to coerce to floats here because the values _must_ be floats if
         # they are used to update PhaseRecords directly
-        params = np.asarray(params, dtype=np.float_)
+        params = np.asarray(params, dtype=np.float64)
 
         # lnprior
         prior_rvs = ctx.get('prior_rvs', [rv_zero() for _ in range(params.size)])
