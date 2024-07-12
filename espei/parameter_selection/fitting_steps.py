@@ -152,7 +152,7 @@ class AbstractLinearPropertyStep(FittingStep):
         site_fractions = []
         for ds in data:
             for _ in ds['conditions']['T']:
-                sf = build_sitefractions(fixed_model.phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies', np.ones((len(ds['solver']['sublattice_configurations']), len(ds['solver']['sublattice_configurations'][0])), dtype=np.float_)))
+                sf = build_sitefractions(fixed_model.phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies', np.ones((len(ds['solver']['sublattice_configurations']), len(ds['solver']['sublattice_configurations'][0])), dtype=np.float64)))
                 site_fractions.append(sf)
         site_fractions = list(itertools.chain(*site_fractions))
         # If any site fractions show up in our rhs that aren't in these
@@ -166,7 +166,7 @@ class AbstractLinearPropertyStep(FittingStep):
         # also replace with database symbols in case we did higher order fitting
         rhs = [fixed_model.symbol_replace(symengine.S(value_with_symbols).xreplace(sf), fixed_model._symbols).evalf() for value_with_symbols, sf in zip(rhs, site_fractions)]
         # cast to float, confirming that these are concrete values with no sybolics
-        rhs = np.asarray(rhs, dtype=np.float_)
+        rhs = np.asarray(rhs, dtype=np.float64)
         return rhs
 
 
@@ -248,7 +248,7 @@ class StepHM(FittingStep):
         site_fractions = []
         for ds in data:
             for _ in ds['conditions']['T']:
-                sf = build_sitefractions(phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies', np.ones((len(ds['solver']['sublattice_configurations']), len(ds['solver']['sublattice_configurations'][0])), dtype=np.float_)))
+                sf = build_sitefractions(phase_name, ds['solver']['sublattice_configurations'], ds['solver'].get('sublattice_occupancies', np.ones((len(ds['solver']['sublattice_configurations']), len(ds['solver']['sublattice_configurations'][0])), dtype=np.float64)))
                 site_fractions.append(sf)
         site_fractions = list(itertools.chain(*site_fractions))
 
@@ -267,7 +267,7 @@ class StepHM(FittingStep):
             sf.update(cond_dict)
         # also replace with database symbols in case we did higher order fitting
         data_qtys = [fixed_model.symbol_replace(symengine.S(i).xreplace(sf), fixed_model._symbols).evalf() for i, sf in zip(data_qtys, site_fractions)]
-        data_qtys = np.asarray(data_qtys, dtype=np.float_)
+        data_qtys = np.asarray(data_qtys, dtype=np.float64)
         return data_qtys
 
 

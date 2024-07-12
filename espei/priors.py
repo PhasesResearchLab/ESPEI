@@ -18,11 +18,11 @@ class rv_zero(object):
     --------
     >>> import numpy as np
     >>> rv = rv_zero()
-    >>> np.isclose(rv.logpdf(-np.inf), 0.0)
+    >>> bool(np.isclose(rv.logpdf(-np.inf), 0.0))
     True
-    >>> np.isclose(rv.logpdf(1.0), 0.0)
+    >>> bool(np.isclose(rv.logpdf(1.0), 0.0))
     True
-    >>> np.isclose(rv.logpdf(0.0), 0.0)
+    >>> bool(np.isclose(rv.logpdf(0.0), 0.0))
     True
 
     """
@@ -41,16 +41,16 @@ class DistributionParameter(object):
     Examples
     --------
     >>> dp = DistributionParameter(5.0, 'absolute')  # always get back 5
-    >>> dp.value(1.0) == 5.0
+    >>> bool(dp.value(1.0) == 5.0)
     True
     >>> dp = DistributionParameter(-2.0, 'relative')  # multiply by -2
-    >>> dp.value(2.0) == -4.0
+    >>> bool(dp.value(2.0) == -4.0)
     True
     >>> dp = DistributionParameter(-1.0, 'shift_absolute')  # subtract 1
-    >>> dp.value(2.0) == 1.0
+    >>> bool(dp.value(2.0) == 1.0)
     True
     >>> dp = DistributionParameter(-0.5, 'shift_relative')  # subtract 1/2 value
-    >>> dp.value(2.0) == 1.0
+    >>> bool(dp.value(2.0) == 1.0)
     True
 
     """
@@ -155,9 +155,9 @@ class PriorSpec(object):
         >>> import numpy as np
         >>> from espei.priors import PriorSpec
         >>> tri_spec = {'name': 'triangular', 'loc_shift_relative': -0.5, 'scale_shift_relative': 0.5, 'c': 0.5}
-        >>> np.isneginf(PriorSpec(**tri_spec).get_prior(10).logpdf(5.1))
+        >>> bool(np.isneginf(PriorSpec(**tri_spec).get_prior(10).logpdf(5.1)))
         False
-        >>> np.isneginf(PriorSpec(**tri_spec).get_prior(10).logpdf(4.9))
+        >>> bool(np.isneginf(PriorSpec(**tri_spec).get_prior(10).logpdf(4.9)))
         True
 
         """

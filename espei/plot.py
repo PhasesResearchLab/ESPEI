@@ -597,7 +597,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     symbol_map = bib_marker_map(bib_reference_keys)
     for data in desired_data:
         indep_var_data = None
-        response_data = np.zeros_like(data['values'], dtype=np.float_)
+        response_data = np.zeros_like(data['values'], dtype=np.float64)
         if disordered_config:
             # Take the second element of the first interacting sublattice as the coordinate
             # Because it's disordered all sublattices should be equivalent
@@ -625,7 +625,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
                 points[point_idx].update({key: 0 for key in missing_variables})
                 # Change entry to a sorted array of site fractions
                 points[point_idx] = list(OrderedDict(sorted(points[point_idx].items(), key=str)).values())
-            points = np.array(points, dtype=np.float_)
+            points = np.array(points, dtype=np.float64)
             # TODO: Real temperature support
             points = points[None, None]
             stability = calculate(dbf, comps, [phase_name], output=data['output'][:-5],
@@ -633,7 +633,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
                                     model=mod_srf)
             response_data -= stability[data['output'][:-5]].values.squeeze()
 
-        response_data += np.array(data['values'], dtype=np.float_)
+        response_data += np.array(data['values'], dtype=np.float64)
         response_data = response_data.flatten()
         ref = data.get('reference', '')
         dataplot_kwargs.setdefault('markersize', 8)
@@ -734,10 +734,10 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
     symbol_map = bib_marker_map(bib_reference_keys)
     for data in desired_data:
         indep_var_data = None
-        response_data = np.zeros_like(data['values'], dtype=np.float_)
-        indep_var_data = np.array(data['conditions'][x], dtype=np.float_).flatten()
+        response_data = np.zeros_like(data['values'], dtype=np.float64)
+        indep_var_data = np.array(data['conditions'][x], dtype=np.float64).flatten()
 
-        response_data += np.array(data['values'], dtype=np.float_)
+        response_data += np.array(data['values'], dtype=np.float64)
         response_data = response_data.flatten()
         ref = data.get('reference', '')
         dataplot_kwargs.setdefault('markersize', 8)
@@ -875,9 +875,9 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
 
     for data in desired_data:
         indep_var_data = None
-        response_data = np.zeros_like(data['values'], dtype=np.float_)
+        response_data = np.zeros_like(data['values'], dtype=np.float64)
         if x == 'T' or x == 'P':
-            indep_var_data = np.array(data['conditions'][x], dtype=np.float_).flatten()
+            indep_var_data = np.array(data['conditions'][x], dtype=np.float64).flatten()
         elif x == 'Z':
             if disordered_config:
                 # Take the second element of the first interacting sublattice as the coordinate
@@ -909,7 +909,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
                     points[point_idx].update({key: 0 for key in missing_variables})
                     # Change entry to a sorted array of site fractions
                     points[point_idx] = list(OrderedDict(sorted(points[point_idx].items(), key=str)).values())
-                points = np.array(points, dtype=np.float_)
+                points = np.array(points, dtype=np.float64)
                 # TODO: Real temperature support
                 points = points[None, None]
                 stability = calculate(dbf, comps, [phase_name], output=data['output'][:-5],
@@ -917,7 +917,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
                                       model=mod_latticeonly, mode='numpy')
                 response_data -= stability[data['output'][:-5]].values.squeeze()
 
-        response_data += np.array(data['values'], dtype=np.float_)
+        response_data += np.array(data['values'], dtype=np.float64)
         response_data = response_data.flatten()
         if not bar_chart:
             extra_kwargs = {}

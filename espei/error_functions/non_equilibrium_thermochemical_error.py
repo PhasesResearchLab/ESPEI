@@ -49,7 +49,7 @@ def filter_sublattice_configurations(desired_data: List[Dataset], subl_model) ->
         matching_configs = np.asarray(matching_configs, dtype=np.bool_)
 
         # Rewrite output values with filtered data
-        data['values'] = np.array(data['values'], dtype=np.float_)[..., matching_configs]
+        data['values'] = np.array(data['values'], dtype=np.float64)[..., matching_configs]
         data['solver']['sublattice_configurations'] = np.array(data['solver']['sublattice_configurations'], dtype=np.object_)[matching_configs].tolist()
         if 'sublattice_occupancies' in data['solver']:
             data['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'], dtype=np.object_)[matching_configs].tolist()

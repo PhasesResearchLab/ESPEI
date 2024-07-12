@@ -211,8 +211,8 @@ def calc_prop_differences(eqpropdata: EqPropData,
     update_phase_record_parameters(phase_records, parameters)
     params_dict = OrderedDict(zip(map(str, eqpropdata.params_keys), parameters))
     output = eqpropdata.output
-    weights = np.array(eqpropdata.weight, dtype=np.float_)
-    samples = np.array(eqpropdata.samples, dtype=np.float_)
+    weights = np.array(eqpropdata.weight, dtype=np.float64)
+    samples = np.array(eqpropdata.samples, dtype=np.float64)
 
     calculated_data = []
     for comp_conds in eqpropdata.composition_conds:
@@ -230,7 +230,7 @@ def calc_prop_differences(eqpropdata: EqPropData,
         vals = getattr(propdata, output).flatten().tolist()
         calculated_data.extend(vals)
 
-    calculated_data = np.array(calculated_data, dtype=np.float_)
+    calculated_data = np.array(calculated_data, dtype=np.float64)
 
     assert calculated_data.shape == samples.shape, f"Calculated data shape {calculated_data.shape} does not match samples shape {samples.shape}"
     assert calculated_data.shape == weights.shape, f"Calculated data shape {calculated_data.shape} does not match weights shape {weights.shape}"

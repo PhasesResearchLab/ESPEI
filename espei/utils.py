@@ -100,7 +100,7 @@ def optimal_parameters(trace_array, lnprob_array, kth=0):
     >>> from espei.utils import optimal_parameters
     >>> trace = np.array([[[1, 0], [2, 0], [3, 0], [0, 0]], [[0, 2], [0, 4], [0, 6], [0, 0]]])  # 3 iterations of 4 allocated
     >>> lnprob = np.array([[-6, -4, -2, 0], [-3, -1, -2, 0]])
-    >>> np.all(np.isclose(optimal_parameters(trace, lnprob), np.array([0, 4])))
+    >>> bool(np.all(np.isclose(optimal_parameters(trace, lnprob), np.array([0, 4]))))
     True
 
     """

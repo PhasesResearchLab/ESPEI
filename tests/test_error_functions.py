@@ -476,7 +476,7 @@ def test_equilibrium_thermochemical_error_computes_correct_probability(datasets_
     errors, weights = calc_prop_differences(eqdata[0], np.array([-31626.6]))
     assert np.all(np.isclose(errors, [-31626.6*0.5*0.5]))
     # change to -40000
-    errors, weights = calc_prop_differences(eqdata[0], np.array([-40000], np.float_))
+    errors, weights = calc_prop_differences(eqdata[0], np.array([-40000], np.float64))
     assert np.all(np.isclose(errors, [-40000*0.5*0.5]))
 
 
