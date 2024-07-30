@@ -320,10 +320,13 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
 
 
 def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfigurationCalculationData, parameters):
+    species = calc_data['species']
     phase_name = calc_data['phase_name']
+    models = calc_data['model']  # Dict[PhaseName: Model]
     output = calc_data['output']
     phase_records = calc_data['phase_records']
     sample_values = calc_data['calculate_dict']['values']
+    str_statevar_dict = calc_data['str_statevar_dict']
 
     constituent_list = []
     sublattice_list = []
@@ -337,8 +340,8 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
     differences = []
     for index in range(len(sample_values)):
         cond_dict = {}
-        for key in calc_data['str_statevar_dict'].keys():
-            cond_dict.update({key: calc_data['str_statevar_dict'][key][index]})
+        for sv_key, sv_val in str_statevar_dict.items():
+            cond_dict.update({sv_key: sv_val[index]})
 
         # here we build the internal DOF as a dictionary to use as conditions
         dof = {}
@@ -350,22 +353,22 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
 
         # TODO: convergence seems like it can get messed up if including DOF as conditions.
         # We temporarily disable that, but be aware that this will allow the minimizer to minimizer internal DOF, so it will only truly work for phases with (# internal DOF) = (# composition conditions)
-        # wks = Workspace(database=dbf, components=calc_data['species'], phases=phase_name, models=calc_data["model"], conditions={**cond_dict, **dof})
+        # wks = Workspace(database=dbf, components=species, phases=phase_name, models=models, conditions={**cond_dict, **dof})
         # TODO: If tests are passing with this, that's bad. We need a phase with more internal DOF (think Laves 2SL)
         #  -- I believe the test_equilibrium_thermochemcial_error_species fails due to this, but more investigation needed
         # TODO: active_pure_elements should be replaced with wks.components when wks.components no longer includes phase constituent Species
-        active_pure_elements = [list(x.constituents.keys()) for x in calc_data["species"]]
+        active_pure_elements = [list(x.constituents.keys()) for x in species]
         active_pure_elements = sorted(set(el.upper() for constituents in active_pure_elements for el in constituents) - {"VA"})
         ind_comps = len(active_pure_elements) - 1
         for comp in active_pure_elements:
             if v.Species(comp) != v.Species('VA') and ind_comps > 0:
-                cond_dict[v.X(comp)] = float(calc_data["model"][phase_name].moles(comp).xreplace(dof))
+                cond_dict[v.X(comp)] = float(models[phase_name].moles(comp).xreplace(dof))
                 ind_comps = ind_comps - 1
         # Need to be careful here. Making a workspace erases the custom models that have some contributions excluded (which are passed in). Not sure exactly why.
         # The models themselves are preserved, but the ones inside the workspace's phase_record_factory get clobbered.
         # We workaround this by replacing the phase_record_factory models with ours, but this is definitely a hack we'd like to avoid.
-        wks = Workspace(database=dbf, components=calc_data['species'], phases=[phase_name], conditions={**cond_dict}, models=calc_data["model"], phase_record_factory=phase_records, parameters=parameters)
-        wks.phase_record_factory.models = calc_data["model"] # if commented: 2 failed, 1 passed. uncommented 1 failed, 2 passed
+        wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, phase_record_factory=phase_records, parameters=parameters)
+        wks.phase_record_factory.models = models
         # Sometimes in miscibility gaps the solver has trouble converging for
         # IsolatedPhase if the first compset it finds is at the edge of
         # composition space. Here, since we know the degrees of freedom, we
