@@ -8,24 +8,21 @@ from typing import Sequence, Dict, Optional
 from numpy.typing import ArrayLike
 import numpy as np
 from pycalphad import Model, variables as v
+from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from pycalphad.core.phase_rec import PhaseRecord
 from pycalphad.core.composition_set import CompositionSet
 from pycalphad.core.starting_point import starting_point
 from pycalphad.core.eqsolver import _solve_eq_at_conditions
-from pycalphad.core.equilibrium import _adjust_conditions
+from pycalphad.core.workspace import _adjust_conditions
 from pycalphad.core.utils import get_state_variables, unpack_kwarg, point_sample
 from pycalphad.core.light_dataset import LightDataset
 from pycalphad.core.calculate import _sample_phase_constitution, _compute_phase_values
 from pycalphad.core.solver import Solver
 
 
-def update_phase_record_parameters(phase_records: Dict[str, PhaseRecord], parameters: ArrayLike) -> None:
+def update_phase_record_parameters(phase_record_factory: PhaseRecordFactory, parameters: ArrayLike) -> None:
     if parameters.size > 0:
-        for phase_name, phase_record in phase_records.items():
-            # very important that these are floats, otherwise parameters can end up
-            # with garbage data. `np.asarray` does not create a copy if the type is
-            # correct
-            phase_record.parameters[:] = np.asarray(parameters, dtype=np.float64)
+        phase_record_factory.param_values[:] = np.asarray(parameters, dtype=np.float64)
 
 def _single_phase_start_point(conditions, state_variables, phase_records, grid):
     """Return a single CompositionSet object to use in a point calculation
@@ -55,7 +52,7 @@ def _single_phase_start_point(conditions, state_variables, phase_records, grid):
     Y = grid.Y[..., idx_min, :].squeeze()[:prx.phase_dof]
     # Get current state variables
     # TODO: can we assume sorting
-    state_vars = np.array([conditions[sv][0] for sv in sorted(state_variables, key=str)])
+    state_vars = np.array([conditions[sv][0].to(sv.implementation_units).magnitude for sv in sorted(state_variables, key=str)])
     compset = CompositionSet(prx)
     compset.update(Y, 1.0, state_vars)
     return compset
@@ -74,6 +71,8 @@ def calculate_(species: Sequence[v.Species], phases: Sequence[str],
     points_dict = unpack_kwarg(points, default_arg=None)
     pdens_dict = unpack_kwarg(pdens, default_arg=50)
     nonvacant_components = [x for x in sorted(species) if x.number_of_atoms > 0]
+    cur_phase_local_conditions = {} # XXX: Temporary hack to allow compatibility
+    str_phase_local_conditions = {} # XXX: Temporary hack to allow compatibility
     maximum_internal_dof = max(prx.phase_dof for prx in phase_records.values())
     all_phase_data = []
     for phase_name in sorted(phases):
@@ -81,11 +80,10 @@ def calculate_(species: Sequence[v.Species], phases: Sequence[str],
         phase_record = phase_records[phase_name]
         points = points_dict[phase_name]
         if points is None:
-            points = _sample_phase_constitution(mod, point_sample, True, pdens_dict[phase_name])
+            points = _sample_phase_constitution(mod, point_sample, True, pdens_dict[phase_name], cur_phase_local_conditions)
         points = np.atleast_2d(points)
-
         fp = fake_points and (phase_name == sorted(phases)[0])
-        phase_ds = _compute_phase_values(nonvacant_components, str_statevar_dict,
+        phase_ds = _compute_phase_values(nonvacant_components, str_statevar_dict, str_phase_local_conditions,
                                          points, phase_record, output,
                                          maximum_internal_dof, broadcast=broadcast,
                                          largest_energy=float(1e10), fake_points=fp,
@@ -125,12 +123,12 @@ def constrained_equilibrium(phase_records: Dict[str, PhaseRecord],
     statevars = get_state_variables(conds=conditions)
     conditions = _adjust_conditions(conditions)
     # Assume that all conditions keys are lists with exactly one element (point calculation)
-    str_conds = OrderedDict([(str(ky), conditions[ky][0]) for ky in sorted(conditions.keys(), key=str)])
+    unitless_conds = OrderedDict([(ky, conditions[ky].to(ky.implementation_units).magnitude) for ky in sorted(conditions.keys(), key=str)])
     compset = _single_phase_start_point(conditions, statevars, phase_records, grid)
     solution_compsets = [compset]
     solver = Solver()
     # modifies `solution_compsets` and `compset` in place
-    solver_result = solver.solve(solution_compsets, str_conds)
+    solver_result = solver.solve(solution_compsets, unitless_conds)
     energy = compset.NP * compset.energy
     return solver_result.converged, energy
 
@@ -142,9 +140,9 @@ def equilibrium_(phase_records: Dict[str, PhaseRecord],
     """
     statevars = sorted(get_state_variables(conds=conditions), key=str)
     conditions = _adjust_conditions(conditions)
-    str_conds = OrderedDict([(str(ky), conditions[ky]) for ky in sorted(conditions.keys(), key=str)])
-    start_point = starting_point(conditions, statevars, phase_records, grid)
-    return _solve_eq_at_conditions(start_point, phase_records, grid, str_conds, statevars, False)
+    stripped_conds = OrderedDict([(ky, conditions[ky].to(ky.implementation_units).magnitude) for ky in sorted(conditions.keys(), key=str)])
+    start_point = starting_point(stripped_conds, statevars, phase_records, grid)
+    return _solve_eq_at_conditions(start_point, phase_records, grid, conditions, statevars, False)
 
 
 def no_op_equilibrium_(phase_records: Dict[str, PhaseRecord],
@@ -164,4 +162,5 @@ def no_op_equilibrium_(phase_records: Dict[str, PhaseRecord],
     """
     statevars = get_state_variables(conds=conditions)
     conditions = _adjust_conditions(conditions)
-    return starting_point(conditions, statevars, phase_records, grid)
+    stripped_conds = OrderedDict([(ky, conditions[ky].to(ky.implementation_units).magnitude) for ky in sorted(conditions.keys(), key=str)])
+    return starting_point(stripped_conds, statevars, phase_records, grid)

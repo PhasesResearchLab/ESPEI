@@ -108,7 +108,7 @@ def _build_feature_matrix(sample_condition_dicts: List[Dict[Symbol, float]], sym
     M = len(sample_condition_dicts)
     N = len(symbolic_coefficients)
     feature_matrix = np.empty((M, N))
-    coeffs = ImmutableDenseMatrix(symbolic_coefficients)
+    coeffs = ImmutableDenseMatrix([symbolic_coefficients])  # see https://github.com/symengine/symengine.py/issues/485
     for i in range(M):
         # Profiling-guided optimization
         # At the time, we got a 3x performance speedup compared to calling subs

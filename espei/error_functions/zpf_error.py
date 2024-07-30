@@ -21,17 +21,16 @@ from typing import Sequence, Dict, Any, Union, List, Tuple, Type, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
-from pycalphad import Database, Model, variables as v
-from pycalphad.codegen.callables import build_phase_records
+from pycalphad import Database, Model, Workspace, variables as v
+from pycalphad.property_framework import IsolatedPhase
 from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
 from pycalphad.core.phase_rec import PhaseRecord
-from pycalphad.core.calculate import _sample_phase_constitution
-from pycalphad.core.utils import point_sample
+from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from scipy.stats import norm
 import tinydb
 
 from espei.phase_models import PhaseModelSpecification
-from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters, constrained_equilibrium
+from espei.shadow_functions import calculate_, update_phase_record_parameters
 from espei.typing import SymbolName
 from espei.utils import PickleableTinyDB, database_symbols_to_fit
 from .residual_base import ResidualFunction, residual_function_registry
@@ -162,18 +161,22 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
+    wks = Workspace(dbf, comps, phases)
 
     zpf_data = []  # 1:1 correspondence with each dataset
     for data in desired_data:
+        current_wks = wks.copy()
         data_comps = list(set(data['components']).union({'VA'}))
-        species = sorted(unpack_components(dbf, data_comps), key=str)
-        data_phases = filter_phases(dbf, species, candidate_phases=phases)
-        models = instantiate_models(dbf, species, data_phases, model=model, parameters=parameters)
-        # assumed N, P, T state variables
-        phase_recs = build_phase_records(dbf, species, data_phases, {v.N, v.P, v.T}, models, parameters=parameters, build_gradients=True, build_hessians=True)
-        all_phase_points = {phase_name: _sample_phase_constitution(models[phase_name], point_sample, True, 50) for phase_name in data_phases}
         all_regions = data['values']
         conditions = data['conditions']
+        current_wks.components = data_comps
+        current_wks.conditions = conditions
+        current_wks.phases = phases
+        models = instantiate_models(dbf, current_wks.components, current_wks.phases, model=model, parameters=parameters)
+        current_wks.models = models
+        models = current_wks.models.unwrap()
+        statevars = {v.N, v.P, v.T} # TODO: hardcoded
+        current_wks.phase_record_factory = PhaseRecordFactory(dbf, current_wks.components, statevars, models, parameters=parameters)
         phase_regions = []
         # Each phase_region is one set of phases in equilibrium (on a tie-line),
         # e.g. [["ALPHA", ["B"], [0.25]], ["BETA", ["B"], [0.5]]]
@@ -190,7 +193,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                 if phase_name.upper() == '__HYPERPLANE__':
                     if np.any(np.isnan(composition)):  # TODO: make this a part of the dataset checker
                         raise ValueError(f"__HYPERPLANE__ vertex ({vertex}) must have all independent compositions defined to make a well-defined hyperplane (from dataset: {data})")
-                    vtx = RegionVertex(phase_name, composition, comp_conds, None, phase_recs, disordered_flag, False)
+                    vtx = RegionVertex(phase_name, composition, comp_conds, None, current_wks.phase_record_factory, disordered_flag, False)
                     hyperplane_vertices.append(vtx)
                     continue
                 # Construct single-phase points satisfying the conditions for each phase in the region
@@ -204,28 +207,33 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                     phase_points = None
                 else:
                     has_missing_comp_cond = False
-                    # Only sample points that have an average mass residual within tol
-                    tol = 0.02
-                    phase_points = _subsample_phase_points(phase_recs[phase_name], all_phase_points[phase_name], composition, tol)
+                    vertex_wks = current_wks.copy()
+                    vertex_wks.phases = [phase_name]
+                    vertex_wks.conditions = {**pot_conds, **comp_conds}
+                    compset = next(vertex_wks.enumerate_composition_sets())[1][0]
+                    # TODO: phase points can probably be removed, they should not be needed now that IsolatedPhase exists
+                    phase_points = np.array([compset.dof[len(compset.phase_record.state_variables):]])
                     assert phase_points.shape[0] > 0, f"phase {phase_name} must have at least one set of points within the target tolerance {pot_conds} {comp_conds}"
-                vtx = RegionVertex(phase_name, composition, comp_conds, phase_points, phase_recs, disordered_flag, has_missing_comp_cond)
+                vtx = RegionVertex(phase_name, composition, comp_conds, phase_points, current_wks.phase_record_factory, disordered_flag, has_missing_comp_cond)
                 vertices.append(vtx)
             if len(hyperplane_vertices) == 0:
                 # Define the hyperplane at the vertices of the ZPF points
                 hyperplane_vertices = vertices
-            region = PhaseRegion(hyperplane_vertices, vertices, pot_conds, species, data_phases, models)
+            region = PhaseRegion(hyperplane_vertices, vertices, pot_conds, current_wks.components, current_wks.phases, models)
             phase_regions.append(region)
 
         data_dict = {
             'weight': data.get('weight', 1.0),
             'phase_regions': phase_regions,
-            'dataset_reference': data['reference']
+            'dataset_reference': data['reference'],
+            'dbf': dbf,  # TODO: not ideal to ship databases across the wire, but we can accept it for now.
+            'parameter_dict': parameters
         }
         zpf_data.append(data_dict)
     return zpf_data
 
 
-def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, approximate_equilibrium: bool = False) -> np.ndarray:
+def estimate_hyperplane(phase_region: PhaseRegion, dbf: Database, parameters: np.ndarray, approximate_equilibrium: bool = False) -> np.ndarray:
     """
     Calculate the chemical potentials for the target hyperplane, one vertex at a time
 
@@ -238,15 +246,12 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
     are taken as the target hyperplane for the given equilibria.
 
     """
-    if approximate_equilibrium:
-        _equilibrium = no_op_equilibrium_
-    else:
-        _equilibrium = equilibrium_
     target_hyperplane_chempots = []
-    target_hyperplane_phases = []
     species = phase_region.species
     phases = phase_region.phases
     models = phase_region.models
+    param_keys = list(models.values())[0]._parameters_arg
+    parameters_dict = dict(zip(sorted(map(str, param_keys)), parameters))
     for vertex in phase_region.hyperplane_vertices:
         phase_records = vertex.phase_records
         update_phase_record_parameters(phase_records, parameters)
@@ -257,16 +262,14 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
         else:
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
-            str_statevar_dict = OrderedDict([(str(key), cond_dict[key]) for key in sorted(phase_region.potential_conds.keys(), key=str)])
-            grid = calculate_(species, phases, str_statevar_dict, models, phase_records, pdens=50, fake_points=True)
-            multi_eqdata = _equilibrium(phase_records, cond_dict, grid)
-            target_hyperplane_phases.append(multi_eqdata.Phase.squeeze())
-            # Does there exist only a single phase in the result with zero internal degrees of freedom?
-            # We should exclude those chemical potentials from the average because they are meaningless.
-            num_phases = np.sum(multi_eqdata.Phase.squeeze() != '')
-            Y_values = multi_eqdata.Y.squeeze()
+            wks = Workspace(database=dbf, components=species, phases=phases, models=models, phase_record_factory=phase_records, conditions=cond_dict, parameters=parameters_dict)
+            # TODO: active_pure_elements should be replaced with wks.components when wks.components no longer includes phase constituent Species
+            active_pure_elements = [list(x.constituents.keys()) for x in species]
+            active_pure_elements = sorted(set(el.upper() for constituents in active_pure_elements for el in constituents) - {"VA"})
+            MU_values = [wks.get(v.MU(comp)) for comp in active_pure_elements]
+            num_phases = np.sum(wks.eq.Phase.squeeze() != '')
+            Y_values = wks.eq.Y.squeeze()
             no_internal_dof = np.all((np.isclose(Y_values, 1.)) | np.isnan(Y_values))
-            MU_values = multi_eqdata.MU.squeeze()
             if (num_phases == 1) and no_internal_dof:
                 target_hyperplane_chempots.append(np.full_like(MU_values, np.nan))
             else:
@@ -276,12 +279,14 @@ def estimate_hyperplane(phase_region: PhaseRegion, parameters: np.ndarray, appro
 
 
 def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
-                                phase_region: PhaseRegion, vertex: RegionVertex,
-                                parameters: np.ndarray, approximate_equilibrium: bool = False) -> float:
+                                phase_region: PhaseRegion, dbf: Database, parameter_dict, vertex: RegionVertex,
+                                parameters: np.ndarray, approximate_equilibrium: bool = False) -> Tuple[float,List[float]]:
     """Calculate the integrated driving force between the current hyperplane and target hyperplane.
     """
     species = phase_region.species
     models = phase_region.models
+    param_keys = list(models.values())[0]._parameters_arg
+    parameters_dict = dict(zip(sorted(map(str, param_keys)), parameters))
     current_phase = vertex.phase_name
     cond_dict = {**phase_region.potential_conds, **vertex.comp_conds}
     str_statevar_dict = OrderedDict([(str(key),cond_dict[key]) for key in sorted(phase_region.potential_conds.keys(), key=str)])
@@ -322,14 +327,9 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
         driving_force = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(np.squeeze(driving_force))
     else:
-        # Extract energies from single-phase calculations
-        grid = calculate_(species, [current_phase], str_statevar_dict, models, phase_records, points=phase_points, pdens=50, fake_points=True)
-        # TODO: consider enabling approximate for this?
-        converged, energy = constrained_equilibrium(phase_records, cond_dict, grid)
-        if not converged:
-            _log.debug('Calculation failure: constrained equilibrium not converged for %s, conditions: %s, parameters %s', current_phase, cond_dict, parameters)
-            return np.inf
-        driving_force = float(np.dot(target_hyperplane_chempots, vertex.composition) - float(energy))
+        wks = Workspace(database=dbf, components=species, phases=current_phase, models=models, phase_record_factory=phase_records, conditions=cond_dict, parameters=parameters_dict)
+        constrained_energy = wks.get(IsolatedPhase(current_phase,wks=wks)('GM'))
+        driving_force = np.dot(np.squeeze(target_hyperplane_chempots), vertex.composition) - constrained_energy
     return driving_force
 
 
@@ -380,7 +380,7 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
         for phase_region in data['phase_regions']:
             # 1. Calculate the average multiphase hyperplane
             eq_str = phase_region.eq_str()
-            target_hyperplane = estimate_hyperplane(phase_region, parameters, approximate_equilibrium=approximate_equilibrium)
+            target_hyperplane = estimate_hyperplane(phase_region, data['dbf'], parameters, approximate_equilibrium=approximate_equilibrium)
             if np.any(np.isnan(target_hyperplane)):
                 _log.debug('NaN target hyperplane. Equilibria: (%s), driving force: 0.0, reference: %s.', eq_str, dataset_ref)
                 data_driving_forces.extend([0]*len(phase_region.vertices))
@@ -388,7 +388,7 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
                 continue
             # 2. Calculate the driving force to that hyperplane for each vertex
             for vertex in phase_region.vertices:
-                driving_force = driving_force_to_hyperplane(target_hyperplane, phase_region, vertex, parameters,
+                driving_force = driving_force_to_hyperplane(target_hyperplane, phase_region, data['dbf'], data['parameter_dict'], vertex, parameters,
                                                             approximate_equilibrium=approximate_equilibrium,
                                                             )
                 if np.isinf(driving_force) and short_circuit:
@@ -421,7 +421,7 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
         return 0.0
     driving_forces, weights = calculate_zpf_driving_forces(zpf_data, parameters, approximate_equilibrium, short_circuit=True)
     # Driving forces and weights are 2D ragged arrays with the shape (len(zpf_data), len(zpf_data['values']))
-    driving_forces = np.concatenate(driving_forces)
+    driving_forces = np.concatenate(driving_forces).T
     weights = np.concatenate(weights)
     if np.any(np.logical_or(np.isinf(driving_forces), np.isnan(driving_forces))):
         return -np.inf
