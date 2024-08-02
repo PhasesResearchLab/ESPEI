@@ -118,24 +118,6 @@ def _compute_vertex_composition(comps: Sequence[str], comp_conds: Dict[str, floa
     return vertex_composition
 
 
-def _subsample_phase_points(phase_record, phase_points, target_composition, additional_distance_radius=0.02):
-    # Compute the mole fractions of each point
-    phase_compositions = np.zeros((phase_points.shape[0], target_composition.size), order='F')
-    # TODO: potential bug here if the composition has dependence (even piecewise
-    #   dependence) in the state variables. The compositions may be nan in this case.
-    statevar_placeholder = np.ones((phase_points.shape[0], phase_record.num_statevars))
-    dof = np.hstack((statevar_placeholder, phase_points))
-    for el_idx in range(target_composition.size):
-        phase_record.mass_obj_2d(phase_compositions[:, el_idx], dof, el_idx)
-
-    # Find the points indicdes where the mass is within the radius of minimum distance + additional_distance_radius
-    distances = np.mean(np.abs(phase_compositions - target_composition), axis=1)
-    idxs = np.nonzero(distances < (distances.min() + additional_distance_radius))[0]
-
-    # Return the sub-space of points where this condition holds valid
-    return phase_points[idxs]
-
-
 def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], datasets: PickleableTinyDB, parameters: Dict[str, float], model: Optional[Dict[str, Type[Model]]] = None):
     """
     Return the ZPF data used in the calculation of ZPF error
