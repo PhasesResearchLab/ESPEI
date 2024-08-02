@@ -19,7 +19,7 @@ from pycalphad import Workspace, as_property
 
 from espei.error_functions.residual_base import ResidualFunction, residual_function_registry
 from espei.phase_models import PhaseModelSpecification
-from espei.shadow_functions import equilibrium_, calculate_, no_op_equilibrium_, update_phase_record_parameters
+from espei.shadow_functions import update_phase_record_parameters
 from espei.typing import SymbolName
 from espei.utils import PickleableTinyDB, database_symbols_to_fit
 
@@ -197,11 +197,6 @@ def calc_prop_differences(eqpropdata: EqPropData,
         * weights for this dataset
 
     """
-    if approximate_equilibrium:
-        _equilibrium = no_op_equilibrium_
-    else:
-        _equilibrium = equilibrium_
-
     dbf = eqpropdata.dbf
     species = eqpropdata.species
     phases = eqpropdata.phases
