@@ -354,11 +354,8 @@ def test_zpf_error_species(datasets_db):
     zero_error_probability = 2 * scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0)
 
     zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
-    exact_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=False)
-    assert np.isclose(exact_likelihood, zero_error_probability)
-    approx_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=True)
-    # accept higher tolerance for approximate
-    assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-4)
+    likelihood = calculate_zpf_error(zpf_data)
+    assert np.isclose(likelihood, zero_error_probability)
 
 
 def test_zpf_error_equilibrium_failure(datasets_db):
@@ -374,10 +371,8 @@ def test_zpf_error_equilibrium_failure(datasets_db):
     zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
 
     with mock.patch('espei.error_functions.zpf_error.estimate_hyperplane', return_value=np.array([np.nan, np.nan])):
-        exact_likelihood = calculate_zpf_error(zpf_data)
-        assert np.isclose(exact_likelihood, zero_error_probability, rtol=1e-6)
-        approx_likelihood = calculate_zpf_error(zpf_data)
-        assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-6)
+        likelihood = calculate_zpf_error(zpf_data)
+        assert np.isclose(likelihood, zero_error_probability, rtol=1e-6)
 
 
 def test_zpf_error_works_for_stoichiometric_cmpd_tielines(datasets_db):
@@ -392,10 +387,8 @@ def test_zpf_error_works_for_stoichiometric_cmpd_tielines(datasets_db):
     zero_error_probability = 2 * scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0)
 
     zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
-    exact_likelihood = calculate_zpf_error(zpf_data)
-    assert np.isclose(exact_likelihood, zero_error_probability, rtol=1e-6)
-    approx_likelihood = calculate_zpf_error(zpf_data)
-    assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-6)
+    likelihood = calculate_zpf_error(zpf_data)
+    assert np.isclose(likelihood, zero_error_probability, rtol=1e-6)
 
 
 def test_non_equilibrium_thermochemcial_species(datasets_db):
@@ -423,13 +416,8 @@ def test_equilibrium_thermochemcial_error_species(datasets_db):
     eqdata = get_equilibrium_thermochemical_data(dbf, ['LI', 'SN'], phases, datasets_db)
     # Thermo-Calc
     truth_values = np.array([0.0, -28133.588, -40049.995, 0.0])
-    # Approximate
-    errors_approximate, weights = calc_prop_differences(eqdata[0], np.array([]), True)
-    # Looser tolerances because the equilibrium is approximate, note that this is pdens dependent
-    assert np.all(np.isclose(errors_approximate, truth_values, atol=1e-5, rtol=1e-3))
-    # Exact
-    errors_exact, weights = calc_prop_differences(eqdata[0], np.array([]), False)
-    assert np.all(np.isclose(errors_exact, truth_values, atol=1e-5))
+    residuals, weights = calc_prop_differences(eqdata[0], np.array([]))
+    assert np.all(np.isclose(residuals, truth_values, atol=1e-5))
 
 
 def test_equilibrium_thermochemical_error_unsupported_property(datasets_db):
@@ -442,8 +430,8 @@ def test_equilibrium_thermochemical_error_unsupported_property(datasets_db):
     phases = list(dbf.phases.keys())
 
     eqdata = get_equilibrium_thermochemical_data(dbf, ['CR', 'NI'], phases, datasets_db)
-    errors_exact, weights = calc_prop_differences(eqdata[0], np.array([]))
-    assert np.all(np.isclose(errors_exact, EXPECTED_VALUES, atol=1e-3))
+    residuals, weights = calc_prop_differences(eqdata[0], np.array([]))
+    assert np.all(np.isclose(residuals, EXPECTED_VALUES, atol=1e-3))
 
 
 def test_equilibrium_property_residual_function(datasets_db):
@@ -494,24 +482,18 @@ def test_driving_force_miscibility_gap(datasets_db):
 
     # Ideal solution case
     params = np.array([0.0])
-    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=False)
-    assert np.isclose(prob, zero_error_prob)
-    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=True)
+    prob = calculate_zpf_error(zpf_data, parameters=params)
     assert np.isclose(prob, zero_error_prob)
 
     # Negative interaction case
     params = np.array([-10000.0])
-    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=False)
-    assert np.isclose(prob, zero_error_prob)
-    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=True)
+    prob = calculate_zpf_error(zpf_data, parameters=params)
     assert np.isclose(prob, zero_error_prob)
 
     # Miscibility gap case
     params = np.array([10000.0])
-    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=False)
+    prob = calculate_zpf_error(zpf_data, parameters=params)
     # Remember these are log probabilities, so more negative means smaller probability and larger error
-    assert prob < zero_error_prob
-    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=True)
     assert prob < zero_error_prob
 
 
