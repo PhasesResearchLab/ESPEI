@@ -289,12 +289,14 @@ class EmceeOptimizer(OptimizerBase):
         lnlike = 0.0
         likelihoods = {}
         for residual_obj in ctx.get("residual_objs", []):
+            residual_starttime = time.time()
             likelihood = residual_obj.get_likelihood(params)
-            likelihoods[type(residual_obj).__name__] = likelihood
+            residual_time = time.time() - residual_starttime
+            likelihoods[type(residual_obj).__name__] = (likelihood, residual_time)
             lnlike += likelihood
         liketime = time.time() - starttime
 
-        like_str = ". ".join([f"{ky}: {vl:0.3f}" for ky, vl in likelihoods.items()])
+        like_str = ". ".join([f"{ky}: {vl[0]:0.3f} ({vl[1]:0.2f} s)" for ky, vl in likelihoods.items()])
         lnlike = np.array(lnlike, dtype=np.float64)
         _log.trace('Likelihood - %0.2fs - %s. Total: %0.3f.', liketime, like_str, lnlike)
 
