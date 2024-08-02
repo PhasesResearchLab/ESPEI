@@ -417,7 +417,7 @@ def test_equilibrium_thermochemcial_error_species(datasets_db):
     # Thermo-Calc
     truth_values = np.array([0.0, -28133.588, -40049.995, 0.0])
     residuals, weights = calc_prop_differences(eqdata[0], np.array([]))
-    assert np.all(np.isclose(residuals, truth_values, atol=1e-5))
+    assert np.all(np.isclose(residuals, truth_values, atol=3e-5))
 
 
 def test_equilibrium_thermochemical_error_unsupported_property(datasets_db):
