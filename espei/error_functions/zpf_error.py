@@ -201,7 +201,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
             if len(hyperplane_vertices) == 0:
                 # Define the hyperplane at the vertices of the ZPF points
                 hyperplane_vertices = vertices
-            region = PhaseRegion(hyperplane_vertices, vertices, pot_conds, current_wks.components, current_wks.phases, current_wks.models)
+            region = PhaseRegion(hyperplane_vertices, vertices, pot_conds, current_wks.components, current_wks.phases, current_wks.models.unwrap())
             phase_regions.append(region)
 
         data_dict = {
