@@ -143,7 +143,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
-    wks = Workspace(dbf, comps, phases)
+    wks = Workspace(dbf, comps, phases, parameters=parameters)
 
     zpf_data = []  # 1:1 correspondence with each dataset
     for data in desired_data:
@@ -154,11 +154,6 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         current_wks.components = data_comps
         current_wks.conditions = conditions
         current_wks.phases = phases
-        models = instantiate_models(dbf, current_wks.components, current_wks.phases, model=model, parameters=parameters)
-        current_wks.models = models
-        models = current_wks.models.unwrap()
-        statevars = {v.N, v.P, v.T} # TODO: hardcoded
-        current_wks.phase_record_factory = PhaseRecordFactory(dbf, current_wks.components, statevars, models, parameters=parameters)
         phase_regions = []
         # Each phase_region is one set of phases in equilibrium (on a tie-line),
         # e.g. [["ALPHA", ["B"], [0.25]], ["BETA", ["B"], [0.5]]]
@@ -179,7 +174,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                     hyperplane_vertices.append(vtx)
                     continue
                 # Construct single-phase points satisfying the conditions for each phase in the region
-                mod = models[phase_name]
+                mod = current_wks.models[phase_name]
                 if np.any(np.isnan(composition)):
                     # We can't construct points because we don't have a known composition
                     has_missing_comp_cond = True
@@ -201,7 +196,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
             if len(hyperplane_vertices) == 0:
                 # Define the hyperplane at the vertices of the ZPF points
                 hyperplane_vertices = vertices
-            region = PhaseRegion(hyperplane_vertices, vertices, pot_conds, current_wks.components, current_wks.phases, models)
+            region = PhaseRegion(hyperplane_vertices, vertices, pot_conds, current_wks.components, current_wks.phases, current_wks.models)
             phase_regions.append(region)
 
         data_dict = {
