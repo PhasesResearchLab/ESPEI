@@ -100,6 +100,19 @@ def test_fixed_configuration_residual_function(datasets_db):
     assert np.isclose(likelihood, -14.28729, rtol=1e-6)
 
 
+def test_fixed_configuration_residual_with_internal_degrees_of_freedom(datasets_db):
+    """Unstable endmembers in phases that have internal degrees of freedom should retain fixed internal DOF"""
+    dbf = Database(CU_MG_TDB)
+    datasets_db.insert(CU_MG_HM_FORM_LAVES_C15_ANTISITE)
+
+    residual_func = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[])
+
+    # Expect that the database has the same energy as the dataset (the former was fit to the latter)
+    residuals, weights = residual_func.get_residuals(np.asarray([]))
+    assert len(residuals) == len(weights)
+    assert np.allclose(residuals, [0.0])
+
+
 def test_get_thermochemical_data_filters_configurations_when_all_configurations_are_invalid(datasets_db):
     datasets_db.insert(CU_MG_HM_MIX_CUMG2_ALL_INVALID)  # No valid configurations
 

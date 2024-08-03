@@ -18,6 +18,8 @@ from pycalphad.core.utils import unpack_components, get_pure_elements, filter_ph
 from pycalphad import Workspace
 from pycalphad.property_framework import IsolatedPhase
 from pycalphad.property_framework.metaproperties import find_first_compset
+from pycalphad.core.solver import Solver, SolverResult
+
 
 from espei.datasets import Dataset
 from espei.core_utils import ravel_conditions, get_prop_data, filter_temperatures
@@ -29,6 +31,45 @@ from espei.utils import database_symbols_to_fit, PickleableTinyDB
 from .residual_base import ResidualFunction, residual_function_registry
 
 _log = logging.getLogger(__name__)
+
+class NoSolveSolver(Solver):
+    def solve(self, composition_sets, conditions):
+        """
+        Initialize a solver, but don't actually do anything - i.e. return the SolverResult as if the calculation converged.
+
+        """
+        spec = self.get_system_spec(composition_sets, conditions)
+        self._fix_state_variables_in_compsets(composition_sets, conditions)
+        state = spec.get_new_state(composition_sets)
+        # DO NOT: converged = spec.run_loop(state, 1000)
+
+        if self.remove_metastable:
+            phase_idx = 0
+            compsets_to_remove = []
+            for compset in composition_sets:
+                # Mark unstable phases for removal
+                if compset.NP <= 0.0 and not compset.fixed:
+                    compsets_to_remove.append(int(phase_idx))
+                phase_idx += 1
+            # Watch removal order here, as the indices of composition_sets are changing!
+            for idx in reversed(compsets_to_remove):
+                del composition_sets[idx]
+
+        phase_amt = [compset.NP for compset in composition_sets]
+
+        x = composition_sets[0].dof
+        state_variables = composition_sets[0].phase_record.state_variables
+        num_statevars = len(state_variables)
+        for compset in composition_sets[1:]:
+            x = np.r_[x, compset.dof[num_statevars:]]
+        x = np.r_[x, phase_amt]
+        chemical_potentials = np.array(state.chemical_potentials)
+
+        if self.verbose:
+            print('Chemical Potentials', chemical_potentials)
+            print(np.asarray(x))
+        return SolverResult(converged=True, x=x, chemical_potentials=chemical_potentials)
+
 
 # TODO: make into an object similar to how ZPF data works?
 FixedConfigurationCalculationData = NewType("FixedConfigurationCalculationData", Dict[str, Any])
@@ -287,7 +328,8 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                 model_cls = model.get(phase_name, Model)
                 mod = model_cls(dbf, comps, phase_name, parameters=symbols_to_fit)
                 if prop.endswith('_FORM'):
-                    output = ''.join(prop.split('_')[:-1])
+                    output = ''.join(prop.split('_')[:-1])+"R"
+                    # print("SHIFTING", output)
                     mod.shift_reference_state(ref_states, dbf, contrib_mods={e: symengine.S.Zero for e in exclusion})
                 else:
                     output = prop
@@ -318,7 +360,6 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
     return all_data_dicts
 
 
-
 def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfigurationCalculationData, parameters):
     species = calc_data['species']
     phase_name = calc_data['phase_name']
@@ -343,7 +384,7 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         for sv_key, sv_val in str_statevar_dict.items():
             cond_dict.update({sv_key: sv_val[index]})
 
-        # here we build the internal DOF as a dictionary to use as conditions
+        # Build internal DOF as if they were used in conditions
         dof = {}
         for site_frac in range(len(constituent_list)):
             comp = constituent_list[site_frac]
@@ -351,12 +392,8 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
             sublattice = sublattice_list[site_frac]
             dof.update({v.Y(phase_name,sublattice,comp): occupancy})
 
-        # TODO: convergence seems like it can get messed up if including DOF as conditions.
-        # We temporarily disable that, but be aware that this will allow the minimizer to minimizer internal DOF, so it will only truly work for phases with (# internal DOF) = (# composition conditions)
-        # wks = Workspace(database=dbf, components=species, phases=phase_name, models=models, conditions={**cond_dict, **dof})
-        # TODO: If tests are passing with this, that's bad. We need a phase with more internal DOF (think Laves 2SL)
-        #  -- I believe the test_equilibrium_thermochemcial_error_species fails due to this, but more investigation needed
         # TODO: active_pure_elements should be replaced with wks.components when wks.components no longer includes phase constituent Species
+        # Build composition conditions, probably not necessary given that we don't actually solve anything, but still useful in terms of derivatives probably.
         active_pure_elements = [list(x.constituents.keys()) for x in species]
         active_pure_elements = sorted(set(el.upper() for constituents in active_pure_elements for el in constituents) - {"VA"})
         ind_comps = len(active_pure_elements) - 1
@@ -369,17 +406,16 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         # We workaround this by replacing the phase_record_factory models with ours, but this is definitely a hack we'd like to avoid.
         wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, phase_record_factory=phase_records, parameters=parameters)
         wks.phase_record_factory.models = models
-        # Sometimes in miscibility gaps the solver has trouble converging for
-        # IsolatedPhase if the first compset it finds is at the edge of
-        # composition space. Here, since we know the degrees of freedom, we
-        # initialize the compset for isolated phase correctly in the first
-        # place. This is kind of a hack until I figure out full DOF support.
+        # We then get a composition set and we use a special "NoSolveSolver" to
+        # ensure that we don't change from the data-specified DOF.
         compset = find_first_compset(phase_name, wks)
         new_sitefracs = np.array([sf for _, sf in sorted(dof.items(), key=lambda y: (y[0].phase_name, y[0].sublattice_index, y[0].species.name))])
-        new_sitefracs[new_sitefracs < 1e-14] = 1e-14  # fix zeros, otherwise we get ZeroDivisionErrors in the minimizer.
-        new_statevars = np.array(compset.dof[:len(compset.phase_record.state_variables)])  # not actually changed
-        compset.update(new_sitefracs, compset.NP, new_statevars)
-        results = wks.get(IsolatedPhase(compset, wks=wks)(output))
+        new_statevars = np.array(compset.dof[:len(compset.phase_record.state_variables)])  # no updates expected
+        compset.update(new_sitefracs, 1.0, new_statevars)
+        iso_phase = IsolatedPhase(compset, wks=wks)
+        iso_phase.solver = NoSolveSolver()
+        wks.solver = NoSolveSolver()
+        results = wks.get(iso_phase(output))
         sample_differences = results - sample_values[index]
         differences.append(sample_differences)
     return differences
