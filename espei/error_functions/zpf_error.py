@@ -154,6 +154,9 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         current_wks.components = data_comps
         current_wks.conditions = conditions
         current_wks.phases = phases
+        # only init models that are defined for the phases; fallback to default pycalphad behavior if no custom model defined
+        current_wks.models = {phase_name: model.get(phase_name, current_wks.models[phase_name])
+                              for phase_name in current_wks.phases}
         phase_regions = []
         # Each phase_region is one set of phases in equilibrium (on a tie-line),
         # e.g. [["ALPHA", ["B"], [0.25]], ["BETA", ["B"], [0.5]]]
