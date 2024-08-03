@@ -4,7 +4,8 @@ Tests for plotting functions.
 Mostly integration tests that don't validate the plots themselves, but rather that the
 internal usage and matplotlib usage is correct.
 """
-
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from pycalphad import Database, variables as v
 
