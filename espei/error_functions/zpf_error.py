@@ -144,6 +144,8 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
                                    (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
     wks = Workspace(dbf, comps, phases, parameters=parameters)
+    if model is None:
+        model = {}
 
     zpf_data = []  # 1:1 correspondence with each dataset
     for data in desired_data:
