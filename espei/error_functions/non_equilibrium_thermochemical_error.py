@@ -176,7 +176,8 @@ def get_prop_samples(desired_data, constituents):
         # extract the data we care about
         datum_T = datum['conditions']['T']
         datum_P = datum['conditions']['P']
-        datum_N = np.full_like(datum_T, 1.0)
+        # TODO: fix this when N different from 1 allowed in pycalphad
+        datum_N = np.full_like(datum['values'], 1.0)
         configurations = datum['solver']['sublattice_configurations']
         occupancies = datum['solver'].get('sublattice_occupancies')
         values = np.array(datum['values'])
