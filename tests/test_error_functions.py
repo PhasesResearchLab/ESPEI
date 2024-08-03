@@ -134,7 +134,7 @@ def test_non_equilibrium_thermochemical_error_with_multiple_X_points(datasets_db
     dbf = Database(CU_MG_TDB)
     phases = list(dbf.phases.keys())
     comps = ['CU', 'MG', 'VA']
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
     error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
 
     assert np.isclose(error, -4061.119001241541, rtol=1e-6)
@@ -147,7 +147,7 @@ def test_non_equilibrium_thermochemical_error_with_multiple_T_points(datasets_db
     dbf = Database(CU_MG_TDB)
     phases = list(dbf.phases.keys())
     comps = ['CU', 'MG', 'VA']
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
     error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
     assert np.isclose(error,-14.287293263253728, rtol=1e-6)
 
