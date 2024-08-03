@@ -159,10 +159,11 @@ def get_prop_samples(desired_data, constituents):
         Dictionary of condition kwargs for pycalphad's calculate and the expected values
 
     """
-    # TODO: assumes T, P as conditions
+    # TODO: assumes T, P, N as conditions
     # calculate needs points, state variable lists, and values to compare to
     num_dof = sum(map(len, constituents))
     calculate_dict = {
+        'N': np.array([]),
         'P': np.array([]),
         'T': np.array([]),
         'points': np.atleast_2d([[]]).reshape(-1, num_dof),
@@ -175,6 +176,7 @@ def get_prop_samples(desired_data, constituents):
         # extract the data we care about
         datum_T = datum['conditions']['T']
         datum_P = datum['conditions']['P']
+        datum_N = np.full_like(datum_T, 1.0)
         configurations = datum['solver']['sublattice_configurations']
         occupancies = datum['solver'].get('sublattice_occupancies')
         values = np.array(datum['values'])
@@ -187,7 +189,7 @@ def get_prop_samples(desired_data, constituents):
         weights = np.broadcast_to(np.asarray(datum.get('weight', 1.0)), values.shape)
 
         # broadcast and flatten the conditions arrays
-        P, T = ravel_conditions(values, datum_P, datum_T)
+        P, T, N = ravel_conditions(values, datum_P, datum_T, datum_N)
         if occupancies is None:
             occupancies = [None] * len(configurations)
 
@@ -198,6 +200,7 @@ def get_prop_samples(desired_data, constituents):
         # add everything to the calculate_dict
         calculate_dict['P'] = np.concatenate([calculate_dict['P'], P])
         calculate_dict['T'] = np.concatenate([calculate_dict['T'], T])
+        calculate_dict['N'] = np.concatenate([calculate_dict['N'], N])
         calculate_dict['points'] = np.concatenate([calculate_dict['points'], np.tile(points, (values.shape[0]*values.shape[1], 1))], axis=0)
         calculate_dict['values'] = np.concatenate([calculate_dict['values'], values.flatten()])
         calculate_dict['weights'].extend(weights.flatten())
@@ -404,8 +407,7 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         # Need to be careful here. Making a workspace erases the custom models that have some contributions excluded (which are passed in). Not sure exactly why.
         # The models themselves are preserved, but the ones inside the workspace's phase_record_factory get clobbered.
         # We workaround this by replacing the phase_record_factory models with ours, but this is definitely a hack we'd like to avoid.
-        wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, phase_record_factory=phase_records, parameters=parameters)
-        wks.phase_record_factory.models = models
+        wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, phase_record_factory=phase_records, parameters=parameters, solver=NoSolveSolver())
         # We then get a composition set and we use a special "NoSolveSolver" to
         # ensure that we don't change from the data-specified DOF.
         compset = find_first_compset(phase_name, wks)
@@ -414,7 +416,6 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         compset.update(new_sitefracs, 1.0, new_statevars)
         iso_phase = IsolatedPhase(compset, wks=wks)
         iso_phase.solver = NoSolveSolver()
-        wks.solver = NoSolveSolver()
         results = wks.get(iso_phase(output))
         sample_differences = results - sample_values[index]
         differences.append(sample_differences)
