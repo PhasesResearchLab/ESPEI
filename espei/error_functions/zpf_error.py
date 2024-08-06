@@ -43,7 +43,6 @@ class RegionVertex:
     phase_name: str
     composition: ArrayLike  # 1D of size (number nonvacant pure elements)
     comp_conds: Dict[v.X, float]
-    points: ArrayLike
     phase_records: Dict[str, PhaseRecord]
     is_disordered: bool
     has_missing_comp_cond: bool
@@ -172,31 +171,21 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
             for vertex in phase_region:
                 phase_name, comp_conds, disordered_flag = _extract_phases_comps(vertex)
                 composition = _compute_vertex_composition(data_comps, comp_conds)
+                # TODO: should maybe have different types of RegionVertex that are semantic for __HYPERPLANE__, known phase composition, unknown phase composition
                 if phase_name.upper() == '__HYPERPLANE__':
                     if np.any(np.isnan(composition)):  # TODO: make this a part of the dataset checker
                         raise ValueError(f"__HYPERPLANE__ vertex ({vertex}) must have all independent compositions defined to make a well-defined hyperplane (from dataset: {data})")
-                    vtx = RegionVertex(phase_name, composition, comp_conds, None, current_wks.phase_record_factory, disordered_flag, False)
+                    vtx = RegionVertex(phase_name, composition, comp_conds, current_wks.phase_record_factory, disordered_flag, False)
                     hyperplane_vertices.append(vtx)
                     continue
-                # Construct single-phase points satisfying the conditions for each phase in the region
                 mod = current_wks.models[phase_name]
                 if np.any(np.isnan(composition)):
-                    # We can't construct points because we don't have a known composition
                     has_missing_comp_cond = True
-                    phase_points = None
                 elif _phase_is_stoichiometric(mod):
                     has_missing_comp_cond = False
-                    phase_points = None
                 else:
                     has_missing_comp_cond = False
-                    vertex_wks = current_wks.copy()
-                    vertex_wks.phases = [phase_name]
-                    vertex_wks.conditions = {**pot_conds, **comp_conds}
-                    compset = next(vertex_wks.enumerate_composition_sets())[1][0]
-                    # TODO: phase points can probably be removed, they should not be needed now that IsolatedPhase exists
-                    phase_points = np.array([compset.dof[len(compset.phase_record.state_variables):]])
-                    assert phase_points.shape[0] > 0, f"phase {phase_name} must have at least one set of points within the target tolerance {pot_conds} {comp_conds}"
-                vtx = RegionVertex(phase_name, composition, comp_conds, phase_points, current_wks.phase_record_factory, disordered_flag, has_missing_comp_cond)
+                vtx = RegionVertex(phase_name, composition, comp_conds, current_wks.phase_record_factory, disordered_flag, has_missing_comp_cond)
                 vertices.append(vtx)
             if len(hyperplane_vertices) == 0:
                 # Define the hyperplane at the vertices of the ZPF points
@@ -272,10 +261,9 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
     current_phase = vertex.phase_name
     cond_dict = {**phase_region.potential_conds, **vertex.comp_conds}
     str_statevar_dict = OrderedDict([(str(key),cond_dict[key]) for key in sorted(phase_region.potential_conds.keys(), key=str)])
-    phase_points = vertex.points
     phase_records = vertex.phase_records
     update_phase_record_parameters(phase_records, parameters)
-    if phase_points is None:
+    if vertex.has_missing_comp_cond:
         # We don't have the phase composition here, so we estimate the driving force.
         # Can happen if one of the composition conditions is unknown or if the phase is
         # stoichiometric and the user did not specify a valid phase composition.
