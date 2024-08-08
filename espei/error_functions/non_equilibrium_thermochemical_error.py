@@ -333,7 +333,6 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                 mod = model_cls(dbf, comps, phase_name, parameters=symbols_to_fit)
                 if prop.endswith('_FORM'):
                     output = ''.join(prop.split('_')[:-1])+"R"
-                    # print("SHIFTING", output)
                     mod.shift_reference_state(ref_states, dbf, contrib_mods={e: symengine.S.Zero for e in exclusion})
                 else:
                     output = prop
