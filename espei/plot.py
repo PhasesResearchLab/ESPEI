@@ -626,7 +626,6 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
                 points[point_idx] = list(OrderedDict(sorted(points[point_idx].items(), key=str)).values())
             points = np.array(points, dtype=np.float64)
             # TODO: Real temperature support
-            points = points[None, None]
             stability = calculate(dbf, comps, [phase_name], output=data['output'][:-5],
                                     T=temps, P=pressures, points=points,
                                     model=mod_srf)
