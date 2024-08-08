@@ -115,12 +115,6 @@ def get_run_settings(input_dict):
         if run_settings['mcmc'].get('restart_trace') is None:
             run_settings['mcmc']['chains_per_parameter'] = run_settings['mcmc'].get('chains_per_parameter', 2)
             run_settings['mcmc']['chain_std_deviation'] = run_settings['mcmc'].get('chain_std_deviation', 0.1)
-        if run_settings['mcmc']['scheduler'] == 'None':
-            warnings.warn(
-                "Setting scheduler to the string 'None' will be deprecated in ESPEI "
-                "0.9. Use `null` in YAML or `None` in Python.", FutureWarning
-            )
-            run_settings['mcmc']['scheduler'] = None
     if not schema.validate(run_settings):
         raise ValueError(schema.errors)
     if run_settings.get("generate_parameters") is not None:
