@@ -12,7 +12,7 @@ import tinydb
 from tinydb import where
 from scipy.stats import norm
 from pycalphad import Database, Model, ReferenceState, variables as v
-from pycalphad.core.utils import instantiate_models, filter_phases, extract_parameters, unpack_components, unpack_condition
+from pycalphad.core.utils import instantiate_models, filter_phases, extract_parameters, unpack_species, unpack_condition
 from pycalphad.core.phase_rec import PhaseRecord
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from pycalphad import Workspace, as_property
@@ -78,7 +78,7 @@ def build_eqpropdata(data: tinydb.database.Document,
     params_keys, _ = extract_parameters(parameters)
 
     data_comps = list(set(data['components']).union({'VA'}))
-    species = sorted(unpack_components(dbf, data_comps), key=str)
+    species = sorted(unpack_species(dbf, data_comps), key=str)
     data_phases = filter_phases(dbf, species, candidate_phases=data['phases'])
     models = instantiate_models(dbf, species, data_phases, model=model, parameters=parameters)
     output = data['output']
@@ -294,7 +294,7 @@ class EquilibriumPropertyResidual(ResidualFunction):
         else:
             comps = sorted(database.elements)
             model_dict = dict()
-        phases = sorted(filter_phases(database, unpack_components(database, comps), database.phases.keys()))
+        phases = sorted(filter_phases(database, unpack_species(database, comps), database.phases.keys()))
         if symbols_to_fit is None:
             symbols_to_fit = database_symbols_to_fit(database)
         # okay if parameters are initialized to zero, we only need the symbol names

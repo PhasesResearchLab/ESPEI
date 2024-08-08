@@ -10,7 +10,7 @@ import numpy as np
 import tinydb
 from symengine import Symbol
 from pycalphad import Model, calculate, equilibrium, variables as v
-from pycalphad.core.utils import unpack_components
+from pycalphad.core.utils import unpack_species
 from pycalphad.plot.utils import phase_legend
 from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_condition
 
@@ -575,7 +575,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     else:
         desired_data = []
 
-    species = unpack_components(dbf, comps)
+    species = unpack_species(dbf, comps)
     # phase constituents are Species objects, so we need to be doing intersections with those
     phase_constituents = dbf.phases[phase_name].constituents
     # phase constituents must be filtered to only active
@@ -716,7 +716,7 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
         prop = output
     endmember = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))
     # Set up the domain of the calculation
-    species = unpack_components(dbf, comps)
+    species = unpack_species(dbf, comps)
     # phase constituents are Species objects, so we need to be doing intersections with those
     phase_constituents = dbf.phases[phase_name].constituents
     # phase constituents must be filtered to only active
@@ -783,7 +783,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
     matplotlib.Axes
 
     """
-    species = unpack_components(dbf, comps)
+    species = unpack_species(dbf, comps)
     # phase constituents are Species objects, so we need to be doing intersections with those
     phase_constituents = dbf.phases[phase_name].constituents
     # phase constituents must be filtered to only active:

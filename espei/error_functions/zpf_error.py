@@ -23,7 +23,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from pycalphad import Database, Model, Workspace, variables as v
 from pycalphad.property_framework import IsolatedPhase
-from pycalphad.core.utils import instantiate_models, filter_phases, unpack_components
+from pycalphad.core.utils import instantiate_models, filter_phases, unpack_species
 from pycalphad.core.phase_rec import PhaseRecord
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from scipy.stats import norm
@@ -420,7 +420,7 @@ class ZPFResidual(ResidualFunction):
         else:
             comps = sorted(database.elements)
             model_dict = dict()
-        phases = sorted(filter_phases(database, unpack_components(database, comps), database.phases.keys()))
+        phases = sorted(filter_phases(database, unpack_species(database, comps), database.phases.keys()))
         if symbols_to_fit is None:
             symbols_to_fit = database_symbols_to_fit(database)
         # okay if parameters are initialized to zero, we only need the symbol names

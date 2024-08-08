@@ -14,7 +14,7 @@ from symengine import Symbol
 from tinydb import where
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from pycalphad import Database, Model, ReferenceState, variables as v
-from pycalphad.core.utils import unpack_components, get_pure_elements, filter_phases
+from pycalphad.core.utils import unpack_species, get_pure_elements, filter_phases
 from pycalphad import Workspace
 from pycalphad.property_framework import IsolatedPhase
 from pycalphad.property_framework.metaproperties import find_first_compset
@@ -286,7 +286,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
     else:
         symbols_to_fit = database_symbols_to_fit(dbf)
 
-    species_comps = set(unpack_components(dbf, comps))
+    species_comps = set(unpack_species(dbf, comps))
 
     # estimated from NIST TRC uncertainties
     property_std_deviation = {
@@ -346,7 +346,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                     except AttributeError:
                         mod.reference_model.models[contrib] = symengine.S.Zero
                 model_dict = {phase_name: mod}
-                species = sorted(unpack_components(dbf, comps), key=str)
+                species = sorted(unpack_species(dbf, comps), key=str)
                 data_dict['species'] = species
                 statevar_dict = {getattr(v, c, None): vals for c, vals in calculate_dict.items() if isinstance(getattr(v, c, None), v.StateVariable)}
                 statevar_dict = OrderedDict(sorted(statevar_dict.items(), key=lambda x: str(x[0])))
@@ -478,7 +478,7 @@ class FixedConfigurationPropertyResidual(ResidualFunction):
         else:
             comps = sorted(database.elements)
             model_dict = dict()
-        phases = sorted(filter_phases(database, unpack_components(database, comps), database.phases.keys()))
+        phases = sorted(filter_phases(database, unpack_species(database, comps), database.phases.keys()))
         if symbols_to_fit is None:
             symbols_to_fit = database_symbols_to_fit(database)
         self.thermochemical_data = get_thermochemical_data(database, comps, phases, datasets, model_dict, weight_dict=self.weight, symbols_to_fit=symbols_to_fit)

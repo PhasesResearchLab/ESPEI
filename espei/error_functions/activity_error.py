@@ -16,7 +16,7 @@ import numpy.typing as npt
 import tinydb
 from pycalphad import Database, variables as v
 from pycalphad.plot.eqplot import _map_coord_to_variable
-from pycalphad.core.utils import filter_phases, unpack_components
+from pycalphad.core.utils import filter_phases, unpack_species
 from scipy.stats import norm
 from pycalphad import Workspace
 
@@ -88,7 +88,7 @@ def calculate_activity_residuals(dbf, comps, phases, datasets, parameters=None, 
         # data_comps and data_phases ensures that we only do calculations on
         # the subsystem of the system defining the data.
         data_comps = ds['components']
-        data_phases = filter_phases(dbf, unpack_components(dbf, data_comps), candidate_phases=phases)
+        data_phases = filter_phases(dbf, unpack_species(dbf, data_comps), candidate_phases=phases)
         ref_conditions = {_map_coord_to_variable(coord): val for coord, val in ref['conditions'].items()}
         wks_ref = Workspace(database=dbf, components=data_comps, phases=ref['phases'], conditions=ref_conditions, parameters=parameters)
 
@@ -201,7 +201,7 @@ class ActivityResidual(ResidualFunction):
         else:
             comps = sorted(database.elements)
             model_dict = dict()
-        phases = sorted(filter_phases(database, unpack_components(database, comps), database.phases.keys()))
+        phases = sorted(filter_phases(database, unpack_species(database, comps), database.phases.keys()))
         if symbols_to_fit is None:
             symbols_to_fit = database_symbols_to_fit(database)
         self._symbols_to_fit = symbols_to_fit
