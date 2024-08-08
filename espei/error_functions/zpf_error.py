@@ -23,8 +23,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from pycalphad import Database, Model, Workspace, variables as v
 from pycalphad.property_framework import IsolatedPhase
-from pycalphad.core.utils import instantiate_models, filter_phases, unpack_species
-from pycalphad.core.phase_rec import PhaseRecord
+from pycalphad.core.utils import filter_phases, unpack_species
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from scipy.stats import norm
 import tinydb
@@ -43,7 +42,7 @@ class RegionVertex:
     phase_name: str
     composition: ArrayLike  # 1D of size (number nonvacant pure elements)
     comp_conds: Dict[v.X, float]
-    phase_records: Dict[str, PhaseRecord]
+    phase_record_factory: PhaseRecordFactory
     is_disordered: bool
     has_missing_comp_cond: bool
 
@@ -224,8 +223,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, dbf: Database, parameters: np
     param_keys = list(models.values())[0]._parameters_arg
     parameters_dict = dict(zip(sorted(map(str, param_keys)), parameters))
     for vertex in phase_region.hyperplane_vertices:
-        phase_records = vertex.phase_records
-        update_phase_record_parameters(phase_records, parameters)
+        update_phase_record_parameters(vertex.phase_record_factory, parameters)
         cond_dict = {**vertex.comp_conds, **phase_region.potential_conds}
         if vertex.has_missing_comp_cond:
             # This composition is unknown -- it doesn't contribute to hyperplane estimation
@@ -233,7 +231,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, dbf: Database, parameters: np
         else:
             # Extract chemical potential hyperplane from multi-phase calculation
             # Note that we consider all phases in the system, not just ones in this tie region
-            wks = Workspace(database=dbf, components=species, phases=phases, models=models, phase_record_factory=phase_records, conditions=cond_dict, parameters=parameters_dict)
+            wks = Workspace(database=dbf, components=species, phases=phases, models=models, phase_record_factory=vertex.phase_record_factory, conditions=cond_dict, parameters=parameters_dict)
             # TODO: active_pure_elements should be replaced with wks.components when wks.components no longer includes phase constituent Species
             active_pure_elements = [list(x.constituents.keys()) for x in species]
             active_pure_elements = sorted(set(el.upper() for constituents in active_pure_elements for el in constituents) - {"VA"})
@@ -261,13 +259,13 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
     current_phase = vertex.phase_name
     cond_dict = {**phase_region.potential_conds, **vertex.comp_conds}
     str_statevar_dict = OrderedDict([(str(key),cond_dict[key]) for key in sorted(phase_region.potential_conds.keys(), key=str)])
-    phase_records = vertex.phase_records
-    update_phase_record_parameters(phase_records, parameters)
+    phase_record_factory = vertex.phase_record_factory
+    update_phase_record_parameters(phase_record_factory, parameters)
     if vertex.has_missing_comp_cond:
         # We don't have the phase composition here, so we estimate the driving force.
         # Can happen if one of the composition conditions is unknown or if the phase is
         # stoichiometric and the user did not specify a valid phase composition.
-        single_eqdata = calculate_(species, [current_phase], str_statevar_dict, models, phase_records, pdens=50)
+        single_eqdata = calculate_(species, [current_phase], str_statevar_dict, models, phase_record_factory, pdens=50)
         df = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(df.max())
     elif vertex.is_disordered:
@@ -293,11 +291,11 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
                 sitefracs_to_add[np.isnan(sitefracs_to_add)] = 1 - np.nansum(sitefracs_to_add)
             desired_sitefracs[dof_idx:dof_idx + num_subl_dof] = sitefracs_to_add
             dof_idx += num_subl_dof
-        single_eqdata = calculate_(species, [current_phase], str_statevar_dict, models, phase_records, points=np.asarray([desired_sitefracs]))
+        single_eqdata = calculate_(species, [current_phase], str_statevar_dict, models, phase_record_factory, points=np.asarray([desired_sitefracs]))
         driving_force = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(np.squeeze(driving_force))
     else:
-        wks = Workspace(database=dbf, components=species, phases=current_phase, models=models, phase_record_factory=phase_records, conditions=cond_dict, parameters=parameters_dict)
+        wks = Workspace(database=dbf, components=species, phases=current_phase, models=models, phase_record_factory=phase_record_factory, conditions=cond_dict, parameters=parameters_dict)
         constrained_energy = wks.get(IsolatedPhase(current_phase,wks=wks)('GM'))
         driving_force = np.dot(np.squeeze(target_hyperplane_chempots), vertex.composition) - constrained_energy
     return driving_force

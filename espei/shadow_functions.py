@@ -9,15 +9,9 @@ from numpy.typing import ArrayLike
 import numpy as np
 from pycalphad import Model, variables as v
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
-from pycalphad.core.phase_rec import PhaseRecord
-from pycalphad.core.composition_set import CompositionSet
-from pycalphad.core.starting_point import starting_point
-from pycalphad.core.eqsolver import _solve_eq_at_conditions
-from pycalphad.core.workspace import _adjust_conditions
-from pycalphad.core.utils import get_state_variables, unpack_kwarg, point_sample
+from pycalphad.core.utils import unpack_kwarg, point_sample
 from pycalphad.core.light_dataset import LightDataset
 from pycalphad.core.calculate import _sample_phase_constitution, _compute_phase_values
-from pycalphad.core.solver import Solver
 
 
 def update_phase_record_parameters(phase_record_factory: PhaseRecordFactory, parameters: ArrayLike) -> None:
@@ -27,7 +21,7 @@ def update_phase_record_parameters(phase_record_factory: PhaseRecordFactory, par
 
 def calculate_(species: Sequence[v.Species], phases: Sequence[str],
                str_statevar_dict: Dict[str, np.ndarray], models: Dict[str, Model],
-               phase_records: Dict[str, PhaseRecord], output: Optional[str] = 'GM',
+               phase_record_factory: PhaseRecordFactory, output: Optional[str] = 'GM',
                points: Optional[Dict[str, np.ndarray]] = None,
                pdens: Optional[int] = 50, broadcast: Optional[bool] = True,
                fake_points: Optional[bool] = False,
@@ -40,11 +34,11 @@ def calculate_(species: Sequence[v.Species], phases: Sequence[str],
     nonvacant_components = [x for x in sorted(species) if x.number_of_atoms > 0]
     cur_phase_local_conditions = {} # XXX: Temporary hack to allow compatibility
     str_phase_local_conditions = {} # XXX: Temporary hack to allow compatibility
-    maximum_internal_dof = max(prx.phase_dof for prx in phase_records.values())
+    maximum_internal_dof = max(prx.phase_dof for prx in phase_record_factory.values())
     all_phase_data = []
     for phase_name in sorted(phases):
         mod = models[phase_name]
-        phase_record = phase_records[phase_name]
+        phase_record = phase_record_factory[phase_name]
         points = points_dict[phase_name]
         if points is None:
             points = _sample_phase_constitution(mod, point_sample, True, pdens_dict[phase_name], cur_phase_local_conditions)
@@ -57,9 +51,9 @@ def calculate_(species: Sequence[v.Species], phases: Sequence[str],
                                          parameters={})
         all_phase_data.append(phase_ds)
 
-    # assumes phase_records all have the same nonvacant pure elements,
+    # assumes phase_record_factory all have the same nonvacant pure elements,
     # even if those elements are not present in this phase record
-    fp_offset = len(tuple(phase_records.values())[0].nonvacant_elements) if fake_points else 0
+    fp_offset = len(tuple(phase_record_factory.values())[0].nonvacant_elements) if fake_points else 0
     running_total = [fp_offset] + list(np.cumsum([phase_ds['X'].shape[-2] for phase_ds in all_phase_data]))
     islice_by_phase = {phase_name: slice(running_total[phase_idx], running_total[phase_idx+1], None)
                        for phase_idx, phase_name in enumerate(sorted(phases))}

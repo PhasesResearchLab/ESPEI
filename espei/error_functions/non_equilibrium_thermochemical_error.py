@@ -318,7 +318,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                     'phase_name': phase_name,
                     'prop': prop,
                     # needs the following keys to be added:
-                    # species, calculate_dict, phase_records, model, output, weights
+                    # species, calculate_dict, phase_record_factory, model, output, weights
                 }
                 # get all the data with these model exclusions
                 if exclusion == tuple([]):
@@ -350,11 +350,11 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                 data_dict['species'] = species
                 statevar_dict = {getattr(v, c, None): vals for c, vals in calculate_dict.items() if isinstance(getattr(v, c, None), v.StateVariable)}
                 statevar_dict = OrderedDict(sorted(statevar_dict.items(), key=lambda x: str(x[0])))
-                phase_records = PhaseRecordFactory(dbf, species, statevar_dict, model_dict,
+                phase_record_factory = PhaseRecordFactory(dbf, species, statevar_dict, model_dict,
                                                    parameters={s: 0 for s in symbols_to_fit})
                 str_statevar_dict = OrderedDict((str(k), vals) for k, vals in statevar_dict.items())
                 data_dict['str_statevar_dict'] = str_statevar_dict
-                data_dict['phase_records'] = phase_records
+                data_dict['phase_record_factory'] = phase_record_factory
                 data_dict['calculate_dict'] = calculate_dict
                 data_dict['model'] = model_dict
                 data_dict['output'] = output
@@ -369,7 +369,7 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
     phase_name = calc_data['phase_name']
     models = calc_data['model']  # Dict[PhaseName: Model]
     output = calc_data['output']
-    phase_records = calc_data['phase_records']
+    phase_record_factory = calc_data['phase_record_factory']
     sample_values = calc_data['calculate_dict']['values']
     str_statevar_dict = calc_data['str_statevar_dict']
 
@@ -408,7 +408,7 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         # Need to be careful here. Making a workspace erases the custom models that have some contributions excluded (which are passed in). Not sure exactly why.
         # The models themselves are preserved, but the ones inside the workspace's phase_record_factory get clobbered.
         # We workaround this by replacing the phase_record_factory models with ours, but this is definitely a hack we'd like to avoid.
-        wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, phase_record_factory=phase_records, parameters=parameters, solver=NoSolveSolver())
+        wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, phase_record_factory=phase_record_factory, parameters=parameters, solver=NoSolveSolver())
         # We then get a composition set and we use a special "NoSolveSolver" to
         # ensure that we don't change from the data-specified DOF.
         compset = find_first_compset(phase_name, wks)
