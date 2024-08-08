@@ -3,7 +3,6 @@ Fast versions of equilibrium and calculate that "override" the equivalent
 pycalphad functions for very fast performance.
 """
 
-from collections import OrderedDict
 from typing import Sequence, Dict, Optional
 from numpy.typing import ArrayLike
 import numpy as np

@@ -13,7 +13,6 @@ from tinydb import where
 from scipy.stats import norm
 from pycalphad import Database, Model, ReferenceState, variables as v
 from pycalphad.core.utils import instantiate_models, filter_phases, extract_parameters, unpack_species, unpack_condition
-from pycalphad.core.phase_rec import PhaseRecord
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from pycalphad import Workspace, as_property
 

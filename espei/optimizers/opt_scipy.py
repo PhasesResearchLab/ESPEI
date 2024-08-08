@@ -4,7 +4,6 @@ import numpy as np
 from scipy.optimize import minimize
 from espei.utils import unpack_piecewise
 from espei.error_functions.context import setup_context
-from espei.error_functions import calculate_activity_error
 from .opt_base import OptimizerBase
 
 _log = logging.getLogger(__name__)
