@@ -25,7 +25,7 @@ setup(
         'emcee<3',
         'matplotlib',
         'numpy>=1.20',
-        'pycalphad>=0.10.4',
+        'pycalphad>=0.11.0',
         'pydantic>2.0',
         'pyyaml',
         'setuptools_scm[toml]>=6.0',
