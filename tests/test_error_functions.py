@@ -12,7 +12,7 @@ import pickle
 import scipy.stats
 from tinydb import where
 
-from pycalphad import Database, Model, variables as v
+from pycalphad import Database
 
 from espei.paramselect import generate_parameters
 from espei.error_functions import *
@@ -78,11 +78,11 @@ def test_get_thermochemical_data_filters_invalid_sublattice_configurations(datas
     dbf = Database(CU_MG_TDB)
     comps = ["CU", "MG", "VA"]
     phases = ["CUMG2"]
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
     print('thermochemical data:', thermochemical_data)
     assert thermochemical_data[0]["calculate_dict"]["values"].shape == (2,)
 
-    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
     assert np.isclose(error, -14.28729)
 
 
@@ -100,6 +100,19 @@ def test_fixed_configuration_residual_function(datasets_db):
     assert np.isclose(likelihood, -14.28729, rtol=1e-6)
 
 
+def test_fixed_configuration_residual_with_internal_degrees_of_freedom(datasets_db):
+    """Unstable endmembers in phases that have internal degrees of freedom should retain fixed internal DOF"""
+    dbf = Database(CU_MG_TDB)
+    datasets_db.insert(CU_MG_HM_FORM_LAVES_C15_ANTISITE)
+
+    residual_func = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[])
+
+    # Expect that the database has the same energy as the dataset (the former was fit to the latter)
+    residuals, weights = residual_func.get_residuals(np.asarray([]))
+    assert len(residuals) == len(weights)
+    assert np.allclose(residuals, [0.0])
+
+
 def test_get_thermochemical_data_filters_configurations_when_all_configurations_are_invalid(datasets_db):
     datasets_db.insert(CU_MG_HM_MIX_CUMG2_ALL_INVALID)  # No valid configurations
 
@@ -110,7 +123,7 @@ def test_get_thermochemical_data_filters_configurations_when_all_configurations_
     print('thermochemical data:', thermochemical_data)
     assert thermochemical_data[0]["calculate_dict"]["values"].shape == (0,)
 
-    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
     assert np.isclose(error, 0)
 
 
@@ -121,8 +134,8 @@ def test_non_equilibrium_thermochemical_error_with_multiple_X_points(datasets_db
     dbf = Database(CU_MG_TDB)
     phases = list(dbf.phases.keys())
     comps = ['CU', 'MG', 'VA']
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
-    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
 
     assert np.isclose(error, -4061.119001241541, rtol=1e-6)
 
@@ -134,8 +147,8 @@ def test_non_equilibrium_thermochemical_error_with_multiple_T_points(datasets_db
     dbf = Database(CU_MG_TDB)
     phases = list(dbf.phases.keys())
     comps = ['CU', 'MG', 'VA']
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
-    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
     assert np.isclose(error,-14.287293263253728, rtol=1e-6)
 
 
@@ -147,7 +160,10 @@ def test_non_equilibrium_thermochemical_error_with_multiple_T_X_points(datasets_
     phases = list(dbf.phases.keys())
     comps = ['CU', 'MG', 'VA']
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
-    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
+    symbols_to_fit = database_symbols_to_fit(dbf)
+    initial_guess = np.array([unpack_piecewise(dbf.symbols[s]) for s in symbols_to_fit])
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf, parameters=dict(zip(symbols_to_fit, initial_guess)))
+
     assert np.isclose(float(error), -3282497.2380024833, rtol=1e-6)
 
 def test_non_equilibrium_thermochemical_error_for_mixing_entropy_error_is_excess_only(datasets_db):
@@ -198,7 +214,7 @@ def test_non_equilibrium_thermochemical_error_for_mixing_entropy_error_is_excess
     zero_error_prob = scipy.stats.norm(loc=0, scale=0.2).logpdf(0.0)  # SM weight = 0.2
     # Explicitly pass parameters={} to not try fitting anything
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
-    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
 
 
@@ -249,7 +265,7 @@ def test_non_equilibrium_thermochemical_error_for_of_enthalpy_mixing(datasets_db
     zero_error_prob = scipy.stats.norm(loc=0, scale=500.0).logpdf(0.0)  # HM weight = 500
     # Explicitly pass parameters={} to not try fitting anything
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
-    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
 
 
@@ -264,16 +280,16 @@ def test_subsystem_non_equilibrium_thermochemcial_probability(datasets_db):
 
     # Truth
     thermochemical_data = get_thermochemical_data(dbf_bin, ['CR', 'NI', 'VA'], phases, datasets_db)
-    bin_prob = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
+    bin_prob = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf_bin)
 
     # Getting binary subsystem data explictly (from binary input)
     thermochemical_data = get_thermochemical_data(dbf_tern, ['CR', 'NI', 'VA'], phases, datasets_db)
-    prob = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
+    prob = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf_tern)
     assert np.isclose(prob, bin_prob)
 
     # Getting binary subsystem from ternary input
     thermochemical_data = get_thermochemical_data(dbf_tern, ['CR', 'FE', 'NI', 'VA'], phases, datasets_db)
-    prob = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
+    prob = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf_tern)
     assert np.isclose(prob, bin_prob)
 
 
@@ -351,11 +367,8 @@ def test_zpf_error_species(datasets_db):
     zero_error_probability = 2 * scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0)
 
     zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
-    exact_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=False)
-    assert np.isclose(exact_likelihood, zero_error_probability)
-    approx_likelihood = calculate_zpf_error(zpf_data, approximate_equilibrium=True)
-    # accept higher tolerance for approximate
-    assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-4)
+    likelihood = calculate_zpf_error(zpf_data)
+    assert np.isclose(likelihood, zero_error_probability)
 
 
 def test_zpf_error_equilibrium_failure(datasets_db):
@@ -371,10 +384,8 @@ def test_zpf_error_equilibrium_failure(datasets_db):
     zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
 
     with mock.patch('espei.error_functions.zpf_error.estimate_hyperplane', return_value=np.array([np.nan, np.nan])):
-        exact_likelihood = calculate_zpf_error(zpf_data)
-        assert np.isclose(exact_likelihood, zero_error_probability, rtol=1e-6)
-        approx_likelihood = calculate_zpf_error(zpf_data)
-        assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-6)
+        likelihood = calculate_zpf_error(zpf_data)
+        assert np.isclose(likelihood, zero_error_probability, rtol=1e-6)
 
 
 def test_zpf_error_works_for_stoichiometric_cmpd_tielines(datasets_db):
@@ -389,10 +400,8 @@ def test_zpf_error_works_for_stoichiometric_cmpd_tielines(datasets_db):
     zero_error_probability = 2 * scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0)
 
     zpf_data = get_zpf_data(dbf, comps, phases, datasets_db, {})
-    exact_likelihood = calculate_zpf_error(zpf_data)
-    assert np.isclose(exact_likelihood, zero_error_probability, rtol=1e-6)
-    approx_likelihood = calculate_zpf_error(zpf_data)
-    assert np.isclose(approx_likelihood, zero_error_probability, rtol=1e-6)
+    likelihood = calculate_zpf_error(zpf_data)
+    assert np.isclose(likelihood, zero_error_probability, rtol=1e-6)
 
 
 def test_non_equilibrium_thermochemcial_species(datasets_db):
@@ -404,7 +413,7 @@ def test_non_equilibrium_thermochemcial_species(datasets_db):
     phases = ['LIQUID']
 
     thermochemical_data = get_thermochemical_data(dbf, ['LI', 'SN'], phases, datasets_db)
-    prob = calculate_non_equilibrium_thermochemical_probability(thermochemical_data)
+    prob = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
     # Near zero error and non-zero error
     assert np.isclose(prob, (-7.13354663 + -22.43585011))
 
@@ -420,13 +429,8 @@ def test_equilibrium_thermochemcial_error_species(datasets_db):
     eqdata = get_equilibrium_thermochemical_data(dbf, ['LI', 'SN'], phases, datasets_db)
     # Thermo-Calc
     truth_values = np.array([0.0, -28133.588, -40049.995, 0.0])
-    # Approximate
-    errors_approximate, weights = calc_prop_differences(eqdata[0], np.array([]), True)
-    # Looser tolerances because the equilibrium is approximate, note that this is pdens dependent
-    assert np.all(np.isclose(errors_approximate, truth_values, atol=1e-5, rtol=1e-3))
-    # Exact
-    errors_exact, weights = calc_prop_differences(eqdata[0], np.array([]), False)
-    assert np.all(np.isclose(errors_exact, truth_values, atol=1e-5))
+    residuals, weights = calc_prop_differences(eqdata[0], np.array([]))
+    assert np.all(np.isclose(residuals, truth_values, atol=3e-5))
 
 
 def test_equilibrium_thermochemical_error_unsupported_property(datasets_db):
@@ -439,8 +443,8 @@ def test_equilibrium_thermochemical_error_unsupported_property(datasets_db):
     phases = list(dbf.phases.keys())
 
     eqdata = get_equilibrium_thermochemical_data(dbf, ['CR', 'NI'], phases, datasets_db)
-    errors_exact, weights = calc_prop_differences(eqdata[0], np.array([]))
-    assert np.all(np.isclose(errors_exact, EXPECTED_VALUES, atol=1e-3))
+    residuals, weights = calc_prop_differences(eqdata[0], np.array([]))
+    assert np.all(np.isclose(residuals, EXPECTED_VALUES, atol=1e-3))
 
 
 def test_equilibrium_property_residual_function(datasets_db):
@@ -483,7 +487,7 @@ def test_equilibrium_thermochemical_error_computes_correct_probability(datasets_
 def test_driving_force_miscibility_gap(datasets_db):
     datasets_db.insert(A_B_DATASET_ALPHA)
     dbf = Database(A_B_REGULAR_SOLUTION_TDB)
-    parameters = {"L_ALPHA": None}
+    parameters = {"L_ALPHA": 0}
     zpf_data = get_zpf_data(dbf, ["A", "B"], ["ALPHA"], datasets_db, parameters)
 
     # probability for zero error error with ZPF weight = 1000.0
@@ -491,24 +495,18 @@ def test_driving_force_miscibility_gap(datasets_db):
 
     # Ideal solution case
     params = np.array([0.0])
-    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=False)
-    assert np.isclose(prob, zero_error_prob)
-    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=True)
+    prob = calculate_zpf_error(zpf_data, parameters=params)
     assert np.isclose(prob, zero_error_prob)
 
     # Negative interaction case
     params = np.array([-10000.0])
-    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=False)
-    assert np.isclose(prob, zero_error_prob)
-    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=True)
+    prob = calculate_zpf_error(zpf_data, parameters=params)
     assert np.isclose(prob, zero_error_prob)
 
     # Miscibility gap case
     params = np.array([10000.0])
-    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=False)
+    prob = calculate_zpf_error(zpf_data, parameters=params)
     # Remember these are log probabilities, so more negative means smaller probability and larger error
-    assert prob < zero_error_prob
-    prob = calculate_zpf_error(zpf_data, parameters=params, approximate_equilibrium=True)
     assert prob < zero_error_prob
 
 

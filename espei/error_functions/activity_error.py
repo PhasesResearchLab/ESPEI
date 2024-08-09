@@ -14,10 +14,11 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 import numpy.typing as npt
 import tinydb
-from pycalphad import Database, equilibrium, variables as v
+from pycalphad import Database, variables as v
 from pycalphad.plot.eqplot import _map_coord_to_variable
-from pycalphad.core.utils import filter_phases, unpack_components
+from pycalphad.core.utils import filter_phases, unpack_species
 from scipy.stats import norm
+from pycalphad import Workspace
 
 from espei.core_utils import ravel_conditions
 from espei.error_functions.residual_base import ResidualFunction, residual_function_registry
@@ -28,7 +29,7 @@ from espei.utils import database_symbols_to_fit, PickleableTinyDB
 _log = logging.getLogger(__name__)
 
 
-def target_chempots_from_activity(component, target_activity, temperatures, reference_result):
+def target_chempots_from_activity(component, target_activity, temperatures, wks_ref):
     """
     Return an array of experimental chemical potentials for the component
 
@@ -50,8 +51,9 @@ def target_chempots_from_activity(component, target_activity, temperatures, refe
     """
     # acr_i = exp((mu_i - mu_i^{ref})/(RT))
     # so mu_i = R*T*ln(acr_i) + mu_i^{ref}
-    ref_chempot = reference_result["MU"].sel(component=component).values.flatten()
-    return v.R * temperatures * np.log(target_activity) + ref_chempot
+    ref_chempot = wks_ref.get(v.MU(component))
+    exp_chem_pots = v.R * temperatures * np.log(target_activity) + ref_chempot
+    return exp_chem_pots
 
 
 # TODO: roll this function into ActivityResidual
@@ -86,11 +88,9 @@ def calculate_activity_residuals(dbf, comps, phases, datasets, parameters=None, 
         # data_comps and data_phases ensures that we only do calculations on
         # the subsystem of the system defining the data.
         data_comps = ds['components']
-        data_phases = filter_phases(dbf, unpack_components(dbf, data_comps), candidate_phases=phases)
+        data_phases = filter_phases(dbf, unpack_species(dbf, data_comps), candidate_phases=phases)
         ref_conditions = {_map_coord_to_variable(coord): val for coord, val in ref['conditions'].items()}
-        ref_result = equilibrium(dbf, data_comps, ref['phases'], ref_conditions,
-                                 model=phase_models, parameters=parameters,
-                                 callables=callables)
+        wks_ref = Workspace(database=dbf, components=data_comps, phases=ref['phases'], conditions=ref_conditions, parameters=parameters)
 
         # calculate current chemical potentials
         # get the conditions
@@ -113,15 +113,13 @@ def calculate_activity_residuals(dbf, comps, phases, datasets, parameters=None, 
         # assume now that the ravelled conditions all have the same size
         conditions_list = [{c: conditions[c][i] for c in conditions.keys()} for i in range(len(conditions[v.T]))]
         for conds in conditions_list:
-            sample_eq_res = equilibrium(dbf, data_comps, data_phases, conds,
-                                        model=phase_models, parameters=parameters,
-                                        callables=callables)
-            dataset_computed_chempots.append(float(sample_eq_res.MU.sel(component=acr_component).values.flatten()[0]))
+            wks_sample = Workspace(database=dbf, components=data_comps, phases=data_phases, conditions=conds, parameters=parameters)
+            dataset_computed_chempots.append(wks_sample.get(v.MU(acr_component)))
             dataset_weights.append(std_dev / data_weight / ds.get("weight", 1.0))
 
         # calculate target chempots
         dataset_activities = np.array(ds['values']).flatten()
-        dataset_target_chempots = target_chempots_from_activity(acr_component, dataset_activities, conditions[v.T], ref_result)
+        dataset_target_chempots = target_chempots_from_activity(acr_component, dataset_activities, conditions[v.T], wks_ref)
         dataset_residuals = (np.asarray(dataset_computed_chempots) - np.asarray(dataset_target_chempots, dtype=float)).tolist()
         _log.debug('Data: %s, chemical potential difference: %s, reference: %s', dataset_activities, dataset_residuals, ds["reference"])
         residuals.extend(dataset_residuals)
@@ -203,7 +201,7 @@ class ActivityResidual(ResidualFunction):
         else:
             comps = sorted(database.elements)
             model_dict = dict()
-        phases = sorted(filter_phases(database, unpack_components(database, comps), database.phases.keys()))
+        phases = sorted(filter_phases(database, unpack_species(database, comps), database.phases.keys()))
         if symbols_to_fit is None:
             symbols_to_fit = database_symbols_to_fit(database)
         self._symbols_to_fit = symbols_to_fit

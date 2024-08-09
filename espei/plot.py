@@ -10,7 +10,7 @@ import numpy as np
 import tinydb
 from symengine import Symbol
 from pycalphad import Model, calculate, equilibrium, variables as v
-from pycalphad.core.utils import unpack_components
+from pycalphad.core.utils import unpack_species
 from pycalphad.plot.utils import phase_legend
 from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_condition
 
@@ -504,7 +504,6 @@ def _get_interaction_predicted_values(dbf, comps, phase_name, configuration, out
     grid = np.linspace(0, 1, num=100)
     point_matrix = grid[None].T * second_endpoint + (1 - grid)[None].T * first_endpoint
     # TODO: Real temperature support
-    point_matrix = point_matrix[None, None]
     predicted_values = calculate(
         dbf, comps, [phase_name], output=output,
         T=298.15, P=101325, points=point_matrix, model=mod)[output].values.flatten()
@@ -576,7 +575,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     else:
         desired_data = []
 
-    species = unpack_components(dbf, comps)
+    species = unpack_species(dbf, comps)
     # phase constituents are Species objects, so we need to be doing intersections with those
     phase_constituents = dbf.phases[phase_name].constituents
     # phase constituents must be filtered to only active
@@ -627,7 +626,6 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
                 points[point_idx] = list(OrderedDict(sorted(points[point_idx].items(), key=str)).values())
             points = np.array(points, dtype=np.float64)
             # TODO: Real temperature support
-            points = points[None, None]
             stability = calculate(dbf, comps, [phase_name], output=data['output'][:-5],
                                     T=temps, P=pressures, points=points,
                                     model=mod_srf)
@@ -715,9 +713,9 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
     else:
         mod = Model(dbf, comps, phase_name)
         prop = output
-    endmember = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))[None, None]
+    endmember = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))
     # Set up the domain of the calculation
-    species = unpack_components(dbf, comps)
+    species = unpack_species(dbf, comps)
     # phase constituents are Species objects, so we need to be doing intersections with those
     phase_constituents = dbf.phases[phase_name].constituents
     # phase constituents must be filtered to only active
@@ -784,7 +782,7 @@ def _compare_data_to_parameters(dbf, comps, phase_name, desired_data, mod, confi
     matplotlib.Axes
 
     """
-    species = unpack_components(dbf, comps)
+    species = unpack_species(dbf, comps)
     # phase constituents are Species objects, so we need to be doing intersections with those
     phase_constituents = dbf.phases[phase_name].constituents
     # phase constituents must be filtered to only active:
