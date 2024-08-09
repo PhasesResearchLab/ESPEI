@@ -34,13 +34,6 @@ ESPEI supports all models supported by pycalphad.
 User-developed models that are compatible with pycalphad can be used without making any modifications to ESPEI's code.
 Performing Bayesian parameter estimation for arbitrary multicomponent thermodynamic data is supported.
 
-.. figure:: docs/_static/cu-mg-mcmc-phase-diagram.png
-    :alt: Cu-Mg phase diagram
-    :scale: 100%
-
-    Cu-Mg phase diagram from a database created with and optimized by ESPEI.
-    See the `Cu-Mg Example <https://espei.org/en/latest/cu-mg-example.html>`_.
-
 Installing
 ----------
 
@@ -92,7 +85,7 @@ The name ESPEI and early concept were developed by [Shang2010]_ under the superv
 After developing `pycalphad`_, Richard Otis and Zi-Kui Liu reimagined the concept and wrote
 `pycalphad-fitting`_ (used in [Otis2016]_ and [Otis2017]_), which formed the nucleus for the present version of ESPEI ([Bocklund2019]_).
 
-Details on the implementation of ESPEI can be found in the following publications: 
+Details on the implementation of ESPEI can be found in the following publications:
 
 - B\. Bocklund *et al.*, MRS Communications 9(2) (2019) 1–10. doi:`10.1557/mrc.2019.59 <https://doi.org/10.1557/mrc.2019.59>`_.
 - B\. Bocklund, Ph.D. Dissertation (Chapter 3), The Pennsylvania State University (2021), https://etda.libraries.psu.edu/catalog/21192bjb54
