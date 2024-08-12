@@ -10,6 +10,35 @@ Changelog
 
 Improvements
 ------------
+* Migrate to PyCalphad Workspace (`@bocklund`_ - :issue:`256`)
+
+  - PyCalphad's ``IsolatedPhase`` feature improves accuracy and elimintes the
+    need for a heuristic to perform constrained equilibria when computing the
+    likelihood for phase diagram data.
+  - ESPEI users will likely see a small 2-4x performance regression in MCMC as
+    some of the heavily optimized code paths in ESPEI were removed in favor of
+    the versions implemented in ``Workspace``. We are looking in to further
+    optimizations and utilizing Jansson derivatives to compute likelihood
+    gradients that will enable us to use more performant optimization and MCMC methods.
+
+Dependencies
+------------
+* Update minimum required PyCalphad version to 0.11 (`@bocklund`_ - :issue:`259`)
+* Add NumPy 2.0 support (`@bocklund`_ - :issue:`255`)
+
+Deprecations
+------------
+* Remove code scheduled for deprecation in ESPEI 0.9: deprecations (`@bocklund`_ - :issue:`257`)
+
+  - ``espei.plot``: ``plot_parameters`` is replaced with ``plot_interaction`` and ``plot_endmember``. ``eqdataplot`` and ``multiplot`` are replaced with using ``dataplot`` combined with the relevant PyCalphad phase diagram plotting code.
+  - ESPEI YAML input: ``scheduler: "None"`` is replaced by ``scheduler: null``
+
+
+0.8.10 (2024-01-30)
+===================
+
+Improvements
+------------
 * Add a generic framework for property model parameter generation (`@bocklund`_ - :issue:`251`)
 * Improve performance for generating candidate models with many features (`@bocklund`_ - :issue:`254`)
 * MCMC: Replace one of the initial MCMC chains with the initial parameter values. This should improve convergence and prevent significant regression compared to input parameters. (`@toastedcrumpets`_ - :issue:`249`)
