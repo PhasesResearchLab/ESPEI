@@ -19,6 +19,7 @@ from pycalphad.plot.eqplot import _map_coord_to_variable
 from pycalphad.core.utils import filter_phases, unpack_species
 from scipy.stats import norm
 from pycalphad import Workspace
+from pycalphad.property_framework import JanssonDerivative
 
 from espei.core_utils import ravel_conditions
 from espei.error_functions.residual_base import ResidualFunction, residual_function_registry
@@ -29,7 +30,7 @@ from espei.utils import database_symbols_to_fit, PickleableTinyDB
 _log = logging.getLogger(__name__)
 
 
-def target_chempots_from_activity(component, target_activity, temperatures, wks_ref):
+def target_chempots_from_activity(component, parameters, target_activity, temperatures, wks_ref):
     """
     Return an array of experimental chemical potentials for the component
 
@@ -53,11 +54,18 @@ def target_chempots_from_activity(component, target_activity, temperatures, wks_
     # so mu_i = R*T*ln(acr_i) + mu_i^{ref}
     ref_chempot = wks_ref.get(v.MU(component))
     exp_chem_pots = v.R * temperatures * np.log(target_activity) + ref_chempot
-    return exp_chem_pots
+    
+    gradient_props = [JanssonDerivative(v.MU(component), key) for key in parameters]
+    gradients = wks_ref.get(*gradient_props)
+    if type(gradients) is list:
+        ref_grads = [float(element) for element in gradients]
+    else:
+        ref_grads = gradients
+    return exp_chem_pots, ref_grads
 
 
 # TODO: roll this function into ActivityResidual
-def calculate_activity_residuals(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, data_weight=1.0) -> Tuple[List[float], List[float]]:
+def calculate_activity_residuals(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, data_weight=1.0) -> Tuple[List[float], List[float], List[float]]:
     """
     Notes
     -----
@@ -75,12 +83,23 @@ def calculate_activity_residuals(dbf, comps, phases, datasets, parameters=None, 
     if parameters is None:
         parameters = {}
 
+    params_keys = []
+
+    # XXX: This mutates the global pycalphad namespace
+    for key in parameters.keys():
+        if not hasattr(v, key):
+            setattr(v, key, v.IndependentPotential(key))
+        params_keys.append(getattr(v, key))
+        # XXX: Mutates argument to function
+        dbf.symbols.pop(key,None)
+        
     activity_datasets = datasets.search(
         (tinydb.where('output').test(lambda x: 'ACR' in x)) &
         (tinydb.where('components').test(lambda x: set(x).issubset(comps))))
 
     residuals = []
     weights = []
+    gradients = []
     for ds in activity_datasets:
         acr_component = ds['output'].split('_')[1]  # the component of interest
         # calculate the reference state equilibrium
@@ -90,7 +109,9 @@ def calculate_activity_residuals(dbf, comps, phases, datasets, parameters=None, 
         data_comps = ds['components']
         data_phases = filter_phases(dbf, unpack_species(dbf, data_comps), candidate_phases=phases)
         ref_conditions = {_map_coord_to_variable(coord): val for coord, val in ref['conditions'].items()}
-        wks_ref = Workspace(database=dbf, components=data_comps, phases=ref['phases'], conditions=ref_conditions, parameters=parameters)
+        # removed parameter assignment from wks_ref
+        ref_conditions.update(parameters)
+        wks_ref = Workspace(database=dbf, components=data_comps, phases=ref['phases'], conditions=ref_conditions)
 
         # calculate current chemical potentials
         # get the conditions
@@ -102,6 +123,7 @@ def calculate_activity_residuals(dbf, comps, phases, datasets, parameters=None, 
         # we will ravel each composition individually, since they all must have the same shape
         dataset_computed_chempots = []
         dataset_weights = []
+        dataset_gradients = []
         for comp_name, comp_x in conds_list:
             P, T, X = ravel_conditions(ds['values'], ds['conditions']['P'], ds['conditions']['T'], comp_x)
             conditions[v.P] = P
@@ -113,22 +135,34 @@ def calculate_activity_residuals(dbf, comps, phases, datasets, parameters=None, 
         # assume now that the ravelled conditions all have the same size
         conditions_list = [{c: conditions[c][i] for c in conditions.keys()} for i in range(len(conditions[v.T]))]
         for conds in conditions_list:
-            wks_sample = Workspace(database=dbf, components=data_comps, phases=data_phases, conditions=conds, parameters=parameters)
+            conds.update(parameters)
+            wks_sample = Workspace(database=dbf, components=data_comps, phases=data_phases, conditions=conds)
             dataset_computed_chempots.append(wks_sample.get(v.MU(acr_component)))
             dataset_weights.append(std_dev / data_weight / ds.get("weight", 1.0))
+            gradient_props = [JanssonDerivative(v.MU(acr_component), key) for key in parameters]
+            grads = wks_sample.get(*gradient_props)
+            if type(grads) is list:
+                sample_grads = [float(element) for element in grads]
+            else:
+                sample_grads = grads
+            dataset_gradients.append(sample_grads)
 
         # calculate target chempots
         dataset_activities = np.array(ds['values']).flatten()
-        dataset_target_chempots = target_chempots_from_activity(acr_component, dataset_activities, conditions[v.T], wks_ref)
+        dataset_target_chempots, ref_grads = target_chempots_from_activity(acr_component, parameters, dataset_activities, conditions[v.T], wks_ref)
         dataset_residuals = (np.asarray(dataset_computed_chempots) - np.asarray(dataset_target_chempots, dtype=float)).tolist()
+        adjusted_gradient = []
+        for element in dataset_gradients:
+            adjusted_gradient.append((np.asarray(element) - np.asarray(ref_grads)).tolist())
         _log.debug('Data: %s, chemical potential difference: %s, reference: %s', dataset_activities, dataset_residuals, ds["reference"])
         residuals.extend(dataset_residuals)
         weights.extend(dataset_weights)
-    return residuals, weights
+        gradients.append(adjusted_gradient)
+    return residuals, weights, gradients
 
 
 # TODO: roll this function into ActivityResidual
-def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, data_weight=1.0) -> float:
+def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phase_models=None, callables=None, data_weight=1.0) -> Tuple[float, List[float]]:
     """
     Return the sum of square error from activity data
 
@@ -160,14 +194,20 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
 
 
     """
-    residuals, weights = calculate_activity_residuals(dbf, comps, phases, datasets, parameters=parameters, phase_models=phase_models, callables=callables, data_weight=data_weight)
+    residuals, weights, gradients = calculate_activity_residuals(dbf, comps, phases, datasets, parameters=parameters, phase_models=phase_models, callables=callables, data_weight=data_weight)
     likelihood = np.sum(norm(0, scale=weights).logpdf(residuals))
+    gradients = np.concatenate(gradients)
+    derivative = -np.array(residuals)*np.array(gradients).T/np.array(weights)**2
+    if derivative.ndim == 1:
+        likelihood_grads = np.sum(-np.array(residuals)*np.array(gradients).T/np.array(weights)**2, axis=0)
+    else:
+        likelihood_grads = np.sum(-np.array(residuals)*np.array(gradients).T/np.array(weights)**2, axis=1)
     if np.isnan(likelihood):
         # TODO: revisit this case and evaluate whether it is resonable for NaN
         # to show up here. When this comment was written, the test
         # test_subsystem_activity_probability would trigger a NaN.
         return -np.inf
-    return likelihood
+    return likelihood, likelihood_grads
 
 
 # TODO: the __init__ method should pre-compute Model and PhaseRecord objects
@@ -218,10 +258,10 @@ class ActivityResidual(ResidualFunction):
         residuals, weights = calculate_activity_residuals(parameters=parameters, **self._activity_likelihood_kwargs)
         return residuals, weights
 
-    def get_likelihood(self, parameters: npt.NDArray) -> float:
+    def get_likelihood(self, parameters: npt.NDArray) -> Tuple[float, List[float]]:
         parameters = {param_name: param for param_name, param in zip(self._symbols_to_fit, parameters.tolist())}
-        likelihood = calculate_activity_error(parameters=parameters, **self._activity_likelihood_kwargs)
-        return likelihood
+        likelihood, gradients = calculate_activity_error(parameters=parameters, **self._activity_likelihood_kwargs)
+        return likelihood, gradients
 
 
 residual_function_registry.register(ActivityResidual)
