@@ -16,7 +16,7 @@ from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from pycalphad import Database, Model, ReferenceState, variables as v
 from pycalphad.core.utils import unpack_species, get_pure_elements, filter_phases
 from pycalphad import Workspace
-from pycalphad.property_framework import IsolatedPhase
+from pycalphad.property_framework import IsolatedPhase, JanssonDerivative
 from pycalphad.property_framework.metaproperties import find_first_compset
 from pycalphad.core.solver import Solver, SolverResult
 
@@ -249,7 +249,7 @@ def get_sample_condition_dicts(calculate_dict: Dict[Any, Any], configuration_tup
     return sample_condition_dicts
 
 
-def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dict=None, symbols_to_fit=None):
+def get_thermochemical_data(dbf, comps, phases, datasets, parameters, model=None, weight_dict=None, symbols_to_fit=None):
     """
 
     Parameters
@@ -274,6 +274,17 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
     list
         List of data dictionaries to iterate over
     """
+    
+    params_keys = []
+
+    # XXX: This mutates the global pycalphad namespace
+    for key in parameters.keys():
+        if not hasattr(v, key):
+            setattr(v, key, v.IndependentPotential(key))
+        params_keys.append(getattr(v, key))
+        # XXX: Mutates argument to function
+        dbf.symbols.pop(key,None)
+        
     # phase by phase, then property by property, then by model exclusions
     if weight_dict is None:
         weight_dict = {}
@@ -330,7 +341,8 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                 curr_data = filter_temperatures(curr_data)
                 calculate_dict = get_prop_samples(curr_data, constituents)
                 model_cls = model.get(phase_name, Model)
-                mod = model_cls(dbf, comps, phase_name, parameters=symbols_to_fit)
+                #mod = model_cls(dbf, comps, phase_name, parameters=symbols_to_fit)
+                mod = model_cls(dbf, comps, phase_name)
                 if prop.endswith('_FORM'):
                     output = ''.join(prop.split('_')[:-1])+"R"
                     mod.shift_reference_state(ref_states, dbf, contrib_mods={e: symengine.S.Zero for e in exclusion})
@@ -368,7 +380,7 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
     phase_name = calc_data['phase_name']
     models = calc_data['model']  # Dict[PhaseName: Model]
     output = calc_data['output']
-    phase_record_factory = calc_data['phase_record_factory']
+    #phase_record_factory = calc_data['phase_record_factory']
     sample_values = calc_data['calculate_dict']['values']
     str_statevar_dict = calc_data['str_statevar_dict']
 
@@ -382,8 +394,9 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         counter = counter + 1
 
     differences = []
+    gradients = []
     for index in range(len(sample_values)):
-        cond_dict = {}
+        cond_dict = {**parameters}
         for sv_key, sv_val in str_statevar_dict.items():
             cond_dict.update({sv_key: sv_val[index]})
 
@@ -407,7 +420,8 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         # Need to be careful here. Making a workspace erases the custom models that have some contributions excluded (which are passed in). Not sure exactly why.
         # The models themselves are preserved, but the ones inside the workspace's phase_record_factory get clobbered.
         # We workaround this by replacing the phase_record_factory models with ours, but this is definitely a hack we'd like to avoid.
-        wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, phase_record_factory=phase_record_factory, parameters=parameters, solver=NoSolveSolver())
+        #wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, phase_record_factory=phase_record_factory, solver=NoSolveSolver())
+        wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, solver=NoSolveSolver())
         # We then get a composition set and we use a special "NoSolveSolver" to
         # ensure that we don't change from the data-specified DOF.
         compset = find_first_compset(phase_name, wks)
@@ -417,9 +431,21 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         iso_phase = IsolatedPhase(compset, wks=wks)
         iso_phase.solver = NoSolveSolver()
         results = wks.get(iso_phase(output))
+        gradient_props = [JanssonDerivative(iso_phase(output), key) for key in parameters]
+        grads = wks.get(*gradient_props) # this is giving NAN for some parameters
+        
+        #if type(grads) is list:
+        #    for i in range(len(grads)):
+         #       if np.isnan(grads[i]):
+         #           grads[i] = 0
+        #else:
+         #   if np.isnan(grads):
+         #       grads = 0
+                
         sample_differences = results - sample_values[index]
         differences.append(sample_differences)
-    return differences
+        gradients.append(grads)
+    return differences, gradients
 
 
 def calculate_non_equilibrium_thermochemical_probability(thermochemical_data: List[FixedConfigurationCalculationData], dbf, parameters=None):
@@ -443,16 +469,24 @@ def calculate_non_equilibrium_thermochemical_probability(thermochemical_data: Li
         parameters = {}
 
     prob_error = 0.0
+    overall_grad = np.zeros(len(parameters))
     for data in thermochemical_data:
         phase_name = data['phase_name']
         sample_values = data['calculate_dict']['values']
-        differences = compute_fixed_configuration_property_differences(dbf, data, parameters)
+        differences, gradients = compute_fixed_configuration_property_differences(dbf, data, parameters)
         differences = np.array(differences)
+        gradients = np.array(gradients)
         probabilities = norm.logpdf(differences, loc=0, scale=data['weights'])
         prob_sum = np.sum(probabilities)
         _log.debug("%s(%s) - probability sum: %0.2f, data: %s, differences: %s, probabilities: %s, references: %s", data['prop'], phase_name, prob_sum, sample_values, differences, probabilities, data['calculate_dict']['references'])
         prob_error += prob_sum
-    return prob_error
+        derivative = -differences*gradients.T/data['weights']**2
+        if derivative.ndim == 1:
+            grad_prob = np.sum(derivative, axis = 0)
+        else:
+            grad_prob = np.sum(derivative, axis=1)
+        overall_grad += grad_prob
+    return prob_error, overall_grad
 
 
 class FixedConfigurationPropertyResidual(ResidualFunction):
@@ -480,7 +514,8 @@ class FixedConfigurationPropertyResidual(ResidualFunction):
         phases = sorted(filter_phases(database, unpack_species(database, comps), database.phases.keys()))
         if symbols_to_fit is None:
             symbols_to_fit = database_symbols_to_fit(database)
-        self.thermochemical_data = get_thermochemical_data(database, comps, phases, datasets, model_dict, weight_dict=self.weight, symbols_to_fit=symbols_to_fit)
+        parameters = dict(zip(symbols_to_fit, [0]*len(symbols_to_fit)))
+        self.thermochemical_data = get_thermochemical_data(database, comps, phases, datasets, parameters, model_dict, weight_dict=self.weight, symbols_to_fit=symbols_to_fit)
         self._symbols_to_fit = symbols_to_fit
         self.dbf = database
 
@@ -498,10 +533,10 @@ class FixedConfigurationPropertyResidual(ResidualFunction):
             weights.extend(dataset_weights)
         return residuals, weights
 
-    def get_likelihood(self, parameters) -> float:
+    def get_likelihood(self, parameters) -> Tuple[float, List[float]]:
         parameters = {param_name: param for param_name, param in zip(self._symbols_to_fit, parameters.tolist())}
-        likelihood = calculate_non_equilibrium_thermochemical_probability(self.thermochemical_data, self.dbf, parameters)
-        return likelihood
+        likelihood, gradient = calculate_non_equilibrium_thermochemical_probability(self.thermochemical_data, self.dbf, parameters)
+        return likelihood, gradient
 
 
 residual_function_registry.register(FixedConfigurationPropertyResidual)
