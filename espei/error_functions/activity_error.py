@@ -199,14 +199,14 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
     gradients = np.concatenate(gradients)
     derivative = -np.array(residuals)*np.array(gradients).T/np.array(weights)**2
     if derivative.ndim == 1:
-        likelihood_grads = np.sum(-np.array(residuals)*np.array(gradients).T/np.array(weights)**2, axis=0)
+        likelihood_grads = np.sum(derivative, axis=0)
     else:
-        likelihood_grads = np.sum(-np.array(residuals)*np.array(gradients).T/np.array(weights)**2, axis=1)
+        likelihood_grads = np.sum(derivative, axis=1)
     if np.isnan(likelihood):
         # TODO: revisit this case and evaluate whether it is resonable for NaN
         # to show up here. When this comment was written, the test
         # test_subsystem_activity_probability would trigger a NaN.
-        return -np.inf
+        return -np.inf, np.zeros(len(parameters))
     return likelihood, likelihood_grads
 
 
