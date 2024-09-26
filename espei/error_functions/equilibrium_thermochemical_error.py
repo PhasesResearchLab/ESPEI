@@ -231,16 +231,12 @@ def calc_prop_differences(eqpropdata: EqPropData,
         wks.conditions = cond_dict
         #wks.parameters = params_dict  # these reset models and phase_record_factory through depends_on -> lose Model.shift_reference_state, etc.
         wks.models = models
-        wks.phase_record_factory = phase_record_factory
+        #wks.phase_record_factory = phase_record_factory
         vals = wks.get(output)
         calculated_data.extend(np.atleast_1d(vals).tolist())
         gradient_props = [JanssonDerivative(output, key) for key in params_dict]
         gradients = wks.get(*gradient_props)
-        if type(gradients) is list:
-            gradients_magnitude = [float(element) for element in gradients]
-        else:
-            gradients_magnitude = gradients
-        gradient_data.append(gradients_magnitude)
+        gradient_data.append(gradients)
 
     calculated_data = np.array(calculated_data, dtype=np.float64)
     gradient_data = np.array(gradient_data, dtype=np.float64)
@@ -276,7 +272,7 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
 
     """
     if len(eq_thermochemical_data) == 0:
-        return 0.0
+        return 0.0, np.zeros(len(parameters))
 
     differences = []
     weights = []
@@ -286,7 +282,7 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
         if np.any(np.isinf(diffs) | np.isnan(diffs)):
             # NaN or infinity are assumed calculation failures. If we are
             # calculating log-probability, just bail out and return -infinity.
-            return -np.inf
+            return -np.inf, np.zeros(len(parameters))
         differences.append(diffs)
         weights.append(wts)
         gradients.append(grads)
@@ -344,6 +340,9 @@ class EquilibriumPropertyResidual(ResidualFunction):
     def get_likelihood(self, parameters) -> Tuple[float, List[float]]:
         likelihood, gradients = calculate_equilibrium_thermochemical_probability(self.property_data, parameters)
         return likelihood, gradients
+
+
+residual_function_registry.register(EquilibriumPropertyResidual)
 
 
 residual_function_registry.register(EquilibriumPropertyResidual)
