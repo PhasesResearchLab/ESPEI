@@ -433,14 +433,6 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         results = wks.get(iso_phase(output))
         gradient_props = [JanssonDerivative(iso_phase(output), key) for key in parameters]
         grads = wks.get(*gradient_props) # this is giving NAN for some parameters
-        
-        #if type(grads) is list:
-        #    for i in range(len(grads)):
-         #       if np.isnan(grads[i]):
-         #           grads[i] = 0
-        #else:
-         #   if np.isnan(grads):
-         #       grads = 0
                 
         sample_differences = results - sample_values[index]
         differences.append(sample_differences)
