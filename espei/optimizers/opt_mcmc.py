@@ -12,6 +12,15 @@ from .opt_base import OptimizerBase
 
 _log = logging.getLogger(__name__)
 
+class _Wrapper:
+    def __init__(self, client, f, **kwargs):
+        self.client = client
+        self.f = f
+        self.kwargs = kwargs
+    
+    def __call__(self, x):
+        return self.client.submit(self.f, x, **self.kwargs)
+
 
 class EmceeOptimizer(OptimizerBase):
     """
@@ -174,7 +183,14 @@ class EmceeOptimizer(OptimizerBase):
                     self.save_sampler_state()
                     _log.trace('Acceptance ratios for parameters: %s', self.sampler.acceptance_fraction)
                 n = int((progbar_width) * float(i + 1) / iterations)
-                _log.info("\r[%s%s] (%d of %d)\n", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
+                #_log.info("\r[%s%s] (%d of %d)\n", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
+                _log.info("\r[%s%s] (%d of %d)", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
+                if self.scheduler is not None:
+                    scheduler_info = self.scheduler.scheduler_info()
+                    memory = []
+                    for w in scheduler_info['workers']:
+                        memory.append(float(scheduler_info['workers'][w]['metrics'].get('memory', 0)))
+                    _log.info('\rTotal memory (GB): {:.5f}, Average worker memory (GB): {:.5f}\n'.format(np.sum(memory)/1e9, np.average(memory)/1e9))
         except KeyboardInterrupt:
             pass
         _log.info('MCMC complete.')
@@ -183,7 +199,7 @@ class EmceeOptimizer(OptimizerBase):
     def _fit(self, symbols, ds, prior=None, iterations=1000,
              chains_per_parameter=2, chain_std_deviation=0.1, deterministic=True,
              restart_trace=None, tracefile=None, probfile=None,
-             mcmc_data_weights=None, approximate_equilibrium=False,
+             mcmc_data_weights=None, approximate_equilibrium=False, additional_mcmc_args = {}
              ):
         """
 
@@ -235,15 +251,36 @@ class EmceeOptimizer(OptimizerBase):
 
         prior_dict = self.get_priors(prior, symbols_to_fit, initial_guess)
         ctx.update(prior_dict)
+
+        use_futures = additional_mcmc_args.get('use_futures', True)
+        if self.scheduler is not None:
+            self.scheduler.use_futures = use_futures
+        if use_futures and self.scheduler is not None:
+            _log.info("Scatter context to workers")
+            ctx_futures = {key: self.scheduler.submit(lambda x: x, val, key=key) for key,val in ctx.items()}
+            wrapper = _Wrapper(self.scheduler, self.predict, **ctx_futures)
+
         # Run the initial parameters for guessing purposes:
         _log.trace("Probability for initial parameters")
-        self.predict(initial_guess, **ctx)
+        #self.predict(initial_guess, **ctx)
+        if use_futures and self.scheduler is not None:
+            wrapper(initial_guess).result()
+        else:
+            self.predict(initial_guess, **ctx)
+
         if restart_trace is not None:
             chains = self.initialize_chains_from_trace(restart_trace)
             # TODO: check that the shape is valid with the existing parameters
         else:
             chains = self.initialize_new_chains(initial_guess, chains_per_parameter, chain_std_deviation, deterministic)
-        sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.predict, kwargs=ctx, pool=self.scheduler)
+        #sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.predict, kwargs=ctx, pool=self.scheduler)
+        if use_futures and self.scheduler is not None:
+            _log.info("Creating sampler with future wrapper")
+            sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, wrapper, pool=self.scheduler)
+        else:
+            _log.info("Creating sampler without futures")
+            sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.predict, kwargs=ctx, pool=self.scheduler)
+
         if deterministic:
             from espei.rstate import numpy_rstate
             sampler.random_state = numpy_rstate
@@ -252,7 +289,10 @@ class EmceeOptimizer(OptimizerBase):
         self.tracefile = tracefile
         self.probfile = probfile
         # Run the MCMC simulation
+        t0 = time.time()
         self.do_sampling(chains, iterations)
+        tf = time.time()
+        _log.info('Fit time: {}'.format(tf-t0))
 
         # Post process
         optimal_params = optimal_parameters(sampler.chain, sampler.lnprobability)
