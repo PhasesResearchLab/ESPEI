@@ -183,6 +183,7 @@ def test_correct_defaults_are_applied_from_minimal_specification():
     assert d['mcmc'].pop('approximate_equilibrium') is False
     assert d['mcmc'].pop('data_weights') == {'ACR': 1.0, 'CPM': 1.0, 'HM': 1.0, 'SM': 1.0, 'ZPF': 1.0}
     assert d['mcmc'].pop('prior') == {'name': 'zero'}
+    assert d['mcmc'].pop('use_futures') is True
     assert len(d['mcmc']) == 1
 
 
