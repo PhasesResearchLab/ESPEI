@@ -263,7 +263,9 @@ def estimate_hyperplane(phase_region: PhaseRegion, dbf: Database, parameter_dict
                 target_hyperplane_chempots.append(MU_values)
                 target_hyperplane_chempots_grads.append(gradients_magnitude)
     target_hyperplane_mean_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float64)
+    #print(target_hyperplane_mean_chempots)
     target_hyperplane_chempots_grads = np.nanmean(target_hyperplane_chempots_grads, axis=0, dtype=np.float64) 
+    #print(target_hyperplane_chempots_grads)
     return target_hyperplane_mean_chempots, target_hyperplane_chempots_grads
 
 
@@ -306,13 +308,19 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, target_h
             counter = counter + 1
         wks = Workspace(database=dbf, components=species, phases=current_phase,  phase_record_factory=phase_record_factory, conditions=cond_dict)
         constrained_energy = wks.get(IsolatedPhase(current_phase,wks=wks)('GM'))
+        #print(constrained_energy)
         driving_force = np.dot(np.squeeze(target_hyperplane_chempots), vertex_comp_estimate) - constrained_energy
+        #print(driving_force)
+        constrained_energy_gradient = []
+        for key in parameter_dict:
+            constrained_energy_gradient.append(wks.get(IsolatedPhase(current_phase,wks=wks)('GM.'+key)))
+            
         gradient_params = [JanssonDerivative(IsolatedPhase(current_phase, wks=wks)('GM'), key) for key in parameter_dict]
         gradients = wks.get(*gradient_params)
-        if type(gradients) is list:
-            constrained_energy_gradient = [float(element) for element in gradients]
-        else:
-            constrained_energy_gradient = gradients
+        constrained_energy_gradient1 = gradients
+        
+        #print(constrained_energy_gradient)
+        #print(constrained_energy_gradient1)
         driving_force_gradient = np.squeeze(np.matmul(vertex_comp_estimate,target_hyperplane_chempots_grads) - constrained_energy_gradient)
         
     elif vertex.is_disordered:
@@ -344,14 +352,21 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, target_h
     else:
         wks = Workspace(database=dbf, components=species, phases=current_phase, models=models, phase_record_factory=phase_record_factory, conditions=cond_dict)
         constrained_energy = wks.get(IsolatedPhase(current_phase,wks=wks)('GM'))
+        #print(constrained_energy)
         driving_force = np.dot(np.squeeze(target_hyperplane_chempots), vertex.composition) - constrained_energy
-        gradient_params = [JanssonDerivative(IsolatedPhase(current_phase, wks=wks)('GM'), key) for key in parameter_dict]
-        gradients = wks.get(*gradient_params)
-        if type(gradients) is list:
-            constrained_energy_gradient = [float(element) for element in gradients]
-        else:
-            constrained_energy_gradient = gradients
+        #print(driving_force)
+        constrained_energy_gradient = []
+        for key in parameter_dict:
+            constrained_energy_gradient.append(wks.get(IsolatedPhase(current_phase,wks=wks)('GM.'+key)))
+        #gradient_params = [JanssonDerivative(IsolatedPhase(current_phase, wks=wks)('GM'), key) for key in parameter_dict]
+        #gradients = wks.get(*gradient_params)
+        #if type(gradients) is list:
+        #    constrained_energy_gradient = [float(element) for element in gradients]
+        #else:
+        #    constrained_energy_gradient = gradients
+        #print(constrained_energy_gradient)
         driving_force_gradient = np.squeeze(np.matmul(np.reshape(vertex.composition,(1,-1)),target_hyperplane_chempots_grads) - constrained_energy_gradient)
+        #print(driving_force_gradient)
     return driving_force, driving_force_gradient
 
 
@@ -411,7 +426,10 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
                 #print('NaN target hyperplane. Equilibria: (%s), driving force: 0.0, reference: %s.', eq_str, dataset_ref)
                 data_driving_forces.extend([0]*len(phase_region.vertices))
                 data_weights.extend([weight]*len(phase_region.vertices))
-                data_gradients.extend([[0]*len(parameters)]*len(phase_region.vertices))
+                if len(parameters) == 1:
+                    data_gradients.extend(np.zeros(len(phase_region.vertices)))
+                else:
+                    data_gradients.extend([[0]*len(parameters)]*len(phase_region.vertices))
                 continue
             # 2. Calculate the driving force to that hyperplane for each vertex
             for vertex in phase_region.vertices:
@@ -455,7 +473,11 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
     weights = np.concatenate(weights)
     gradients = np.concatenate(gradients)
     if np.any(np.logical_or(np.isinf(driving_forces), np.isnan(driving_forces))):
-        return -np.inf, np.zeros(np.shape(gradients)[1]) #NEED TO ASK ABOUT THIS
+        if len(parameters) == 1:
+            return -np.inf, -np.inf
+        else:
+            return -np.inf, np.ones(len(parameters))*(-np.inf)
+        
     log_probabilites = norm.logpdf(driving_forces, loc=0, scale=1000/data_weight/weights)
     grad_log_probs = -driving_forces*gradients.T/(1000/data_weight/weights)**2
     if grad_log_probs.ndim == 1:
