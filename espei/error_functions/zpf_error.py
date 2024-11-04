@@ -310,17 +310,23 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, target_h
         constrained_energy = wks.get(IsolatedPhase(current_phase,wks=wks)('GM'))
         #print(constrained_energy)
         driving_force = np.dot(np.squeeze(target_hyperplane_chempots), vertex_comp_estimate) - constrained_energy
-        #print(driving_force)
+        #constrained_energy_gradient = []
+        #for key in parameter_dict:
+        #    constrained_energy_gradient.append(wks.get(IsolatedPhase(current_phase,wks=wks)('GM.'+key)))
+            
+        #gradient_params = [JanssonDerivative(IsolatedPhase(current_phase, wks=wks)('GM'), key) for key in parameter_dict]
+        #constrained_energy_gradient = wks.get(*gradient_params)
+        
+        #ip = IsolatedPhase(current_phase, wks=wks)
+        #gradient_params = [JanssonDerivative(ip('GM'), key) for key in parameter_dict]
+        #constrained_energy_gradient = wks.get(*gradient_params)
+        
+        ip = IsolatedPhase(current_phase, wks=wks)
         constrained_energy_gradient = []
         for key in parameter_dict:
-            constrained_energy_gradient.append(wks.get(IsolatedPhase(current_phase,wks=wks)('GM.'+key)))
-            
-        gradient_params = [JanssonDerivative(IsolatedPhase(current_phase, wks=wks)('GM'), key) for key in parameter_dict]
-        gradients = wks.get(*gradient_params)
-        constrained_energy_gradient1 = gradients
+            constrained_energy_gradient.append(wks.get(ip('GM.'+key)))
         
-        #print(constrained_energy_gradient)
-        #print(constrained_energy_gradient1)
+    
         driving_force_gradient = np.squeeze(np.matmul(vertex_comp_estimate,target_hyperplane_chempots_grads) - constrained_energy_gradient)
         
     elif vertex.is_disordered:
