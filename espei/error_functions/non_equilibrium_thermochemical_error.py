@@ -1,4 +1,3 @@
-"""
 Calculate error due to thermochemical quantities: heat capacity, entropy, enthalpy.
 """
 
@@ -431,8 +430,12 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         iso_phase = IsolatedPhase(compset, wks=wks)
         iso_phase.solver = NoSolveSolver()
         results = wks.get(iso_phase(output))
-        gradient_props = [JanssonDerivative(iso_phase(output), key) for key in parameters]
-        grads = wks.get(*gradient_props) # this is giving NAN for some parameters
+        #gradient_props = [JanssonDerivative(iso_phase(output), key) for key in parameters]
+        #grads = wks.get(*gradient_props) # this is giving NAN for some parameters
+        
+        grads = []
+        for key in parameters:
+            grads.append(wks.get(iso_phase(output+'.'+key)))
                 
         sample_differences = results - sample_values[index]
         differences.append(sample_differences)
@@ -515,7 +518,7 @@ class FixedConfigurationPropertyResidual(ResidualFunction):
         residuals = []
         weights = []
         for data in self.thermochemical_data:
-            dataset_residuals = compute_fixed_configuration_property_differences(self.dbf, data, dict(zip(self._symbols_to_fit, parameters)))
+            dataset_residuals, grads = compute_fixed_configuration_property_differences(self.dbf, data, dict(zip(self._symbols_to_fit, parameters)))
             residuals.extend(dataset_residuals)
             dataset_weights = np.asarray(data["weights"], dtype=float).flatten().tolist()
             if len(dataset_weights) != len(dataset_residuals):
