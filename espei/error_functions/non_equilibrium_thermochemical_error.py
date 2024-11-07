@@ -1,3 +1,4 @@
+"""
 Calculate error due to thermochemical quantities: heat capacity, entropy, enthalpy.
 """
 
