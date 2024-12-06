@@ -16,7 +16,7 @@ from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from pycalphad import Database, Model, ReferenceState, variables as v
 from pycalphad.core.utils import unpack_species, get_pure_elements, filter_phases
 from pycalphad import Workspace
-from pycalphad.property_framework import IsolatedPhase, JanssonDerivative
+from pycalphad.property_framework import IsolatedPhase, JanssonDerivative, ModelComputedProperty
 from pycalphad.property_framework.metaproperties import find_first_compset
 from pycalphad.core.solver import Solver, SolverResult
 
@@ -422,6 +422,7 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         # We workaround this by replacing the phase_record_factory models with ours, but this is definitely a hack we'd like to avoid.
         #wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, phase_record_factory=phase_record_factory, solver=NoSolveSolver())
         wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, solver=NoSolveSolver())
+        #### Do we need the degrees of freedom as a condition here? Or does this break what is happening next?
         # We then get a composition set and we use a special "NoSolveSolver" to
         # ensure that we don't change from the data-specified DOF.
         compset = find_first_compset(phase_name, wks)
@@ -431,12 +432,13 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         iso_phase = IsolatedPhase(compset, wks=wks)
         iso_phase.solver = NoSolveSolver()
         results = wks.get(iso_phase(output))
-        #gradient_props = [JanssonDerivative(iso_phase(output), key) for key in parameters]
-        #grads = wks.get(*gradient_props) # this is giving NAN for some parameters
         
-        grads = []
-        for key in parameters:
-            grads.append(wks.get(iso_phase(output+'.'+key)))
+        prop = ModelComputedProperty(output)
+        # chemical potentials are an input to _compute_property_gradient, but they aren't used, so here they are just
+        # passed as zeros
+        grads = prop._compute_property_gradient([compset], wks.conditions,np.zeros(len(active_pure_elements)))
+        grads = grads[0][len(str_statevar_dict):len(str_statevar_dict)+len(parameters)]
+        
                 
         sample_differences = results - sample_values[index]
         differences.append(sample_differences)
