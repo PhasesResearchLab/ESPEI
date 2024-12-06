@@ -324,7 +324,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                 if exclusion == tuple([]):
                     exc_search = (~where('excluded_model_contributions').exists()) & (where('solver').exists())
                 else:
-                    exc_search = (where('excluded_model_contributions').test(lambda x: tuple(sorted(x)) == exclusion)) & (where('solver').exists())
+                    exc_search = (where('excluded_model_contributions').test(lambda x: tuple(sorted(set(x))) == exclusion)) & (where('solver').exists())
                 curr_data = get_prop_data(comps, phase_name, prop, datasets, additional_query=exc_search)
                 curr_data = filter_sublattice_configurations(curr_data, constituents)
                 curr_data = filter_temperatures(curr_data)

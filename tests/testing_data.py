@@ -385,6 +385,28 @@ CU_MG_HM_MIX_CUMG2_ANTISITE = yaml.load("""{
 """, Loader=YAML_LOADER)
 
 
+CU_MG_HM_MIX_CUMG2_ANTISITE_DUPLICATE_EXCLUDED_MODEL_CONTRIBUTIONS = yaml.load("""{
+  "components": ["CU", "MG", "VA"],
+  "phases": ["CUMG2"],
+  "solver": {
+    "sublattice_site_ratios": [1, 2],
+    "sublattice_configurations": [["CU", "MG"], ["MG", "CU"], ["MG", "MG"], ["CU", "CU"]],
+    "mode": "manual"
+  },
+  "conditions": {
+    "P": 101325,
+    "T": [300, 400],
+  },
+
+  "output": "HM_MIX",
+    "values":   [[[10, 11, 12, 13], [100, 101, 102, 103]]],
+  "reference": "FAKE DATA",
+  "comment": "FAKE DATA",
+  "excluded_model_contributions": ["idmix", "idmix"]
+}
+""", Loader=YAML_LOADER)
+
+
 CU_MG_HM_MIX_CUMG2_ALL_INVALID = yaml.load("""{
   "components": ["CU", "MG", "VA"],
   "phases": ["CUMG2"],
