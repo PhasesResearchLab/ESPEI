@@ -196,12 +196,15 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
     """
     residuals, weights, gradients = calculate_activity_residuals(dbf, comps, phases, datasets, parameters=parameters, phase_models=phase_models, callables=callables, data_weight=data_weight)
     likelihood = np.sum(norm(0, scale=weights).logpdf(residuals))
-    gradients = np.concatenate(gradients)
-    derivative = -np.array(residuals)*np.array(gradients).T/np.array(weights)**2
-    if derivative.ndim == 1:
-        likelihood_grads = np.sum(derivative, axis=0)
-    else:
-        likelihood_grads = np.sum(derivative, axis=1)
+    if len(gradients) == 0:
+        likelihood_grads = []
+    else: 
+        gradients = np.concatenate(gradients)
+        derivative = -np.array(residuals)*np.array(gradients).T/np.array(weights)**2
+        if derivative.ndim == 1:
+            likelihood_grads = np.sum(derivative, axis=0)
+        else:
+            likelihood_grads = np.sum(derivative, axis=1)
     if np.isnan(likelihood):
         # TODO: revisit this case and evaluate whether it is resonable for NaN
         # to show up here. When this comment was written, the test
@@ -255,7 +258,7 @@ class ActivityResidual(ResidualFunction):
 
     def get_residuals(self, parameters: npt.ArrayLike) -> Tuple[List[float], List[float]]:
         parameters = {param_name: param for param_name, param in zip(self._symbols_to_fit, parameters.tolist())}
-        residuals, weights = calculate_activity_residuals(parameters=parameters, **self._activity_likelihood_kwargs)
+        residuals, weights, grads = calculate_activity_residuals(parameters=parameters, **self._activity_likelihood_kwargs)
         return residuals, weights
 
     def get_likelihood(self, parameters: npt.NDArray) -> Tuple[float, List[float]]:
