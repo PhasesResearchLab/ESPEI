@@ -300,12 +300,15 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray, target_h
             vertex_comp_estimate = np.squeeze(single_eqdata.X)
         else:
             vertex_comp_estimate = np.squeeze(single_eqdata.X)[np.nanargmax(df),:]
-        #print(vertex_comp_estimate)
         counter = 0
         for comp in species:
-            if v.X(comp) in cond_dict.keys():
-                cond_dict.update({v.X(comp): vertex_comp_estimate[counter]})
-            counter = counter + 1
+            if v.Species(comp) != v.Species('VA'):
+                if v.X(comp) in cond_dict.keys():
+                    cond_dict.update({v.X(comp): vertex_comp_estimate[counter]})
+                counter = counter + 1
+                
+        # local_conds = dict(zip(single_eqdata.components, single_eqdata.X))
+            
         wks = Workspace(database=dbf, components=species, phases=current_phase,  phase_record_factory=phase_record_factory, conditions=cond_dict)
         constrained_energy = wks.get(IsolatedPhase(current_phase,wks=wks)('GM'))
         #print(constrained_energy)
@@ -472,7 +475,7 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
 
     """
     if len(zpf_data) == 0:
-        return 0.0
+        return 0.0, []
     driving_forces, weights, gradients = calculate_zpf_driving_forces(zpf_data, parameters, approximate_equilibrium, short_circuit=True)
     # Driving forces and weights are 2D ragged arrays with the shape (len(zpf_data), len(zpf_data['values']))
     driving_forces = np.concatenate(driving_forces).T
