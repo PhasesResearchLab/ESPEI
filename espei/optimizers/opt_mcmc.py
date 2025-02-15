@@ -176,6 +176,7 @@ class EmceeOptimizer(OptimizerBase):
     def do_sampling(self, chains, iterations):
         progbar_width = 30
         _log.info('Running MCMC for %s iterations.', iterations)
+        iter_start_time = time.time()
         try:
             for i, result in enumerate(self.sampler.sample(chains, iterations=iterations)):
                 # progress bar
@@ -186,11 +187,12 @@ class EmceeOptimizer(OptimizerBase):
                 #_log.info("\r[%s%s] (%d of %d)\n", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
                 _log.info("\r[%s%s] (%d of %d)", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
                 if self.scheduler is not None:
+                    iter_curr_time = time.time()
                     scheduler_info = self.scheduler.scheduler_info()
                     memory = []
                     for w in scheduler_info['workers']:
                         memory.append(float(scheduler_info['workers'][w]['metrics'].get('memory', 0)))
-                    _log.info('\rTotal memory (GB): {:.5f}, Average worker memory (GB): {:.5f}\n'.format(np.sum(memory)/1e9, np.average(memory)/1e9))
+                    _log.info('\rCurrent time (s): {:.3f}, Total memory (GB): {:.5f}, Average worker memory (GB): {:.5f}\n'.format(iter_curr_time - iter_start_time, np.sum(memory)/1e9, np.average(memory)/1e9))
         except KeyboardInterrupt:
             pass
         _log.info('MCMC complete.')
