@@ -182,7 +182,7 @@ class EmceeOptimizer(OptimizerBase):
                     memory = []
                     for w in scheduler_info['workers']:
                         memory.append(float(scheduler_info['workers'][w]['metrics'].get('memory', 0)))
-                    _log.info('\rCurrent time (s): {:.3f}, Total memory (GB): {:.5f}, Average worker memory (GB): {:.5f}\n'.format(iter_curr_time - iter_start_time, np.sum(memory)/1e9, np.average(memory)/1e9))
+                    _log.info('\rCurrent time (s): {:.1f}, Total memory (GB): {:.5f}, Average worker memory (GB): {:.5f}\n'.format(iter_curr_time - iter_start_time, np.sum(memory)/1e9, np.average(memory)/1e9))
         except KeyboardInterrupt:
             pass
         _log.info('MCMC complete.')
@@ -191,7 +191,7 @@ class EmceeOptimizer(OptimizerBase):
     def _fit(self, symbols, ds, prior=None, iterations=1000,
              chains_per_parameter=2, chain_std_deviation=0.1, deterministic=True,
              restart_trace=None, tracefile=None, probfile=None,
-             mcmc_data_weights=None, approximate_equilibrium=False, additional_mcmc_args = {}
+             mcmc_data_weights=None, approximate_equilibrium=False
              ):
         """
 
@@ -257,7 +257,7 @@ class EmceeOptimizer(OptimizerBase):
         if self.scheduler is None:
             sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.predict, kwargs=ctx, pool=None)
         else:
-            wrapper = PredictWrapper(self.scheduler, self.predict, additional_mcmc_args.get('use_futures', True), **ctx)
+            wrapper = PredictWrapper(self.scheduler, self.predict, **ctx)
             sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, wrapper, pool=self.scheduler)
 
         if deterministic:
@@ -271,7 +271,7 @@ class EmceeOptimizer(OptimizerBase):
         t0 = time.time()
         self.do_sampling(chains, iterations)
         tf = time.time()
-        _log.info('Fit time: {}'.format(tf-t0))
+        _log.info('Fit time: {:.1f} seconds'.format(tf-t0))
 
         # Post process
         optimal_params = optimal_parameters(sampler.chain, sampler.lnprobability)

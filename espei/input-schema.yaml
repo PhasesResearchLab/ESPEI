@@ -133,7 +133,3 @@ mcmc:
       default: {'ZPF': 1.0, 'ACR': 1.0, 'HM': 1.0, 'SM': 1.0, 'CPM': 1.0}
     symbols:
       type: list
-    use_futures:
-      type: boolean
-      default: True
-      required: True

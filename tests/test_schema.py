@@ -109,20 +109,6 @@ mcmc:
   input_db: dft.tdb
 """
 
-MCMC_RUN_DICT_ADDITIONAL_ARGS = {
-    'mcmc':
-    {
-        'iterations': 1000,
-        'input_db': 'input.tdb',
-        'use_futures': True,
-    },
-    'system':
-    {
-        'datasets': 'ds_path',
-        'phase_models': 'phases.json'
-    }
-}
-
 
 def test_input_yaml_valid_for_full_run():
     """A minimal full run input file should validate"""
@@ -183,7 +169,6 @@ def test_correct_defaults_are_applied_from_minimal_specification():
     assert d['mcmc'].pop('approximate_equilibrium') is False
     assert d['mcmc'].pop('data_weights') == {'ACR': 1.0, 'CPM': 1.0, 'HM': 1.0, 'SM': 1.0, 'ZPF': 1.0}
     assert d['mcmc'].pop('prior') == {'name': 'zero'}
-    assert d['mcmc'].pop('use_futures') is True
     assert len(d['mcmc']) == 1
 
 
@@ -213,7 +198,3 @@ def test_nullable_arguments_are_all_nullable():
     assert null_settings['output']['logfile'] is None
     assert null_settings['output']['probfile'] is None
     assert null_settings['mcmc']['scheduler'] is None
-
-def test_input_yaml_valid_for_mcmc_with_additional_args():
-    d = get_run_settings(MCMC_RUN_DICT_ADDITIONAL_ARGS)
-    assert d.get('generate_parameters') is None

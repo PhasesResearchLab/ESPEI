@@ -47,27 +47,18 @@ class PickleableTinyDB(TinyDB):
         self.insert_multiple(state['_tables']['_default'])
 
 class PredictWrapper:
-    def __init__(self, client, f, use_futures, **kwargs):
-        self.client = client
+    def __init__(self, client, f, **kwargs):
         self.f = f
-        self.use_futures = use_futures
-        if use_futures:
-            # Not really a fan of disabling the active memory manager (AMM), although it's somewhat experimental in dask
-            # However, the AMM will delete any duplicates found across workers. The consequence of this is when
-            # the context is created on all workers, the AMM will remove all duplicates of the context except for 
-            # one worker, and all the dependent tasks will then be done on that single worker (and we won't see any benefit
-            # from parallelization). 
-            # TODO: I'm debating whether to submit a self generating lambda function for the context or to scatter the context
-            # as data. With scattering, the data will transfer before the worker starts anything, but I don't know
-            # if a worker that restarts will retain the data. The lambda function will transfer data after the worker starts
-            # (it should only be once at the start), but I think if a worker dies, it could still generate the data again (although,
-            # since the self generating function lives on a specific worker, I don't know what would happen if that specific worker
-            # restarts. Memory and performance-wise, scattering vs submitting lambda function seems to be the same
-            self.client.amm.stop()
-            self.kwargs = {key: self.client.submit(lambda x: x, val, key=key) for key,val in kwargs.items()}
-            #self.kwargs = {key: self.client.scatter(val, broadcast=True, hash=False) for key,val in kwargs.items()}
-        else:
-            self.kwargs = kwargs
+        self.client = client
+
+        # TODO: I'm debating whether to submit a self generating lambda function for the context or to scatter the context
+        # as data. With scattering, the data will transfer before the worker starts anything, but I don't know
+        # if a worker that restarts will retain the data. The lambda function will transfer data after the worker starts
+        # (it should only be once at the start), but I think if a worker dies, it could still generate the data again (although,
+        # since the self generating function lives on a specific worker, I don't know what would happen if that specific worker
+        # restarts. Memory and performance-wise, scattering vs submitting lambda function seems to be the same
+        self.kwargs = {key: self.client.submit(lambda x: x, val, key=key) for key,val in kwargs.items()}
+        #self.kwargs = {key: self.client.scatter(val, broadcast=True, hash=False) for key,val in kwargs.items()}
     
     def __call__(self, x):
         return self.client.submit(self.f, x, **self.kwargs)
@@ -79,6 +70,14 @@ class ImmediateClient(Client):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # Not really a fan of disabling the active memory manager (AMM), although it's somewhat experimental in dask
+        # However, the AMM will delete any duplicates found across workers. The consequence of this is when
+        # the context is created on all workers, the AMM will remove all duplicates of the context except for 
+        # one worker, and all the dependent tasks will then be done on that single worker (and we won't see any benefit
+        # from parallelization).
+        _client = super(ImmediateClient, self)
+        _client.amm.stop()
 
     def map(self, f, *iterators, **kwargs):
         """Map a function on a sequence of arguments.
