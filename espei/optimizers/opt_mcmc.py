@@ -6,21 +6,11 @@ import warnings
 import numpy as np
 import emcee
 from espei.priors import PriorSpec, build_prior_specs, rv_zero
-from espei.utils import unpack_piecewise, optimal_parameters
+from espei.utils import unpack_piecewise, optimal_parameters, PredictWrapper
 from espei.error_functions.context import setup_context
 from .opt_base import OptimizerBase
 
 _log = logging.getLogger(__name__)
-
-class _Wrapper:
-    def __init__(self, client, f, **kwargs):
-        self.client = client
-        self.f = f
-        self.kwargs = kwargs
-    
-    def __call__(self, x):
-        return self.client.submit(self.f, x, **self.kwargs)
-
 
 class EmceeOptimizer(OptimizerBase):
     """
@@ -254,34 +244,21 @@ class EmceeOptimizer(OptimizerBase):
         prior_dict = self.get_priors(prior, symbols_to_fit, initial_guess)
         ctx.update(prior_dict)
 
-        use_futures = additional_mcmc_args.get('use_futures', True)
-        if self.scheduler is not None:
-            self.scheduler.use_futures = use_futures
-        if use_futures and self.scheduler is not None:
-            _log.info("Scatter context to workers")
-            ctx_futures = {key: self.scheduler.submit(lambda x: x, val, key=key) for key,val in ctx.items()}
-            wrapper = _Wrapper(self.scheduler, self.predict, **ctx_futures)
-
         # Run the initial parameters for guessing purposes:
         _log.trace("Probability for initial parameters")
-        #self.predict(initial_guess, **ctx)
-        if use_futures and self.scheduler is not None:
-            wrapper(initial_guess).result()
-        else:
-            self.predict(initial_guess, **ctx)
+        self.predict(initial_guess, **ctx)
 
         if restart_trace is not None:
             chains = self.initialize_chains_from_trace(restart_trace)
             # TODO: check that the shape is valid with the existing parameters
         else:
             chains = self.initialize_new_chains(initial_guess, chains_per_parameter, chain_std_deviation, deterministic)
-        #sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.predict, kwargs=ctx, pool=self.scheduler)
-        if use_futures and self.scheduler is not None:
-            _log.info("Creating sampler with future wrapper")
-            sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, wrapper, pool=self.scheduler)
+        
+        if self.scheduler is None:
+            sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.predict, kwargs=ctx, pool=None)
         else:
-            _log.info("Creating sampler without futures")
-            sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.predict, kwargs=ctx, pool=self.scheduler)
+            wrapper = PredictWrapper(self.scheduler, self.predict, additional_mcmc_args.get('use_futures', True), **ctx)
+            sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, wrapper, pool=self.scheduler)
 
         if deterministic:
             from espei.rstate import numpy_rstate
