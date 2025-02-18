@@ -150,7 +150,7 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, legend_gene
     # so generate the legend without them, special casing only hyperplane for now
     # https://github.com/matplotlib/matplotlib/issues/5200/
     phases_without_hyperplane = [phase_name for phase_name in phases if phase_name != "__HYPERPLANE__"]
-    legend_handles, phase_color_map = phase_legend(phases_without_hyperplane)
+    legend_handles, phase_color_map = legend_generator(phases_without_hyperplane)
     # Force hyperplane color to black
     phase_color_map["__HYPERPLANE__"] = "black"
 
