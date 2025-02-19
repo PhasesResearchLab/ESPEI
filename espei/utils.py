@@ -50,6 +50,7 @@ class PredictWrapper:
     def __init__(self, client, f, **kwargs):
         self.f = f
         self.client = client
+        self.kwargs = kwargs
 
         # TODO: I'm debating whether to submit a self generating lambda function for the context or to scatter the context
         # as data. With scattering, the data will transfer before the worker starts anything, but I don't know
@@ -57,11 +58,11 @@ class PredictWrapper:
         # (it should only be once at the start), but I think if a worker dies, it could still generate the data again (although,
         # since the self generating function lives on a specific worker, I don't know what would happen if that specific worker
         # restarts. Memory and performance-wise, scattering vs submitting lambda function seems to be the same
-        self.kwargs = {key: self.client.submit(lambda x: x, val, key=key) for key,val in kwargs.items()}
-        #self.kwargs = {key: self.client.scatter(val, broadcast=True, hash=False) for key,val in kwargs.items()}
+        self.future_kwargs = {key: self.client.submit(lambda x: x, val, key=key) for key,val in self.kwargs.items()}
+        #self.future_kwargs = {key: self.client.scatter(val, broadcast=True, hash=False) for key,val in self.kwargs.items()}
     
     def __call__(self, x):
-        return self.client.submit(self.f, x, **self.kwargs)
+        return self.client.submit(self.f, x, **self.future_kwargs)
 
 class ImmediateClient(Client):
     """
@@ -71,11 +72,9 @@ class ImmediateClient(Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Not really a fan of disabling the active memory manager (AMM), although it's somewhat experimental in dask
-        # However, the AMM will delete any duplicates found across workers. The consequence of this is when
-        # the context is created on all workers, the AMM will remove all duplicates of the context except for 
-        # one worker, and all the dependent tasks will then be done on that single worker (and we won't see any benefit
-        # from parallelization).
+        # The active memory manager (AMM) removes any duplicate data found across workers,
+        # and any tasks that require said data will go to the one worker where it is retained on
+        # However, we want the context to remain on all workers to limit data transfer so we disable AMM
         _client = super(ImmediateClient, self)
         _client.amm.stop()
 

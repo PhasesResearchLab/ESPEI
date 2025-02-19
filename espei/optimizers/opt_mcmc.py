@@ -181,7 +181,8 @@ class EmceeOptimizer(OptimizerBase):
                     memory = []
                     for w in scheduler_info['workers']:
                         memory.append(float(scheduler_info['workers'][w]['metrics'].get('memory', 0)))
-                    _log.info('\rCurrent time (s): {:.1f}, Total memory (GB): {:.5f}, Average worker memory (GB): {:.5f}\n'.format(iter_curr_time - iter_start_time, np.sum(memory)/1e9, np.average(memory)/1e9))
+                    _log.info('Current time (s): %.1f, Total memory (GB): %.3f, Average worker memory (GB): %.3f\n', iter_curr_time - iter_start_time, np.sum(memory)/1e9, np.average(memory)/1e9)
+                    #self.scheduler.restart()
         except KeyboardInterrupt:
             pass
         _log.info('MCMC complete.')
@@ -270,7 +271,7 @@ class EmceeOptimizer(OptimizerBase):
         t0 = time.time()
         self.do_sampling(chains, iterations)
         tf = time.time()
-        _log.info('Fit time: {:.1f} seconds'.format(tf-t0))
+        _log.info('Fit time: %.1f seconds', tf-t0)
 
         # Post process
         optimal_params = optimal_parameters(sampler.chain, sampler.lnprobability)
