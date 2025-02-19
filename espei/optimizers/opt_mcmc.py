@@ -182,7 +182,11 @@ class EmceeOptimizer(OptimizerBase):
                     for w in scheduler_info['workers']:
                         memory.append(float(scheduler_info['workers'][w]['metrics'].get('memory', 0)))
                     _log.info('Current time (s): %.1f, Total memory (GB): %.3f, Average worker memory (GB): %.3f\n', iter_curr_time - iter_start_time, np.sum(memory)/1e9, np.average(memory)/1e9)
-                    #self.scheduler.restart()
+                    
+                    workers = list(self.scheduler.has_what().keys())
+                    if i % 3 == 0:
+                        self.scheduler.restart_workers([workers[0], workers[1], workers[4], workers[5]])
+                    self.wrapper.check_workers_have_futures()
         except KeyboardInterrupt:
             pass
         _log.info('MCMC complete.')
@@ -257,8 +261,8 @@ class EmceeOptimizer(OptimizerBase):
         if self.scheduler is None:
             sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.predict, kwargs=ctx, pool=None)
         else:
-            wrapper = PredictWrapper(self.scheduler, self.predict, **ctx)
-            sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, wrapper, pool=self.scheduler)
+            self.wrapper = PredictWrapper(self.scheduler, self.predict, **ctx)
+            sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.wrapper.predict, pool=self.scheduler)
 
         if deterministic:
             from espei.rstate import numpy_rstate

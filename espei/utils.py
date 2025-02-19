@@ -47,21 +47,35 @@ class PickleableTinyDB(TinyDB):
         self.insert_multiple(state['_tables']['_default'])
 
 class PredictWrapper:
+    """
+    A wrapper around predict that submits the context (kwargs) as futures and 
+    distributes among workers to continually submit context every time predict is called
+
+    This wrapper is used since emcee seems to be incompatible with using dask futures
+    as kwargs in the sampler
+    """
     def __init__(self, client, f, **kwargs):
         self.f = f
         self.client = client
         self.kwargs = kwargs
 
-        # TODO: I'm debating whether to submit a self generating lambda function for the context or to scatter the context
-        # as data. With scattering, the data will transfer before the worker starts anything, but I don't know
-        # if a worker that restarts will retain the data. The lambda function will transfer data after the worker starts
-        # (it should only be once at the start), but I think if a worker dies, it could still generate the data again (although,
-        # since the self generating function lives on a specific worker, I don't know what would happen if that specific worker
-        # restarts. Memory and performance-wise, scattering vs submitting lambda function seems to be the same
-        self.future_kwargs = {key: self.client.submit(lambda x: x, val, key=key) for key,val in self.kwargs.items()}
-        #self.future_kwargs = {key: self.client.scatter(val, broadcast=True, hash=False) for key,val in self.kwargs.items()}
+        # We can also use client.scatter, but a self-generating lambda function results in less futures to
+        # keep track of and performance/memory usage appears to be the same
+        self.future_kwargs = {key: self._submit_lambda_func(key, self.kwargs[key]) for key in self.kwargs}
+
+    def _submit_lambda_func(self, key, value):
+        return self.client.submit(lambda x: x, value, key=key)
+
+    def check_workers_have_futures(self):
+        """
+        If a future in the context was cancelled, then resubmit it
+        This is in case dask workers are restarted, they could still have access to the context
+        """
+        for key, future in self.future_kwargs.items():
+            if future.cancelled():
+                self.future_kwargs[key] = self._submit_lambda_func(key, self.kwargs[key])
     
-    def __call__(self, x):
+    def predict(self, x):
         return self.client.submit(self.f, x, **self.future_kwargs)
 
 class ImmediateClient(Client):
