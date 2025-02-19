@@ -174,7 +174,6 @@ class EmceeOptimizer(OptimizerBase):
                     self.save_sampler_state()
                     _log.trace('Acceptance ratios for parameters: %s', self.sampler.acceptance_fraction)
                 n = int((progbar_width) * float(i + 1) / iterations)
-                #_log.info("\r[%s%s] (%d of %d)\n", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
                 _log.info("\r[%s%s] (%d of %d)", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
                 if self.scheduler is not None:
                     iter_curr_time = time.time()
