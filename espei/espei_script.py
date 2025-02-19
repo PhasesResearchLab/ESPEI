@@ -251,7 +251,7 @@ def run_espei(run_settings):
                       deterministic=deterministic, restart_trace=restart_trace,
                       tracefile=tracefile, probfile=probfile,
                       mcmc_data_weights=data_weights,
-                      approximate_equilibrium=approximate_equilibrium
+                      approximate_equilibrium=approximate_equilibrium,
                       )
 
         optimizer.dbf.to_file(output_settings['output_db'], if_exists='overwrite')
