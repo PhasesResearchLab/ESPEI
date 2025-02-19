@@ -35,7 +35,7 @@ plot_mapping = {
 }
 
 
-def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs=None, tieline_plot_kwargs=None) -> plt.Axes:
+def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, legend_generator=phase_legend, plot_kwargs=None, tieline_plot_kwargs=None) -> plt.Axes:
     """
     Plot datapoints corresponding to the components, phases, and conditions.
 
@@ -53,6 +53,8 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs
         If True (default), plot the tie-lines from the data
     ax : matplotlib.Axes
         Default axes used if not specified.
+    legend_generator: callable
+        Function that creates legend handles and colors for list of phases.
     plot_kwargs : dict
         Additional keyword arguments to pass to the matplotlib plot function for points
     tieline_plot_kwargs : dict
@@ -148,7 +150,7 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, plot_kwargs
     # so generate the legend without them, special casing only hyperplane for now
     # https://github.com/matplotlib/matplotlib/issues/5200/
     phases_without_hyperplane = [phase_name for phase_name in phases if phase_name != "__HYPERPLANE__"]
-    legend_handles, phase_color_map = phase_legend(phases_without_hyperplane)
+    legend_handles, phase_color_map = legend_generator(phases_without_hyperplane)
     # Force hyperplane color to black
     phase_color_map["__HYPERPLANE__"] = "black"
 
