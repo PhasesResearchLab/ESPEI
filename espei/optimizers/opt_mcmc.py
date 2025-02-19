@@ -6,7 +6,7 @@ import warnings
 import numpy as np
 import emcee
 from espei.priors import PriorSpec, build_prior_specs, rv_zero
-from espei.utils import unpack_piecewise, optimal_parameters, PredictWrapper
+from espei.utils import unpack_piecewise, optimal_parameters, PredictWrapper, ImmediateClient
 from espei.error_functions.context import setup_context
 from .opt_base import OptimizerBase
 
@@ -175,17 +175,13 @@ class EmceeOptimizer(OptimizerBase):
                     _log.trace('Acceptance ratios for parameters: %s', self.sampler.acceptance_fraction)
                 n = int((progbar_width) * float(i + 1) / iterations)
                 _log.info("\r[%s%s] (%d of %d)", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
-                if self.scheduler is not None:
-                    iter_curr_time = time.time()
+                _log.info("Current time (s): %.1f", time.time() - iter_start_time)
+                if isinstance(self.scheduler, ImmediateClient):
                     scheduler_info = self.scheduler.scheduler_info()
                     memory = []
                     for w in scheduler_info['workers']:
                         memory.append(float(scheduler_info['workers'][w]['metrics'].get('memory', 0)))
-                    _log.info('Current time (s): %.1f, Total memory (GB): %.3f, Average worker memory (GB): %.3f\n', iter_curr_time - iter_start_time, np.sum(memory)/1e9, np.average(memory)/1e9)
-                    
-                    workers = list(self.scheduler.has_what().keys())
-                    if i % 3 == 0:
-                        self.scheduler.restart_workers([workers[0], workers[1], workers[4], workers[5]])
+                    _log.info("Total memory (GB): %.3f, Average worker memory (GB): %.3f", np.sum(memory)/1e9, np.average(memory)/1e9)
                     self.wrapper.check_workers_have_futures()
         except KeyboardInterrupt:
             pass
@@ -258,11 +254,11 @@ class EmceeOptimizer(OptimizerBase):
         else:
             chains = self.initialize_new_chains(initial_guess, chains_per_parameter, chain_std_deviation, deterministic)
         
-        if self.scheduler is None:
-            sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.predict, kwargs=ctx, pool=None)
-        else:
+        if isinstance(self.scheduler, ImmediateClient):
             self.wrapper = PredictWrapper(self.scheduler, self.predict, **ctx)
             sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.wrapper.predict, pool=self.scheduler)
+        else:
+            sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.predict, kwargs=ctx, pool=self.scheduler)
 
         if deterministic:
             from espei.rstate import numpy_rstate
@@ -275,7 +271,7 @@ class EmceeOptimizer(OptimizerBase):
         t0 = time.time()
         self.do_sampling(chains, iterations)
         tf = time.time()
-        _log.info('Fit time: %.1f seconds', tf-t0)
+        _log.info('Fit time (s): %.1f', tf-t0)
 
         # Post process
         optimal_params = optimal_parameters(sampler.chain, sampler.lnprobability)
