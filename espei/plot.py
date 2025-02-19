@@ -35,7 +35,7 @@ plot_mapping = {
 }
 
 
-def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, legend_generator = phase_legend, plot_kwargs=None, tieline_plot_kwargs=None) -> plt.Axes:
+def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, legend_generator=phase_legend, plot_kwargs=None, tieline_plot_kwargs=None) -> plt.Axes:
     """
     Plot datapoints corresponding to the components, phases, and conditions.
 
