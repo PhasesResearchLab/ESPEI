@@ -12,6 +12,7 @@ from .opt_base import OptimizerBase
 
 _log = logging.getLogger(__name__)
 
+
 class EmceeOptimizer(OptimizerBase):
     """
     An optimizer using an EnsembleSampler based on Goodman and Weare [1]
@@ -189,7 +190,7 @@ class EmceeOptimizer(OptimizerBase):
     def _fit(self, symbols, ds, prior=None, iterations=1000,
              chains_per_parameter=2, chain_std_deviation=0.1, deterministic=True,
              restart_trace=None, tracefile=None, probfile=None,
-             mcmc_data_weights=None, approximate_equilibrium=False
+             mcmc_data_weights=None, approximate_equilibrium=False,
              ):
         """
 
@@ -241,19 +242,15 @@ class EmceeOptimizer(OptimizerBase):
 
         prior_dict = self.get_priors(prior, symbols_to_fit, initial_guess)
         ctx.update(prior_dict)
-
         # Run the initial parameters for guessing purposes:
         _log.trace("Probability for initial parameters")
         self.predict(initial_guess, **ctx)
-
         if restart_trace is not None:
             chains = self.initialize_chains_from_trace(restart_trace)
             # TODO: check that the shape is valid with the existing parameters
         else:
             chains = self.initialize_new_chains(initial_guess, chains_per_parameter, chain_std_deviation, deterministic)
-
         sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.predict, kwargs=ctx, pool=self.scheduler)
-
         if deterministic:
             from espei.rstate import numpy_rstate
             sampler.random_state = numpy_rstate
