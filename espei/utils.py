@@ -62,38 +62,29 @@ class ImmediateClient(Client):
         _client.amm.stop()
         self.future_kwargs = {}
 
-    def _check_workers_have_futures(self, kwargs):
-        """If a future in the context was cancelled, then resubmit it
-        
-        This is in case dask workers are restarted, they could still have access to the context
-        """
-        _client = super(ImmediateClient, self)
-        for key in kwargs:
-            if key not in self.future_kwargs:
-                self.future_kwargs[key] = _client.submit(lambda x: x, kwargs[key], key=key)
-            elif self.future_kwargs[key].cancelled():
-                self.future_kwargs[key] = _client.submit(lambda x: x, kwargs[key], key=key)
-
     def map(self, f, *iterators, **kwargs):
         """Map a function on a sequence of arguments.
 
         Any keyword arguments are passed to distributed.Client.map
         """
+        _client = super(ImmediateClient, self)
+
         # This is specific to emcee, where f, args, kwargs are put into a function wrapper object
         # We want to submit the kwargs to the client before evaluating func which allows us
         # to reuse the submitted context data
         # NOTE: in emcee 3.x, _function_wrapper has been renamed to FunctionWrapper
         if isinstance(f, _function_wrapper):
             func = f.f
-            kwargs = f.kwargs
-            self._check_workers_have_futures(kwargs)
+            # Submit kwargs as futures if not done so
+            # If a future in the context was cancelled, then also resubmit it
+            #   This is in case dask workers are restarted, they could still have access to the context
+            for key in f.kwargs:
+                if key not in self.future_kwargs or self.future_kwargs[key].cancelled():
+                    self.future_kwargs[key] = _client.submit(lambda x: x, f.kwargs[key], key=key)
         else:
             func = f
 
-        _client = super(ImmediateClient, self)
-        params = list(*[list(it) for it in iterators])
-        futures = [_client.submit(func, p, **self.future_kwargs) for p in params]
-        result = _client.gather(futures)
+        result = _client.gather(_client.map(func, *[list(it) for it in iterators], **self.future_kwargs))
         return result
 
 
