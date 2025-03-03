@@ -6,7 +6,7 @@ import warnings
 import numpy as np
 import emcee
 from espei.priors import PriorSpec, build_prior_specs, rv_zero
-from espei.utils import unpack_piecewise, optimal_parameters, PredictWrapper, ImmediateClient
+from espei.utils import unpack_piecewise, optimal_parameters, ImmediateClient
 from espei.error_functions.context import setup_context
 from .opt_base import OptimizerBase
 
@@ -176,13 +176,11 @@ class EmceeOptimizer(OptimizerBase):
                 n = int((progbar_width) * float(i + 1) / iterations)
                 _log.info("\r[%s%s] (%d of %d)", '#' * n, ' ' * (progbar_width - n), i + 1, iterations)
                 _log.info("Current time (s): %.1f", time.time() - iter_start_time)
+                # Specific case to ImmediateClient to output memory usage
                 if isinstance(self.scheduler, ImmediateClient):
                     scheduler_info = self.scheduler.scheduler_info()
-                    memory = []
-                    for w in scheduler_info['workers']:
-                        memory.append(float(scheduler_info['workers'][w]['metrics'].get('memory', 0)))
-                    _log.info("Total memory (GB): %.3f, Average worker memory (GB): %.3f", np.sum(memory)/1e9, np.average(memory)/1e9)
-                    self.wrapper.check_workers_have_futures()
+                    memory = [float(worker['metrics'].get('memory', 0)) for worker in scheduler_info['workers'].values()]
+                    _log.info("Total memory (GB): %.3f, Min/max worker memory (GB): [%.3f, %.3f]", np.sum(memory)/1e9, np.amin(memory)/1e9, np.amax(memory)/1e9)
         except KeyboardInterrupt:
             pass
         _log.info('MCMC complete.')
@@ -253,12 +251,8 @@ class EmceeOptimizer(OptimizerBase):
             # TODO: check that the shape is valid with the existing parameters
         else:
             chains = self.initialize_new_chains(initial_guess, chains_per_parameter, chain_std_deviation, deterministic)
-        
-        if isinstance(self.scheduler, ImmediateClient):
-            self.wrapper = PredictWrapper(self.scheduler, self.predict, **ctx)
-            sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.wrapper.predict, pool=self.scheduler)
-        else:
-            sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.predict, kwargs=ctx, pool=self.scheduler)
+
+        sampler = emcee.EnsembleSampler(chains.shape[0], initial_guess.size, self.predict, kwargs=ctx, pool=self.scheduler)
 
         if deterministic:
             from espei.rstate import numpy_rstate
