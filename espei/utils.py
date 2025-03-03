@@ -63,8 +63,8 @@ class ImmediateClient(Client):
         self.future_kwargs = {}
 
     def _check_workers_have_futures(self, kwargs):
-        """
-        If a future in the context was cancelled, then resubmit it
+        """If a future in the context was cancelled, then resubmit it
+        
         This is in case dask workers are restarted, they could still have access to the context
         """
         _client = super(ImmediateClient, self)
@@ -75,6 +75,10 @@ class ImmediateClient(Client):
                 self.future_kwargs[key] = _client.submit(lambda x: x, kwargs[key], key=key)
 
     def map(self, f, *iterators, **kwargs):
+        """Map a function on a sequence of arguments.
+
+        Any keyword arguments are passed to distributed.Client.map
+        """
         # This is specific to emcee, where f, args, kwargs are put into a function wrapper object
         # We want to submit the kwargs to the client before evaluating func which allows us
         # to reuse the submitted context data
