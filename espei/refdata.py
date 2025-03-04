@@ -40,9 +40,10 @@ def find_and_insert_user_refstate(entry_point_plugin_name='espei.reference_state
   ``BOCK2015`` and  ``BOCK2015SER``, which define the reference states.
 
   """
-  import pkg_resources
+  from importlib.metadata import entry_points
+
   found_refstates = []
-  for entry_point in pkg_resources.iter_entry_points(entry_point_plugin_name):
+  for entry_point in entry_points(group=entry_point_plugin_name):
     user_module = entry_point.load()
     refstate_name = entry_point.name
     namespace[refstate_name] = getattr(user_module, refstate_name)
