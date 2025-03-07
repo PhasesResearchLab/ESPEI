@@ -81,10 +81,9 @@ class ImmediateClient(Client):
             for key in f.kwargs:
                 if key not in self.future_kwargs or self.future_kwargs[key].cancelled():
                     self.future_kwargs[key] = _client.submit(lambda x: x, f.kwargs[key], key=key)
+            result = _client.gather(_client.map(func, *[list(it) for it in iterators], **self.future_kwargs))
         else:
-            func = f
-
-        result = _client.gather(_client.map(func, *[list(it) for it in iterators], **self.future_kwargs))
+            result = _client.gather(_client.map(f, *[list(it) for it in iterators], **kwargs))
         return result
 
 
