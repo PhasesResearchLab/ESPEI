@@ -16,7 +16,7 @@ from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from pycalphad import Database, Model, ReferenceState, variables as v
 from pycalphad.core.utils import unpack_species, get_pure_elements, filter_phases
 from pycalphad import Workspace
-from pycalphad.property_framework import IsolatedPhase, JanssonDerivative, ModelComputedProperty
+from pycalphad.property_framework import IsolatedPhase, ModelComputedProperty
 from pycalphad.property_framework.metaproperties import find_first_compset
 from pycalphad.core.solver import Solver, SolverResult
 
@@ -277,12 +277,12 @@ def get_thermochemical_data(dbf, comps, phases, datasets, parameters, model=None
     
     params_keys = []
 
-    # XXX: This mutates the global pycalphad namespace
+    # This mutates the global pycalphad namespace
     for key in parameters.keys():
         if not hasattr(v, key):
             setattr(v, key, v.IndependentPotential(key))
         params_keys.append(getattr(v, key))
-        # XXX: Mutates argument to function
+        # Mutates argument to function
         dbf.symbols.pop(key,None)
         
     # phase by phase, then property by property, then by model exclusions
@@ -341,7 +341,6 @@ def get_thermochemical_data(dbf, comps, phases, datasets, parameters, model=None
                 curr_data = filter_temperatures(curr_data)
                 calculate_dict = get_prop_samples(curr_data, constituents)
                 model_cls = model.get(phase_name, Model)
-                #mod = model_cls(dbf, comps, phase_name, parameters=symbols_to_fit)
                 mod = model_cls(dbf, comps, phase_name)
                 if prop.endswith('_FORM'):
                     output = ''.join(prop.split('_')[:-1])+"R"
@@ -380,7 +379,6 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
     phase_name = calc_data['phase_name']
     models = calc_data['model']  # Dict[PhaseName: Model]
     output = calc_data['output']
-    #phase_record_factory = calc_data['phase_record_factory']
     sample_values = calc_data['calculate_dict']['values']
     str_statevar_dict = calc_data['str_statevar_dict']
 
@@ -420,9 +418,7 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         # Need to be careful here. Making a workspace erases the custom models that have some contributions excluded (which are passed in). Not sure exactly why.
         # The models themselves are preserved, but the ones inside the workspace's phase_record_factory get clobbered.
         # We workaround this by replacing the phase_record_factory models with ours, but this is definitely a hack we'd like to avoid.
-        #wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, phase_record_factory=phase_record_factory, solver=NoSolveSolver())
         wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, solver=NoSolveSolver())
-        #### Do we need the degrees of freedom as a condition here? Or does this break what is happening next?
         # We then get a composition set and we use a special "NoSolveSolver" to
         # ensure that we don't change from the data-specified DOF.
         compset = find_first_compset(phase_name, wks)
