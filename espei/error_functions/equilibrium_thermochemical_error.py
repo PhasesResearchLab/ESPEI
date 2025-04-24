@@ -12,14 +12,13 @@ import tinydb
 from tinydb import where
 from scipy.stats import norm
 from pycalphad import Database, Model, ReferenceState, variables as v
-from pycalphad.core.utils import instantiate_models, filter_phases, extract_parameters, unpack_species, unpack_condition
+from pycalphad.core.utils import instantiate_models, filter_phases, unpack_species, unpack_condition
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from pycalphad import Workspace, as_property
 from pycalphad.property_framework import JanssonDerivative
 
 from espei.error_functions.residual_base import ResidualFunction, residual_function_registry
 from espei.phase_models import PhaseModelSpecification
-from espei.shadow_functions import update_phase_record_parameters
 from espei.typing import SymbolName
 from espei.utils import PickleableTinyDB, database_symbols_to_fit
 
@@ -74,23 +73,20 @@ def build_eqpropdata(data: tinydb.database.Document,
         'SM':   0.2,  # J/K-mol
         'CPM':  0.2,  # J/K-mol
     }
-
-    #params_keys, _ = extract_parameters(parameters)
     
     params_keys = []
 
-    # XXX: This mutates the global pycalphad namespace
+    # This mutates the global pycalphad namespace
     for key in parameters.keys():
         if not hasattr(v, key):
             setattr(v, key, v.IndependentPotential(key))
         params_keys.append(getattr(v, key))
-        # XXX: Mutates argument to function
+        # Mutates argument to function
         dbf.symbols.pop(key,None)
 
     data_comps = list(set(data['components']).union({'VA'}))
     species = sorted(unpack_species(dbf, data_comps), key=str)
     data_phases = filter_phases(dbf, species, candidate_phases=data['phases'])
-    #models = instantiate_models(dbf, species, data_phases, model=model, parameters=parameters)
     models = instantiate_models(dbf, species, data_phases, model=model)
     output = data['output']
     property_output = output.split('_')[0]  # property without _FORM, _MIX, etc.
@@ -112,15 +108,6 @@ def build_eqpropdata(data: tinydb.database.Document,
     comp_conds = OrderedDict([(v.X(key[2:]), unpack_condition(data['conditions'][key])) for key in sorted(data['conditions'].keys()) if key.startswith('X_')])
 
     phase_record_factory = PhaseRecordFactory(dbf, species, {**pot_conds, **comp_conds, **parameters}, models)
-    #wks = Workspace(dbf, species, data_phases, {**pot_conds, **comp_conds, **parameters}, models=model)
-    #phase_record_factory = wks.phase_record_factory
-
-    # Now we need to unravel the composition conditions
-    # (from Dict[v.X, Sequence[float]] to Sequence[Dict[v.X, float]]), since the
-    # composition conditions are only broadcast against the potentials, not
-    # each other. Each individual composition needs to be computed
-    # independently, since broadcasting over composition cannot be turned off
-    # in pycalphad.
     rav_comp_conds = [OrderedDict(zip(comp_conds.keys(), pt_comps)) for pt_comps in zip(*comp_conds.values())]
 
     # Build weights, should be the same size as the values
@@ -217,7 +204,6 @@ def calc_prop_differences(eqpropdata: EqPropData,
     pot_conds = eqpropdata.potential_conds
     models = eqpropdata.models
     phase_record_factory = eqpropdata.phase_record_factory
-    #update_phase_record_parameters(phase_record_factory, parameters)
     params_dict = OrderedDict(zip(map(str, eqpropdata.params_keys), parameters))
     output = as_property(eqpropdata.output)
     weights = np.array(eqpropdata.weight, dtype=np.float64)
@@ -229,9 +215,7 @@ def calc_prop_differences(eqpropdata: EqPropData,
     for comp_conds in eqpropdata.composition_conds:
         cond_dict = OrderedDict(**pot_conds, **comp_conds, **params_dict)
         wks.conditions = cond_dict
-        #wks.parameters = params_dict  # these reset models and phase_record_factory through depends_on -> lose Model.shift_reference_state, etc.
         wks.models = models
-        #wks.phase_record_factory = phase_record_factory
         vals = wks.get(output)
         calculated_data.extend(np.atleast_1d(vals).tolist())
         gradient_props = [JanssonDerivative(output, key) for key in params_dict]
@@ -332,7 +316,7 @@ class EquilibriumPropertyResidual(ResidualFunction):
         residuals = []
         weights = []
         for data in self.property_data:
-            dataset_residuals, dataset_weights = calc_prop_differences(data, parameters)
+            dataset_residuals, dataset_weights, dataset_grads = calc_prop_differences(data, parameters)
             residuals.extend(dataset_residuals.tolist())
             weights.extend(dataset_weights.tolist())
         return residuals, weights
