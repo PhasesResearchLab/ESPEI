@@ -50,8 +50,7 @@ def target_chempots_from_activity(component, parameters, target_activity, temper
     numpy.ndarray
         Array of experimental chemical potentials
     """
-    # acr_i = exp((mu_i - mu_i^{ref})/(RT))
-    # so mu_i = R*T*ln(acr_i) + mu_i^{ref}
+    
     ref_chempot = wks_ref.get(v.MU(component))
     exp_chem_pots = v.R * temperatures * np.log(target_activity) + ref_chempot
     
@@ -85,12 +84,12 @@ def calculate_activity_residuals(dbf, comps, phases, datasets, parameters=None, 
 
     params_keys = []
 
-    # XXX: This mutates the global pycalphad namespace
+    # This mutates the global pycalphad namespace
     for key in parameters.keys():
         if not hasattr(v, key):
             setattr(v, key, v.IndependentPotential(key))
         params_keys.append(getattr(v, key))
-        # XXX: Mutates argument to function
+        # Mutates argument to function
         dbf.symbols.pop(key,None)
         
     activity_datasets = datasets.search(
@@ -268,3 +267,4 @@ class ActivityResidual(ResidualFunction):
 
 
 residual_function_registry.register(ActivityResidual)
+
