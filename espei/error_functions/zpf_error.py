@@ -455,9 +455,9 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
     gradients = np.concatenate(gradients)
     if np.any(np.logical_or(np.isinf(driving_forces), np.isnan(driving_forces))):
         if len(parameters) == 1:
-            return -np.inf, -np.inf, 1
+            return -np.inf, -np.inf
         else:
-            return -np.inf, np.ones(len(parameters))*(-np.inf), np.ones(len(parameters))
+            return -np.inf, np.ones(len(parameters))*(-np.inf)
         
     log_probabilites = norm.logpdf(driving_forces, loc=0, scale=1000/data_weight/weights)
     grad_log_probs = -driving_forces*gradients.T/(1000/data_weight/weights)**2
