@@ -238,10 +238,19 @@ def estimate_hyperplane(phase_region: PhaseRegion, dbf: Database, parameters: np
             MU_values = [wks.get(v.MU(comp)) for comp in active_pure_elements]
             num_phases = np.sum(wks.eq.Phase.squeeze() != '')
             Y_values = wks.eq.Y.squeeze()
+            # TODO: we need better detection for equilibria low-rank composition
+            # subspaces of the subspace of interest.
+            # This one covers stoichiometric phases, but would fail to capture
+            # two stoichiometric phases in a ternary or a single phase
+            # pseudo-binary in a ternary (and higher order generalizations).
+            # Granted this might be an upstream issue in PyCalphad
             no_internal_dof = np.all((np.isclose(Y_values, 1.)) | np.isnan(Y_values))
             if (num_phases == 1) and no_internal_dof:
+                _log.trace("The equilibrium computed at the vertex for %s with composition conditions %s in the phase region %s has underdetermined chemical potentials and will not be considered in the target hyperplane", vertex.phase_name, vertex.comp_conds, phase_region.eq_str())
                 target_hyperplane_chempots.append(np.full_like(MU_values, np.nan))
             else:
+                if np.any(np.isnan(MU_values)):
+                    _log.info("The equilibrium computed at the vertex for %s with composition conditions %s in the phase region %s has NaN chemical potentials %s", vertex.phase_name, vertex.comp_conds, phase_region.eq_str(), np.asarray(MU_values))
                 target_hyperplane_chempots.append(MU_values)
     target_hyperplane_mean_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float64)
     return target_hyperplane_mean_chempots
