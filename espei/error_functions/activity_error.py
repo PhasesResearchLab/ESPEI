@@ -50,10 +50,10 @@ def target_chempots_from_activity(component, parameters, target_activity, temper
     numpy.ndarray
         Array of experimental chemical potentials
     """
-    
+
     ref_chempot = wks_ref.get(v.MU(component))
     exp_chem_pots = v.R * temperatures * np.log(target_activity) + ref_chempot
-    
+
     gradient_props = [JanssonDerivative(v.MU(component), key) for key in parameters]
     gradients = wks_ref.get(*gradient_props)
     if type(gradients) is list:
@@ -91,7 +91,7 @@ def calculate_activity_residuals(dbf, comps, phases, datasets, parameters=None, 
         params_keys.append(getattr(v, key))
         # Mutates argument to function
         dbf.symbols.pop(key,None)
-        
+
     activity_datasets = datasets.search(
         (tinydb.where('output').test(lambda x: 'ACR' in x)) &
         (tinydb.where('components').test(lambda x: set(x).issubset(comps))))
@@ -196,8 +196,8 @@ def calculate_activity_error(dbf, comps, phases, datasets, parameters=None, phas
     residuals, weights, gradients = calculate_activity_residuals(dbf, comps, phases, datasets, parameters=parameters, phase_models=phase_models, callables=callables, data_weight=data_weight)
     likelihood = np.sum(norm(0, scale=weights).logpdf(residuals))
     if len(gradients) == 0:
-        likelihood_grads = []
-    else: 
+        likelihood_grads = np.zeros(len(parameters))
+    else:
         gradients = np.concatenate(gradients)
         derivative = -np.array(residuals)*np.array(gradients).T/np.array(weights)**2
         if derivative.ndim == 1:
@@ -267,4 +267,3 @@ class ActivityResidual(ResidualFunction):
 
 
 residual_function_registry.register(ActivityResidual)
-
