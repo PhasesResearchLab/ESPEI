@@ -68,17 +68,11 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
         If an error is found in the dataset
     """
     is_equilibrium = 'solver' not in dataset.keys() and dataset['output'] != 'ZPF'
-    is_activity = dataset['output'].startswith('ACR')
     components = dataset['components']
     conditions = dataset['conditions']
     values = dataset['values']
     phases = dataset['phases']
     if is_equilibrium:
-        conditions = dataset['conditions']
-        comp_conditions = {k: v for k, v in conditions.items() if k.startswith('X_')}
-    if is_activity:
-        ref_state = dataset['reference_state']
-    elif is_equilibrium:
         for el, vals in dataset.get('reference_states', {}).items():
             if 'phase' not in vals:
                 raise DatasetError(f'Reference state for element {el} must define the `phase` key with the reference phase name.')
@@ -87,6 +81,8 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
     num_pressure = np.atleast_1d(conditions['P']).size
     num_temperature = np.atleast_1d(conditions['T']).size
     if is_equilibrium:
+        conditions = dataset['conditions']
+        comp_conditions = {k: v for k, v in conditions.items() if k.startswith('X_')}
         values_shape = np.array(values).shape
         # check each composition condition is the same shape
         num_x_conds = [len(v) for _, v in comp_conditions.items()]
@@ -98,6 +94,8 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
 
     # check that all of the components used match the components entered
     if is_equilibrium:  # and is_activity
+        conditions = dataset['conditions']
+        comp_conditions = {k: v for k, v in conditions.items() if k.startswith('X_')}
         components_entered = set(components)
         components_used = set()
         components_used.update({c.split('_')[1] for c in comp_conditions.keys()})
@@ -108,7 +106,7 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
 
     if dataset["output"] == "ZPF":
         dataset_obj = ZPFDataset(**dataset)
-    elif is_activity:
+    elif dataset['output'].startswith('ACR'):
         dataset_obj = ActivityPropertyDataset(**dataset)
     elif is_equilibrium:
         dataset_obj = EquilibriumPropertyDataset(**dataset)
