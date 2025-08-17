@@ -7,12 +7,8 @@ from tinydb import where
 
 from espei.utils import PickleableTinyDB
 
-from .dataset_models import Dataset, ActivityPropertyDataset, BroadcastSinglePhaseFixedConfigurationDataset, EquilibriumPropertyDataset, ZPFDataset
+from .dataset_models import Dataset, ActivityPropertyDataset, BroadcastSinglePhaseFixedConfigurationDataset, EquilibriumPropertyDataset, ZPFDataset, DatasetError
 
-
-class DatasetError(Exception):
-    """Exception raised when datasets are invalid."""
-    pass
 
 
 def recursive_map(f, x):
@@ -73,10 +69,7 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
     """
     is_equilibrium = 'solver' not in dataset.keys() and dataset['output'] != 'ZPF'
     is_activity = dataset['output'].startswith('ACR')
-    is_zpf = dataset['output'] == 'ZPF'
     is_single_phase = 'solver' in dataset.keys()
-    if not any((is_equilibrium, is_single_phase, is_zpf)):
-        raise DatasetError("Cannot determine type of dataset")
     components = dataset['components']
     conditions = dataset['conditions']
     values = dataset['values']
@@ -121,21 +114,6 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
         conditions_shape = (num_pressure, num_temperature, num_configs)
         if conditions_shape != values_shape:
             raise DatasetError('Shape of conditions (P, T, configs): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
-    elif is_zpf:
-        values_shape = (len(values))
-        conditions_shape = (num_temperature)
-        if conditions_shape != values_shape:
-            raise DatasetError('Shape of conditions (T): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
-
-    # check that all of the correct phases are present
-    if is_zpf:
-        phases_entered = set(phases)
-        phases_used = set()
-        for zpf in values:
-            for tieline in zpf:
-                phases_used.add(tieline[0])
-        if len(phases_entered - phases_used) > 0:
-            raise DatasetError('Phases entered {} do not match phases used {}.'.format(phases_entered, phases_used))
 
     # check that all of the components used match the components entered
     components_entered = set(components)
@@ -152,40 +130,8 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
         components_used.update({c.split('_')[1] for c in comp_conditions.keys()})
         # mass balance of components
         comp_dof = len(comp_conditions.keys())
-    elif is_zpf:
-        for zpf in values:
-            for tieline in zpf:
-                tieline_comps = set(tieline[1])
-                components_used.update(tieline_comps)
-                if len(components_entered - tieline_comps - {'VA'}) != 1:
-                    raise DatasetError('Degree of freedom error for entered components {} in tieline {} of ZPF {}'.format(components_entered, tieline, zpf))
-        # handle special case of mass balance in ZPFs
-        comp_dof = 1
-    if len(components_entered - components_used - {'VA'}) > comp_dof or len(components_used - components_entered) > 0:
+    if (is_single_phase or is_activity or is_equilibrium) and (len(components_entered - components_used - {'VA'}) > comp_dof or len(components_used - components_entered) > 0):
         raise DatasetError('Components entered {} do not match components used {}.'.format(components_entered, components_used))
-
-    # check that the ZPF values are formatted properly
-    if is_zpf:
-        for zpf in values:
-            for tieline in zpf:
-                phase = tieline[0]
-                component_list = tieline[1]
-                mole_fraction_list = tieline[2]
-                # check that the phase is a string, components a list of strings,
-                #  and the fractions are a list of float
-                if not isinstance(phase, str):
-                    raise DatasetError('The first element in the tieline {} for the ZPF point {} should be a string. Instead it is a {} of value {}'.format(tieline, zpf, type(phase), phase))
-                if not all([isinstance(comp, str) for comp in component_list]):
-                    raise DatasetError('The second element in the tieline {} for the ZPF point {} should be a list of strings. Instead it is a {} of value {}'.format(tieline, zpf, type(component_list), component_list))
-                if not all([(isinstance(mole_frac, (int, float)) or mole_frac is None)  for mole_frac in mole_fraction_list]):
-                    raise DatasetError('The last element in the tieline {} for the ZPF point {} should be a list of numbers. Instead it is a {} of value {}'.format(tieline, zpf, type(mole_fraction_list), mole_fraction_list))
-                # check that the shape of components list and mole fractions list is the same
-                if len(component_list) != len(mole_fraction_list):
-                    raise DatasetError('The length of the components list and mole fractions list in tieline {} for the ZPF point {} should be the same.'.format(tieline, zpf))
-                # check that all mole fractions are less than one
-                mf_sum = np.nansum(np.array(mole_fraction_list, dtype=np.float64))
-                if any([mf is not None for mf in mole_fraction_list]) and mf_sum > 1.0:
-                    raise DatasetError('Mole fractions for tieline {} for the ZPF point {} sum to greater than one.'.format(tieline, zpf))
 
     # check that the site ratios are valid as well as site occupancies, if applicable
     if is_single_phase:
@@ -206,7 +152,7 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
                     if isinstance(subl, (list, tuple)) and sorted(subl) != subl:
                         raise DatasetError('Sublattice {} in configuration {} is must be sorted in alphabetic order ({})'.format(subl, configuration, sorted(subl)))
 
-    if is_zpf:
+    if dataset["output"] == "ZPF":
         dataset_obj = ZPFDataset(**clean_dataset(dataset))
     elif is_activity:
         dataset_obj = ActivityPropertyDataset(**clean_dataset(dataset))
@@ -248,20 +194,7 @@ def clean_dataset(dataset: dict[str, Any]) -> dict[str, Any]:
         if occupancies is not None:
             solver["sublattice_occupancies"] = recursive_map(float, occupancies)
 
-    if dataset["output"] == "ZPF":
-        values = dataset["values"]
-        new_values = []
-        for tieline in values:
-            new_tieline = []
-            for tieline_point in tieline:
-                if all([comp is None for comp in tieline_point[2]]):
-                    # this is a null tieline point
-                    new_tieline.append(tieline_point)
-                else:
-                    new_tieline.append([tieline_point[0], tieline_point[1], recursive_map(float, tieline_point[2])])
-            new_values.append(new_tieline)
-        dataset["values"] = new_values
-    else:
+    if dataset["output"] != "ZPF":
         # values should be all numerical
         dataset["values"] = recursive_map(float, dataset["values"])
 

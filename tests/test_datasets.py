@@ -4,6 +4,7 @@ from espei.datasets import DatasetError, check_dataset, clean_dataset, apply_tag
 
 from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, LI_SN_LIQUID_DATA, dataset_multi_valid_ternary
 from .fixtures import datasets_db
+from pydantic import ValidationError
 
 dataset_single_valid = {
     "components": ["AL", "NI", "VA"],
@@ -294,6 +295,21 @@ dataset_multi_mole_fractions_as_percents = {
     ],
 }
 
+dataset_zpf_negative_mole_fraction = {
+    "components": ["AL", "NI", "VA"],
+    "phases": ["AL3NI2", "BCC_B2"],
+    "conditions": {
+        "P": 101325,
+        "T": [1348]
+    },
+    "output": "ZPF",
+    "values": [
+        [["AL3NI2", ["NI"], [-0.5]], ["BCC_B2", ["NI"], [None]]], # mole fraction is negative
+    ],
+}
+
+
+
 dataset_single_unsorted_interaction = {
     "components": ["AL", "NI", "VA"],
     "phases": ["BCC_B2"],
@@ -382,7 +398,7 @@ def test_check_datasets_raises_with_incorrect_components():
 
 def test_check_datasets_raises_with_malformed_zpf():
     """Passed datasets that have malformed ZPF values should raise."""
-    with pytest.raises(DatasetError):
+    with pytest.raises((DatasetError, ValidationError)):
         check_dataset(dataset_multi_malformed_zpfs_components_not_list)
     with pytest.raises(DatasetError):
         check_dataset(dataset_multi_malformed_zpfs_fractions_do_not_match_components)
@@ -409,6 +425,12 @@ def test_check_datasets_raises_with_zpf_fractions_greater_than_one():
         check_dataset(dataset_multi_mole_fractions_as_percents)
 
 
+def test_check_datasets_raises_with_negative_zpf_fractions():
+    """Passed datasets that have negative mole fractions should raise."""
+    with pytest.raises(DatasetError):
+        check_dataset(dataset_zpf_negative_mole_fraction)
+
+
 def test_check_datasets_raises_with_unsorted_interactions():
     """Passed datasets that have sublattice interactions not in sorted order should raise."""
     with pytest.raises(DatasetError):
@@ -425,7 +447,7 @@ def test_datasets_convert_thermochemical_string_values_producing_correct_value(d
 
 def test_datasets_convert_zpf_string_values_producing_correct_value(datasets_db):
     """Strings where floats are expected should give correct answers for ZPF datasets"""
-    ds = clean_dataset(CU_MG_DATASET_ZPF_STRING_VALUES)
+    ds = check_dataset(CU_MG_DATASET_ZPF_STRING_VALUES).model_dump()
     assert np.issubdtype(np.array([t[0][2] for t in ds['values']]).dtype, np.number)
     assert np.issubdtype(np.array(ds['conditions']['T']).dtype, np.number)
     assert np.issubdtype(np.array(ds['conditions']['P']).dtype, np.number)
