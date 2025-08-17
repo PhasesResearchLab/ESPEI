@@ -58,7 +58,7 @@ class ActivityDataReferenceState(BaseModel):
 # TODO: refactor to merge this with EquilibriumPropertyDataset
 class ActivityPropertyDataset(Dataset):
     components: list[ComponentName] = Field(min_length=1)
-    phases: list[PhaseName] = Field(min_length=1, max_length=1)
+    phases: list[PhaseName] = Field(min_length=1)
     conditions: dict[str, float | list[float]]
     reference_state: ActivityDataReferenceState
     output: str
@@ -77,7 +77,7 @@ class ReferenceStates(BaseModel):
 
 class EquilibriumPropertyDataset(Dataset):
     components: list[ComponentName] = Field(min_length=1)
-    phases: list[PhaseName] = Field(min_length=1, max_length=1)
+    phases: list[PhaseName] = Field(min_length=1)
     conditions: dict[str, float | list[float]]
     reference_states: dict[ComponentName, ReferenceStates]
     output: str
