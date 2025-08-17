@@ -1,6 +1,6 @@
 import fnmatch, json, os
 from typing import Any, Dict, List, TypeAlias
-
+import warnings
 import numpy as np
 from tinydb.storages import MemoryStorage
 from tinydb import where
@@ -153,13 +153,13 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
                         raise DatasetError('Sublattice {} in configuration {} is must be sorted in alphabetic order ({})'.format(subl, configuration, sorted(subl)))
 
     if dataset["output"] == "ZPF":
-        dataset_obj = ZPFDataset(**clean_dataset(dataset))
+        dataset_obj = ZPFDataset(**dataset)
     elif is_activity:
-        dataset_obj = ActivityPropertyDataset(**clean_dataset(dataset))
+        dataset_obj = ActivityPropertyDataset(**dataset)
     elif is_equilibrium:
-        dataset_obj = EquilibriumPropertyDataset(**clean_dataset(dataset))
+        dataset_obj = EquilibriumPropertyDataset(**dataset)
     elif is_single_phase:
-        dataset_obj = BroadcastSinglePhaseFixedConfigurationDataset(**clean_dataset(dataset))
+        dataset_obj = BroadcastSinglePhaseFixedConfigurationDataset(**dataset)
     else:
         raise ValueError(f"Unknown dataset type for dataset {dataset}")
     return dataset_obj
@@ -167,37 +167,9 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
 
 def clean_dataset(dataset: dict[str, Any]) -> dict[str, Any]:
     """
-    Clean an ESPEI dataset dictionary.
-
-    Parameters
-    ----------
-    dataset: Dataset
-        Dictionary of the standard ESPEI dataset.   dataset : dic
-
-    Returns
-    -------
-    Dataset
-        Modified dataset that has been cleaned
-
-    Notes
-    -----
-    Assumes a valid, checked dataset. Currently handles
-    * Converting expected numeric values to floats
-
+    No-op
     """
-    dataset["conditions"] = {k: recursive_map(float, v) for k, v in dataset["conditions"].items()}
-
-    solver = dataset.get("solver")
-    if solver is not None:
-        solver["sublattice_site_ratios"] = recursive_map(float, solver["sublattice_site_ratios"])
-        occupancies = solver.get("sublattice_occupancies")
-        if occupancies is not None:
-            solver["sublattice_occupancies"] = recursive_map(float, occupancies)
-
-    if dataset["output"] != "ZPF":
-        # values should be all numerical
-        dataset["values"] = recursive_map(float, dataset["values"])
-
+    warnings.warn(f"clean_dataset deprecated will be removed in ESPEI 0.11. Behavior has been migrated to the pydantic dataset implementations in espei.datasets.dataset_models.", DeprecationWarning)
     return dataset
 
 

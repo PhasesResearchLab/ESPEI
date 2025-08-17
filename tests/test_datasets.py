@@ -1,6 +1,7 @@
+from copy import deepcopy
 import pytest
 import numpy as np
-from espei.datasets import DatasetError, check_dataset, clean_dataset, apply_tags
+from espei.datasets import DatasetError, check_dataset, apply_tags
 
 from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, LI_SN_LIQUID_DATA, dataset_multi_valid_ternary
 from .fixtures import datasets_db
@@ -439,7 +440,7 @@ def test_check_datasets_raises_with_unsorted_interactions():
 
 def test_datasets_convert_thermochemical_string_values_producing_correct_value(datasets_db):
     """Strings where floats are expected should give correct answers for thermochemical datasets"""
-    ds = clean_dataset(CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES)
+    ds = check_dataset(CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES).model_dump()
     assert np.issubdtype(np.array(ds['values']).dtype, np.number)
     assert np.issubdtype(np.array(ds['conditions']['T']).dtype, np.number)
     assert np.issubdtype(np.array(ds['conditions']['P']).dtype, np.number)
@@ -468,7 +469,7 @@ def test_non_equilibrium_thermo_data_with_species_passes_checker():
 
 def test_applying_tags(datasets_db):
     """Test that applying tags updates the appropriate values"""
-    dataset = clean_dataset(CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES)
+    dataset = deepcopy(CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES)
     # overwrite tags for this test
     dataset["tags"] = ["testtag"]
     datasets_db.insert(dataset)

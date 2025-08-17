@@ -30,7 +30,9 @@ class Solver(BaseModel):
     sublattice_site_ratios: list[float]
     # TODO: migrate to list[list[list[float]]]
     sublattice_configurations: list[list[ComponentName | list[ComponentName]]]
-    sublattice_occupancies: list[list[float | list[float]]] # TODO: optional and validate against configurations
+    sublattice_occupancies: list[list[float | list[float]]] | None = Field(default=None)
+
+
 
 class BroadcastSinglePhaseFixedConfigurationDataset(Dataset):
     components: list[ComponentName] = Field(min_length=1)
