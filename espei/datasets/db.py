@@ -69,23 +69,10 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
     """
     is_equilibrium = 'solver' not in dataset.keys() and dataset['output'] != 'ZPF'
     is_activity = dataset['output'].startswith('ACR')
-    is_single_phase = 'solver' in dataset.keys()
     components = dataset['components']
     conditions = dataset['conditions']
     values = dataset['values']
     phases = dataset['phases']
-    if is_single_phase:
-        solver = dataset['solver']
-        sublattice_configurations = solver['sublattice_configurations']
-        sublattice_site_ratios = solver['sublattice_site_ratios']
-        sublattice_occupancies = solver.get('sublattice_occupancies', None)
-        # check for mixing
-        is_mixing = any([any([isinstance(subl, list) for subl in config]) for config in sublattice_configurations])
-        # pad the values of sublattice occupancies if there is no mixing
-        if sublattice_occupancies is None and not is_mixing:
-            sublattice_occupancies = [None]*len(sublattice_configurations)
-        elif sublattice_occupancies is None:
-            raise DatasetError('At least one sublattice in the following sublattice configurations is mixing, but the "sublattice_occupancies" key is empty: {}'.format(sublattice_configurations))
     if is_equilibrium:
         conditions = dataset['conditions']
         comp_conditions = {k: v for k, v in conditions.items() if k.startswith('X_')}
@@ -108,49 +95,16 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
         conditions_shape = (num_pressure, num_temperature, num_x_conds[0])
         if conditions_shape != values_shape:
             raise DatasetError('Shape of conditions (P, T, compositions): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
-    elif is_single_phase:
-        values_shape = np.array(values).shape
-        num_configs = len(dataset['solver']['sublattice_configurations'])
-        conditions_shape = (num_pressure, num_temperature, num_configs)
-        if conditions_shape != values_shape:
-            raise DatasetError('Shape of conditions (P, T, configs): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
 
     # check that all of the components used match the components entered
-    components_entered = set(components)
-    components_used = set()
-    if is_single_phase:
-        for config in sublattice_configurations:
-            for sl in config:
-                if isinstance(sl, list):
-                    components_used.update(set(sl))
-                else:
-                    components_used.add(sl)
-        comp_dof = 0
-    elif is_equilibrium:
+    if is_equilibrium:  # and is_activity
+        components_entered = set(components)
+        components_used = set()
         components_used.update({c.split('_')[1] for c in comp_conditions.keys()})
         # mass balance of components
         comp_dof = len(comp_conditions.keys())
-    if (is_single_phase or is_activity or is_equilibrium) and (len(components_entered - components_used - {'VA'}) > comp_dof or len(components_used - components_entered) > 0):
-        raise DatasetError('Components entered {} do not match components used {}.'.format(components_entered, components_used))
-
-    # check that the site ratios are valid as well as site occupancies, if applicable
-    if is_single_phase:
-        nconfigs = len(sublattice_configurations)
-        noccupancies = len(sublattice_occupancies)
-        if nconfigs != noccupancies:
-            raise DatasetError('Number of sublattice configurations ({}) does not match the number of sublattice occupancies ({})'.format(nconfigs, noccupancies))
-        for configuration, occupancy in zip(sublattice_configurations, sublattice_occupancies):
-            if len(configuration) != len(sublattice_site_ratios):
-                raise DatasetError('Sublattice configuration {} and sublattice site ratio {} describe different numbers of sublattices ({} and {}).'.format(configuration, sublattice_site_ratios, len(configuration), len(sublattice_site_ratios)))
-            if is_mixing:
-                configuration_shape = tuple(len(sl) if isinstance(sl, list) else 1 for sl in configuration)
-                occupancy_shape = tuple(len(sl) if isinstance(sl, list) else 1 for sl in occupancy)
-                if configuration_shape != occupancy_shape:
-                    raise DatasetError('The shape of sublattice configuration {} ({}) does not match the shape of occupancies {} ({})'.format(configuration, configuration_shape, occupancy, occupancy_shape))
-                # check that sublattice interactions are in sorted. Related to sorting in espei.core_utils.get_samples
-                for subl in configuration:
-                    if isinstance(subl, (list, tuple)) and sorted(subl) != subl:
-                        raise DatasetError('Sublattice {} in configuration {} is must be sorted in alphabetic order ({})'.format(subl, configuration, sorted(subl)))
+        if len(components_entered - components_used - {'VA'}) > comp_dof or len(components_used - components_entered) > 0:
+            raise DatasetError('Components entered {} do not match components used {}.'.format(components_entered, components_used))
 
     if dataset["output"] == "ZPF":
         dataset_obj = ZPFDataset(**dataset)
@@ -158,7 +112,7 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
         dataset_obj = ActivityPropertyDataset(**dataset)
     elif is_equilibrium:
         dataset_obj = EquilibriumPropertyDataset(**dataset)
-    elif is_single_phase:
+    elif 'solver' in dataset.keys():
         dataset_obj = BroadcastSinglePhaseFixedConfigurationDataset(**dataset)
     else:
         raise ValueError(f"Unknown dataset type for dataset {dataset}")

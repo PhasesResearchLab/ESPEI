@@ -49,6 +49,67 @@ class BroadcastSinglePhaseFixedConfigurationDataset(Dataset):
     disabled: bool = Field(default=False)
 
 
+    @model_validator(mode="after")
+    def validate_components_entered_match_components_used(self) -> Self:
+        components_entered = set(self.components)
+        components_used = set()
+        for config in self.solver.sublattice_configurations:
+            for subl in config:
+                if isinstance(subl, list):
+                    components_used.update(set(subl))
+                else:
+                    components_used.add(subl)
+        # Don't count vacancies as a component here
+        components_difference = components_entered.symmetric_difference(components_used) - {"VA"}
+        if len(components_difference) != 0:
+            raise DatasetError(f'Components entered {components_entered} do not match components used {components_used} ({components_difference} different).')
+        return self
+
+    @model_validator(mode="after")
+    def validate_condition_value_shape_agreement(self) -> Self:
+        values_shape = np.array(self.values).shape
+        num_configs = len(self.solver.sublattice_configurations)
+        num_temperature = np.atleast_1d(self.conditions["T"]).size
+        num_pressure = np.atleast_1d(self.conditions["P"]).size
+        conditions_shape = (num_pressure, num_temperature, num_configs)
+        if conditions_shape != values_shape:
+            raise DatasetError(f'Shape of conditions (P, T, configs): {conditions_shape} does not match the shape of the values {values_shape}.')
+        return self
+
+    @model_validator(mode="after")
+    def validate_configuration_occupancy_shape_agreement(self) -> Self:
+        sublattice_configurations = self.solver.sublattice_configurations
+        sublattice_site_ratios = self.solver.sublattice_site_ratios
+        sublattice_occupancies = self.solver.sublattice_occupancies
+        # check for mixing
+        is_mixing = any([any([isinstance(subl, list) for subl in config]) for config in sublattice_configurations])
+        # pad the values of sublattice occupancies if there is no mixing
+        # just for the purposes of checking validity
+        if sublattice_occupancies is None and not is_mixing:
+            sublattice_occupancies = [None]*len(sublattice_configurations)
+        elif sublattice_occupancies is None:
+            raise DatasetError(f'At least one sublattice in the following sublattice configurations is mixing, but the "sublattice_occupancies" key is empty: {sublattice_configurations}')
+
+        # check that the site ratios are valid as well as site occupancies, if applicable
+        nconfigs = len(sublattice_configurations)
+        noccupancies = len(sublattice_occupancies)
+        if nconfigs != noccupancies:
+            raise DatasetError(f'Number of sublattice configurations ({nconfigs}) does not match the number of sublattice occupancies ({noccupancies})')
+        for configuration, occupancy in zip(sublattice_configurations, sublattice_occupancies):
+            if len(configuration) != len(sublattice_site_ratios):
+                raise DatasetError(f'Sublattice configuration {configuration} and sublattice site ratio {sublattice_site_ratios} describe different numbers of sublattices ({len(configuration)} and {len(sublattice_site_ratios)}).')
+            if is_mixing:
+                configuration_shape = tuple(len(sl) if isinstance(sl, list) else 1 for sl in configuration)
+                occupancy_shape = tuple(len(sl) if isinstance(sl, list) else 1 for sl in occupancy)
+                if configuration_shape != occupancy_shape:
+                    raise DatasetError(f'The shape of sublattice configuration {configuration} ({configuration_shape}) does not match the shape of occupancies {occupancy} ({occupancy_shape})')
+                # check that sublattice interactions are in sorted. Related to sorting in espei.core_utils.get_samples
+                for subl in configuration:
+                    if isinstance(subl, (list, tuple)) and sorted(subl) != subl:
+                        raise DatasetError(f'Sublattice {subl} in configuration {configuration} is must be sorted in alphabetic order ({sorted(subl)})')
+        return self
+
+
 # TODO: would be great to remove
 class ActivityDataReferenceState(BaseModel):
     phases: list[PhaseName] = Field(min_length=1)
