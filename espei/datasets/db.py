@@ -1,5 +1,5 @@
 import fnmatch, json, os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TypeAlias
 
 import numpy as np
 from tinydb.storages import MemoryStorage
@@ -7,8 +7,8 @@ from tinydb import where
 
 from espei.utils import PickleableTinyDB
 
-# Create a type
-Dataset = Dict[str, Any]
+from .dataset_models import Dataset, ActivityPropertyDataset, BroadcastSinglePhaseFixedConfigurationDataset, EquilibriumPropertyDataset, ZPFDataset
+
 
 class DatasetError(Exception):
     """Exception raised when datasets are invalid."""
@@ -42,7 +42,7 @@ def recursive_map(f, x):
         return f(x)
 
 
-def check_dataset(dataset: Dataset):
+def check_dataset(dataset: dict[str, Any]) -> Dataset:
     """Ensure that the dataset is valid and consistent.
 
     Currently supports the following validation checks:
@@ -64,7 +64,7 @@ def check_dataset(dataset: Dataset):
 
     Returns
     -------
-    None
+    Dataset
 
     Raises
     ------
@@ -206,8 +206,20 @@ def check_dataset(dataset: Dataset):
                     if isinstance(subl, (list, tuple)) and sorted(subl) != subl:
                         raise DatasetError('Sublattice {} in configuration {} is must be sorted in alphabetic order ({})'.format(subl, configuration, sorted(subl)))
 
+    if is_zpf:
+        dataset_obj = ZPFDataset(**clean_dataset(dataset))
+    elif is_activity:
+        dataset_obj = ActivityPropertyDataset(**clean_dataset(dataset))
+    elif is_equilibrium:
+        dataset_obj = EquilibriumPropertyDataset(**clean_dataset(dataset))
+    elif is_single_phase:
+        dataset_obj = BroadcastSinglePhaseFixedConfigurationDataset(**clean_dataset(dataset))
+    else:
+        raise ValueError(f"Unknown dataset type for dataset {dataset}")
+    return dataset_obj
 
-def clean_dataset(dataset: Dataset) -> Dataset:
+
+def clean_dataset(dataset: dict[str, Any]) -> dict[str, Any]:
     """
     Clean an ESPEI dataset dictionary.
 
@@ -333,8 +345,8 @@ def load_datasets(dataset_filenames, include_disabled=False) -> PickleableTinyDB
                 if not include_disabled and d.get('disabled', False):
                     # The dataset is disabled and not included
                     continue
-                check_dataset(d)
-                ds_database.insert(clean_dataset(d))
+                dataset_obj = check_dataset(d)
+                ds_database.insert(dataset_obj.model_dump())
             except ValueError as e:
                 raise ValueError('JSON Error in {}: {}'.format(fname, e))
             except DatasetError as e:
