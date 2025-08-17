@@ -1,5 +1,5 @@
-import fnmatch, json, os, warnings
-from typing import Any, Dict, List
+import fnmatch, json, os
+from typing import Any, Dict, List, TypeAlias
 
 import numpy as np
 from tinydb.storages import MemoryStorage
@@ -7,16 +7,11 @@ from tinydb import where
 
 from espei.utils import PickleableTinyDB
 
-# Create a type
-Dataset = Dict[str, Any]
+from .dataset_models import Dataset, ActivityPropertyDataset, BroadcastSinglePhaseFixedConfigurationDataset, EquilibriumPropertyDataset, ZPFDataset
+
 
 class DatasetError(Exception):
     """Exception raised when datasets are invalid."""
-    pass
-
-
-class DatasetWarning(UserWarning):
-    """Warning for parts of a dataset that could not be checked."""
     pass
 
 
@@ -47,20 +42,7 @@ def recursive_map(f, x):
         return f(x)
 
 
-def _constituent_elements(name, components, species):
-    """Return the elements of a sublattice constituent, resolved through the species if given, or None if unresolved."""
-    if species is None:
-        if name not in components and name != 'VA':
-            return None
-        return {name}
-    if name == 'VA':
-        return {'VA'}
-    if name not in species:
-        raise DatasetError(f'Species {name} is not defined in the phase models or the input database.')
-    return set(species[name].constituents)
-
-
-def check_dataset(dataset: Dataset, species=None):
+def check_dataset(dataset: dict[str, Any]) -> Dataset:
     """Ensure that the dataset is valid and consistent.
 
     Currently supports the following validation checks:
@@ -79,24 +61,15 @@ def check_dataset(dataset: Dataset, species=None):
     ----------
     dataset : Dataset
         Dictionary of the standard ESPEI dataset.
-    species : Optional[Iterable[v.Species]]
-        Species, e.g. from ``PhaseModelSpecification.get_species``, used to
-        resolve the names in sublattice configurations to their elements.
 
     Returns
     -------
-    None
+    Dataset
 
     Raises
     ------
     DatasetError
         If an error is found in the dataset
-
-    Warns
-    -----
-    DatasetWarning
-        If names in the sublattice configurations can't be resolved without
-        ``species``. The components of such datasets are not checked.
     """
     is_equilibrium = 'solver' not in dataset.keys() and dataset['output'] != 'ZPF'
     is_activity = dataset['output'].startswith('ACR')
@@ -167,24 +140,13 @@ def check_dataset(dataset: Dataset, species=None):
     # check that all of the components used match the components entered
     components_entered = set(components)
     components_used = set()
-    unresolved = set()
-    in_system = True
-    if species is not None:
-        species = {sp.name: sp for sp in species}
-        species_components = sorted(c for c in components_entered if c in species and species[c].constituents != {c: 1})
-        if len(species_components) > 0:
-            raise DatasetError(f'Components {species_components} are species. Components must be elements.')
-        # datasets outside the system being fit are never used, so species aren't resolved
-        in_system = (components_entered - {'VA'}).issubset(species)
-    if is_single_phase and in_system:
+    if is_single_phase:
         for config in sublattice_configurations:
             for sl in config:
-                for constituent in (sl if isinstance(sl, list) else [sl]):
-                    elements = _constituent_elements(constituent, components_entered, species)
-                    if elements is None:
-                        unresolved.add(constituent)
-                    else:
-                        components_used.update(elements)
+                if isinstance(sl, list):
+                    components_used.update(set(sl))
+                else:
+                    components_used.add(sl)
         comp_dof = 0
     elif is_equilibrium:
         components_used.update({c.split('_')[1] for c in comp_conditions.keys()})
@@ -199,7 +161,7 @@ def check_dataset(dataset: Dataset, species=None):
                     raise DatasetError('Degree of freedom error for entered components {} in tieline {} of ZPF {}'.format(components_entered, tieline, zpf))
         # handle special case of mass balance in ZPFs
         comp_dof = 1
-    if in_system and len(unresolved) == 0 and (len(components_entered - components_used - {'VA'}) > comp_dof or len(components_used - components_entered) > 0):
+    if len(components_entered - components_used - {'VA'}) > comp_dof or len(components_used - components_entered) > 0:
         raise DatasetError('Components entered {} do not match components used {}.'.format(components_entered, components_used))
 
     # check that the ZPF values are formatted properly
@@ -243,11 +205,21 @@ def check_dataset(dataset: Dataset, species=None):
                 for subl in configuration:
                     if isinstance(subl, (list, tuple)) and sorted(subl) != subl:
                         raise DatasetError('Sublattice {} in configuration {} is must be sorted in alphabetic order ({})'.format(subl, configuration, sorted(subl)))
-    if len(unresolved) > 0:
-        warnings.warn(f"Species {', '.join(sorted(unresolved))} in the sublattice configurations were not checked. Provide the phase models (e.g. `espei --check-datasets PATH --phase-models FILE`) to check them.", DatasetWarning)
+
+    if is_zpf:
+        dataset_obj = ZPFDataset(**clean_dataset(dataset))
+    elif is_activity:
+        dataset_obj = ActivityPropertyDataset(**clean_dataset(dataset))
+    elif is_equilibrium:
+        dataset_obj = EquilibriumPropertyDataset(**clean_dataset(dataset))
+    elif is_single_phase:
+        dataset_obj = BroadcastSinglePhaseFixedConfigurationDataset(**clean_dataset(dataset))
+    else:
+        raise ValueError(f"Unknown dataset type for dataset {dataset}")
+    return dataset_obj
 
 
-def clean_dataset(dataset: Dataset) -> Dataset:
+def clean_dataset(dataset: dict[str, Any]) -> dict[str, Any]:
     """
     Clean an ESPEI dataset dictionary.
 
@@ -352,7 +324,7 @@ def apply_tags(datasets: PickleableTinyDB, tags):
                 datasets.update(match, doc_ids=[match.doc_id])
 
 
-def load_datasets(dataset_filenames, include_disabled=False, species=None) -> PickleableTinyDB:
+def load_datasets(dataset_filenames, include_disabled=False) -> PickleableTinyDB:
     """
     Create a PickelableTinyDB with the data from a list of filenames.
 
@@ -360,15 +332,12 @@ def load_datasets(dataset_filenames, include_disabled=False, species=None) -> Pi
     ----------
     dataset_filenames : [str]
         List of filenames to load as datasets
-    species : Optional[Iterable[v.Species]]
-        Species used to check the datasets, see ``check_dataset``.
 
     Returns
     -------
     PickleableTinyDB
     """
     ds_database = PickleableTinyDB(storage=MemoryStorage)
-    species = None if species is None else set(species)
     for fname in dataset_filenames:
         with open(fname) as file_:
             try:
@@ -376,16 +345,8 @@ def load_datasets(dataset_filenames, include_disabled=False, species=None) -> Pi
                 if not include_disabled and d.get('disabled', False):
                     # The dataset is disabled and not included
                     continue
-                # add the file name to dataset warnings, as for DatasetError
-                with warnings.catch_warnings(record=True) as caught:
-                    warnings.simplefilter("always", DatasetWarning)
-                    check_dataset(d, species=species)
-                for w in caught:
-                    if issubclass(w.category, DatasetWarning):
-                        warnings.warn(f"{fname}: {w.message}", DatasetWarning, stacklevel=2)
-                    else:
-                        warnings.warn_explicit(w.message, w.category, w.filename, w.lineno)
-                ds_database.insert(clean_dataset(d))
+                dataset_obj = check_dataset(d)
+                ds_database.insert(dataset_obj.model_dump())
             except ValueError as e:
                 raise ValueError('JSON Error in {}: {}'.format(fname, e))
             except DatasetError as e:
