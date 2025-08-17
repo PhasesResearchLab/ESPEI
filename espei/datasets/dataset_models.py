@@ -33,7 +33,6 @@ class Solver(BaseModel):
     sublattice_occupancies: list[list[float | list[float]]] | None = Field(default=None)
 
 
-
 class BroadcastSinglePhaseFixedConfigurationDataset(Dataset):
     components: list[ComponentName] = Field(min_length=1)
     phases: list[PhaseName] = Field(min_length=1, max_length=1)
@@ -47,7 +46,6 @@ class BroadcastSinglePhaseFixedConfigurationDataset(Dataset):
     dataset_author: str = Field(default="")
     comment: str = Field(default="")
     disabled: bool = Field(default=False)
-
 
     @model_validator(mode="after")
     def validate_components_entered_match_components_used(self) -> Self:
