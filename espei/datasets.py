@@ -2,7 +2,9 @@ from typing import Any, Literal, Union, TypeAlias, Self
 import warnings
 from pydantic import BaseModel, Field, model_validator, field_validator
 import numpy as np
-import fnmatch, json, os
+import fnmatch
+import json
+import os
 from tinydb.storages import MemoryStorage
 from tinydb import where
 
@@ -465,11 +467,11 @@ def recursive_glob(start, pattern='*.json'):
 
 def check_dataset(dataset: dict[str, Any]) -> dict[str, Any]:
     """Ensure that the dataset is valid and consistent by round-tripping through pydantic."""
-    warnings.warn(f"check_dataset is deprecated will be removed in ESPEI 0.11. Behavior has been migrated to the pydantic dataset implementations in espei.datasets.dataset_models. To get a Dataset object, use espei.datasets.to_Dataset.", DeprecationWarning)
+    warnings.warn("check_dataset is deprecated will be removed in ESPEI 0.11. Behavior has been migrated to the pydantic dataset implementations in espei.datasets.dataset_models. To get a Dataset object, use espei.datasets.to_Dataset.", DeprecationWarning)
     return to_Dataset(dataset).model_dump()
 
 
 def clean_dataset(dataset: dict[str, Any]) -> dict[str, Any]:
     """Ensure that the dataset is valid and consistent by round-tripping through pydantic."""
-    warnings.warn(f"clean_dataset is deprecated will be removed in ESPEI 0.11. Behavior has been migrated to the pydantic dataset implementations in espei.datasets.dataset_models. To get a Dataset object, use espei.datasets.to_Dataset.", DeprecationWarning)
+    warnings.warn("clean_dataset is deprecated will be removed in ESPEI 0.11. Behavior has been migrated to the pydantic dataset implementations in espei.datasets.dataset_models. To get a Dataset object, use espei.datasets.to_Dataset.", DeprecationWarning)
     return to_Dataset(dataset).model_dump()
