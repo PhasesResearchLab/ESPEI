@@ -109,12 +109,15 @@ class BroadcastSinglePhaseFixedConfigurationDataset(Dataset):
 
 
 # TODO: would be great to remove
-class ActivityDataReferenceState(BaseModel):
+class ActivityDataReferenceState(Dataset):
     phases: list[PhaseName] = Field(min_length=1)
     conditions: dict[str, float]
 
 
 # TODO: refactor to merge this with EquilibriumPropertyDataset
+# The validator functions are exactly duplicated in EquilibriumPropertyDataset
+# The duplication simplifies the implementation since the activity special case is
+# ultimately meant to be removed once activity is a PyCalphad Workspace property
 class ActivityPropertyDataset(Dataset):
     components: list[ComponentName] = Field(min_length=1)
     phases: list[PhaseName] = Field(min_length=1)
@@ -128,6 +131,36 @@ class ActivityPropertyDataset(Dataset):
     comment: str = Field(default="")
     disabled: bool = Field(default=False)
 
+    @model_validator(mode="after")
+    def validate_condition_value_shape_agreement(self) -> Self:
+        conditions = self.conditions
+        comp_conditions = {k: v for k, v in conditions.items() if k.startswith('X_')}
+        num_temperature = np.atleast_1d(self.conditions["T"]).size
+        num_pressure = np.atleast_1d(self.conditions["P"]).size
+        # check each composition condition is the same shape
+        num_x_conds = [np.atleast_1d(vals).size for _, vals in comp_conditions.items()]
+        if num_x_conds.count(num_x_conds[0]) != len(num_x_conds):
+            raise DatasetError(f'All compositions in conditions are not the same shape. Note that conditions cannot be broadcast. Composition conditions are {comp_conditions}')
+        conditions_shape = (num_pressure, num_temperature, num_x_conds[0])
+        values_shape = np.array(self.values).shape
+        if conditions_shape != values_shape:
+            raise DatasetError(f'Shape of conditions (P, T, compositions): {conditions_shape} does not match the shape of the values {values_shape}.')
+        return self
+
+    @model_validator(mode="after")
+    def validate_components_entered_match_components_used(self) -> Self:
+        conditions = self.conditions
+        comp_conditions = {ky: vl for ky, vl in conditions.items() if ky.startswith('X_')}
+        components_entered = set(self.components)
+        components_used = set()
+        components_used.update({c.split('_')[1] for c in comp_conditions.keys()})
+        if not components_entered.issuperset(components_used):
+            raise DatasetError(f"Components were used as conditions that are not present in the specified components: {components_used - components_entered}.")
+        independent_components = components_entered - components_used - {'VA'}
+        if len(independent_components) != 1:
+            raise DatasetError(f"Degree of freedom error: expected 1 independent component, got {len(independent_components)} for entered components {components_entered} and {components_used} used in the conditions.")
+        return self
+
 
 class ReferenceStates(BaseModel):
     phase: PhaseName
@@ -138,14 +171,54 @@ class EquilibriumPropertyDataset(Dataset):
     components: list[ComponentName] = Field(min_length=1)
     phases: list[PhaseName] = Field(min_length=1)
     conditions: dict[str, float | list[float]]
-    reference_states: dict[ComponentName, ReferenceStates]
     output: str
     values: list[list[list[float]]]
+    reference_states: dict[ComponentName, ReferenceStates] | None = Field(default=None)
     reference: str = Field(default="")
     bibtex: str = Field(default="")
     dataset_author: str = Field(default="")
     comment: str = Field(default="")
     disabled: bool = Field(default=False)
+
+    @model_validator(mode="after")
+    def validate_condition_value_shape_agreement(self) -> Self:
+        conditions = self.conditions
+        comp_conditions = {k: v for k, v in conditions.items() if k.startswith('X_')}
+        num_temperature = np.atleast_1d(self.conditions["T"]).size
+        num_pressure = np.atleast_1d(self.conditions["P"]).size
+        # check each composition condition is the same shape
+        num_x_conds = [np.atleast_1d(vals).size for _, vals in comp_conditions.items()]
+        if num_x_conds.count(num_x_conds[0]) != len(num_x_conds):
+            raise DatasetError(f'All compositions in conditions are not the same shape. Note that conditions cannot be broadcast. Composition conditions are {comp_conditions}')
+        conditions_shape = (num_pressure, num_temperature, num_x_conds[0])
+        values_shape = np.array(self.values).shape
+        if conditions_shape != values_shape:
+            raise DatasetError(f'Shape of conditions (P, T, compositions): {conditions_shape} does not match the shape of the values {values_shape}.')
+        return self
+
+    @model_validator(mode="after")
+    def validate_components_entered_match_components_used(self) -> Self:
+        conditions = self.conditions
+        comp_conditions = {ky: vl for ky, vl in conditions.items() if ky.startswith('X_')}
+        components_entered = set(self.components)
+        components_used = set()
+        components_used.update({c.split('_')[1] for c in comp_conditions.keys()})
+        if not components_entered.issuperset(components_used):
+            raise DatasetError(f"Components were used as conditions that are not present in the specified components: {components_used - components_entered}.")
+        independent_components = components_entered - components_used - {'VA'}
+        if len(independent_components) != 1:
+            raise DatasetError(f"Degree of freedom error: expected 1 independent component, got {len(independent_components)} for entered components {components_entered} and {components_used} used in the conditions.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_reference_state_fully_specified_if_used(self) -> Self:
+        """If there is a reference state specified, the components in the reference state must match the dataset components"""
+        components_entered = set(self.components) - {"VA"}
+        if self.reference_states is not None:
+            reference_state_components = set(self.reference_states.keys()) - {"VA"}
+            if components_entered != reference_state_components:
+                raise DatasetError(f"If used, reference states in equilibrium property must define a reference state for all components in the calculation. Got {components_entered} entered components and {reference_state_components} in the reference states ({components_entered.symmetric_difference(reference_state_components)} non-matching).")
+        return self
 
 
 class ZPFDataset(Dataset):
