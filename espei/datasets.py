@@ -49,10 +49,7 @@ class DatasetError(Exception):
     pass
 
 
-class Dataset(BaseModel):
-    pass
-
-
+# Used by BroadcastSinglePhaseFixedConfigurationDataset to define internal DOF
 class Solver(BaseModel):
     mode: Literal["manual"] = Field(default="manual")
     sublattice_site_ratios: list[float]
@@ -61,19 +58,41 @@ class Solver(BaseModel):
     sublattice_occupancies: list[list[float | list[float]]] | None = Field(default=None)
 
 
-class BroadcastSinglePhaseFixedConfigurationDataset(Dataset):
+# Activity dataset special case reference state
+class ActivityDataReferenceState(BaseModel):
+    phases: list[PhaseName] = Field(min_length=1)
+    conditions: dict[str, float]
+
+
+# More general reference states for equilibrium property datasets
+class ReferenceStates(BaseModel):
+    phase: PhaseName
+    fixed_state_variables: dict[str, float] | None = Field(default=None, description="Fixed potentials for the reference state", examples=[{"T": 298.15, "P": 101325}])
+
+
+class Dataset(BaseModel):
     components: list[ComponentName] = Field(min_length=1)
-    phases: list[PhaseName] = Field(min_length=1, max_length=1)
-    solver: Solver
+    phases: list[PhaseName] = Field(min_length=1)
     conditions: dict[str, float | list[float]]
     output: str
-    values: list[list[list[float]]]
-    excluded_model_contributions: list[str] = Field(default_factory=list)
+    # TODO: weights
+
+    # Control
+    disabled: bool = Field(default=False)
+    tags: list[str] = Field(default_factory=list)
+
+    # Metadata
     reference: str = Field(default="")
     bibtex: str = Field(default="")
     dataset_author: str = Field(default="")
-    disabled: bool = Field(default=False)
-    tags: list[str] = Field(default_factory=list)
+
+
+class BroadcastSinglePhaseFixedConfigurationDataset(Dataset):
+    phases: list[PhaseName] = Field(min_length=1, max_length=1)
+    values: list[list[list[float]]]
+    solver: Solver
+    conditions: dict[str, float | list[float]]
+    excluded_model_contributions: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_components_entered_match_components_used(self) -> Self:
@@ -136,26 +155,13 @@ class BroadcastSinglePhaseFixedConfigurationDataset(Dataset):
         return self
 
 
-class ActivityDataReferenceState(Dataset):
-    phases: list[PhaseName] = Field(min_length=1)
-    conditions: dict[str, float]
-
 # TODO: refactor ActivityPropertyDataset to merge with EquilibriumPropertyDataset
 # The validator functions are exactly duplicated in EquilibriumPropertyDataset
 # The duplication simplifies the implementation since the activity special case is
 # ultimately meant to be removed once activity is a PyCalphad Workspace property
 class ActivityPropertyDataset(Dataset):
-    components: list[ComponentName] = Field(min_length=1)
-    phases: list[PhaseName] = Field(min_length=1)
-    conditions: dict[str, float | list[float]]
-    reference_state: ActivityDataReferenceState
-    output: str
     values: list[list[list[float]]]
-    reference: str = Field(default="")
-    bibtex: str = Field(default="")
-    dataset_author: str = Field(default="")
-    disabled: bool = Field(default=False)
-    tags: list[str] = Field(default_factory=list)
+    reference_state: ActivityDataReferenceState
 
     @model_validator(mode="after")
     def validate_condition_value_shape_agreement(self) -> Self:
@@ -188,23 +194,9 @@ class ActivityPropertyDataset(Dataset):
         return self
 
 
-class ReferenceStates(BaseModel):
-    phase: PhaseName
-    fixed_state_variables: dict[str, float] | None = Field(default=None, description="Fixed potentials for the reference state", examples=[{"T": 298.15, "P": 101325}])
-
-
 class EquilibriumPropertyDataset(Dataset):
-    components: list[ComponentName] = Field(min_length=1)
-    phases: list[PhaseName] = Field(min_length=1)
-    conditions: dict[str, float | list[float]]
-    output: str
     values: list[list[list[float]]]
     reference_states: dict[ComponentName, ReferenceStates] | None = Field(default=None)
-    reference: str = Field(default="")
-    bibtex: str = Field(default="")
-    dataset_author: str = Field(default="")
-    disabled: bool = Field(default=False)
-    tags: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_condition_value_shape_agreement(self) -> Self:
@@ -248,18 +240,7 @@ class EquilibriumPropertyDataset(Dataset):
 
 
 class ZPFDataset(Dataset):
-    components: list[ComponentName] = Field(min_length=1)
-    phases: list[str] = Field(min_length=1)
-    conditions: dict[str, float | list[float]]
-    broadcast_conditions: Literal[False] = Field(default=False)  # TODO: migrate and remove, since True was never supported
-    output: Literal["ZPF"]
-    values: list[PhaseRegionType]  # TODO: validate to be of same shape as conditions
-    excluded_model_contributions: list[str] = Field(default_factory=list)
-    reference: str = Field(default="")
-    bibtex: str = Field(default="")
-    dataset_author: str = Field(default="")
-    disabled: bool = Field(default=False)
-    tags: list[str] = Field(default_factory=list)
+    values: list[PhaseRegionType]
 
     @model_validator(mode="after")
     def validate_condition_value_shape_agreement(self) -> Self:
