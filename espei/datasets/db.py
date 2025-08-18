@@ -6,56 +6,26 @@ from tinydb.storages import MemoryStorage
 from tinydb import where
 
 from espei.utils import PickleableTinyDB
+from .dataset_models import to_Dataset, Dataset, ActivityPropertyDataset, BroadcastSinglePhaseFixedConfigurationDataset, EquilibriumPropertyDataset, ZPFDataset, DatasetError
 
-from .dataset_models import Dataset, ActivityPropertyDataset, BroadcastSinglePhaseFixedConfigurationDataset, EquilibriumPropertyDataset, ZPFDataset, DatasetError
+__all__ = [
+    "load_datasets",
+    "recursive_glob",
+    "apply_tags",
+    "check_dataset",
+    "clean_dataset"
+]
 
-
-def check_dataset(dataset: dict[str, Any]) -> Dataset:
-    """Ensure that the dataset is valid and consistent.
-
-    Currently supports the following validation checks:
-    * data shape is valid
-    * phases and components used match phases and components entered
-    * individual shapes of keys, such as ZPF, sublattice configs and site ratios
-
-    Planned validation checks:
-    * all required keys are present
-
-    Note that this follows some of the implicit assumptions in ESPEI at the time
-    of writing, such that conditions are only P, T, configs for single phase and
-    essentially only T for ZPF data.
-
-    Parameters
-    ----------
-    dataset : Dataset
-        Dictionary of the standard ESPEI dataset.
-
-    Returns
-    -------
-    Dataset
-
-    Raises
-    ------
-    DatasetError
-        If an error is found in the dataset
-    """
-    if dataset["output"] == "ZPF":
-        dataset_obj = ZPFDataset(**dataset)
-    elif dataset['output'].startswith('ACR'):
-        dataset_obj = ActivityPropertyDataset(**dataset)
-    elif 'solver' in dataset.keys():
-        dataset_obj = BroadcastSinglePhaseFixedConfigurationDataset(**dataset)
-    else:
-        dataset_obj = EquilibriumPropertyDataset(**dataset)
-    return dataset_obj
+def check_dataset(dataset: dict[str, Any]) -> dict[str, Any]:
+    """Ensure that the dataset is valid and consistent by round-tripping through pydantic."""
+    warnings.warn(f"check_dataset is deprecated will be removed in ESPEI 0.11. Behavior has been migrated to the pydantic dataset implementations in espei.datasets.dataset_models. To get a Dataset object, use espei.datasets.to_Dataset.", DeprecationWarning)
+    return to_Dataset(dataset).model_dump()
 
 
 def clean_dataset(dataset: dict[str, Any]) -> dict[str, Any]:
-    """
-    No-op
-    """
-    warnings.warn(f"clean_dataset deprecated will be removed in ESPEI 0.11. Behavior has been migrated to the pydantic dataset implementations in espei.datasets.dataset_models.", DeprecationWarning)
-    return dataset
+    """Ensure that the dataset is valid and consistent by round-tripping through pydantic."""
+    warnings.warn(f"clean_dataset is deprecated will be removed in ESPEI 0.11. Behavior has been migrated to the pydantic dataset implementations in espei.datasets.dataset_models. To get a Dataset object, use espei.datasets.to_Dataset.", DeprecationWarning)
+    return to_Dataset(dataset).model_dump()
 
 
 def apply_tags(datasets: PickleableTinyDB, tags):
@@ -135,8 +105,7 @@ def load_datasets(dataset_filenames, include_disabled=False) -> PickleableTinyDB
                 if not include_disabled and d.get('disabled', False):
                     # The dataset is disabled and not included
                     continue
-                dataset_obj = check_dataset(d)
-                ds_database.insert(dataset_obj.model_dump())
+                ds_database.insert(to_Dataset(d).model_dump())
             except ValueError as e:
                 raise ValueError('JSON Error in {}: {}'.format(fname, e))
             except DatasetError as e:

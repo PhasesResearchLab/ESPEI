@@ -1,7 +1,7 @@
 from copy import deepcopy
 import pytest
 import numpy as np
-from espei.datasets import DatasetError, check_dataset, apply_tags
+from espei.datasets import DatasetError, to_Dataset, apply_tags, BroadcastSinglePhaseFixedConfigurationDataset, ZPFDataset
 
 from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, LI_SN_LIQUID_DATA, dataset_multi_valid_ternary
 from .fixtures import datasets_db
@@ -366,35 +366,35 @@ dataset_mismatched_configs_occupancies = {
 
 def test_check_datasets_run_on_good_data():
     """Passed valid datasets that should raise DatasetError."""
-    check_dataset(dataset_single_valid)
-    check_dataset(dataset_multi_valid)
-    check_dataset(dataset_multi_valid_ternary)
+    to_Dataset(dataset_single_valid)
+    to_Dataset(dataset_multi_valid)
+    to_Dataset(dataset_multi_valid_ternary)
 
 
 def test_check_datasets_raises_on_misaligned_data():
     """Passed datasets that have misaligned data and conditions should raise DatasetError."""
     with pytest.raises(DatasetError):
-        check_dataset(dataset_single_misaligned)
+        to_Dataset(dataset_single_misaligned)
     with pytest.raises(DatasetError):
-        check_dataset(dataset_multi_misaligned)
+        to_Dataset(dataset_multi_misaligned)
 
 
 def test_check_datasets_raises_with_incorrect_zpf_phases():
     """Passed datasets that have incorrect phases entered than used should raise."""
     with pytest.raises(DatasetError):
-        check_dataset(dataset_multi_incorrect_phases)
+        to_Dataset(dataset_multi_incorrect_phases)
 
 
 def test_check_datasets_raises_with_incorrect_components():
     """Passed datasets that have incorrect components entered vs. used should raise."""
     with pytest.raises(DatasetError):
-        check_dataset(dataset_single_incorrect_components_overspecified)
+        to_Dataset(dataset_single_incorrect_components_overspecified)
     with pytest.raises(DatasetError):
-        check_dataset(dataset_single_incorrect_components_underspecified)
+        to_Dataset(dataset_single_incorrect_components_underspecified)
     with pytest.raises(DatasetError):
-        check_dataset(dataset_multi_incorrect_components_overspecified)
+        to_Dataset(dataset_multi_incorrect_components_overspecified)
     with pytest.raises(DatasetError):
-        check_dataset(dataset_multi_incorrect_components_underspecified)
+        to_Dataset(dataset_multi_incorrect_components_underspecified)
 
     # equilibrium datasets underspecified
     ds_eq_underspecified = {
@@ -409,7 +409,7 @@ def test_check_datasets_raises_with_incorrect_components():
     "values": [[[-1000], [-900], [-800]]]
     }
     with pytest.raises(DatasetError):
-        check_dataset(ds_eq_underspecified)
+        to_Dataset(ds_eq_underspecified)
 
     # equilibrium datasets overspecified
     ds_eq_overspecified = {
@@ -424,25 +424,25 @@ def test_check_datasets_raises_with_incorrect_components():
     "values": [[[-1000], [-900], [-800]]]
     }
     with pytest.raises(DatasetError):
-        check_dataset(ds_eq_overspecified)
+        to_Dataset(ds_eq_overspecified)
 
 
 def test_check_datasets_raises_with_malformed_zpf():
     """Passed datasets that have malformed ZPF values should raise."""
     with pytest.raises((DatasetError, ValidationError)):
-        check_dataset(dataset_multi_malformed_zpfs_components_not_list)
+        to_Dataset(dataset_multi_malformed_zpfs_components_not_list)
     with pytest.raises(DatasetError):
-        check_dataset(dataset_multi_malformed_zpfs_fractions_do_not_match_components)
+        to_Dataset(dataset_multi_malformed_zpfs_fractions_do_not_match_components)
     with pytest.raises(DatasetError):
-        check_dataset(dataset_multi_malformed_zpfs_components_do_not_match_fractions)
+        to_Dataset(dataset_multi_malformed_zpfs_components_do_not_match_fractions)
 
 
 def test_check_datasets_raises_with_malformed_sublattice_configurations():
     """Passed datasets that have malformed ZPF values should raise."""
     with pytest.raises(DatasetError):
-        check_dataset(dataset_single_malformed_site_occupancies)
+        to_Dataset(dataset_single_malformed_site_occupancies)
     with pytest.raises(DatasetError):
-       check_dataset(dataset_single_malformed_site_ratios)
+       to_Dataset(dataset_single_malformed_site_ratios)
 
 
 def test_check_datasets_raises_with_equilibrium_conditions_and_values_shapes_mismatch():
@@ -460,7 +460,7 @@ def test_check_datasets_raises_with_equilibrium_conditions_and_values_shapes_mis
         "reference": "equilibrium thermochemical tests",
     }
     # Good shape should not raise
-    check_dataset(COND_VALS_SHAPE_GOOD)
+    to_Dataset(COND_VALS_SHAPE_GOOD)
 
     COND_VALS_SHAPE_DISAGREEMENT_1_1_2 = {
         "components": ["CU", "MG", "NI"],
@@ -476,7 +476,7 @@ def test_check_datasets_raises_with_equilibrium_conditions_and_values_shapes_mis
         "reference": "equilibrium thermochemical tests",
     }
     with pytest.raises(DatasetError):
-        check_dataset(COND_VALS_SHAPE_DISAGREEMENT_1_1_2)
+        to_Dataset(COND_VALS_SHAPE_DISAGREEMENT_1_1_2)
 
     COND_VALS_SHAPE_DISAGREEMENT_1_2_2 = {
         "components": ["CU", "MG"],
@@ -491,7 +491,7 @@ def test_check_datasets_raises_with_equilibrium_conditions_and_values_shapes_mis
         "reference": "equilibrium thermochemical tests",
     }
     with pytest.raises(DatasetError):
-        check_dataset(COND_VALS_SHAPE_DISAGREEMENT_1_2_2)
+        to_Dataset(COND_VALS_SHAPE_DISAGREEMENT_1_2_2)
 
     # we don't broadcast over compositions, so composition conditions shapes need to match
     MISMATCHED_COMPOSITION_CONDS = {
@@ -508,51 +508,53 @@ def test_check_datasets_raises_with_equilibrium_conditions_and_values_shapes_mis
         "reference": "equilibrium thermochemical tests",
     }
     with pytest.raises(DatasetError):
-        check_dataset(MISMATCHED_COMPOSITION_CONDS)
+        to_Dataset(MISMATCHED_COMPOSITION_CONDS)
 
 
 def test_check_datasets_works_on_activity_data():
     """Passed activity datasets should work correctly."""
-    check_dataset(CU_MG_EXP_ACTIVITY)
+    to_Dataset(CU_MG_EXP_ACTIVITY)
 
 
 def test_check_datasets_raises_with_zpf_fractions_greater_than_one():
     """Passed datasets that have mole fractions greater than one should raise."""
     with pytest.raises(DatasetError):
-        check_dataset(dataset_multi_mole_fractions_as_percents)
+        to_Dataset(dataset_multi_mole_fractions_as_percents)
 
 
 def test_check_datasets_raises_with_negative_zpf_fractions():
     """Passed datasets that have negative mole fractions should raise."""
     with pytest.raises(DatasetError):
-        check_dataset(dataset_zpf_negative_mole_fraction)
+        to_Dataset(dataset_zpf_negative_mole_fraction)
 
 
 def test_check_datasets_raises_with_unsorted_interactions():
     """Passed datasets that have sublattice interactions not in sorted order should raise."""
     with pytest.raises(DatasetError):
-        check_dataset(dataset_single_unsorted_interaction)
+        to_Dataset(dataset_single_unsorted_interaction)
 
 
 def test_datasets_convert_thermochemical_string_values_producing_correct_value(datasets_db):
     """Strings where floats are expected should give correct answers for thermochemical datasets"""
-    ds = check_dataset(CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES).model_dump()
-    assert np.issubdtype(np.array(ds['values']).dtype, np.number)
-    assert np.issubdtype(np.array(ds['conditions']['T']).dtype, np.number)
-    assert np.issubdtype(np.array(ds['conditions']['P']).dtype, np.number)
+    ds = to_Dataset(CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES)
+    assert isinstance(ds, BroadcastSinglePhaseFixedConfigurationDataset)
+    assert np.issubdtype(np.array(ds.values).dtype, np.number)
+    assert np.issubdtype(np.array(ds.conditions['T']).dtype, np.number)
+    assert np.issubdtype(np.array(ds.conditions['P']).dtype, np.number)
 
 
 def test_datasets_convert_zpf_string_values_producing_correct_value(datasets_db):
     """Strings where floats are expected should give correct answers for ZPF datasets"""
-    ds = check_dataset(CU_MG_DATASET_ZPF_STRING_VALUES).model_dump()
-    assert np.issubdtype(np.array([t[0][2] for t in ds['values']]).dtype, np.number)
-    assert np.issubdtype(np.array(ds['conditions']['T']).dtype, np.number)
-    assert np.issubdtype(np.array(ds['conditions']['P']).dtype, np.number)
+    ds = to_Dataset(CU_MG_DATASET_ZPF_STRING_VALUES)
+    assert isinstance(ds, ZPFDataset)
+    assert np.issubdtype(np.array([t[0][2] for t in ds.values]).dtype, np.number)
+    assert np.issubdtype(np.array(ds.conditions['T']).dtype, np.number)
+    assert np.issubdtype(np.array(ds.conditions['P']).dtype, np.number)
 
 def test_check_datasets_raises_if_configs_occupancies_not_aligned(datasets_db):
     """Checking datasets that don't have the same number/shape of configurations/occupancies should raise."""
     with pytest.raises(DatasetError):
-        check_dataset(dataset_mismatched_configs_occupancies)
+        to_Dataset(dataset_mismatched_configs_occupancies)
 
 
 # Expected to fail, since the dataset checker cannot determine that species are used in the configurations and components should only contain pure elements.
@@ -560,7 +562,7 @@ def test_check_datasets_raises_if_configs_occupancies_not_aligned(datasets_db):
 def test_non_equilibrium_thermo_data_with_species_passes_checker():
     """Non-equilibrium thermochemical data that use species in the configurations should pass the dataset checker.
     """
-    check_dataset(LI_SN_LIQUID_DATA)
+    to_Dataset(LI_SN_LIQUID_DATA)
 
 
 def test_applying_tags(datasets_db):
