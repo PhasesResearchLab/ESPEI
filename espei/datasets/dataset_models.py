@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Union, TypeAlias, Self
+from typing import Any, Literal, Union, TypeAlias, Self
 from pydantic import BaseModel, Field, model_validator, field_validator
 import numpy as np
 
@@ -9,6 +9,7 @@ __all__ = [
     "EquilibriumPropertyDataset",
     "ZPFDataset",
     "DatasetError",
+    "to_Dataset",
 ]
 
 class DatasetError(Exception):
@@ -302,3 +303,30 @@ class ZPFDataset(Dataset):
                 if any([(mf is not None) and (mf < 0.0) for mf in mole_fraction_list]):
                     raise DatasetError('Got unallowed negative mole fraction for phase composition {} ({}) for phase region {} ({}).'.format(j, phase_composition, i, phase_region))
         return values
+
+
+def to_Dataset(candidate: dict[str, Any]) -> Dataset:
+    """Return a validated Dataset object for a dataset dict. Raises if a validated dataset cannot be created.
+
+    Parameters
+    ----------
+    candidate : dict[str, Any]
+        Dictionary describing an ESPEI dataset.
+
+    Returns
+    -------
+    Dataset
+
+    Raises
+    ------
+    DatasetError
+        If an error is found in the dataset
+    """
+    if candidate["output"] == "ZPF":
+        return ZPFDataset.model_validate(candidate)
+    elif candidate['output'].startswith('ACR'):
+        return ActivityPropertyDataset.model_validate(candidate)
+    elif 'solver' in candidate.keys():
+        return BroadcastSinglePhaseFixedConfigurationDataset.model_validate(candidate)
+    else:
+        return EquilibriumPropertyDataset.model_validate(candidate)
