@@ -10,34 +10,6 @@ from espei.utils import PickleableTinyDB
 from .dataset_models import Dataset, ActivityPropertyDataset, BroadcastSinglePhaseFixedConfigurationDataset, EquilibriumPropertyDataset, ZPFDataset, DatasetError
 
 
-
-def recursive_map(f, x):
-    """
-    map, but over nested lists
-
-    Parameters
-    ----------
-    f : callable
-        Function to apply to x
-    x : list or value
-        Value passed to v
-
-    Returns
-    -------
-    list or value
-    """
-    if isinstance(x, list):
-        if [isinstance(xx, list) for xx in x]:
-            # we got a nested list
-            return [recursive_map(f, xx) for xx in x]
-        else:
-            # it's a list with some values inside
-            return list(map(f, x))
-    else:
-        # not a list, probably just a singular value
-        return f(x)
-
-
 def check_dataset(dataset: dict[str, Any]) -> Dataset:
     """Ensure that the dataset is valid and consistent.
 
