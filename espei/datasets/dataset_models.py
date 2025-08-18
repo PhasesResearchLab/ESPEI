@@ -8,6 +8,7 @@ __all__ = [
     "ActivityPropertyDataset",
     "EquilibriumPropertyDataset",
     "ZPFDataset",
+    "DatasetError",
 ]
 
 class DatasetError(Exception):
@@ -46,6 +47,7 @@ class BroadcastSinglePhaseFixedConfigurationDataset(Dataset):
     dataset_author: str = Field(default="")
     comment: str = Field(default="")
     disabled: bool = Field(default=False)
+    tags: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_components_entered_match_components_used(self) -> Self:
@@ -130,6 +132,7 @@ class ActivityPropertyDataset(Dataset):
     dataset_author: str = Field(default="")
     comment: str = Field(default="")
     disabled: bool = Field(default=False)
+    tags: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_condition_value_shape_agreement(self) -> Self:
@@ -179,6 +182,7 @@ class EquilibriumPropertyDataset(Dataset):
     dataset_author: str = Field(default="")
     comment: str = Field(default="")
     disabled: bool = Field(default=False)
+    tags: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_condition_value_shape_agreement(self) -> Self:
@@ -234,6 +238,7 @@ class ZPFDataset(Dataset):
     dataset_author: str = Field(default="")
     comment: str = Field(default="")
     disabled: bool = Field(default=False)
+    tags: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_condition_value_shape_agreement(self) -> Self:
