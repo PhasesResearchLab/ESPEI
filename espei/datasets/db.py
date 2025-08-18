@@ -67,53 +67,14 @@ def check_dataset(dataset: dict[str, Any]) -> Dataset:
     DatasetError
         If an error is found in the dataset
     """
-    is_equilibrium = 'solver' not in dataset.keys() and dataset['output'] != 'ZPF'
-    components = dataset['components']
-    conditions = dataset['conditions']
-    values = dataset['values']
-    phases = dataset['phases']
-    if is_equilibrium:
-        for el, vals in dataset.get('reference_states', {}).items():
-            if 'phase' not in vals:
-                raise DatasetError(f'Reference state for element {el} must define the `phase` key with the reference phase name.')
-
-    # check that the shape of conditions match the values
-    num_pressure = np.atleast_1d(conditions['P']).size
-    num_temperature = np.atleast_1d(conditions['T']).size
-    if is_equilibrium:
-        conditions = dataset['conditions']
-        comp_conditions = {k: v for k, v in conditions.items() if k.startswith('X_')}
-        values_shape = np.array(values).shape
-        # check each composition condition is the same shape
-        num_x_conds = [len(v) for _, v in comp_conditions.items()]
-        if num_x_conds.count(num_x_conds[0]) != len(num_x_conds):
-            raise DatasetError('All compositions in conditions are not the same shape. Note that conditions cannot be broadcast. Composition conditions are {}'.format(comp_conditions))
-        conditions_shape = (num_pressure, num_temperature, num_x_conds[0])
-        if conditions_shape != values_shape:
-            raise DatasetError('Shape of conditions (P, T, compositions): {} does not match the shape of the values {}.'.format(conditions_shape, values_shape))
-
-    # check that all of the components used match the components entered
-    if is_equilibrium:  # and is_activity
-        conditions = dataset['conditions']
-        comp_conditions = {k: v for k, v in conditions.items() if k.startswith('X_')}
-        components_entered = set(components)
-        components_used = set()
-        components_used.update({c.split('_')[1] for c in comp_conditions.keys()})
-        # mass balance of components
-        comp_dof = len(comp_conditions.keys())
-        if len(components_entered - components_used - {'VA'}) > comp_dof or len(components_used - components_entered) > 0:
-            raise DatasetError('Components entered {} do not match components used {}.'.format(components_entered, components_used))
-
     if dataset["output"] == "ZPF":
         dataset_obj = ZPFDataset(**dataset)
     elif dataset['output'].startswith('ACR'):
         dataset_obj = ActivityPropertyDataset(**dataset)
-    elif is_equilibrium:
-        dataset_obj = EquilibriumPropertyDataset(**dataset)
     elif 'solver' in dataset.keys():
         dataset_obj = BroadcastSinglePhaseFixedConfigurationDataset(**dataset)
     else:
-        raise ValueError(f"Unknown dataset type for dataset {dataset}")
+        dataset_obj = EquilibriumPropertyDataset(**dataset)
     return dataset_obj
 
 

@@ -396,6 +396,36 @@ def test_check_datasets_raises_with_incorrect_components():
     with pytest.raises(DatasetError):
         check_dataset(dataset_multi_incorrect_components_underspecified)
 
+    # equilibrium datasets underspecified
+    ds_eq_underspecified = {
+    "components": ["NI"],
+    "phases": ["LIQUID"],
+    "conditions": {
+        "P": 101325,
+        "T": [1348, 1176, 977],
+        "X_NI": 0.5
+    },
+    "output": "HM",
+    "values": [[[-1000], [-900], [-800]]]
+    }
+    with pytest.raises(DatasetError):
+        check_dataset(ds_eq_underspecified)
+
+    # equilibrium datasets overspecified
+    ds_eq_overspecified = {
+    "components": ["CU", "MG", "NI"],
+    "phases": ["LIQUID"],
+    "conditions": {
+        "P": 101325,
+        "T": [1348, 1176, 977],
+        "X_NI": 0.5
+    },
+    "output": "HM",
+    "values": [[[-1000], [-900], [-800]]]
+    }
+    with pytest.raises(DatasetError):
+        check_dataset(ds_eq_overspecified)
+
 
 def test_check_datasets_raises_with_malformed_zpf():
     """Passed datasets that have malformed ZPF values should raise."""
@@ -413,6 +443,72 @@ def test_check_datasets_raises_with_malformed_sublattice_configurations():
         check_dataset(dataset_single_malformed_site_occupancies)
     with pytest.raises(DatasetError):
        check_dataset(dataset_single_malformed_site_ratios)
+
+
+def test_check_datasets_raises_with_equilibrium_conditions_and_values_shapes_mismatch():
+    """Passed equilibrium datasets that have mismatched condition and values shapes should raise."""
+    COND_VALS_SHAPE_GOOD = {
+        "components": ["CU", "MG"],
+        "phases": ["LIQUID"],
+        "conditions": {"P": [101325, 1e5], "T": [1400, 1500, 1600], "X_MG": [0.5, 0.6, 0.7, 0.8]},
+        "reference_states": {
+            "CU": {"phase": "LIQUID"},
+            "MG": {"phase": "LIQUID"}
+        },
+        "output": "HMR",
+        "values": np.zeros((2, 3, 4)).tolist(),
+        "reference": "equilibrium thermochemical tests",
+    }
+    # Good shape should not raise
+    check_dataset(COND_VALS_SHAPE_GOOD)
+
+    COND_VALS_SHAPE_DISAGREEMENT_1_1_2 = {
+        "components": ["CU", "MG", "NI"],
+        "phases": ["LIQUID"],
+        "conditions": {"P": 101325, "T": [1400], "X_MG": [0.5, 0.6], "X_NI": [0.5, 0.6]},
+        "reference_states": {
+            "CU": {"phase": "LIQUID"},
+            "MG": {"phase": "LIQUID"},
+            "NI": {"phase": "LIQUID"}
+        },
+        "output": "HMR",
+        "values": [[[0]]],
+        "reference": "equilibrium thermochemical tests",
+    }
+    with pytest.raises(DatasetError):
+        check_dataset(COND_VALS_SHAPE_DISAGREEMENT_1_1_2)
+
+    COND_VALS_SHAPE_DISAGREEMENT_1_2_2 = {
+        "components": ["CU", "MG"],
+        "phases": ["LIQUID"],
+        "conditions": {"P": 101325, "T": [1400, 1500], "X_MG": [0.5, 0.6]},
+        "reference_states": {
+            "CU": {"phase": "LIQUID"},
+            "MG": {"phase": "LIQUID"}
+        },
+        "output": "HMR",
+        "values": [[[0, 0]]],
+        "reference": "equilibrium thermochemical tests",
+    }
+    with pytest.raises(DatasetError):
+        check_dataset(COND_VALS_SHAPE_DISAGREEMENT_1_2_2)
+
+    # we don't broadcast over compositions, so composition conditions shapes need to match
+    MISMATCHED_COMPOSITION_CONDS = {
+        "components": ["CU", "MG", "NI"],
+        "phases": ["LIQUID"],
+        "conditions": {"P": 101325, "T": [1400], "X_MG": [0.5, 0.6], "X_NI": [0.5]},
+        "reference_states": {
+            "CU": {"phase": "LIQUID"},
+            "MG": {"phase": "LIQUID"},
+            "NI": {"phase": "LIQUID"}
+        },
+        "output": "HMR",
+        "values": [[[0, 0]]],
+        "reference": "equilibrium thermochemical tests",
+    }
+    with pytest.raises(DatasetError):
+        check_dataset(MISMATCHED_COMPOSITION_CONDS)
 
 
 def test_check_datasets_works_on_activity_data():
