@@ -72,7 +72,6 @@ class BroadcastSinglePhaseFixedConfigurationDataset(Dataset):
     reference: str = Field(default="")
     bibtex: str = Field(default="")
     dataset_author: str = Field(default="")
-    comment: str = Field(default="")
     disabled: bool = Field(default=False)
     tags: list[str] = Field(default_factory=list)
 
@@ -155,7 +154,6 @@ class ActivityPropertyDataset(Dataset):
     reference: str = Field(default="")
     bibtex: str = Field(default="")
     dataset_author: str = Field(default="")
-    comment: str = Field(default="")
     disabled: bool = Field(default=False)
     tags: list[str] = Field(default_factory=list)
 
@@ -205,7 +203,6 @@ class EquilibriumPropertyDataset(Dataset):
     reference: str = Field(default="")
     bibtex: str = Field(default="")
     dataset_author: str = Field(default="")
-    comment: str = Field(default="")
     disabled: bool = Field(default=False)
     tags: list[str] = Field(default_factory=list)
 
@@ -261,7 +258,6 @@ class ZPFDataset(Dataset):
     reference: str = Field(default="")
     bibtex: str = Field(default="")
     dataset_author: str = Field(default="")
-    comment: str = Field(default="")
     disabled: bool = Field(default=False)
     tags: list[str] = Field(default_factory=list)
 
