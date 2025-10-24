@@ -239,11 +239,10 @@ def estimate_hyperplane(phase_region: PhaseRegion, dbf: Database, parameters: np
             num_phases = np.sum(wks.eq.Phase.squeeze() != '')
             Y_values = wks.eq.Y.squeeze()
             # TODO: we need better detection for equilibria low-rank composition
-            # subspaces of the subspace of interest.
+            # subspaces of the composition space of interest.
             # This one covers stoichiometric phases, but would fail to capture
             # two stoichiometric phases in a ternary or a single phase
             # pseudo-binary in a ternary (and higher order generalizations).
-            # Granted this might be an upstream issue in PyCalphad
             no_internal_dof = np.all((np.isclose(Y_values, 1.)) | np.isnan(Y_values))
             if (num_phases == 1) and no_internal_dof:
                 _log.trace("The equilibrium computed at the vertex for %s with composition conditions %s in the phase region %s has underdetermined chemical potentials and will not be considered in the target hyperplane", vertex.phase_name, vertex.comp_conds, phase_region.eq_str())
