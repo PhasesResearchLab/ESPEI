@@ -17,7 +17,7 @@ jobs:
       - run: uv sync --dev -P "pycalphad @ git+https://github.com/pycalphad/pycalphad.git@develop"
       # Build HTML and LaTeX docs
       # Treat all warnings as errors and "keep-going" to collect all warnings
-      - run: uv run sphinx-build --fail-on-warning --keep-going docs/ docs/html
+      - run: uv run sphinx-build --fail-on-warning --keep-going docs/ docs/_build
 
 # PyTest: Run automated tests with PyTest using both release and development versions of pycalphad
   PyTest-release:
