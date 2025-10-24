@@ -49,6 +49,29 @@ jobs:
     - name: pytest
       run: uv run pytest -v
 
+  PyTest-develop-uv:
+    name: Test Python ${{ matrix.python-version }} - pycalphad release
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 100
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+    - name: git checkout
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
+    - name: install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+        enable-cache: true
+    - name: uv sync
+      run: uv sync --dev --group pycalphad-develop
+    - name: pytest
+      run: uv run pytest -v
+
   PyTest-develop:
     name: Test Python ${{ matrix.python-version }} - pycalphad develop
     runs-on: ubuntu-latest
