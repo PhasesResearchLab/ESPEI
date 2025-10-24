@@ -8,20 +8,16 @@ jobs:
     name: Run sphinx-build
     runs-on: ubuntu-latest
     steps:
-      - name: git checkout
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
-      - name: install uv
-        uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-      - name: uv sync
-        run: uv sync --dev -P "pycalphad @ git+https://github.com/pycalphad/pycalphad.git@develop"
+      - run: uv sync --dev -P "pycalphad @ git+https://github.com/pycalphad/pycalphad.git@develop"
       # Build HTML and LaTeX docs
       # Treat all warnings as errors and "keep-going" to collect all warnings
-      - name: sphinx build html
-        run: uv run sphinx-build --fail-on-warning --keep-going docs/ docs/html
+      - run: uv run sphinx-build --fail-on-warning --keep-going docs/ docs/html
 
 # PyTest: Run automated tests with PyTest using both release and development versions of pycalphad
   PyTest-release:
@@ -33,19 +29,15 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-    - name: git checkout
-      uses: actions/checkout@v5
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
-    - name: install uv
-      uses: astral-sh/setup-uv@v6
+    - uses: astral-sh/setup-uv@v6
       with:
         python-version: ${{ matrix.python-version }}
         enable-cache: true
-    - name: uv sync
-      run: uv sync --dev
-    - name: pytest
-      run: uv run pytest -v
+    - run: uv sync --dev
+    - run: uv run pytest -v
 
   PyTest-develop:
     name: Test Python ${{ matrix.python-version }} - pycalphad develop
@@ -56,16 +48,12 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-    - name: git checkout
-      uses: actions/checkout@v5
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
-    - name: install uv
-      uses: astral-sh/setup-uv@v6
+    - uses: astral-sh/setup-uv@v6
       with:
         python-version: ${{ matrix.python-version }}
         enable-cache: true
-    - name: uv sync
-      run: uv sync --dev -P "pycalphad @ git+https://github.com/pycalphad/pycalphad.git@develop"
-    - name: pytest
-      run: uv run pytest -v
+    - run: uv sync --dev -P "pycalphad @ git+https://github.com/pycalphad/pycalphad.git@develop"
+    - run: uv run pytest -v
