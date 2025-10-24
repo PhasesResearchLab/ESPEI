@@ -23,7 +23,6 @@ jobs:
       - name: sphinx build html
         run: uv run sphinx-build --fail-on-warning --keep-going docs/ docs/html
 
-
 # PyTest: Run automated tests with PyTest using both release and development versions of pycalphad
   PyTest-release:
     name: Test Python ${{ matrix.python-version }} - pycalphad release
@@ -48,7 +47,7 @@ jobs:
     - name: pytest
       run: uv run pytest -v
 
-  PyTest-develop-uv:
+  PyTest-develop:
     name: Test Python ${{ matrix.python-version }} - pycalphad develop
     runs-on: ubuntu-latest
     strategy:
@@ -70,24 +69,3 @@ jobs:
       run: uv sync --dev -P "pycalphad @ git+https://github.com/pycalphad/pycalphad.git@develop"
     - name: pytest
       run: uv run pytest -v
-
-  PyTest-develop:
-    name: Test Python ${{ matrix.python-version }} - pycalphad develop legacy
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      max-parallel: 100
-      matrix:
-        python-version: ["3.11", "3.12", "3.13"]
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
-    - uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install pycalphad development version
-      run: pip install git+https://github.com/pycalphad/pycalphad.git@develop
-    - run: pip install --editable .[dev]
-    - run: pip list
-    - run: pytest -v
