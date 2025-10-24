@@ -66,6 +66,15 @@ mpi = [
 [project.scripts]
 espei = "espei.espei_script:main"
 
+[dependency-groups]
+dev = [
+    "furo",
+    "ipython",
+    "pytest",
+    "sphinx",
+    "twine",
+]
+
 [tool.setuptools.packages.find]
 include = ["espei*"]
 
