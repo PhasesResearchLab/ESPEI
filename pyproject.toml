@@ -74,9 +74,6 @@ dev = [
     "sphinx",
     "twine",
 ]
-pycalphad-develop = [
-    "git+https://github.com/pycalphad/pycalphad.git@develop"
-]
 
 [tool.setuptools.packages.find]
 include = ["espei*"]

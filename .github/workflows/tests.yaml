@@ -68,7 +68,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
         enable-cache: true
     - name: uv sync
-      run: uv sync --dev --group pycalphad-develop
+      run: uv sync --dev
+    - name: install pycalphad development version
+      run: uv add "pycalphad @ git+https://github.com/pycalphad/pycalphad.git@develop"
     - name: pytest
       run: uv run pytest -v
 
