@@ -8,22 +8,16 @@ jobs:
     name: Run sphinx-build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
         with:
-          python-version: '3.10'
-      # Development version for development docs
-      - name: Install pycalphad development version
-        run: pip install git+https://github.com/pycalphad/pycalphad.git@develop
-      - run: pip install -e .[dev]
-      - run: pip list
+          fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --dev -P "pycalphad @ git+https://github.com/pycalphad/pycalphad.git@develop"
       # Build HTML and LaTeX docs
       # Treat all warnings as errors and "keep-going" to collect all warnings
-      - name: Build HTML
-        shell: bash
-        run: |
-          cd docs
-          make SPHINXOPTS="-W --keep-going" html
+      - run: uv run sphinx-build --fail-on-warning --keep-going docs/ docs/_build
 
 # PyTest: Run automated tests with PyTest using both release and development versions of pycalphad
   PyTest-release:
@@ -33,17 +27,17 @@ jobs:
       fail-fast: false
       max-parallel: 100
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
-    - uses: actions/setup-python@v5
+    - uses: astral-sh/setup-uv@v6
       with:
         python-version: ${{ matrix.python-version }}
-    - run: pip install --editable .[dev]
-    - run: pip list
-    - run: pytest -v
+        enable-cache: true
+    - run: uv sync --dev
+    - run: uv run pytest -v
 
   PyTest-develop:
     name: Test Python ${{ matrix.python-version }} - pycalphad develop
@@ -52,16 +46,14 @@ jobs:
       fail-fast: false
       max-parallel: 100
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
-    - uses: actions/setup-python@v5
+    - uses: astral-sh/setup-uv@v6
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install pycalphad development version
-      run: pip install git+https://github.com/pycalphad/pycalphad.git@develop
-    - run: pip install --editable .[dev]
-    - run: pip list
-    - run: pytest -v
+        enable-cache: true
+    - run: uv sync --dev -P "pycalphad @ git+https://github.com/pycalphad/pycalphad.git@develop"
+    - run: uv run pytest -v
