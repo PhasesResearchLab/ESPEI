@@ -100,6 +100,21 @@ def test_fixed_configuration_residual_function(datasets_db):
     assert np.isclose(likelihood, -14.28729, rtol=1e-6)
 
 
+def test_fixed_configuration_residual_function_duplicate_excluded_model_contributions(datasets_db):
+    """Datasets where a excluded model contribution is duplicated is in the excluded model contributions contributes to the residual"""
+    dbf = Database(CU_MG_TDB)
+    datasets_db.insert(CU_MG_HM_MIX_CUMG2_ANTISITE_DUPLICATE_EXCLUDED_MODEL_CONTRIBUTIONS)
+
+    residual_func = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[])
+
+    # Regression test "truth" values - got values by running
+    residuals, weights = residual_func.get_residuals(np.asarray([]))
+    assert len(residuals) == len(weights)
+    assert np.allclose(residuals, [-10.0, -100.0])
+    likelihood = residual_func.get_likelihood(np.asarray([]))
+    assert np.isclose(likelihood, -14.28729, rtol=1e-6)
+
+
 def test_fixed_configuration_residual_with_internal_degrees_of_freedom(datasets_db):
     """Unstable endmembers in phases that have internal degrees of freedom should retain fixed internal DOF"""
     dbf = Database(CU_MG_TDB)

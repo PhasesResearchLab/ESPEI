@@ -6,6 +6,81 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "espei"
+authors = [
+    {name = "Brandon Bocklund", email = "brandonbocklund@gmail.com"},
+]
+description = "Fitting thermodynamic models with pycalphad."
+readme = {file = "README.rst", content-type = "text/x-rst"}
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "cerberus",
+    "corner",
+    "dask[complete]>=2",
+    "distributed>=2",
+    "emcee<3",
+    "matplotlib",
+    "numpy>=1.20",
+    "pycalphad>=0.11.0",
+    "pydantic>2.0",
+    "pyyaml",
+    "setuptools_scm[toml]>=6.0",
+    "scikit-learn>=1.0",
+    "scipy",
+    "symengine>=0.9",
+    "tinydb>=4",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://espei.org/"
+
+[project.optional-dependencies]
+dev = [
+    "furo",
+    "ipython",
+    "pytest",
+    "sphinx",
+    "twine",
+]
+mpi = [
+    "mpi4py",
+    "dask-mpi>=2",
+]
+
+[project.scripts]
+espei = "espei.espei_script:main"
+
+[dependency-groups]
+dev = [
+    "furo",
+    "ipython",
+    "pytest",
+    "sphinx",
+    "twine",
+]
+
+[tool.setuptools.packages.find]
+include = ["espei*"]
+
+[tool.setuptools.package-data]
+espei = ["input-schema.yaml"]
+
 [tool.pytest.ini_options]
 norecursedirs = ["espei/_dev"]
 addopts = "--doctest-modules"
