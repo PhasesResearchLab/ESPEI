@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # fetch the entire repo history, required to guarantee setuptools_scm will pick up tags
       - uses: actions/setup-python@v6

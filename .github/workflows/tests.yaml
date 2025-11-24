@@ -8,7 +8,7 @@ jobs:
     name: Run sphinx-build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
       - uses: astral-sh/setup-uv@v7
@@ -29,7 +29,7 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
     - uses: astral-sh/setup-uv@v7
@@ -48,7 +48,7 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
     - uses: astral-sh/setup-uv@v7
