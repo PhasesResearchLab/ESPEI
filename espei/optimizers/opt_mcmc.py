@@ -300,7 +300,7 @@ class EmceeOptimizer(OptimizerBase):
         likelihoods = {}
         for residual_obj in ctx.get("residual_objs", []):
             residual_starttime = time.time()
-            likelihood = residual_obj.get_likelihood(params)
+            likelihood, grads = residual_obj.get_likelihood(params)
             residual_time = time.time() - residual_starttime
             likelihoods[type(residual_obj).__name__] = (likelihood, residual_time)
             lnlike += likelihood
