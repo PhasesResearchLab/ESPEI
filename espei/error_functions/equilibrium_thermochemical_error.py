@@ -87,7 +87,7 @@ def build_eqpropdata(data: tinydb.database.Document,
 
     # Models are now modified in response to the data from this data
     # TODO: build a reference state MetaProperty with the reference state information, maybe just-in-time, below
-    if 'reference_states' in data:
+    if data.get("reference_states") is not None:
         property_output = output[:-1] if output.endswith('R') else output  # unreferenced model property so we can tell shift_reference_state what to build.
         reference_states = []
         for el, vals in data['reference_states'].items():

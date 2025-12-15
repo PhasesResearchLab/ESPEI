@@ -584,7 +584,6 @@ CU_MG_DATASET_ZPF_WORKING = yaml.load("""{
       "P": 101325,
       "T": [1337.97, 1262.238]
     },
-    "broadcast_conditions": false,
     "output": "ZPF",
     "values":   [
         [["LIQUID", ["MG"], [0.0246992]], ["FCC_A1", ["MG"],  [null]]],
@@ -695,7 +694,6 @@ CU_MG_DATASET_ZPF_STRING_VALUES = yaml.load("""{
       "P": "101325",
       "T": ["1337.97", "1262.238"]
     },
-    "broadcast_conditions": false,
     "output": "ZPF",
     "values":   [
         [["LIQUID", ["MG"], ["0.0246992"]], ["FCC_A1", ["MG"],  [null]]],
@@ -713,7 +711,6 @@ CU_MG_DATASET_ZPF_HYPERPLANE_TWOPHASE = yaml.load("""{
     "P": 101325,
     "T": [733.15]
   },
-  "broadcast_conditions": false,
   "output": "ZPF",
   "values":   [
     [["__HYPERPLANE__", ["CU"], [0.05]], ["HCP_A3", ["CU"], [null]], ["CUMG2", ["CU"], [null]]]
@@ -964,7 +961,6 @@ CR_NI_LIQUID_DATA = {
 CR_NI_ZPF_DATA = {
     "components": ["CR", "NI", "VA"],
     "phases": ["BCC_A2", "FCC_A1"],
-    "broadcast_conditions": False,
     "conditions": {
         "T": [1073, 1173, 1273, 1373, 1548],
         "P": [101325.0]
@@ -1478,7 +1474,6 @@ $ LU2005 Lu, X.-G., Selleby, M. & Sundman, B. Assessments of molar volume and th
 LI_SN_ZPF_DATA = {
     "components": ["LI", "SN"],
     "phases": ["LIQUID", "LI7SN2"],
-    "broadcast_conditions": False,
     "conditions": {
         "T": [1040],
         "P": [101325.0]
