@@ -9,45 +9,45 @@ espei.parameter\_selection.fitting\_descriptions module
 
 .. automodule:: espei.parameter_selection.fitting_descriptions
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.parameter\_selection.fitting\_steps module
 ------------------------------------------------
 
 .. automodule:: espei.parameter_selection.fitting_steps
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.parameter\_selection.model\_building module
 -------------------------------------------------
 
 .. automodule:: espei.parameter_selection.model_building
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.parameter\_selection.redlich\_kister module
 -------------------------------------------------
 
 .. automodule:: espei.parameter_selection.redlich_kister
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.parameter\_selection.selection module
 -------------------------------------------
 
 .. automodule:: espei.parameter_selection.selection
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 Module contents
 ---------------
 
 .. automodule:: espei.parameter_selection
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

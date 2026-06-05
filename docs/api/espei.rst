@@ -19,149 +19,149 @@ espei.analysis module
 
 .. automodule:: espei.analysis
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.citing module
 -------------------
 
 .. automodule:: espei.citing
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.core\_utils module
 ------------------------
 
 .. automodule:: espei.core_utils
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.database\_utils module
 ----------------------------
 
 .. automodule:: espei.database_utils
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.datasets module
 ---------------------
 
 .. automodule:: espei.datasets
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.espei\_script module
 --------------------------
 
 .. automodule:: espei.espei_script
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.logger module
 -------------------
 
 .. automodule:: espei.logger
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.paramselect module
 ------------------------
 
 .. automodule:: espei.paramselect
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.phase\_models module
 --------------------------
 
 .. automodule:: espei.phase_models
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.plot module
 -----------------
 
 .. automodule:: espei.plot
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.priors module
 -------------------
 
 .. automodule:: espei.priors
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.refdata module
 --------------------
 
 .. automodule:: espei.refdata
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.rstate module
 -------------------
 
 .. automodule:: espei.rstate
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.shadow\_functions module
 ------------------------------
 
 .. automodule:: espei.shadow_functions
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.sublattice\_tools module
 ------------------------------
 
 .. automodule:: espei.sublattice_tools
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.typing module
 -------------------
 
 .. automodule:: espei.typing
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.utils module
 ------------------
 
 .. automodule:: espei.utils
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 espei.validation module
 -----------------------
 
 .. automodule:: espei.validation
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 Module contents
 ---------------
 
 .. automodule:: espei
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

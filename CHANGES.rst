@@ -5,6 +5,33 @@ Changelog
 |version| (development)
 =======================
 
+0.9.1 (2026-06-05)
+==================
+
+Improvements
+------------
+* Add ability to pass a ``legend_generator`` to ``dataplot`` for custom phase legends for phase diagrams (`@rushigong`_ - :issue:`265`)
+* Add features to support upcoming mobility fitting features that will land in `Kawin <https://kawin.org/>`_ (`@nury12n`_ - :issue:`264`)
+* Improve debug log messages in ZPF error to handle convergence failures due to underdetermined chemical potentials (`@bocklund`_ - :issue:`274`)
+
+Bug fixes
+---------
+* Fix ``TypeError`` from expired deprecations in NumPy 2.4.2 (`@bocklund`_ - :issue:`285`)
+* Support installing from Git URLs (`@bocklund`_ - :issue:`287`)
+* Fix a bug where duplicated excluded model contribution entries resulted in datasets being incorrectly filtered out (`@bocklund`_ - :issue:`263`)
+
+Dependencies
+------------
+* Removed `pkg_resources` dependency for plugin discovery, preferring the currently reccomended ``importlib.metadata.entry_points`` (`@jmmshn`_ - :issue:`266`)
+* Use `uv <https://docs.astral.sh/uv/>`_ for package management in CI. We reccomend using ``uv`` for development. (`@bocklund`_ - :issue:`273`)
+
+**Thank you to our new contributors!**
+
+* `@nury12n`_
+* `@jmmshn`_
+* `@rushigong`_
+
+
 0.9.0 (2024-08-12)
 ==================
 
@@ -528,3 +555,6 @@ ESPEI is now a package! New features include
 .. _`@toastedcrumpets`: https://github.com/toastedcrumpets
 .. _`@wahab2604`: https://github.com/wahab2604
 .. _`@zhyrek`: https://github.com/zhyrek
+.. _`@nury12n`: https://github.com/nury12n
+.. _`@jmmshn`: https://github.com/jmmshn
+.. _`@rushigong`: https://github.com/rushigong

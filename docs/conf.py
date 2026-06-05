@@ -24,7 +24,7 @@ import re
 sys.path.insert(0, os.path.abspath('..'))  # For autodoc and version loading
 from espei import __version__ as espei_version
 # Cleanup dirty local version, since RTD dirties the repository
-espei_version = re.sub('\.d[0-9]{8}', '', espei_version)
+espei_version = re.sub(r'\.d[0-9]{8}', '', espei_version)
 
 # -- General configuration ------------------------------------------------
 
