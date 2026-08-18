@@ -124,7 +124,11 @@ class AbstractLinearPropertyStep(FittingStep):
                     # state (i.e. where the property of interest is zero for all
                     # the endmembers). To shift our VM_MIX data into VM, we need
                     # to add the VM computed from the endmember reference model.
-                    values[..., config_idx] += getattr(fixed_model.endmember_reference_model, cls.data_types_read)
+                    em_prop = getattr(fixed_model.endmember_reference_model, cls.data_types_read)
+                    if cls.data_types_read == "V0":
+                        # Model.V0 is per mole-formula, but datasets are per mole-atoms
+                        em_prop = em_prop / fixed_model.endmember_reference_model._site_ratio_normalization
+                    values[..., config_idx] += em_prop
                 else:
                     pass
             total_response.append(values.flatten())
@@ -141,10 +145,11 @@ class AbstractLinearPropertyStep(FittingStep):
         # do anything too special here.
         # subtract off lower order contributions.
         for i in range(rhs.shape[0]):
-            rhs[i] -= getattr(fixed_model, cls.parameter_name)
             if cls.normalize_parameter_per_mole_formula:
                 # Convert the quantity per-mole-atoms to per-mole-formula
                 rhs[i] *= mole_atoms_per_mole_formula_unit
+            # model parameter attributes (e.g. V0) are already per-mole-formula
+            rhs[i] -= getattr(fixed_model, cls.parameter_name)
 
         # Previous steps may have introduced some symbolic terms.
         # Now we remove all the symbols:
@@ -229,11 +234,12 @@ class StepHM(FittingStep):
                     if occupancy is None:
                         raise ValueError('Cannot have a _MIX property without sublattice occupancies.')
                     else:
-                        values[..., config_idx] += cls.transform_feature(fixed_model.models['ref'])*mole_atoms_per_mole_formula_unit
+                        # Model contributions are already per mole-formula
+                        values[..., config_idx] += cls.transform_feature(fixed_model.models['ref'])
                 else:
                     raise ValueError(f'Unknown property to shift: {dataset["output"]}')
                 for excluded_contrib in unique_excluded_contributions:
-                    values[..., config_idx] += cls.transform_feature(fixed_model.models[excluded_contrib])*mole_atoms_per_mole_formula_unit
+                    values[..., config_idx] += cls.transform_feature(fixed_model.models[excluded_contrib])
             total_response.append(values.flatten())
         return total_response
 
@@ -253,8 +259,8 @@ class StepHM(FittingStep):
         site_fractions = list(itertools.chain(*site_fractions))
 
         data_qtys = np.concatenate(cls.shift_reference_state(data, fixed_model, mole_atoms_per_mole_formula_unit), axis=-1)
-        # Remove existing partial model contributions from the data, convert to per mole-formula units
-        data_qtys = data_qtys - cls.transform_feature(fixed_model.ast)*mole_atoms_per_mole_formula_unit
+        # Remove existing partial model contributions from the data (Model.ast is already per mole-formula)
+        data_qtys = data_qtys - cls.transform_feature(fixed_model.ast)
         # Subtract out high-order (in T) parameters we've already fit, already in per mole-formula units
         data_qtys = data_qtys - cls.transform_feature(sum(fixed_portions))
         # If any site fractions show up in our rhs that aren't in these
@@ -313,8 +319,10 @@ class StepLogVA(AbstractLinearPropertyStep):
         # \[ V_A = \log(VM / V_0) \]
         # cast to object_ because the real type may become a symengine.Expr
         d = np.asarray(d, dtype=np.object_)
+        # Model.V0 is per mole-formula; VM data are per mole-atoms
+        V0_molar = model.V0 / model._site_ratio_normalization
         for i in range(d.shape[0]):
-            d[i] = symengine.log(d[i] / model.V0)
+            d[i] = symengine.log(d[i] / V0_molar)
         return d
 
     @classmethod
