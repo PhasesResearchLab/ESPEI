@@ -1,0 +1,47 @@
+---
+title: MCMC Parameter Trace Plots
+execute:
+  warning: false
+order: 30
+---
+
+Looking at how each parameter chain evolves across the chains can show
+if any particular chains are diverging from the rest, if there are
+multiple modes being explored, or how wide the distribution of
+parameters are relative to each other.
+
+Each line corresponds to one chain in the ensemble.
+
+``` {python}
+import matplotlib.pyplot as plt
+import numpy as np
+from espei.analysis import truncate_arrays
+
+trace = np.load('trace.npy')
+lnprob = np.load('lnprob.npy')
+trace, lnprob = truncate_arrays(trace, lnprob)
+
+num_chains = trace.shape[0]
+num_parameters = trace.shape[2]
+iterations = np.arange(1,trace.shape[1]+1)
+fig, axs = plt.subplots(nrows=num_parameters, gridspec_kw=dict(hspace=0.4), figsize=(4, 3*num_parameters))
+for parameter in range(num_parameters):
+    ax = axs[parameter]
+    ax.set_xlabel('Iterations')
+    ax.set_ylabel('Parameter value')
+    ax.plot(iterations, trace[..., parameter].T)
+fig.show()
+```
+
+and if we plot again after 500 iterations of burn-in:
+
+```{python}
+burn_in_iterations = 500
+fig, axs = plt.subplots(nrows=num_parameters, gridspec_kw=dict(hspace=0.4), figsize=(4, 3*num_parameters))
+for parameter in range(num_parameters):
+    ax = axs[parameter]
+    ax.set_xlabel('Iterations')
+    ax.set_ylabel('Parameter value')
+    ax.plot(iterations[burn_in_iterations:], trace[:, burn_in_iterations:, parameter].T)
+fig.show()
+```

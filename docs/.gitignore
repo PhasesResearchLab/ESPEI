@@ -1,0 +1,9 @@
+_site
+.quarto
+/.quarto/
+reference/api
+objects.json
+_sidebar.yml
+html.json
+tutorials/cu-mg-example/mcmc-log.txt
+*.pyc

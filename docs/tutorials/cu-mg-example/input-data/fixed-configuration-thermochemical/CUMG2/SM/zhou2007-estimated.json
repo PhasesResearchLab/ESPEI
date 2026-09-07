@@ -1,0 +1,18 @@
+{
+  "components": ["CU", "MG"],
+  "phases": ["CUMG2"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": [1, 2],
+    "sublattice_configurations": [["CU", "MG"]]
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 298.15
+  },
+  "output": "SM_FORM",
+    "values":   [[[-4.4]]],
+  "reference": "Estimated from Zhou (2007)",
+  "bibtex": "zhou2007",
+  "comment": "Estimated from enthalpy by s=h/3000",
+  "tags": ["estimated-entropy", "dft"]}

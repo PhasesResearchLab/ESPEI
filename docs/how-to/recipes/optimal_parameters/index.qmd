@@ -1,0 +1,23 @@
+---
+title: Get optimal MCMC parameters
+order: 10
+---
+
+Load an existing database and  optimal parameters from a tracefile and probfile:
+
+``` {python}
+import numpy as np
+from pycalphad import Database
+from espei.analysis import truncate_arrays
+from espei.utils import database_symbols_to_fit, optimal_parameters
+
+trace = np.load("trace.npy")
+lnprob = np.load("lnprob.npy")
+trace, lnprob = truncate_arrays(trace, lnprob)
+
+dbf = Database("Cu-Mg-generated.tdb")
+opt_params = dict(zip(database_symbols_to_fit(dbf), optimal_parameters(trace, lnprob)))
+# Update the symbols in the database, this database can now be used in PyCalphad calculations
+dbf.symbols.update(opt_params)
+# dbf.to_file("Cu-Mg-opt.tdb")  # if desired, write out the database
+```

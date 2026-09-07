@@ -1,0 +1,23 @@
+{
+    "components": ["CR", "NI"],
+    "phases": ["BCC_A2", "FCC_A1"],
+    "conditions": {
+        "T": [1473.15, 1373.15, 1273.15, 1173.15, 1023.15, 1373.15, 1273.15, 1173.15, 1023.15],
+        "P": [101325.0]
+    },
+    "output": "ZPF",
+    "values": [
+        [["FCC_A1", ["NI"], [0.5155]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["NI"], [0.5155]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["NI"], [0.542]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["NI"], [0.581]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["NI"], [0.6295]], ["BCC_A2", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.124]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.080]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.0405]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.014]], ["FCC_A1", ["NI"], [null]]]
+    ],
+    "reference": "Taylor (1952)", "bibtex": "taylor1952",
+    "comment": "Taken as mean composition single-phase/two-phase alloy regions, table 2.",
+    "author": "Bocklund, Brandon"
+}

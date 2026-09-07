@@ -1,0 +1,114 @@
+---
+title: "Installation"
+---
+
+## pip (recommended)
+
+To install ESPEI from PyPI using pip:
+
+``` bash
+pip install -U pip
+pip install -U espei
+```
+
+A recommended best practice is to install Python packages into a virtual
+environment. To create an environment and install ESPEI on Linux and
+macOS/OSX:
+
+``` bash
+python -m venv calphad-env
+source calphad-env/bin/activate
+pip install -U pip
+pip install -U pycalphad
+```
+
+On Windows:
+
+``` batch
+python -m venv calphad-env
+calphad-env\Scripts\activate
+pip install -U pip
+pip install -U pycalphad
+```
+
+## Anaconda
+
+If you prefer using Anaconda, ESPEI is distributed on conda-forge. If
+you do not have Anaconda installed, we recommend you download and
+install [Miniconda3](https://docs.conda.io/en/latest/miniconda.html).
+ESPEI can be installed with the conda package manager by:
+
+``` bash
+conda install -c conda-forge espei
+```
+
+## Development versions {#installing-development-versions}
+
+To make changes to the ESPEI source code, the development version must be installed.
+
+ESPEI uses [Git](https://git-scm.com/book/en/v2) and
+[GitHub](https://github.com/PhasesResearchLab/ESPEI) for version
+control. Windows users: if you do not have a working version of Git,
+[download it here](https://git-scm.com/downloads) first.
+
+### uv (recommended)
+
+We reccomend using [uv](https://docs.astral.sh/uv/) to develop ESPEI,
+which manages virtual environments for you.
+To install a development version of ESPEI and run the test suite:
+
+``` bash
+git clone https://github.com/phasesresearchlab/espei.git
+uv sync
+uv run pytest
+```
+
+If the test suite passes, you are ready to start using the development
+version or making changes yourself! See the
+[guide for contributing to ESPEI](developer/contributing.qmd) to learn more.
+If any tests fail, please report the failure to the
+[ESPEI issue tracker on GitHub](https://github.com/phasesresearchlab/espei/issues).
+
+To upgrade your development version to the latest version, run
+`git pull` from the top level ESPEI directory (the directory containing
+the `pyproject.toml` file) and then `uv sync`.
+
+To build and then open documentation, run
+
+``` bash
+uv run sphinx-build --fail-on-warning --keep-going docs/ docs/_build
+uv run python -m http.server -d docs/_build
+```
+
+### pip (manual setup)
+
+If you want to manage your own environment using `pip`, you can still do so.
+We strongly recommend that users interested in developing packages work
+in a virtual environment. The steps below will create an environment
+called `calphad-dev`, which can be entered using
+`source calphad-dev/bin/activate` on Linux or macOS/OSX or
+`activate calphad-dev\bin\activate` on Windows. The environment name is
+arbitrary - you can use whatever name you prefer.
+
+If you\'ll need to make changes to pycalphad
+simultaneously, follow the
+[instructions to install the development version of pycalphad](https://pycalphad.org/docs/latest/INSTALLING.html#development-versions-advanced-users)
+first.
+
+To install the latest development version of ESPEI using pip:
+
+``` bash
+python -m venv calphad-env
+source calphad-env/bin/activate
+git clone https://github.com/phasesresearchlab/espei.git
+cd espei
+pip install -U pip
+pip install -U --editable .[dev]
+```
+
+With the development version installed and your environment activated,
+you can run the automated tests by running
+
+``` bash
+pytest
+```

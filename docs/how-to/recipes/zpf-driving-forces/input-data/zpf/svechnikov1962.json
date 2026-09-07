@@ -1,0 +1,30 @@
+{
+    "components": ["CR", "NI"],
+    "phases": ["BCC_A2", "LIQUID"],
+    "conditions": {
+        "T": [2055, 1985, 1934, 1815, 1782, 1747, 1725, 1703, 1682, 1660, 1650, 1669, 1767, 1822, 1940],
+        "P": [101325.0]
+    },
+    "output": "ZPF",
+    "values": [
+        [["LIQUID", ["CR"], [0.912]], ["BCC_A2", ["CR"], [null]]],
+        [["LIQUID", ["CR"], [0.842]], ["BCC_A2", ["CR"], [null]]],
+        [["LIQUID", ["CR"], [0.792]], ["BCC_A2", ["CR"], [null]]],
+        [["LIQUID", ["CR"], [0.692]], ["BCC_A2", ["CR"], [null]]],
+        [["LIQUID", ["CR"], [0.671]], ["BCC_A2", ["CR"], [null]]],
+        [["LIQUID", ["CR"], [0.652]], ["BCC_A2", ["CR"], [null]]],
+        [["LIQUID", ["CR"], [0.631]], ["BCC_A2", ["CR"], [null]]],
+        [["LIQUID", ["CR"], [0.612]], ["BCC_A2", ["CR"], [null]]],
+        [["LIQUID", ["CR"], [0.602]], ["BCC_A2", ["CR"], [null]]],
+        [["LIQUID", ["CR"], [0.571]], ["BCC_A2", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.640]], ["LIQUID", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.662]], ["LIQUID", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.771]], ["LIQUID", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.830]], ["LIQUID", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.911]], ["LIQUID", ["CR"], [null]]]
+    ],
+    "reference": "Svechnikov (1962)", "bibtex": "svechnikov1962",
+    "comment": "Digitized from Figure 1 in F. Tang, B. Hallstedt, Calphad Comput. Coupling Phase Diagrams Thermochem. 55 (2016) 260–269. doi:10.1016/j.calphad.2016.10.003., but the original article should be used.",
+    "author": "Bocklund, Brandon",
+    "date": "2021-03-02"
+}

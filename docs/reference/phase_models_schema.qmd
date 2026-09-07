@@ -1,0 +1,79 @@
+---
+title: "Phase Models Schema"
+---
+
+{{< include _json_callout.qmd >}}
+
+The JSON file for describing Calphad phases is conceptually similar to a
+setup file in Thermo-Calc\'s PARROT module. At the top of the file there
+is the `refdata` key that describes which reference state you would like
+to choose. Currently the reference states are strings referring to
+dictionaries in `pycalphad.refdata` only `"SGTE91"` is implemented.
+
+Each phase is described with the phase name as they key in the
+dictionary of phases. The details of that phase is a dictionary of
+values for that key. There are 4 possible entries to describe a phase:
+`sublattice_model`, `sublattice_site_ratios`, `equivalent_sublattices`,
+and `aliases`. `sublattice_model` is a list of lists, where each
+internal list contains all of the components in that sublattice. The
+`BCC_B2` sublattice model is
+`[["AL", "NI", "VA"], ["AL", "NI", "VA"], ["VA"]]`, thus there are three
+sublattices where the first two have Al, Ni, and vacancies.
+`sublattice_site_ratios` should be of the same length as the sublattice
+model (e.g. 3 for `BCC_B2`). The sublattice site ratios can be
+fractional or integers and do not have to sum to unity.
+
+The optional `equivalent_sublattices` key is a list of lists that
+describe which sublattices are symmetrically equivalent. Each sub-list
+in `equivalent_sublattices` describes the indices (zero-indexed) of
+sublattices that are equivalent. For `BCC_B2` the equivalent sublattices
+are `[[0, 1]]`, meaning that the sublattice at index 0 and index 1 are
+equivalent. There can be multiple different sets (multiple sub-lists) of
+equivalent sublattices and there can be many equivalent sublattices
+within a sublattice (see `FCC_L12`). If no `equivalent_sublattice` key
+exists, it is assumed that there are none.a
+
+Finally, the `aliases` key is used to refer to other phases that this
+sublattice model can describe when symmetry is accounted for. Aliases
+are used here to describe the `BCC_A2` and `FCC_A1`, which are the
+disordered phases of `BCC_B2` and `FCC_L12`, respectively. Notice that
+the aliased phases are not otherwise described in the input file.
+Multiple phases can exist with aliases to the same phase, e.g. `FCC_L12`
+and `FCC_L10` can both have `FCC_A1` as an alias.
+
+``` JSON
+{
+  "refdata": "SGTE91",
+  "components": ["AL", "NI", "VA"],
+  "phases": {
+      "LIQUID" : {
+      "sublattice_model": [["AL", "NI"]],
+      "sublattice_site_ratios": [1]
+      },
+      "BCC_B2": {
+      "aliases": ["BCC_A2"],
+      "sublattice_model": [["AL", "NI", "VA"], ["AL", "NI", "VA"], ["VA"]],
+      "sublattice_site_ratios": [0.5, 0.5, 1],
+      "equivalent_sublattices": [[0, 1]]
+      },
+      "FCC_L12": {
+      "aliases": ["FCC_A1"],
+      "sublattice_model": [["AL", "NI"], ["AL", "NI"], ["AL", "NI"], ["AL", "NI"], ["VA"]],
+      "sublattice_site_ratios": [0.25, 0.25, 0.25, 0.25, 1],
+      "equivalent_sublattices": [[0, 1, 2, 3]]
+      },
+      "AL3NI1": {
+      "sublattice_site_ratios": [0.75, 0.25],
+      "sublattice_model": [["AL"], ["NI"]]
+      },
+      "AL3NI2": {
+      "sublattice_site_ratios": [3, 2, 1],
+      "sublattice_model": [["AL"], ["AL", "NI"], ["NI", "VA"]]
+      },
+      "AL3NI5": {
+      "sublattice_site_ratios": [0.375, 0.625],
+      "sublattice_model": [["AL"], ["NI"]]
+      }
+    }
+}
+```

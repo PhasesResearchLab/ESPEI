@@ -1,0 +1,19 @@
+system:
+  phase_models: phase_models.json    # path to the phases file
+  datasets: input-data               # path to the directory containing input data
+  tags:
+    dft:
+      excluded_model_contributions: ['idmix', 'mag']
+    estimated-entropy:
+      excluded_model_contributions: ['idmix', 'mag']
+      weight: 0.1
+output:
+  output_db: Cu-Mg-generated.tdb     # what to name the output TDB file
+  verbosity: 2                       # levels of verbosity. Choose 0, 1 or 2 for Warnings, Info, or Debug
+generate_parameters:
+  ref_state: SGTE91
+  excess_model: linear
+  aicc_penalty_factor:
+    LIQUID:
+      HM: 1.4  # goal is to generate two parameters
+      SM: 1.4

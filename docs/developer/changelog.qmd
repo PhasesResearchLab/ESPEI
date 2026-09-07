@@ -1,0 +1,776 @@
+# Changelog
+
+## (development)
+
+## 0.9.0 (2024-08-12)
+
+### Improvements
+
+-   Migrate to PyCalphad Workspace
+    ([\@bocklund](https://github.com/bocklund) - [issue 256](https://github.com/phasesresearchlab/espei/issues/256))
+    -   PyCalphad\'s `IsolatedPhase` feature improves accuracy and
+        elimintes the need for a heuristic to perform constrained
+        equilibria when computing the likelihood for phase diagram data.
+    -   ESPEI users will likely see a small 2-4x performance regression
+        in MCMC as some of the heavily optimized code paths in ESPEI
+        were removed in favor of the versions implemented in
+        `Workspace`. We are looking in to further optimizations and
+        utilizing Jansson derivatives to compute likelihood gradients
+        that will enable us to use more performant optimization and MCMC
+        methods.
+
+### Dependencies
+
+-   Update minimum required PyCalphad version to 0.11
+    ([\@bocklund](https://github.com/bocklund) - [issue 259](https://github.com/phasesresearchlab/espei/issues/259))
+-   Add NumPy 2.0 support ([\@bocklund](https://github.com/bocklund) -
+    [issue 255](https://github.com/phasesresearchlab/espei/issues/255))
+
+### Deprecations
+
+-   Remove code scheduled for deprecation in ESPEI 0.9: deprecations
+    ([\@bocklund](https://github.com/bocklund) - [issue 257](https://github.com/phasesresearchlab/espei/issues/257))
+    -   `espei.plot`: `plot_parameters` is replaced with
+        `plot_interaction` and `plot_endmember`. `eqdataplot` and
+        `multiplot` are replaced with using `dataplot` combined with the
+        relevant PyCalphad phase diagram plotting code.
+    -   ESPEI YAML input: `scheduler: "None"` is replaced by
+        `scheduler: null`
+
+## 0.8.10 (2024-01-30)
+
+### Improvements
+
+-   Add a generic framework for property model parameter generation
+    ([\@bocklund](https://github.com/bocklund) - [issue 251](https://github.com/phasesresearchlab/espei/issues/251))
+-   Improve performance for generating candidate models with many
+    features ([\@bocklund](https://github.com/bocklund) -
+    [issue 254](https://github.com/phasesresearchlab/espei/issues/254))
+-   MCMC: Replace one of the initial MCMC chains with the initial
+    parameter values. This should improve convergence and prevent
+    significant regression compared to input parameters.
+    ([\@toastedcrumpets](https://github.com/toastedcrumpets) -
+    [issue 249](https://github.com/phasesresearchlab/espei/issues/249))
+-   Support checking only a single dataset from command line
+    ([\@zhyrek](https://github.com/zhyrek) - [issue 244](https://github.com/phasesresearchlab/espei/issues/244))
+
+### Bug fixes
+
+-   Fix `dataplot()` for ternary cases with that use `__HYPERPLANE__`
+    ([\@bocklund](https://github.com/bocklund) - [issue 252](https://github.com/phasesresearchlab/espei/issues/252))
+-   Fix `Residual` protocol for MCMC for newer Python versions (3.11+)
+    ([\@bocklund](https://github.com/bocklund) - [issue 253](https://github.com/phasesresearchlab/espei/issues/253))
+-   Correctly pass parameters through `calculate_activity_error()`
+    ([\@bocklund](https://github.com/bocklund) - [issue 246](https://github.com/phasesresearchlab/espei/issues/246))
+
+### Dependencies
+
+-   Update pycalphad minimum version to 0.10.4 to support new property
+    modeling framework ([\@bocklund](https://github.com/bocklund))
+-   Migrate to pydantic v2 ([\@bocklund](https://github.com/bocklund) -
+    [issue 247](https://github.com/phasesresearchlab/espei/issues/247), [issue 248](https://github.com/phasesresearchlab/espei/issues/248))
+-   \[Developer\] Add support for Python 3.12 in test framework
+    ([\@bocklund](https://github.com/bocklund))
+
+## 0.8.9 (2022-08-04)
+
+### Improvements
+
+-   Support varying pressure and P-X plots in `dataplot()` and
+    `ravel_zpf_values()` ([\@bocklund](https://github.com/bocklund) -
+    [issue 240](https://github.com/phasesresearchlab/espei/issues/240))
+-   MCMC: Refactor residual/likelihood functions to better support
+    custom user data types and likelihood functions
+    ([\@bocklund](https://github.com/bocklund) - [issue 236](https://github.com/phasesresearchlab/espei/issues/236))
+
+### Deprecations
+
+-   Drop Python 3.7 (following NEP-29)
+    ([\@bocklund](https://github.com/bocklund) - [issue 237](https://github.com/phasesresearchlab/espei/issues/237))
+-   Remove custom graph of optimizer history
+    ([\@bocklund](https://github.com/bocklund) - [issue 235](https://github.com/phasesresearchlab/espei/issues/235))
+
+## 0.8.8 (2022-05-22)
+
+### Improvements
+
+-   Generalize entering the `__HYPERPLANE__` phase in ZPF vertices to
+    control the compositions for the target hyperplane
+    ([\@bocklund](https://github.com/bocklund) - [issue 221](https://github.com/phasesresearchlab/espei/issues/221))
+-   Update for CompositionSet-based solver in pycalphad 0.10.1
+    ([\@bocklund](https://github.com/bocklund) - [issue 232](https://github.com/phasesresearchlab/espei/issues/232))
+-   Fix generating parameters for symmetry of 4 sublattice FCC models
+    ([\@bocklund](https://github.com/bocklund) - [issue 229](https://github.com/phasesresearchlab/espei/issues/229))
+-   Fix a bug where a trace of all zeros would raise an error.
+
+## 0.8.7 (2022-02-21)
+
+### Improvements
+
+-   Add support for Python 3.10
+    ([\@bocklund](https://github.com/bocklund) - [issue 227](https://github.com/phasesresearchlab/espei/issues/227))
+-   Add support for changes in pycalphad 0.10 that use SymEngine as the
+    symbolic backend ([\@bocklund](https://github.com/bocklund) -
+    [issue 212](https://github.com/phasesresearchlab/espei/issues/212))
+-   Performance improvements in parameter selection, which can lead to
+    more than an order of magnitude improvement for phases with large
+    sublattice models ([\@bocklund](https://github.com/bocklund) -
+    [issue 225](https://github.com/phasesresearchlab/espei/issues/225))
+
+## 0.8.6 (2022-01-25)
+
+### Improvements
+
+-   Significant performance improvement in startup time in MCMC for ZPF
+    data and decrease in runtime memory usage
+    ([\@bocklund](https://github.com/bocklund) - [issue 210](https://github.com/phasesresearchlab/espei/issues/210))
+-   Improve sampling of energy surface for finding constrained driving
+    forces in ZPF data, at least one energy surface sample is now
+    guaranteed ([\@bocklund](https://github.com/bocklund) -
+    [issue 211](https://github.com/phasesresearchlab/espei/issues/211))
+-   Fix bug in MCMC when fitting ZPF data for non-pure element species
+    with recent versions of pycalphad
+    ([\@wahab2604](https://github.com/wahab2604) -
+    [issue 208](https://github.com/phasesresearchlab/espei/issues/208))
+-   MCMC: Add support for fitting subsets of the database components
+    given in phase models ([\@bocklund](https://github.com/bocklund) -
+    [issue 218](https://github.com/phasesresearchlab/espei/issues/218))
+-   Update dependencies and resolve deprecations
+    ([\@bocklund](https://github.com/bocklund) - [issue 222](https://github.com/phasesresearchlab/espei/issues/222), [issue 223](https://github.com/phasesresearchlab/espei/issues/223))
+
+## 0.8.5 (2021-08-09)
+
+### Improvements
+
+-   Migrate to the new pycalphad internal APIs for the minimizer and
+    `calculate` utilities ([\@bocklund](https://github.com/bocklund) -
+    [issue 201](https://github.com/phasesresearchlab/espei/issues/201) and [issue 206](https://github.com/phasesresearchlab/espei/issues/206))
+-   Improve AICc formulation to have more consistent behavior when the
+    number of data points is small
+    ([\@bocklund](https://github.com/bocklund) - [issue 205](https://github.com/phasesresearchlab/espei/issues/205))
+-   Enable specifying custom pycalphad `Model` classes in MCMC
+    simulations via the phase models data file
+    ([\@bocklund](https://github.com/bocklund) - [issue 202](https://github.com/phasesresearchlab/espei/issues/202))
+
+## 0.8.4 (2021-06-06)
+
+### Improvements
+
+-   Migrate to pycalphad\'s new minimizer
+    ([\@bocklund](https://github.com/bocklund) - [issue 196](https://github.com/phasesresearchlab/espei/issues/196))
+-   Fix a memory issue in large sublattice models by using the new
+    minimizer to implement constrained driving forces
+    ([\@bocklund](https://github.com/bocklund) - [issue 196](https://github.com/phasesresearchlab/espei/issues/196))
+-   Fix a regression where `plot_interaction` and `plot_endmember`
+    re-used reference labels and markers
+    ([\@bocklund](https://github.com/bocklund) - [issue 187](https://github.com/phasesresearchlab/espei/issues/187))
+-   Parameter selection now adds and fits only phases which in the phase
+    models and are active ([\@bocklund](https://github.com/bocklund) -
+    [issue 188](https://github.com/phasesresearchlab/espei/issues/188))
+-   Fix a bug where `plot_interaction` and `plot_endmember` would raise
+    an error when axes were not passed explicitly
+    ([\@bocklund](https://github.com/bocklund) - [issue 191](https://github.com/phasesresearchlab/espei/issues/191))
+-   Fix a bug where reference keys were assumed to be present in
+    `dataplot`, `plot_interaction` and `plot_endmember`
+    ([\@bocklund](https://github.com/bocklund) - [issue 191](https://github.com/phasesresearchlab/espei/issues/191))
+-   Documentation: Rewrite phase diagram datasets section, switch paper
+    references to RST citations, reorganize sections into
+    how-to/reference material appropriately
+    ([\@bocklund](https://github.com/bocklund) - [issue 192](https://github.com/phasesresearchlab/espei/issues/192))
+-   Documentation: Switch from `sphinx_rtd_theme` to `furo` theme
+    ([\@bocklund](https://github.com/bocklund) - [issue 193](https://github.com/phasesresearchlab/espei/issues/193))
+
+### Deprecations
+
+-   pycalphad versions lower than 0.9.0 are no longer supported.
+
+## 0.8.3 (2021-05-08)
+
+### Improvements
+
+-   Fix a bug where excluded model contributions could be double counted
+    ([\@bocklund](https://github.com/bocklund) - [issue 181](https://github.com/phasesresearchlab/espei/issues/181))
+-   Support internal API changes for pycalphad 0.8.5
+    ([\@bocklund](https://github.com/bocklund) - [issue 183](https://github.com/phasesresearchlab/espei/issues/183))
+-   Fix a regression for ZPF error calculations introduced in
+    [issue 181](https://github.com/phasesresearchlab/espei/issues/181) where prescribed phase
+    compositions of stoichiometric phases that used to work no longer
+    work because the phase composition of a stoichiometric phase may be
+    unsatisfiable ([\@bocklund](https://github.com/bocklund) -
+    [issue 185](https://github.com/phasesresearchlab/espei/issues/185)).
+-   Fix a bug in ZPF error calculations where stoichiometric phases
+    could give incorrect energies for exact equilibrium when prescribed
+    mass balance conditions could not be satisfied. The fix now computes
+    the driving force exactly in all cases for stoichiometric compounds.
+    ([\@bocklund](https://github.com/bocklund) - [issue 185](https://github.com/phasesresearchlab/espei/issues/185))
+
+## 0.8.2 (2021-05-05)
+
+### Improvements
+
+-   Fix weighting in model selection
+    ([\@bocklund](https://github.com/bocklund) - [issue 176](https://github.com/phasesresearchlab/espei/issues/176))
+
+### Deprecations
+
+-   `plot_parameters` is deprecated in favor of `plot_interaction` and
+    `plot_endmember` ([\@bocklund](https://github.com/bocklund) -
+    [issue 177](https://github.com/phasesresearchlab/espei/issues/177))
+
+## 0.8.1 (2021-04-22)
+
+This is a minor release that fixes a performance regression and retires
+unused utility code.
+
+-   Fixes a performance regression in `_sample_solution_constitution`
+    that could cause getting ZPF data for MCMC to be extremely slow.
+    ([\@bocklund](https://github.com/bocklund) - [issue 174](https://github.com/phasesresearchlab/espei/issues/174))
+-   The `flexible_open_string` and `add_bibtex_to_bib_database`
+    utilities were removed. Both were unusued in ESPEI. ESPEI no longer
+    depends on `bibtexparser`.
+    ([\@bocklund](https://github.com/bocklund) - [issue 171](https://github.com/phasesresearchlab/espei/issues/171))
+
+## 0.8 (2021-04-19)
+
+This is a major release with bug fixes and a backward compatible public
+API, but breaking changes in the behavior of parameter selection and
+MCMC parameter estimation. Some internal functions were deprecated.
+
+### Improvements
+
+-   Revamped internal logging. For users, ESPEI now has namespaced
+    logging and filters out all non-ESPEI logs (e.g. dask and
+    matplotlib). This change also fixed a bug where changing the
+    verbosity in Jupyter was not taking effect.
+    ([\@bocklund](https://github.com/bocklund) - [issue 165](https://github.com/phasesresearchlab/espei/issues/165))
+-   Fixed a bug where scalar weights of non-equilibrium thermochemical
+    datasets were not being broadcasted correctly and raised errors.
+    ([\@bocklund](https://github.com/bocklund) - [issue 154](https://github.com/phasesresearchlab/espei/issues/154))
+-   Fixed a bug where non-equilibrium thermochemical datasets using
+    broadcasted temperatures and compositions were broadcasted against
+    the values incorrectly. ([\@bocklund](https://github.com/bocklund) -
+    [issue 154](https://github.com/phasesresearchlab/espei/issues/154))
+-   Allow disabling datasets semantically using `disabled: true` in JSON
+    datasets. ([\@bocklund](https://github.com/bocklund) -
+    [issue 153](https://github.com/phasesresearchlab/espei/issues/153))
+-   Users can now pass custom SER reference data to override SER phases,
+    mass, H298, and S298 for existing elements or new elements. Includes
+    better warnings for common errors when the SER data is incompatible
+    with the phases being fit.
+    ([\@bocklund](https://github.com/bocklund) - [issue 158](https://github.com/phasesresearchlab/espei/issues/158))
+-   Fixed a bug in computing activity error in MCMC where species were
+    not correctly generated from the pure comopnents.
+    ([\@bocklund](https://github.com/bocklund) - [issue 152](https://github.com/phasesresearchlab/espei/issues/152))
+
+### Breaking changes
+
+-   Driving forces in ZPF error are now computed from local minimum
+    solutions rather than global minimum solutions. This change
+    significantly improves the convergence for any phases with stable or
+    metastable miscibility gaps. It also prevents users from prescribing
+    phase composition conditions that cannot be satisfied. See the
+    linked GitHub issue for a detailed description of the rationale and
+    implementation of this change.
+    ([\@bocklund](https://github.com/bocklund) - [issue 151](https://github.com/phasesresearchlab/espei/issues/151))
+-   Removed automatically added ideal exclusions, which was deprecated
+    in ESPEI 0.7. Non-equilibrium thermochemical data should use the
+    `excluded_model_contributions` key to exclude `idmix`, `mag` or
+    other model contributions.
+    ([\@bocklund](https://github.com/bocklund) - [issue 168](https://github.com/phasesresearchlab/espei/issues/168))
+-   Remove deprecated `mcmc.py`
+    ([\@bocklund](https://github.com/bocklund) - [issue 164](https://github.com/phasesresearchlab/espei/issues/164))
+
+### Deprecations
+
+-   Setting `mcmc.scheduler` to the string `"None"` to get a serial
+    scheduler is deprecated. Users should use `null` in YAML/JSON or
+    `None` in Python.
+-   Deprecated `multiplot` and `eqdataplot` in favor of having users
+    compose `binplot` and `dataplot`. pycalphad\'s `binplot` is much
+    faster than `multiplot`. The extra functional call added is worth
+    removing the maintenance burden and allows users to understand more
+    explictly the difference between plotting data and plotting the
+    calculated phase diagram. The documentation was updated to reflect
+    this change and no longer uses `multiplot`.
+    ([\@bocklund](https://github.com/bocklund) - [issue 162](https://github.com/phasesresearchlab/espei/issues/162))
+
+## 0.7.12 (2021-03-16)
+
+This is a minor bugfix release that updates the SGTE reference state
+data for carbon and more strictly specifies dependences. No changes to
+the code were made since 0.7.11.
+
+## 0.7.11 (2021-03-12)
+
+This is a minor bugfix release with backwards compatible changes.
+
+-   Fix numpy v1.20 deprecations
+    ([\@bocklund](https://github.com/bocklund) - [issue 147](https://github.com/phasesresearchlab/espei/issues/147))
+-   Add dataplot tie-line flag
+    ([\@bocklund](https://github.com/bocklund) - [issue 145](https://github.com/phasesresearchlab/espei/issues/145))
+-   Add `corner` package to dependencies so the recipes now work without
+    installing extra packages
+
+## 0.7.10 (2020-11-14)
+
+This is a minor bugfix release that addresses a potential inconsistency
+with hyphen/underscore usage in dask configuration files
+([\@bocklund](https://github.com/bocklund) - [issue 136](https://github.com/phasesresearchlab/espei/issues/136)).
+
+## 0.7.9 (2020-11-12)
+
+This is a minor maintenance release that automatically disables work
+stealing (users are no longer required to configure this themselves)
+([\@bocklund](https://github.com/bocklund) - [issue 134](https://github.com/phasesresearchlab/espei/issues/134)).
+
+## 0.7.8 (2020-11-10)
+
+This is a bug fix release with backwards compatible changes.
+
+-   Fix a bug triggered by pycalphad 0.8.4 where the new parameter
+    extraction behavior could break the MCMC sampler
+    ([\@bocklund](https://github.com/bocklund) - [issue 132](https://github.com/phasesresearchlab/espei/issues/132))
+-   Fix a bug where some feature matrices had incorrect shape, stemming
+    from using SymPy.Matrix to symbolically manipulate the data
+    ([\@bocklund](https://github.com/bocklund) - [issue 130](https://github.com/phasesresearchlab/espei/issues/130))
+-   Migrate to tinydb v4+ ([\@bocklund](https://github.com/bocklund) -
+    [issue 126](https://github.com/phasesresearchlab/espei/issues/126))
+
+## 0.7.7 (2020-04-11)
+
+This is a minor feature and bug fix release with backwards compatible
+changes.
+
+-   Preliminary support for thermochemical error for arbitrary
+    properties ([\@bocklund](https://github.com/bocklund) -
+    [issue 124](https://github.com/phasesresearchlab/espei/issues/124))
+-   Update the preferred method for disabling tracefile, probfile,
+    logfile, and no scheduler in YAML to use `null` instead of `"None"`
+    ([\@bocklund](https://github.com/bocklund) - [issue 125](https://github.com/phasesresearchlab/espei/issues/125))
+-   Fix a bug in `truncate_arrays` and `optimal_parameters` to allow
+    some zeros ([\@bocklund](https://github.com/bocklund) -
+    [issue 122](https://github.com/phasesresearchlab/espei/issues/122))
+-   Enable custom unary reference states for parameter generation with
+    [entry_points]{.title-ref} plugin system
+    ([\@bocklund](https://github.com/bocklund) - [issue 121](https://github.com/phasesresearchlab/espei/issues/121))
+
+## 0.7.6 (2020-03-27)
+
+This is a minor bug fix release.
+
+-   Fixes a bug introduced in 0.7.5 for calculating likelihood for phase
+    boundary data under equilibrium failures
+    ([\@bocklund](https://github.com/bocklund) - [issue 120](https://github.com/phasesresearchlab/espei/issues/120))
+-   Since Python 2 was dropped, [six]{.title-ref} has been removed as a
+    dependency ([\@bocklund](https://github.com/bocklund) -
+    [issue 119](https://github.com/phasesresearchlab/espei/issues/119))
+
+## 0.7.5 (2020-03-09)
+
+This release includes performance optimizations, bug fixes and new
+features for MCMC simulations.
+
+-   This version of ESPEI now requires pycalphad 0.8.2 or later for the
+    features below.
+-   Fitting subsystems of a large database is explicitly supported and
+    tested for all implemented MCMC data types. Fixes a bug in ZPF error
+    and activity error where having phases in the database that are
+    inactive in the subsystem would raise errors
+    ([\@bocklund](https://github.com/bocklund) - [issue 118](https://github.com/phasesresearchlab/espei/issues/118)).
+-   Computing thermochemical error and phase boundary (ZPF) error are
+    now optimized to reduce overhead time in dependencies
+    ([\@bocklund](https://github.com/bocklund) - [issue 117](https://github.com/phasesresearchlab/espei/issues/117))
+-   A new feature for calculating approximate driving force for phase
+    boundary data is implemented, which can give performance
+    improvements of 3x-10x, depending on the system
+    ([\@bocklund](https://github.com/bocklund) - [issue 115](https://github.com/phasesresearchlab/espei/issues/115))
+
+## 0.7.4 (2019-12-09)
+
+This release includes small fixes for parameter generation.
+
+-   Excluded model contributions are fixed for models with different
+    sublattice site ratios and for data that are not endmembers
+    ([\@bocklund](https://github.com/bocklund) - [issue 113](https://github.com/phasesresearchlab/espei/issues/113))
+
+## 0.7.3 (2019-12-02)
+
+This change includes several new features and performance improvements.
+
+-   Drop Python 2 support (Python 2 is no longer supported on January 1,
+    2020).
+-   Update dask and distributed support to versions \>=2.
+    ([\@bocklund](https://github.com/bocklund))
+-   Users can tweak the AICc penalty factor for each phase to nudge
+    parameter selection towards adding more or fewer parameters based on
+    user modeling intuition. ([\@bocklund](https://github.com/bocklund))
+-   Allow for tracefile and probfile to be set to None.
+    ([\@jwsiegel2510](https://github.com/jwsiegel2510))
+-   Weighting individual datasets in single phase fitting is now
+    implemented via scikit-learn.
+    ([\@bocklund](https://github.com/bocklund))
+-   Performance improvements by reducing overhead.
+    ([\@bocklund](https://github.com/bocklund))
+-   Increased solver accuracy by using pycalphad\'s exact Hessian
+    solver. ([\@bocklund](https://github.com/bocklund))
+-   Support writing SER reference state information to the
+    [ELEMENT]{.title-ref} keyword in TDBs based on the SGTE unary 5
+    database. ([\@bocklund](https://github.com/bocklund))
+-   MCMC now calculates the likelihood of the initial parameter set so
+    the starting point can be reasonably compared.
+    ([\@bocklund](https://github.com/bocklund))
+-   Fixed a bug where mis-aligned configurations and site occupancies in
+    single phase datasets passed the dataset checker
+    ([\@bocklund](https://github.com/bocklund))
+
+## 0.7.2 (2019-06-12)
+
+This is a small bugfix release that fixes the inability to provide the
+EmceeOptimizer a `restart_trace`.
+
+## 0.7.1 (2019-06-03)
+
+This is a significant update reflecting many internal improvements, new
+features, and bug fixes. Users using the YAML input or the `run_espei`
+Python API should see entirely backwards compatible changes with ESPEI
+0.6.2.
+
+pycalphad 0.8, which introduced many [key
+features](https://pycalphad.org/docs/latest/CHANGES.html) for these
+changes is now required. This should almost completely eliminate the
+time to build phases due to the symengine backend (phases will likely
+build in less time than to call the MCMC objective function). Users can
+expect a slight performance improvement for MCMC fitting.
+
+### Improvements
+
+-   Priors can now be specified and are documented online.
+-   Weights for different datasets are added and are supported by a
+    `"weight"` key at the top level of any dataset.
+-   Weights for different types of data are added. These are controlled
+    via the input YAML and are documented there.
+-   A new internal API is introduced for generic fitting of parameters
+    to datasets in the `OptimizerBase` class. The MCMC optimizer in
+    emcee was migrated to this API (the `mcmc_fit` function is now
+    deprecated, but still works until the next major version of ESPEI).
+    A simple SciPy-based optimizer was implemented using this API.
+-   Parameter selection can now be passed initial databases with
+    parameters (e.g. for adding magnetic or other parameters manually).
+-   pycalphad\'s reference state support can now be used to properly
+    reference out different types of model contributions (ideal mixing,
+    magnetic, etc.). This is especially useful for DFT thermochemical
+    data which does not include model contributions from ideal mixing or
+    magnetic heat capacity. Useful for experimental data which does
+    include ideal mixing (previously ESPEI assumed all data
+-   Datasets and input YAML files now have a tag system where tags that
+    are specified in the input YAML can override any keys/values in the
+    JSON datasets at runtime. This is useful for tagging data with
+    different weights/model contribution exclusions (e.g. DFT tags may
+    get lower weights and can be set to exclude model contributions). If
+    no tags are applied, removing ideal mixing from all thermochemical
+    data is applied automatically for backwards compatibility. This
+    backwards compatibility feature will be removed in the next major
+    version of ESPEI (all model contributions will be included by
+    default and exclusions must be specified manually).
+
+### Bug fixes
+
+-   Bug fixed where asymmetric ternary parameters were not properly
+    replaced in SymPy
+-   Fixed error where ZPF error was considering the chemical potentials
+    of stoichiometric phases in the target hyperplane (they are
+    meaningless)
+-   Report the actual file paths when dask\'s work-stealing is set to
+    false.
+-   Errors in the ZPF error function are no longer swallowed with
+    -np.inf error. Any errors should be reported as bugs.
+-   Fix bug where subsets of symbols to fit are not built properly for
+    thermochemical data
+
+### Other
+
+-   Documentation recipe added for [plot_parameters]{.title-ref}
+-   \[Developer\] ZPF and thermochemical datasets now have an function
+    to get all the data up front in a dictionary that can be used in the
+    functions for separation of concerns and calculation efficiency by
+    not recalculating the same thing every iteration.
+-   \[Developer\] a function to generate the a context dict to pass to
+    lnprob now exists. It gets the datasets automatically using the
+    above.
+-   \[Developer\] transition to pycalphad\'s new build_callables
+    function, taking care of the `v.N` state variable.
+-   \[Developer\] Load all YAML safely, silencing warnings.
+
+## 0.6.2 (2018-11-27)
+
+This backwards-compatible release includes several bug fixes and
+improvements.
+
+-   Updated branding to include the new ESPEI logo. See the logo in the
+    `docs/_static` directory.
+-   Add support for fitting excess heat capacity.
+-   Bug fix for broken potassium unary.
+-   Documentation improvements for recipes
+-   pycalphad 0.7.1 fixes for dask, sympy, and gmpy2 should mean that
+    ESPEI should not require package upgrade or downgrades. Please
+    report any installations issues in [ESPEI\'s Gitter
+    Channel](https://gitter.im/PhasesResearchLab/ESPEI).
+-   \[Developers\] ESPEI\'s `eq_callables_dict` is now
+    `pycalphad.codegen.callables.build_callables`.
+-   \[Developers\] matplotlib plotting tests are removed because nose is
+    no longer supported.
+
+## 0.6.1 (2018-08-28)
+
+This a major release with several important features and bug fixes.
+
+-   Enable use of ridge regression alpha for parameter selection via the
+    `parameter_generation.ridge_alpha` input parameter.
+-   Add ternary parameter selection. Works by default, just add data.
+-   Set memory limit to zero to avoid dask killing workers near the dask
+    memory limits.
+-   Remove ideal mixing from plotting models so that `plot_parameters`
+    gives the correct entropy values.
+-   Add [recipes
+    documentation](https://github.com/PhasesResearchLab/ESPEI/blob/master/docs/recipes.rst)
+    that contains some Python code for common utility operations.
+-   Add documentation for running custom distributed schedulers in ESPEI
+
+## 0.6 (2018-07-02)
+
+This is a update including *breaking changes to the input files* and
+several minor improvements.
+
+-   Update input file schema and Python API to be more consistent so
+    that the `trace` always refers to the collection of chains and
+    `chain` refers to individual chains. Additionally removed some
+    redundancy in the parameters nested under the `mcmc` heading, e.g.
+    `mcmc_steps` is now `iterations` and `mcmc_save_interval` is now
+    `save_interval` in the input file and Python API. See [YAML Schema](../reference/yaml_input_schema.qmd) documentation
+    for all of the updates.
+-   The default save interval is now 1, which is more reasonable for
+    most MCMC systems with significant numbers of phase equilibria.
+-   Bug fixes for plotting and some better plotting defaults for
+    plotting input data
+-   Dataset parsing and cleaning improvements.
+-   Documentation improvements (see the
+    [PDF](http://readthedocs.org/projects/espei/downloads/pdf/latest/)!)
+
+## 0.5.2 (2018-04-28)
+
+This is a major bugfix release for MCMC multi-phase fitting runs for
+single phase data.
+
+-   Fixed a major issue where single phase thermochemical data was
+    always compared to Gibbs energy, giving incorrect errors in MCMC
+    runs.
+-   Single phase errors in ESPEI incorrectly compared values with ideal
+    mixing contributions to data, which is excess only.
+-   Fixed a bug where single phase thermochemical data with that are
+    dependent on composition and pressure and/or temperature were not
+    fit correctly.
+-   Added utilities for analyzing ESPEI results and add them to the
+    Cu-Mg example docs.
+
+## 0.5.1 (2018-04-17)
+
+This is a minor bugfix release.
+
+-   Parameter generation for phases with vacancies would produce
+    incorrect parameters because the vacancy site fractions were not
+    being correctly removed from the contributions due to their
+    treatment as `Species` objects in `pycalphad >=0.7`.
+
+## 0.5 (2018-04-03)
+
+-   Parameter selection now uses the corrected AIC, which further
+    prevents overparameterization where there is sparse training data.
+-   Activity and single phase thermochemical data can now be included in
+    MCMC fitting runs. Including single phase data can help anchor
+    metastable phases to DFT data when they are not on the stable phase
+    diagram. See the [Gathering input data](../reference/dataset_schema.qmd) documentation for
+    information on how to input activity data.
+-   Dataset checking has been improved. Now there are checks to make
+    sure sublattice interactions are properly sorted and mole fractions
+    sum to less than 1.0 in ZPF data.
+-   Support for fitting phases with arbitrary pycalphad Models in MCMC,
+    including (charged and neutral) species and ionic liquids. There are
+    several consequences of this:
+    -   ESPEI requires support on `pycalphad >=0.7`
+    -   ESPEI now uses pycalphad `Model` objects directly. Using the JIT
+        compiled Models has shown up to a *50% performance improvement*
+        in MCMC runs.
+    -   Using JIT compiled `Model` objects required the use of
+        `cloudpickle` everywhere. Due to challenges in overriding
+        `pickle` for upstream packages, we now rely solely on `dask` for
+        scheduler tasks, including `mpi` via `dask-mpi`. Note that users
+        must turn off `work-stealing` in their `~/.dask/config.yaml`
+        file.
+-   \[Developers\] Each method for calculating error in MCMC has been
+    moved into a module for that method in an `error_functions`
+    subpackage. One top level function from each module should be
+    imported into the `mcmc.py` and used in `lnprob`. Developers should
+    then just customize `lnprob`.
+-   \[Developers\] Significant internal docs improvements: all
+    non-trivial functions have complete docstrings.
+
+## 0.4.1 (2018-02-05)
+
+-   Enable plotting of isothermal sections with data using `dataplot`
+    (and `multiplot`, etc.)
+-   Tielines are now plotted in `dataplot` for isothermal sections and
+    T-x phase diagrams
+-   Add a useful `ravel_conditions` method to unpack conditions from
+    datasets
+
+## 0.4 (2017-12-29)
+
+-   MCMC is now deterministic by default (can be toggled off with the
+    `mcmc.deterministic` setting).
+-   Added support for having no scheduler (running with no parallelism)
+    with the `mcmc.scheduler` option set to `None`. This may be useful
+    for debugging.
+-   Logging improvements
+    -   Extraneous warnings that may be confusing for users and dirty
+        the log are silenced.
+    -   A warning is added for when there are no datasets found.
+    -   Fixed a bug where logging was silenced with the dask scheduler
+-   Add `optimal_parameters` utility function as a helper to get optimal
+    parameter sets for analysis
+-   Several improvements to plotting
+    -   Users can now plot phase diagram data alone with `dataplot`,
+        useful for checking datasets visually. This changes the API for
+        `dataplot` to no longer infer the conditions from an equilibrium
+        `Dataset` (from pycalphad). That functionality is preserved in
+        `eqdataplot`.
+    -   Experimental data points are now plotted with unique symbols
+        depending on the reference key in the dataset. This is for both
+        phase diagram and single phase parameter plots.
+    -   Options to control plotting parameters (e.g. symbol size) and
+        take user supplied Axes and Figures in the plotting functions.
+        The symbol size is now smaller by default.
+-   Documentation improvements for API and separation of theory from the
+    Cu-Mg example
+-   Fixes a bug where elements with single character names would not
+    find the correct reference state (which are typically named GHSERCC
+    for the example of C).
+-   \[Developer\] All MCMC code is moved from the `paramselect` module
+    to the `mcmc` module to separate these tasks
+-   \[Developer\] Support for arbitrary user reference states (so long
+    as the reference state is in the `refdata` module and follows the
+    same format as SGTE91)
+
+## 0.3.1.post2 (2017-10-31)
+
+-   Propagate the new entry point to setup.py
+
+## 0.3.1.post1 (2017-10-31)
+
+-   Fix for module name/function conflict in entry point
+
+## 0.3.1 (2017-10-31)
+
+-   ESPEI is much easier to run interactively in Python and in Jupyter
+    Notebooks
+-   Reference data is now included in ESPEI instead of in pycalphad
+-   Several reference data fixes including support for single character
+    elements (\'V\', \'B\', \'C\', \...)
+-   Support for using multiprocessing to parallelize MCMC runs, used by
+    default (\@olivia-higgins)
+-   Improved documentation for installing and developing ESPEI
+
+## 0.3.post2 (2017-09-20)
+
+-   Add input-schema.yaml file to installer
+
+## 0.3.post1 (2017-09-20)
+
+-   Add LICENSE to manifest
+
+## 0.3 (2017-09-20)
+
+-   **ESPEI input is now described by a file.** This change is breaking.
+    Old command line arguments are not supported. See [Writing input files](../reference/yaml_input_schema.qmd) for a full
+    description of all the inputs.
+-   New input options are supported, including modifying the number of
+    chains and standard deviation from the mean
+-   ESPEI is now available on conda-forge
+-   TinyDB 2 support is dropped in favor of TinyDB 3 for conda-forge
+    deployment
+-   Allow for restarting previous mcmc calculations with a trace file
+-   Add Cu-Mg example to documentation
+
+## 0.2.1 (2017-08-17)
+
+Fixes to the 0.2 release plotting interface
+
+-   `multiplot` is renamed from `multi_plot`, as in docs.
+-   Fixed an issue where phases in datasets, but not in equilibrium were
+    not plotted by dataplot and raised an error.
+
+## 0.2 (2017-08-15)
+
+-   New `multiplot` interface for convenient plotting of phase
+    diagrams + data. `dataplot` function underlies key data plotting
+    features and can be used with `eqplot`. See their API docs for
+    examples. Will break existing code using multiplot.
+
+-   MPI support for local/HPC runs. Only single node runs are explicitly
+    supported currently. Use `--scheduler='MPIPool'` command line
+    option. Requires `mpi4py`.
+
+-   Default debug reporting of acceptance ratios
+
+-   Option (and default) to output the log probability array matching
+    the trace. Use `--probfile` option to control.
+
+-   Optimal parameters are now chosen based on lowest error in chain.
+
+-   Bug fixes including
+
+    > -   py2/3 compatibility
+    > -   Unicode datasets
+    > -   handling of singular matrix errors from pycalphad\'s
+    >     `equilibrium`
+    > -   reporting of failed conditions
+
+## 0.1.5 (2017-08-02)
+
+-   Significant error checking of JSON inputs.
+-   Add new `--check-datasets` option to check the datasets at path. It
+    should be run before you run ESPEI fittings. All errors must be
+    resolved before you run.
+-   Move the espei script module from `fit.py` to `run_espei.py`.
+-   Better docs building with mocking
+-   Google docstrings are now NumPy docstrings
+
+## 0.1.4 (2017-07-24)
+
+-   Documentation improvements for usage and API docs
+-   Fail fast on JSON errors
+
+## 0.1.3 (2017-06-23)
+
+-   Fix bad version pinning in setup.py
+-   Explicitly support Python 2.7
+
+## 0.1.2 (2017-06-23)
+
+-   Fix dask incompatibility due to new API usage
+
+## 0.1.1 (2017-06-23)
+
+-   Fix a bug that caused logging to raise if bokeh isn\'t installed
+
+## 0.1 (2017-06-23)
+
+ESPEI is now a package! New features include
+
+-   Fork <https://github.com/richardotis/pycalphad-fitting>
+-   Use emcee for MCMC fitting rather than pymc
+-   Support single-phase only fitting
+-   More control options for running ESPEI from the command line
+-   Better support for incremental saving of the chain
+-   Control over output with logging over printing
+-   Significant code cleanup
+-   Better usage documentation

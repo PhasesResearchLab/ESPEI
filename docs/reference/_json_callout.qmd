@@ -1,0 +1,30 @@
+::: {.callout-caution collapse="true"}
+## Formatting JSON Files for ESPEI
+
+ESPEI has a single input style in JSON format that is used for all data
+entry. For those unfamiliar with JSON, it is fairly similar to Python
+dictionaries with some rigid requirements
+
+> -   All string quotes must be double quotes. Use `"key"` instead of
+>     `'key'`.
+> -   Numbers should not have leading zeros. `00.123` should be `0.123`
+>     and `012.34` must be `12.34`.
+> -   Lists and nested key-value pairs cannot have trailing commas.
+>     `{"nums": [1,2,3,],}` is invalid and should be
+>     `{"nums": [1,2,3]}`.
+
+These errors can be challenging to track down, particularly if you are
+only reading the JSON error messages in Python. A visual editor is
+encouraged for debugging JSON files such as
+[JSONLint](https://jsonlint.com). A quick reference to the format can be
+found at [Learn JSON in Y
+minutes](https://learnxinyminutes.com/docs/json/).
+
+ESPEI has support for checking all of your input datasets for errors,
+which you should always use before you attempt to run ESPEI. This error
+checking will report all of the errors at once and all errors should be
+fixed. Errors in the datasets will prevent fitting. To check the
+datasets at path `my-input-data/` you can run
+`espei --check-datasets my-input-data`.
+
+:::
