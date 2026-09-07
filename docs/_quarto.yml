@@ -62,8 +62,6 @@ quartodoc:
           - developer/design.qmd
           - text: "Release Notes"
             href: developer/release_notes.md
-          # TODO:
-          #- developer/releasing.qmd
   title: API Reference
   sections:
   - title: espei

@@ -33,7 +33,7 @@ ESPEI uses [pytest](https://pytest.org) as a test runner. The tests can
 be run from the root directory of the cloned repository:
 
 ``` bash
-pytest
+uv run pytest
 ```
 
 ## Style

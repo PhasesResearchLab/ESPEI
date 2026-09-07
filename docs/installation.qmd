@@ -73,13 +73,6 @@ To upgrade your development version to the latest version, run
 `git pull` from the top level ESPEI directory (the directory containing
 the `pyproject.toml` file) and then `uv sync`.
 
-To build and then open documentation, run
-
-``` bash
-uv run sphinx-build --fail-on-warning --keep-going docs/ docs/_build
-uv run python -m http.server -d docs/_build
-```
-
 ### pip (manual setup)
 
 If you want to manage your own environment using `pip`, you can still do so.
@@ -98,8 +91,8 @@ first.
 To install the latest development version of ESPEI using pip:
 
 ``` bash
-python -m venv calphad-env
-source calphad-env/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 git clone https://github.com/phasesresearchlab/espei.git
 cd espei
 pip install -U pip
