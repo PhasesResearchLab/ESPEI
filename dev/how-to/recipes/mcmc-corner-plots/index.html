@@ -311,7 +311,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <img src="../../../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../../../">ESPEI v0.9.2.dev7+g5cf37d45e</a> 
+      <a href="../../../">ESPEI v0.9.2.dev8+g18558411f</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -752,7 +752,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>In a corner plot, the distributions for each parameter are plotted along the diagonal and covariances between them under the diagonal. A more circular covariance means that parameters are not correlated to each other, while elongated shapes indicate that the two parameters are correlated.</p>
 <p>Strongly correlated parameters are expected for some parameters in Calphad models within phases or for phases in equilibrium, because increasing one parameter while decreasing another would give a similar likelihood.</p>
 <p>If you started an MCMC run from scratch, you almost certainly want to discard a number of initial parameters to account for burn-in. The figure produced is relatively small <code>figsize=(8,8)</code> so that it can fit more easily on a page. Larger figures without passing the <code>fig</code> argument to <code>corner.corner</code> will be more legible (try not passing <code>fig</code> to <code>corner.corner</code>).</p>
-<div id="307d2932" class="cell" data-execution_count="1">
+<div id="9c6562e2" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> corner</span>
