@@ -6,7 +6,25 @@ website:
   favicon: _static/ESPEI-logo.png
   # See https://quarto.org/docs/websites/website-navigation.html for details on setup
   title: "ESPEI"
+  page-navigation: true
+  back-to-top-navigation: true
+  page-footer: "Copyright © Materials Genome Foundation"
+  repo-url: https://github.com/phasesresearchlab/espei
+  repo-subdir: docs
+  repo-branch: master
+  repo-actions: [edit, issue]
+
+bibliography: references.bib
+
+metadata-files:
+  - _sidebar.yml
+
+quartodoc:
+  style: pkgdown
+  dir: reference/api
+  package: espei
   sidebar:
+    file: _sidebar.yml
     logo: "_static/ESPEI-logo-withtext.png"
     title: "ESPEI v{{< var version >}}"
     style: "floating"
@@ -34,53 +52,10 @@ website:
           - reference/phase_models_schema.qmd
           - reference/dataset_schema.qmd
           - reference/yaml_input_schema.qmd
-          # Note: the API reference is somewhat hacky.
-          # We generate _sidebar.yml with quartodoc build, which contains
-          # (more or less) the structure below. Then it's copied here and modified.
-          # It's not exactly clear how to use metadata-files to automatically
-          # merge the generated sidebar into the format I want (the one below).
-          # The functionality exists in theory: https://quarto.org/docs/projects/quarto-projects.html#metadata-includes
-          # These issues seem to track possible conflicts:
-          # - https://github.com/quarto-dev/quarto-cli/issues/8449
-          # - https://github.com/machow/quartodoc/discussions/330
-          # It should also be possible to write some code to perform the merge automatically
           - section: "API Reference"
             href: reference/api/index.qmd
             contents:
-            - contents:
-              - reference/api/generate_parameters.qmd
-              - reference/api/run_espei.qmd
-              section: espei
-            - contents:
-              - reference/api/datasets.load_datasets.qmd
-              - reference/api/datasets.recursive_glob.qmd
-              section: espei.datasets
-            - contents:
-              - reference/api/analysis.truncate_arrays.qmd
-              section: espei.analsys
-            - contents:
-              - reference/api/error_functions.residual_base.residual_function_registry.qmd
-              - reference/api/error_functions.residual_base.ResidualFunction.qmd
-              - reference/api/error_functions.activity_error.ActivityResidual.qmd
-              - reference/api/error_functions.zpf_error.ZPFResidual.qmd
-              - reference/api/error_functions.equilibrium_thermochemical_error.EquilibriumPropertyResidual.qmd
-              - reference/api/error_functions.non_equilibrium_thermochemical_error.FixedConfigurationPropertyResidual.qmd
-              section: espei.error_functions
-            - contents:
-              - reference/api/parameter_selection.fitting_descriptions.ModelFittingDescription.qmd
-              section: espei.parameter_selection.fitting_descriptions
-            - contents:
-              - reference/api/parameter_selection.fitting_steps.qmd
-              section: espei.parameter_selection.fitting_steps
-            - contents:
-              - reference/api/utils.database_symbols_to_fit.qmd
-              - reference/api/utils.optimal_parameters.qmd
-              section: espei.utils
-            - contents:
-              - reference/api/plot.dataplot.qmd
-              - reference/api/plot.plot_interaction.qmd
-              - reference/api/plot.plot_endmember.qmd
-              section: espei.plot
+              - "{{ contents }}"
       - section: "Developer"
         contents:
           - developer/contributing.qmd
@@ -89,21 +64,6 @@ website:
             href: developer/release_notes.md
           # TODO:
           #- developer/releasing.qmd
-  page-navigation: true
-  back-to-top-navigation: true
-  page-footer: "Copyright © Materials Genome Foundation"
-  repo-url: https://github.com/phasesresearchlab/espei
-  repo-subdir: docs
-  repo-branch: master
-  repo-actions: [edit, issue]
-
-bibliography: references.bib
-
-quartodoc:
-  style: pkgdown
-  dir: reference/api
-  package: espei
-  sidebar: _sidebar.yml
   title: API Reference
   sections:
   - title: espei
