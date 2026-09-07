@@ -15,7 +15,7 @@ pycalphad model.
 
 ESPEI is developed in the open on
 [GitHub](https://github.com/PhasesResearchLab/ESPEI). The project is led
-by Brandon Bocklund, who is currently a postdoctoral researcher at
+by [Brandon Bocklund](https://www.linkedin.com/in/brandon-bocklund-878541b9/), who is currently a staff scientist at
 Lawrence Livermore National Laboratory. Brandon developed ESPEI while
 completing his Ph.D. under Zi-Kui Liu at The Pennsylvania State
 University. See the project\'s [History](#history) for more details.
