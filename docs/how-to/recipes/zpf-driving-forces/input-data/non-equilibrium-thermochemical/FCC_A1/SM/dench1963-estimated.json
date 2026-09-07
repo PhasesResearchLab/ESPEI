@@ -1,0 +1,11 @@
+{
+  "components": ["CR", "NI"],
+  "phases": ["FCC_A1"],
+  "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]]], "sublattice_occupancies": [[[0.019, 0.981]], [[0.018, 0.982]], [[0.1, 0.9]], [[0.099, 0.901]], [[0.199, 0.801]], [[0.199, 0.801]], [[0.351, 0.649]], [[0.349, 0.651]], [[0.502, 0.498]], [[0.501, 0.499]], [[0.502, 0.498]]]},
+  "conditions": {"P": 101325, "T": 1538.15},
+  "output": "SM_FORM",
+  "values": [[[0.04, -0.06, -0.28, -0.3, -0.06, -0.06, 0.84, 0.82, 1.98, 2.17, 2.27]]],
+  "reference": "Estimated from Watson (1995)", "bibtex": "dench1963",
+  "comment": "Estimated from enthalpy using tau=3000.0",
+  "tags": ["estimated-entropy"]
+}

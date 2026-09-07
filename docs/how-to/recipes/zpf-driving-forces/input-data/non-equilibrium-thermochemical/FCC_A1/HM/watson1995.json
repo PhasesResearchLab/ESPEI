@@ -1,0 +1,23 @@
+{
+  "components": ["CR", "NI"],
+  "phases": ["FCC_A1"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": [1],
+    "sublattice_configurations": [[["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]]],
+    "sublattice_occupancies": [
+      [[0.10, 0.90]],
+      [[0.10, 0.90]],
+      [[0.40, 0.60]],
+      [[0.40, 0.60]]
+    ]
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 1583
+  },
+  "output": "HM_FORM",
+  "values": [[[-1100, -1510, 2880, 3280]]],
+  "reference": "Watson (1995)", "bibtex": "watson1995",
+  "comment": "From Table 5. Converted from kJ to J. Two phase data neglected."
+}

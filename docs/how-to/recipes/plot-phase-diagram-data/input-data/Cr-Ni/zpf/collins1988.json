@@ -1,0 +1,35 @@
+{
+    "components": ["CR", "NI"],
+    "phases": ["BCC_A2", "FCC_A1"],
+    "conditions": {
+        "T": [1025, 1073, 1123, 1174, 1219, 1274, 1323, 1371, 1424, 1469, 1525, 1473, 1424, 1374, 1323, 1273, 1225, 1171, 1123, 1071, 1023],
+        "P": [101325.0]
+    },
+    "output": "ZPF",
+    "values": [
+        [["FCC_A1", ["CR"], [0.374]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.382]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.395]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.406]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.427]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.446]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.460]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.470]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.488]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.491]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.507]], ["BCC_A2", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.722]], ["FCC_A1", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.779]], ["FCC_A1", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.866]], ["FCC_A1", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.916]], ["FCC_A1", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.932]], ["FCC_A1", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.961]], ["FCC_A1", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.966]], ["FCC_A1", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.977]], ["FCC_A1", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.981]], ["FCC_A1", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.985]], ["FCC_A1", ["CR"], [null]]]
+    ],
+    "reference": "Collins (1988)", "bibtex": "collins1988",
+    "comment": "From Figure 1. Converted from weight percent.",
+    "author": "Bocklund, Brandon"
+}

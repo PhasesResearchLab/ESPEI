@@ -1,0 +1,117 @@
+project:
+  type: website
+  pre-render: _scripts/pre_render.py
+
+website:
+  favicon: _static/ESPEI-logo.png
+  # See https://quarto.org/docs/websites/website-navigation.html for details on setup
+  title: "ESPEI"
+  page-navigation: true
+  back-to-top-navigation: true
+  page-footer: "Copyright © Materials Genome Foundation"
+  repo-url: https://github.com/phasesresearchlab/espei
+  repo-subdir: docs
+  repo-branch: master
+  repo-actions: [edit, issue]
+
+bibliography: references.bib
+
+metadata-files:
+  - _sidebar.yml
+
+quartodoc:
+  style: pkgdown
+  dir: reference/api
+  package: espei
+  sidebar:
+    file: _sidebar.yml
+    logo: "_static/ESPEI-logo-withtext.png"
+    title: "ESPEI v{{< var version >}}"
+    style: "floating"
+    search: true
+    collapse-level: 2
+    contents:
+      - text: "Home"
+        href: index.qmd
+      - text: "Installation"
+        href: installation.qmd
+      - text: "Quickstart"
+        href: quickstart.qmd
+      - section: "Tutorials"
+        contents:
+          - tutorials/cu-mg-example/cu-mg-example.qmd
+          - tutorials/custom-model-parameter-selection/custom_model_parameter_selection.qmd
+      - section: "How-To"
+        contents:
+          - auto: how-to/recipes
+          - how-to/specifying_priors.qmd
+          - how-to/custom_unary_data.qmd
+          - how-to/schedulers.qmd
+      - section: "Reference"
+        contents:
+          - reference/phase_models_schema.qmd
+          - reference/dataset_schema.qmd
+          - reference/yaml_input_schema.qmd
+          - section: "API Reference"
+            href: reference/api/index.qmd
+            contents:
+              - "{{ contents }}"
+      - section: "Developer"
+        contents:
+          - developer/contributing.qmd
+          - developer/design.qmd
+          - text: "Release Notes"
+            href: developer/release_notes.md
+          # TODO:
+          #- developer/releasing.qmd
+  title: API Reference
+  sections:
+  - title: espei
+    contents:
+      - name: generate_parameters
+      - name: run_espei
+  - title: espei.datasets
+    contents:
+      - name: datasets.load_datasets
+      - name: datasets.recursive_glob
+  - title: espei.analsys
+    contents:
+      - name: analysis.truncate_arrays
+  - title: espei.error_functions
+    desc: Residual functions
+    contents:
+      - name: error_functions.residual_base.residual_function_registry
+      - name: error_functions.residual_base.ResidualFunction
+      - name: error_functions.activity_error.ActivityResidual
+      - name: error_functions.zpf_error.ZPFResidual
+      - name: error_functions.equilibrium_thermochemical_error.EquilibriumPropertyResidual
+      - name: error_functions.non_equilibrium_thermochemical_error.FixedConfigurationPropertyResidual
+  - title: espei.parameter_selection.fitting_descriptions
+    desc: Fitting descriptions for custom model parameter generation
+    contents:
+      - name: parameter_selection.fitting_descriptions.ModelFittingDescription
+  - title: espei.parameter_selection.fitting_steps
+    desc: Fitting steps for custom model parameter generation
+    contents:
+      - name: parameter_selection.fitting_steps
+  - title: espei.utils
+    contents:
+      - name: utils.database_symbols_to_fit
+      - name: utils.optimal_parameters
+  - title: espei.plot
+    contents:
+      - name: plot.dataplot
+      - name: plot.plot_interaction
+      - name: plot.plot_endmember
+
+format:
+  html:
+    include-in-header:
+      - _version.html
+    include-after-body:
+      - _static/version-switcher.html
+    theme:
+      light: cosmo
+      dark: solar  # TODO: would like to change to cosmo, requires https://github.com/quarto-dev/quarto-cli/issues/6741
+    css: styles.css
+    toc: true

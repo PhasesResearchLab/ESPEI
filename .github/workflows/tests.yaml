@@ -3,22 +3,6 @@ name: ESPEI tests
 on: [push, pull_request]
 
 jobs:
-# sphinx-build: Check that the documentation builds html with no warnings
-  sphinx-build:
-    name: Run sphinx-build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
-      - uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-      - run: uv sync --dev -P "pycalphad @ git+https://github.com/pycalphad/pycalphad.git@develop"
-      # Build HTML and LaTeX docs
-      # Treat all warnings as errors and "keep-going" to collect all warnings
-      - run: uv run sphinx-build --fail-on-warning --keep-going docs/ docs/_build
-
 # PyTest: Run automated tests with PyTest using both release and development versions of pycalphad
   PyTest-release:
     name: Test Python ${{ matrix.python-version }} - pycalphad release
