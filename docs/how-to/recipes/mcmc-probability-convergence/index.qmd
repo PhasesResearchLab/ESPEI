@@ -17,10 +17,13 @@ Plotting these can also be helpful to estimate how many iterations to discard as
 import matplotlib.pyplot as plt
 import numpy as np
 
-lnprob = np.load("lnprob.npy")
+# ESPEI writes trace.npy and lnprob.npy; the documentation stores this run as a
+# compressed .npz archive to keep the repository small.
+mcmc_results = np.load("../_data/mcmc-results.npz")
+lnprob = mcmc_results["lnprob"]
 # the following lines are optional, but useful if your traces are not full
 # (i.e. your MCMC runs didn't run all their steps)
-# trace = np.load("trace.npy")
+# trace = mcmc_results["trace"]
 # from espei.analysis import truncate_arrays
 # trace, lnprob = truncate_arrays(trace, lnprob)
 

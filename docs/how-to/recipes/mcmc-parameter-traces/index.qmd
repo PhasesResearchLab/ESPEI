@@ -17,8 +17,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from espei.analysis import truncate_arrays
 
-trace = np.load('trace.npy')
-lnprob = np.load('lnprob.npy')
+# ESPEI writes trace.npy and lnprob.npy; the documentation stores this run as a
+# compressed .npz archive to keep the repository small.
+mcmc_results = np.load('../_data/mcmc-results.npz')
+trace = mcmc_results['trace']
+lnprob = mcmc_results['lnprob']
 trace, lnprob = truncate_arrays(trace, lnprob)
 
 num_chains = trace.shape[0]

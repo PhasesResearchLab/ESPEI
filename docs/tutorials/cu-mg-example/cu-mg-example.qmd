@@ -219,8 +219,11 @@ next sections will explore some of the options.
 ``` {python}
 from espei.analysis import truncate_arrays
 # load our trace and lnprob files to use in later analysis steps
-trace = np.load("trace.npy")
-lnprob = np.load("lnprob.npy")
+# ESPEI writes trace.npy and lnprob.npy; the documentation stores this run as a
+# compressed .npz archive to keep the repository small.
+mcmc_results = np.load("mcmc-results.npz")
+trace = mcmc_results["trace"]
+lnprob = mcmc_results["lnprob"]
 trace, lnprob = truncate_arrays(trace, lnprob)
 ```
 
@@ -228,8 +231,11 @@ trace, lnprob = truncate_arrays(trace, lnprob)
 ``` {python}
 from espei.utils import database_symbols_to_fit, optimal_parameters
 # load our trace and lnprob files to use in later analysis steps
-trace = np.load("trace.npy")
-lnprob = np.load("lnprob.npy")
+# ESPEI writes trace.npy and lnprob.npy; the documentation stores this run as a
+# compressed .npz archive to keep the repository small.
+mcmc_results = np.load("mcmc-results.npz")
+trace = mcmc_results["trace"]
+lnprob = mcmc_results["lnprob"]
 trace, lnprob = truncate_arrays(trace, lnprob)
 
 dbf = Database("Cu-Mg-generated.tdb")

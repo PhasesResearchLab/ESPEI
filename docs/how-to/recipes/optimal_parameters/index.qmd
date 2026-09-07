@@ -11,8 +11,11 @@ from pycalphad import Database
 from espei.analysis import truncate_arrays
 from espei.utils import database_symbols_to_fit, optimal_parameters
 
-trace = np.load("trace.npy")
-lnprob = np.load("lnprob.npy")
+# ESPEI writes trace.npy and lnprob.npy; the documentation stores this run as a
+# compressed .npz archive to keep the repository small.
+mcmc_results = np.load("../../../tutorials/cu-mg-example/mcmc-results.npz")
+trace = mcmc_results["trace"]
+lnprob = mcmc_results["lnprob"]
 trace, lnprob = truncate_arrays(trace, lnprob)
 
 dbf = Database("Cu-Mg-generated.tdb")

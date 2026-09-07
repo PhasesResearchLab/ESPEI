@@ -25,12 +25,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import corner
 
-trace = np.load('trace.npy')
+# ESPEI writes trace.npy and lnprob.npy; the documentation stores this run as a
+# compressed .npz archive to keep the repository small.
+mcmc_results = np.load('../_data/mcmc-results.npz')
+trace = mcmc_results['trace']
 
 # the following lines are optional, but useful if your traces are not full
 # (i.e. your MCMC runs didn't run all their steps)
 # from espei.analysis import truncate_arrays
-# lnprob = np.load('lnprob.npy')
+# lnprob = mcmc_results['lnprob']
 # trace, lnprob = truncate_arrays(trace, lnprob)
 
 burn_in_iterations = 500  # number of samples of burn-in to discard
