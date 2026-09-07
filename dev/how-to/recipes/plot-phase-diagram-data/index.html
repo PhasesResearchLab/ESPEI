@@ -311,7 +311,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <img src="../../../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../../../">ESPEI v0.9.2.dev6+ga8f2b5115</a> 
+      <a href="../../../">ESPEI v0.9.2.dev7+g5cf37d45e</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -759,7 +759,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="plot-data-only" class="level2">
 <h2 class="anchored" data-anchor-id="plot-data-only">Plot data only</h2>
 <p>When compiling ESPEI datasets of phase equilibria data, it can be useful to plot the data to check that it matches visually with what you are expecting. This script plots data from a binary phase diagram.</p>
-<div id="061fc945" class="cell" data-execution_count="1">
+<div id="edabb770" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pycalphad <span class="im">import</span> variables <span class="im">as</span> v</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> espei.datasets <span class="im">import</span> recursive_glob, load_datasets</span>
@@ -794,7 +794,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="plot-phase-diagram-with-data" class="level2">
 <h2 class="anchored" data-anchor-id="plot-phase-diagram-with-data">Plot phase diagram with data</h2>
 <p>This example uses <code>binplot</code> from PyCalphad and <code>dataplot</code> from ESPEI to plot a phase diagram with the data used to fit it on the same axes.</p>
-<div id="c8b51b9e" class="cell" data-execution_count="2">
+<div id="605fdd7c" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pycalphad <span class="im">import</span> Database, binplot, variables <span class="im">as</span> v</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> espei.datasets <span class="im">import</span> load_datasets, recursive_glob</span>

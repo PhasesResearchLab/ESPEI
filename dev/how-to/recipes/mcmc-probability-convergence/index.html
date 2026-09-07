@@ -311,7 +311,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <img src="../../../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../../../">ESPEI v0.9.2.dev6+ga8f2b5115</a> 
+      <a href="../../../">ESPEI v0.9.2.dev7+g5cf37d45e</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -752,7 +752,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Convergence can be qualitatively estimated by looking at how the log-probability changes for all of the chains as a function of iterations.</p>
 <p>Some metrics exist to help estimate convergence, but they should be used with caution, especialy ones that depend on multiple <em>independent</em> chains, as ensemble MCMC methods like the one used by ESPEI do not have independent chains.</p>
 <p>Plotting these can also be helpful to estimate how many iterations to discard as burn-in, e.g.&nbsp;in the <a href="../../../how-to/recipes/mcmc-corner-plots/index.html">corner plot example</a>.</p>
-<div id="f4488ed4" class="cell" data-execution_count="1">
+<div id="6b36b917" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -782,7 +782,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>we can zoom in using a linear scale to inspect more closely:</p>
-<div id="51062b14" class="cell" data-execution_count="2">
+<div id="5f418093" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots()</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>ax.plot(lnprob.T)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">"log-probability convergence"</span>)</span>
