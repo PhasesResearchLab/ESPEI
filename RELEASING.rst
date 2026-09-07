@@ -4,7 +4,7 @@ Releasing ESPEI
 Use this checklist to create a new release of ESPEI and distribute the package
 to PyPI and conda-forge. All steps are intended to be run from the root
 directory of the repository (i.e. the one containing ``docs/``, ``espei/``,
-``setup.py``, ...).
+``pyproject.toml``, ...).
 
 Create a release of espei
 --------------------------
@@ -19,10 +19,9 @@ Replace their values with the last public release's version number and the new v
 #. ``git checkout master``
 #. ``git pull`` to make sure you haven't missed any last-minute commits. **After this point, nothing else is making it into this version.**
 #. ``pytest`` to ensure that all tests pass locally.
-#. ``sphinx-apidoc -f -H 'API Documentation' -o docs/api/ espei`` to regenerate the API documentation.
 #. Update ``CHANGES.rst`` with a human-readable list of changes since the last commit.
    ``git log --oneline --no-decorate --color 0.1^..master`` can be used to list the changes since the last version.
-#. ``git add docs/api CHANGES.rst`` to stage the updated documentation.
+#. ``git add CHANGES.rst`` to stage the updated changelog.
 #. ``git commit -m "REL: 0.2"`` to commit the changes.
 #. ``git push origin master``
 #. **Verify that all continuous integration test and build workflows pass.**

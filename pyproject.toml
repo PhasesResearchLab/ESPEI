@@ -52,10 +52,11 @@ Homepage = "https://espei.org/"
 
 [project.optional-dependencies]
 dev = [
-    "furo",
+    "griffe<2",  # quartodoc 0.11 does not support griffe 2
     "ipython",
+    "jupyter",
     "pytest",
-    "sphinx",
+    "quartodoc",
     "twine",
 ]
 mpi = [
@@ -68,10 +69,11 @@ espei = "espei.espei_script:main"
 
 [dependency-groups]
 dev = [
-    "furo",
+    "griffe<2",  # quartodoc 0.11 does not support griffe 2
     "ipython",
+    "jupyter",
     "pytest",
-    "sphinx",
+    "quartodoc",
     "twine",
 ]
 
