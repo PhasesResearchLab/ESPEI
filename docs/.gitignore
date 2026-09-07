@@ -9,3 +9,5 @@ tutorials/cu-mg-example/mcmc-log.txt
 *.pyc
 _variables.yml
 _version.html
+
+**/*.quarto_ipynb

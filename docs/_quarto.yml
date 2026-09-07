@@ -106,6 +106,10 @@ quartodoc:
 
 format:
   html:
+    include-in-header:
+      - _version.html
+    include-after-body:
+      - _static/version-switcher.html
     theme:
       light: cosmo
       dark: solar  # TODO: would like to change to cosmo, requires https://github.com/quarto-dev/quarto-cli/issues/6741

@@ -35,6 +35,7 @@ Replace their values with the last public release's version number and the new v
    #. If this version is a pre-release, check the "This is a pre-release" box.
    #. Click "Publish release".
 #. The new version will be available on PyPI when the ``Build and deploy to PyPI`` workflow on GitHub Actions finishes successfully.
+#. The documentation for the new version will be published to https://espei.org when the ``Docs`` workflow on GitHub Actions finishes successfully.
 
 Now the public package must be built and distributed.
 
