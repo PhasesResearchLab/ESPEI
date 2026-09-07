@@ -1,16 +1,19 @@
-# espei.org Quarto site
+# ESPEI documentation
+
+The ESPEI documentation is a [Quarto](https://quarto.org) website. See the
+[contributing guide](developer/contributing.qmd) for details on building
+and deploying it.
 
 ## Building the docs
+
 1. Install `quarto` from [quarto.org](https://quarto.org/docs/get-started/)
-2. `pip install -r requirements.txt` (installs ESPEI and `quartodoc`)
-3. `quartodoc build && quarto preview` to generate `reference/api` docs and preview the site
+2. `uv sync --dev` from the root of the repository (installs ESPEI, `quartodoc` and `jupyter`)
+3. `uv run quartodoc build && uv run quarto preview` from this directory to generate the `reference/api` docs and preview the site
 
 ## TODO:
 - Update png logos to the versions with transparency (for dark mode)
 - Enable "tabbed" mode in the Cu-Mg tutorials for comparing command line vs. running interactively with Python code
-- API docs automation:
-  - Make API docs more automated in terms of discovery. Using `__all__` and/or pointing to modules with things well documented should simplify.
-  - Make API docs more automated in terms of integrating the outputs of `quartodoc build` into the site (see the notes in `_quarto.yml`)
+- API docs automation: make API docs more automated in terms of discovery. Using `__all__` and/or pointing to modules with things well documented should simplify.
 - Content to add:
   - CLI reference document
   - Need to document equilibrium thermochemical data

@@ -57,7 +57,7 @@ utilities that are likely to be run by users. See
 [`espei.analysis.truncate_arrays`](../reference/api/analysis.truncate_arrays.qmd) for
 an example.
 
-### Web documention
+### Web documentation
 
 Documentation on ESPEI is split into user tutorials, reference and
 developer documentation.
@@ -70,44 +70,61 @@ developer documentation.
 -   Developer documentation should describe what should be considered
     when contributing source code back to ESPEI.
 
-You can check changes you make to the documentation by going to the
-documentation folder in the root repository `cd docs/`. Running the
-command
-`make html && cd build/html && python3 -m http.server && cd ../.. && make clean`
-from that folder will build the docs and run them on a local HTTP
-server. You can see the documentation when the server is running by
-visting the URL at the end of the output, usually
-`localhost port 8000 <http://0.0.0.0:8000>`\_. When you are finished,
-type `Ctrl-C` to stop the server and the command will clean up the build
-for you.
+The documentation lives in the `docs/` directory of the repository and is
+built with [Quarto](https://quarto.org). Tutorials and recipes are
+executed when the site is rendered, so their code is checked against the
+installed version of ESPEI on every build.
 
-Make sure to fix any warnings that come up if you are adding
-documentation.
+#### Building the documentation
 
-#### Building Documentation
-
-The docs can be built by running the docs/Makefile (or docs/make.bat on
-Windows). Then Python can be used to serve the html files in the \_build
-directory and you can visit `http://localhost:8000` in your broswer to
-see the built documentation.
-
-For Unix systems:
+1.  Install [Quarto](https://quarto.org/docs/get-started/).
+2.  Install ESPEI with the development dependencies from the root of the
+    repository. Using [uv](https://docs.astral.sh/uv/), `uv sync --dev` creates
+    a virtual environment with ESPEI, `quartodoc` and `jupyter`.
+3.  From the `docs/` directory, build the API reference and preview the site:
 
 ``` bash
 cd docs
-make html
-cd _build/html
-python -m http.server
+uv run quartodoc build
+uv run quarto preview
 ```
 
-Windows:
+`quartodoc build` generates the API reference pages in `reference/api/` and
+the site sidebar in `_sidebar.yml` from the `quartodoc` section of
+`_quarto.yml`. Rerun it after changing docstrings or the list of documented
+objects. `quarto preview` renders the site, opens it in a browser and
+re-renders pages as you edit them. Use `quarto render` for a one-off build
+into `_site/`.
 
-``` bash
-cd docs
-make.bat html
-cd _build\html
-python -m http.server
-```
+A pre-render script (`_scripts/pre_render.py`) records the installed ESPEI
+version in `_variables.yml`, which the sidebar title and pages reference
+through `{{{< var version >}}}`. There is no version number to update by hand.
+
+Fix any warnings that come up if you are adding documentation.
+
+#### Data used by tutorials
+
+The MCMC results plotted in the Cu-Mg tutorial and the MCMC recipes are
+stored as float32 compressed `.npz` archives (`mcmc-results.npz`) rather
+than the `trace.npy` and `lnprob.npy` files ESPEI writes, to keep the
+repository small. If a tutorial run is regenerated, convert the arrays
+with `numpy.savez_compressed` and replace the archive in place.
+
+#### Release notes
+
+`CHANGES.md` in the root of the repository is the single source for the
+release notes and is included in the [Release Notes](release_notes.md) page.
+Add entries there as part of a pull request.
+
+#### Deployment
+
+The `Docs` GitHub Actions workflow renders the site on every push and pull
+request. Pushes to `master` are deployed to the `dev/` directory of the
+`gh-pages` branch and published releases are deployed under their version
+number, e.g. `0.9.1/`. The root of the site redirects to the latest
+release, and every page gets a version selector fed by `switcher.json`.
+The deployment step is `docs/_scripts/deploy_version.py`, which can also be
+run locally against a checkout of `gh-pages`.
 
 ## Logging
 
