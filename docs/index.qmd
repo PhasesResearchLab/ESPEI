@@ -135,7 +135,7 @@ B.  Bocklund, R. Otis, A. Egorov, A. Obaied, I. Roslyakova, Z.-K. Liu,
 
 # Changelog
 
-See [what\'s new](CHANGES.html)!
+See [what\'s new](developer/release_notes.md)!
 
 
 # License

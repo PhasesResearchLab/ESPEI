@@ -18,7 +18,6 @@ website:
         href: installation.qmd
       - text: "Quickstart"
         href: quickstart.qmd
-# TODO: changelog
       - section: "Tutorials"
         contents:
           - tutorials/cu-mg-example/cu-mg-example.qmd
@@ -85,7 +84,8 @@ website:
         contents:
           - developer/contributing.qmd
           - developer/design.qmd
-          - developer/changelog.qmd
+          - text: "Release Notes"
+            href: developer/release_notes.md
           # TODO:
           #- developer/releasing.qmd
   page-navigation: true

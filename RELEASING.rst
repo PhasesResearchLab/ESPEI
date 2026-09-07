@@ -19,7 +19,7 @@ Replace their values with the last public release's version number and the new v
 #. ``git checkout master``
 #. ``git pull`` to make sure you haven't missed any last-minute commits. **After this point, nothing else is making it into this version.**
 #. ``pytest`` to ensure that all tests pass locally.
-#. Update ``CHANGES.rst`` with a human-readable list of changes since the last commit.
+#. Update ``CHANGES.md`` with a human-readable list of changes since the last commit.
    ``git log --oneline --no-decorate --color 0.1^..master`` can be used to list the changes since the last version.
 #. ``git add CHANGES.rst`` to stage the updated changelog.
 #. ``git commit -m "REL: 0.2"`` to commit the changes.
