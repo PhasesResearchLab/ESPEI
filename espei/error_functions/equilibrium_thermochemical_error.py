@@ -12,13 +12,13 @@ import tinydb
 from tinydb import where
 from scipy.stats import norm
 from pycalphad import Database, Model, ReferenceState, variables as v
-from pycalphad.core.utils import instantiate_models, filter_phases, extract_parameters, unpack_species, unpack_condition
+from pycalphad.core.utils import instantiate_models, filter_phases, unpack_species, unpack_condition
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from pycalphad import Workspace, as_property
+from pycalphad.property_framework import JanssonDerivative
 
 from espei.error_functions.residual_base import ResidualFunction, residual_function_registry
 from espei.phase_models import PhaseModelSpecification
-from espei.shadow_functions import update_phase_record_parameters
 from espei.typing import SymbolName
 from espei.utils import PickleableTinyDB, database_symbols_to_fit
 
@@ -73,13 +73,21 @@ def build_eqpropdata(data: tinydb.database.Document,
         'SM':   0.2,  # J/K-mol
         'CPM':  0.2,  # J/K-mol
     }
+    
+    params_keys = []
 
-    params_keys, _ = extract_parameters(parameters)
+    # This mutates the global pycalphad namespace
+    for key in parameters.keys():
+        if not hasattr(v, key):
+            setattr(v, key, v.IndependentPotential(key))
+        params_keys.append(getattr(v, key))
+        # Mutates argument to function
+        dbf.symbols.pop(key,None)
 
     data_comps = list(set(data['components']).union({'VA'}))
     species = sorted(unpack_species(dbf, data_comps), key=str)
     data_phases = filter_phases(dbf, species, candidate_phases=data['phases'])
-    models = instantiate_models(dbf, species, data_phases, model=model, parameters=parameters)
+    models = instantiate_models(dbf, species, data_phases, model=model)
     output = data['output']
     property_output = output.split('_')[0]  # property without _FORM, _MIX, etc.
     samples = np.array(data['values']).flatten()
@@ -99,14 +107,7 @@ def build_eqpropdata(data: tinydb.database.Document,
     pot_conds = OrderedDict([(getattr(v, key), unpack_condition(data['conditions'][key])) for key in sorted(data['conditions'].keys()) if not key.startswith('X_')])
     comp_conds = OrderedDict([(v.X(key[2:]), unpack_condition(data['conditions'][key])) for key in sorted(data['conditions'].keys()) if key.startswith('X_')])
 
-    phase_record_factory = PhaseRecordFactory(dbf, species, {**pot_conds, **comp_conds}, models, parameters=parameters)
-
-    # Now we need to unravel the composition conditions
-    # (from Dict[v.X, Sequence[float]] to Sequence[Dict[v.X, float]]), since the
-    # composition conditions are only broadcast against the potentials, not
-    # each other. Each individual composition needs to be computed
-    # independently, since broadcasting over composition cannot be turned off
-    # in pycalphad.
+    phase_record_factory = PhaseRecordFactory(dbf, species, {**pot_conds, **comp_conds, **parameters}, models)
     rav_comp_conds = [OrderedDict(zip(comp_conds.keys(), pt_comps)) for pt_comps in zip(*comp_conds.values())]
 
     # Build weights, should be the same size as the values
@@ -174,7 +175,7 @@ def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
 def calc_prop_differences(eqpropdata: EqPropData,
                           parameters: np.ndarray,
                           approximate_equilibrium: Optional[bool] = False,
-                          ) -> Tuple[np.ndarray, np.ndarray]:
+                          ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Calculate differences between the expected and calculated values for a property
 
@@ -197,42 +198,45 @@ def calc_prop_differences(eqpropdata: EqPropData,
         * weights for this dataset
 
     """
+        
     dbf = eqpropdata.dbf
     species = eqpropdata.species
     phases = eqpropdata.phases
     pot_conds = eqpropdata.potential_conds
     models = eqpropdata.models
     phase_record_factory = eqpropdata.phase_record_factory
-    update_phase_record_parameters(phase_record_factory, parameters)
     params_dict = OrderedDict(zip(map(str, eqpropdata.params_keys), parameters))
     output = as_property(eqpropdata.output)
     weights = np.array(eqpropdata.weight, dtype=np.float64)
     samples = np.array(eqpropdata.samples, dtype=np.float64)
-    wks = Workspace(database=dbf, components=species, phases=phases, models=models, phase_record_factory=phase_record_factory, parameters=params_dict)
+    wks = Workspace(database=dbf, components=species, phases=phases, models=models, phase_record_factory=phase_record_factory)
 
     calculated_data = []
+    gradient_data = []
     for comp_conds in eqpropdata.composition_conds:
-        cond_dict = OrderedDict(**pot_conds, **comp_conds)
+        cond_dict = OrderedDict(**pot_conds, **comp_conds, **params_dict)
         wks.conditions = cond_dict
-        wks.parameters = params_dict  # these reset models and phase_record_factory through depends_on -> lose Model.shift_reference_state, etc.
         wks.models = models
-        wks.phase_record_factory = phase_record_factory
         vals = wks.get(output)
         calculated_data.extend(np.atleast_1d(vals).tolist())
+        gradient_props = [JanssonDerivative(output, key) for key in params_dict]
+        gradients = wks.get(*gradient_props)
+        gradient_data.append(gradients)
 
     calculated_data = np.array(calculated_data, dtype=np.float64)
+    gradient_data = np.array(gradient_data, dtype=np.float64)
 
     assert calculated_data.shape == samples.shape, f"Calculated data shape {calculated_data.shape} does not match samples shape {samples.shape}"
     assert calculated_data.shape == weights.shape, f"Calculated data shape {calculated_data.shape} does not match weights shape {weights.shape}"
     differences = calculated_data - samples
     _log.debug('Output: %s differences: %s, weights: %s, reference: %s', output, differences, weights, eqpropdata.reference)
-    return differences, weights
+    return differences, weights, gradient_data
 
 
 def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Sequence[EqPropData],
                                                      parameters: np.ndarray,
                                                      approximate_equilibrium: Optional[bool] = False,
-                                                     ) -> float:
+                                                     ) -> Tuple[float, List[float]]:
     """
     Calculate the total equilibrium thermochemical probability for all EqPropData
 
@@ -253,23 +257,31 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
 
     """
     if len(eq_thermochemical_data) == 0:
-        return 0.0
+        return 0.0, np.zeros(len(parameters))
 
     differences = []
     weights = []
+    gradients = []
     for eqpropdata in eq_thermochemical_data:
-        diffs, wts = calc_prop_differences(eqpropdata, parameters, approximate_equilibrium)
+        diffs, wts, grads = calc_prop_differences(eqpropdata, parameters, approximate_equilibrium)
         if np.any(np.isinf(diffs) | np.isnan(diffs)):
             # NaN or infinity are assumed calculation failures. If we are
             # calculating log-probability, just bail out and return -infinity.
-            return -np.inf
+            return -np.inf, np.zeros(len(parameters))
         differences.append(diffs)
         weights.append(wts)
+        gradients.append(grads)
 
     differences = np.concatenate(differences, axis=0)
     weights = np.concatenate(weights, axis=0)
+    gradients = np.concatenate(gradients, axis=0)
     probs = norm(loc=0.0, scale=weights).logpdf(differences)
-    return np.sum(probs)
+    grad_probs = -differences*gradients.T/weights**2
+    if grad_probs.ndim == 1:
+        grad_probs_sum = np.sum(grad_probs, axis=0)
+    else:
+        grad_probs_sum = np.sum(grad_probs, axis=1)
+    return np.sum(probs), grad_probs_sum
 
 
 class EquilibriumPropertyResidual(ResidualFunction):
@@ -305,14 +317,14 @@ class EquilibriumPropertyResidual(ResidualFunction):
         residuals = []
         weights = []
         for data in self.property_data:
-            dataset_residuals, dataset_weights = calc_prop_differences(data, parameters)
+            dataset_residuals, dataset_weights, dataset_grads = calc_prop_differences(data, parameters)
             residuals.extend(dataset_residuals.tolist())
             weights.extend(dataset_weights.tolist())
         return residuals, weights
 
-    def get_likelihood(self, parameters) -> float:
-        likelihood = calculate_equilibrium_thermochemical_probability(self.property_data, parameters)
-        return likelihood
+    def get_likelihood(self, parameters) -> Tuple[float, List[float]]:
+        likelihood, gradients = calculate_equilibrium_thermochemical_probability(self.property_data, parameters)
+        return likelihood, gradients
 
 
 residual_function_registry.register(EquilibriumPropertyResidual)
