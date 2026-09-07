@@ -5,11 +5,11 @@ title: "Custom unary reference states"
 Unary reference state data provides three pieces of information about
 pure elements to ESPEI:
 
-1.  Stable element reference (SER) data, giving the stable phase, atomic
+1.  Standard element reference (SER) data, giving the stable phase, atomic
     mass, $H298$ and $S298$ of each element
 2.  Gibbs energy of each element in its SER phase
 3.  Optional lattice stability functions for selected phases, often
-    relative to the stable element reference energy
+    relative to the standard element reference energy
 
 By default, ESPEI uses the SGTE91 reference state using the functions
 defined in [@dinsdale1991].
