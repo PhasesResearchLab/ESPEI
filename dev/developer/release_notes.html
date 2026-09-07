@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Release Notes – ESPEI</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../developer/design.html" rel="prev">
+<link href="../_static/ESPEI-logo.png" rel="icon" type="image/png">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-b85bc7c33db8c58e0ec93c3465666fed.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-3e9b1289f5f353c49b617ce48ad2bc38.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-2279885434f9d2f3f2cf8d7423a1a79b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-3e9b1289f5f353c49b617ce48ad2bc38.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script>window.ESPEI_DOCS_VERSION = "dev";</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+    const toggleBodyColorMode = (bsSheetEl) => {
+      const mode = bsSheetEl.getAttribute("data-mode");
+      const bodyEl = window.document.querySelector("body");
+      if (mode === "dark") {
+        bodyEl.classList.add("quarto-dark");
+        bodyEl.classList.remove("quarto-light");
+      } else {
+        bodyEl.classList.add("quarto-light");
+        bodyEl.classList.remove("quarto-dark");
+      }
+    }
+    const toggleBodyColorPrimary = () => {
+      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
+      if (bsSheetEl) {
+        toggleBodyColorMode(bsSheetEl);
+      }
+    }
+    const setColorSchemeToggle = (alternate) => {
+      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+      for (let i=0; i < toggles.length; i++) {
+        const toggle = toggles[i];
+        if (toggle) {
+          if (alternate) {
+            toggle.classList.add("alternate");
+          } else {
+            toggle.classList.remove("alternate");
+          }
+        }
+      }
+    };
+    const toggleColorMode = (alternate) => {
+      // Switch the stylesheets
+      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
+      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+      manageTransitions('#quarto-margin-sidebar .nav-link', false);
+      if (alternate) {
+        // note: dark is layered on light, we don't disable primary!
+        enableStylesheet(alternateStylesheets);
+        for (const sheetNode of alternateStylesheets) {
+          if (sheetNode.id === "quarto-bootstrap") {
+            toggleBodyColorMode(sheetNode);
+          }
+        }
+      } else {
+        disableStylesheet(alternateStylesheets);
+        enableStylesheet(primaryStylesheets)
+        toggleBodyColorPrimary();
+      }
+      manageTransitions('#quarto-margin-sidebar .nav-link', true);
+      // Switch the toggles
+      setColorSchemeToggle(alternate)
+      // Hack to workaround the fact that safari doesn't
+      // properly recolor the scrollbar when toggling (#1455)
+      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+        manageTransitions("body", false);
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          manageTransitions("body", true);
+        }, 40);
+      }
+    }
+    const disableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        stylesheet.rel = 'disabled-stylesheet';
+      }
+    }
+    const enableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
+          stylesheet.rel = 'stylesheet';
+        }
+      }
+    }
+    const manageTransitions = (selector, allowTransitions) => {
+      const els = window.document.querySelectorAll(selector);
+      for (let i=0; i < els.length; i++) {
+        const el = els[i];
+        if (allowTransitions) {
+          el.classList.remove('notransition');
+        } else {
+          el.classList.add('notransition');
+        }
+      }
+    }
+    const isFileUrl = () => {
+      return window.location.protocol === 'file:';
+    }
+    const hasAlternateSentinel = () => {
+      let styleSentinel = getColorSchemeSentinel();
+      if (styleSentinel !== null) {
+        return styleSentinel === "alternate";
+      } else {
+        return false;
+      }
+    }
+    const setStyleSentinel = (alternate) => {
+      const value = alternate ? "alternate" : "default";
+      if (!isFileUrl()) {
+        window.localStorage.setItem("quarto-color-scheme", value);
+      } else {
+        localAlternateSentinel = value;
+      }
+    }
+    const getColorSchemeSentinel = () => {
+      if (!isFileUrl()) {
+        const storageValue = window.localStorage.getItem("quarto-color-scheme");
+        return storageValue != null ? storageValue : localAlternateSentinel;
+      } else {
+        return localAlternateSentinel;
+      }
+    }
+    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+      let newTheme = '';
+      if(authorPrefersDark) {
+        newTheme = isAlternate ? baseTheme : alternateTheme;
+      } else {
+        newTheme = isAlternate ? alternateTheme : baseTheme;
+      }
+      const changeGiscusTheme = () => {
+        // From: https://github.com/giscus/giscus/issues/336
+        const sendMessage = (message) => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          if (!iframe) return;
+          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+        }
+        sendMessage({
+          setConfig: {
+            theme: newTheme
+          }
+        });
+      }
+      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+      if (isGiscussLoaded) {
+        changeGiscusTheme();
+      }
+    };
+    const authorPrefersDark = false;
+    const darkModeDefault = authorPrefersDark;
+      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+    // Dark / light mode switch
+    window.quartoToggleColorScheme = () => {
+      // Read the current dark / light value
+      let toAlternate = !hasAlternateSentinel();
+      toggleColorMode(toAlternate);
+      setStyleSentinel(toAlternate);
+      toggleGiscusIfUsed(toAlternate, darkModeDefault);
+      window.dispatchEvent(new Event('resize'));
+    };
+    // Switch to dark mode if need be
+    if (hasAlternateSentinel()) {
+      toggleColorMode(true);
+    } else {
+      toggleColorMode(false);
+    }
+  </script>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../developer/contributing.html">Developer</a></li><li class="breadcrumb-item"><a href="../developer/release_notes.html">Release Notes</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header sidebar-header-stacked">
+      <a href="../index.html" class="sidebar-logo-link">
+      <img src="../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo light-content py-0 d-lg-inline d-none">
+      <img src="../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
+      </a>
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">ESPEI v0.9.2.dev6+ga8f2b5115</a> 
+        <div class="sidebar-tools-main">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Home</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../installation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Installation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../quickstart.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quickstart</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Tutorials</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tutorials/cu-mg-example/cu-mg-example.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Cu-Mg Example</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tutorials/custom-model-parameter-selection/custom_model_parameter_selection.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generating Custom Model Parameters</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">How-To</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
+ <span class="menu-text">Recipes</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/optimal_parameters/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Get optimal MCMC parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/plot-phase-diagram-data/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Plot phase diagram data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/plot-thermochemical-data/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Plot Thermochemical Data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/mcmc-corner-plots/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Corner Plots</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/mcmc-probability-convergence/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Probability Convergence Plots</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/mcmc-parameter-traces/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Parameter Trace Plots</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/zpf-driving-forces/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Plot ZPF Driving Forces</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/specifying_priors.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Priors</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/custom_unary_data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Custom unary reference states</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/schedulers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Alternative Schedulers</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Reference</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/phase_models_schema.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Phase Models Schema</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/dataset_schema.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ESPEI Dataset Schema</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/yaml_input_schema.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">YAML Input Schema</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../reference/api/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">API Reference</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">API Reference</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/generate_parameters.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">generate_parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/run_espei.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">run_espei</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.datasets</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/datasets.load_datasets.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">datasets.load_datasets</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/datasets.recursive_glob.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">datasets.recursive_glob</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.analsys</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/analysis.truncate_arrays.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">analysis.truncate_arrays</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.error_functions</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/error_functions.residual_base.residual_function_registry.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">error_functions.residual_base.residual_function_registry</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/error_functions.residual_base.ResidualFunction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">error_functions.residual_base.ResidualFunction</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/error_functions.activity_error.ActivityResidual.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">error_functions.activity_error.ActivityResidual</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/error_functions.zpf_error.ZPFResidual.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">error_functions.zpf_error.ZPFResidual</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/error_functions.equilibrium_thermochemical_error.EquilibriumPropertyResidual.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">error_functions.equilibrium_thermochemical_error.EquilibriumPropertyResidual</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/error_functions.non_equilibrium_thermochemical_error.FixedConfigurationPropertyResidual.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">error_functions.non_equilibrium_thermochemical_error.FixedConfigurationPropertyResidual</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.parameter_selection.fitting_descriptions</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-10" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/parameter_selection.fitting_descriptions.ModelFittingDescription.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">parameter_selection.fitting_descriptions.ModelFittingDescription</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.parameter_selection.fitting_steps</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-11" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/parameter_selection.fitting_steps.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">parameter_selection.fitting_steps</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-12" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.utils</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-12" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-12" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/utils.database_symbols_to_fit.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.database_symbols_to_fit</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/utils.optimal_parameters.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.optimal_parameters</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-13" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.plot</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-13" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-13" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/plot.dataplot.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">plot.dataplot</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/plot.plot_interaction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">plot.plot_interaction</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/plot.plot_endmember.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">plot.plot_endmember</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-14" role="navigation" aria-expanded="true">
+ <span class="menu-text">Developer</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-14" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-14" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../developer/contributing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Contributing Guide</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../developer/design.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design Guidelines</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../developer/release_notes.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Release Notes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#release-notes" id="toc-release-notes" class="nav-link active" data-scroll-target="#release-notes">Release Notes</a>
+  <ul class="collapse">
+  <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">0.9.1 (2026-06-05)</a>
+  <ul class="collapse">
+  <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
+  <li><a href="#bug-fixes" id="toc-bug-fixes" class="nav-link" data-scroll-target="#bug-fixes">Bug fixes</a></li>
+  <li><a href="#dependencies" id="toc-dependencies" class="nav-link" data-scroll-target="#dependencies">Dependencies</a></li>
+  </ul></li>
+  <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">0.9.0 (2024-08-12)</a>
+  <ul class="collapse">
+  <li><a href="#improvements-1" id="toc-improvements-1" class="nav-link" data-scroll-target="#improvements-1">Improvements</a></li>
+  <li><a href="#dependencies-1" id="toc-dependencies-1" class="nav-link" data-scroll-target="#dependencies-1">Dependencies</a></li>
+  <li><a href="#deprecations" id="toc-deprecations" class="nav-link" data-scroll-target="#deprecations">Deprecations</a></li>
+  </ul></li>
+  <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">0.8.10 (2024-01-30)</a>
+  <ul class="collapse">
+  <li><a href="#improvements-2" id="toc-improvements-2" class="nav-link" data-scroll-target="#improvements-2">Improvements</a></li>
+  <li><a href="#bug-fixes-1" id="toc-bug-fixes-1" class="nav-link" data-scroll-target="#bug-fixes-1">Bug fixes</a></li>
+  <li><a href="#dependencies-2" id="toc-dependencies-2" class="nav-link" data-scroll-target="#dependencies-2">Dependencies</a></li>
+  </ul></li>
+  <li><a href="#section-3" id="toc-section-3" class="nav-link" data-scroll-target="#section-3">0.8.9 (2022-08-04)</a>
+  <ul class="collapse">
+  <li><a href="#improvements-3" id="toc-improvements-3" class="nav-link" data-scroll-target="#improvements-3">Improvements</a></li>
+  <li><a href="#deprecations-1" id="toc-deprecations-1" class="nav-link" data-scroll-target="#deprecations-1">Deprecations</a></li>
+  </ul></li>
+  <li><a href="#section-4" id="toc-section-4" class="nav-link" data-scroll-target="#section-4">0.8.8 (2022-05-22)</a>
+  <ul class="collapse">
+  <li><a href="#improvements-4" id="toc-improvements-4" class="nav-link" data-scroll-target="#improvements-4">Improvements</a></li>
+  </ul></li>
+  <li><a href="#section-5" id="toc-section-5" class="nav-link" data-scroll-target="#section-5">0.8.7 (2022-02-21)</a>
+  <ul class="collapse">
+  <li><a href="#improvements-5" id="toc-improvements-5" class="nav-link" data-scroll-target="#improvements-5">Improvements</a></li>
+  </ul></li>
+  <li><a href="#section-6" id="toc-section-6" class="nav-link" data-scroll-target="#section-6">0.8.6 (2022-01-25)</a>
+  <ul class="collapse">
+  <li><a href="#improvements-6" id="toc-improvements-6" class="nav-link" data-scroll-target="#improvements-6">Improvements</a></li>
+  </ul></li>
+  <li><a href="#section-7" id="toc-section-7" class="nav-link" data-scroll-target="#section-7">0.8.5 (2021-08-09)</a>
+  <ul class="collapse">
+  <li><a href="#improvements-7" id="toc-improvements-7" class="nav-link" data-scroll-target="#improvements-7">Improvements</a></li>
+  </ul></li>
+  <li><a href="#section-8" id="toc-section-8" class="nav-link" data-scroll-target="#section-8">0.8.4 (2021-06-06)</a>
+  <ul class="collapse">
+  <li><a href="#improvements-8" id="toc-improvements-8" class="nav-link" data-scroll-target="#improvements-8">Improvements</a></li>
+  <li><a href="#deprecations-2" id="toc-deprecations-2" class="nav-link" data-scroll-target="#deprecations-2">Deprecations</a></li>
+  </ul></li>
+  <li><a href="#section-9" id="toc-section-9" class="nav-link" data-scroll-target="#section-9">0.8.3 (2021-05-08)</a>
+  <ul class="collapse">
+  <li><a href="#improvements-9" id="toc-improvements-9" class="nav-link" data-scroll-target="#improvements-9">Improvements</a></li>
+  </ul></li>
+  <li><a href="#section-10" id="toc-section-10" class="nav-link" data-scroll-target="#section-10">0.8.2 (2021-05-05)</a>
+  <ul class="collapse">
+  <li><a href="#improvements-10" id="toc-improvements-10" class="nav-link" data-scroll-target="#improvements-10">Improvements</a></li>
+  <li><a href="#deprecations-3" id="toc-deprecations-3" class="nav-link" data-scroll-target="#deprecations-3">Deprecations</a></li>
+  </ul></li>
+  <li><a href="#section-11" id="toc-section-11" class="nav-link" data-scroll-target="#section-11">0.8.1 (2021-04-22)</a></li>
+  <li><a href="#section-12" id="toc-section-12" class="nav-link" data-scroll-target="#section-12">0.8 (2021-04-19)</a>
+  <ul class="collapse">
+  <li><a href="#improvements-11" id="toc-improvements-11" class="nav-link" data-scroll-target="#improvements-11">Improvements</a></li>
+  <li><a href="#breaking-changes" id="toc-breaking-changes" class="nav-link" data-scroll-target="#breaking-changes">Breaking changes</a></li>
+  <li><a href="#deprecations-4" id="toc-deprecations-4" class="nav-link" data-scroll-target="#deprecations-4">Deprecations</a></li>
+  </ul></li>
+  <li><a href="#section-13" id="toc-section-13" class="nav-link" data-scroll-target="#section-13">0.7.12 (2021-03-16)</a></li>
+  <li><a href="#section-14" id="toc-section-14" class="nav-link" data-scroll-target="#section-14">0.7.11 (2021-03-12)</a></li>
+  <li><a href="#section-15" id="toc-section-15" class="nav-link" data-scroll-target="#section-15">0.7.10 (2020-11-14)</a></li>
+  <li><a href="#section-16" id="toc-section-16" class="nav-link" data-scroll-target="#section-16">0.7.9 (2020-11-12)</a></li>
+  <li><a href="#section-17" id="toc-section-17" class="nav-link" data-scroll-target="#section-17">0.7.8 (2020-11-10)</a></li>
+  <li><a href="#section-18" id="toc-section-18" class="nav-link" data-scroll-target="#section-18">0.7.7 (2020-04-11)</a></li>
+  <li><a href="#section-19" id="toc-section-19" class="nav-link" data-scroll-target="#section-19">0.7.6 (2020-03-27)</a></li>
+  <li><a href="#section-20" id="toc-section-20" class="nav-link" data-scroll-target="#section-20">0.7.5 (2020-03-09)</a></li>
+  <li><a href="#section-21" id="toc-section-21" class="nav-link" data-scroll-target="#section-21">0.7.4 (2019-12-09)</a></li>
+  <li><a href="#section-22" id="toc-section-22" class="nav-link" data-scroll-target="#section-22">0.7.3 (2019-12-02)</a></li>
+  <li><a href="#section-23" id="toc-section-23" class="nav-link" data-scroll-target="#section-23">0.7.2 (2019-06-12)</a></li>
+  <li><a href="#section-24" id="toc-section-24" class="nav-link" data-scroll-target="#section-24">0.7.1 (2019-06-03)</a>
+  <ul class="collapse">
+  <li><a href="#improvements-12" id="toc-improvements-12" class="nav-link" data-scroll-target="#improvements-12">Improvements</a></li>
+  <li><a href="#bug-fixes-2" id="toc-bug-fixes-2" class="nav-link" data-scroll-target="#bug-fixes-2">Bug fixes</a></li>
+  <li><a href="#other" id="toc-other" class="nav-link" data-scroll-target="#other">Other</a></li>
+  </ul></li>
+  <li><a href="#section-25" id="toc-section-25" class="nav-link" data-scroll-target="#section-25">0.6.2 (2018-11-27)</a></li>
+  <li><a href="#section-26" id="toc-section-26" class="nav-link" data-scroll-target="#section-26">0.6.1 (2018-08-28)</a></li>
+  <li><a href="#section-27" id="toc-section-27" class="nav-link" data-scroll-target="#section-27">0.6 (2018-07-02)</a></li>
+  <li><a href="#section-28" id="toc-section-28" class="nav-link" data-scroll-target="#section-28">0.5.2 (2018-04-28)</a></li>
+  <li><a href="#section-29" id="toc-section-29" class="nav-link" data-scroll-target="#section-29">0.5.1 (2018-04-17)</a></li>
+  <li><a href="#section-30" id="toc-section-30" class="nav-link" data-scroll-target="#section-30">0.5 (2018-04-03)</a></li>
+  <li><a href="#section-31" id="toc-section-31" class="nav-link" data-scroll-target="#section-31">0.4.1 (2018-02-05)</a></li>
+  <li><a href="#section-32" id="toc-section-32" class="nav-link" data-scroll-target="#section-32">0.4 (2017-12-29)</a></li>
+  <li><a href="#post2-2017-10-31" id="toc-post2-2017-10-31" class="nav-link" data-scroll-target="#post2-2017-10-31">0.3.1.post2 (2017-10-31)</a></li>
+  <li><a href="#post1-2017-10-31" id="toc-post1-2017-10-31" class="nav-link" data-scroll-target="#post1-2017-10-31">0.3.1.post1 (2017-10-31)</a></li>
+  <li><a href="#section-33" id="toc-section-33" class="nav-link" data-scroll-target="#section-33">0.3.1 (2017-10-31)</a></li>
+  <li><a href="#post2-2017-09-20" id="toc-post2-2017-09-20" class="nav-link" data-scroll-target="#post2-2017-09-20">0.3.post2 (2017-09-20)</a></li>
+  <li><a href="#post1-2017-09-20" id="toc-post1-2017-09-20" class="nav-link" data-scroll-target="#post1-2017-09-20">0.3.post1 (2017-09-20)</a></li>
+  <li><a href="#section-34" id="toc-section-34" class="nav-link" data-scroll-target="#section-34">0.3 (2017-09-20)</a></li>
+  <li><a href="#section-35" id="toc-section-35" class="nav-link" data-scroll-target="#section-35">0.2.1 (2017-08-17)</a></li>
+  <li><a href="#section-36" id="toc-section-36" class="nav-link" data-scroll-target="#section-36">0.2 (2017-08-15)</a></li>
+  <li><a href="#section-37" id="toc-section-37" class="nav-link" data-scroll-target="#section-37">0.1.5 (2017-08-02)</a></li>
+  <li><a href="#section-38" id="toc-section-38" class="nav-link" data-scroll-target="#section-38">0.1.4 (2017-07-24)</a></li>
+  <li><a href="#section-39" id="toc-section-39" class="nav-link" data-scroll-target="#section-39">0.1.3 (2017-06-23)</a></li>
+  <li><a href="#section-40" id="toc-section-40" class="nav-link" data-scroll-target="#section-40">0.1.2 (2017-06-23)</a></li>
+  <li><a href="#section-41" id="toc-section-41" class="nav-link" data-scroll-target="#section-41">0.1.1 (2017-06-23)</a></li>
+  <li><a href="#section-42" id="toc-section-42" class="nav-link" data-scroll-target="#section-42">0.1 (2017-06-23)</a></li>
+  </ul></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/phasesresearchlab/espei/edit/master/docs/developer/release_notes.md" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/phasesresearchlab/espei/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../developer/contributing.html">Developer</a></li><li class="breadcrumb-item"><a href="../developer/release_notes.html">Release Notes</a></li></ol></nav></header>
+
+
+
+
+
+<section id="release-notes" class="level1">
+<h1>Release Notes</h1>
+<section id="section" class="level2">
+<h2 class="anchored" data-anchor-id="section">0.9.1 (2026-06-05)</h2>
+<section id="improvements" class="level3">
+<h3 class="anchored" data-anchor-id="improvements">Improvements</h3>
+<ul>
+<li>Add ability to pass a <code>legend_generator</code> to <code>dataplot</code> for custom phase legends for phase diagrams (<a href="https://github.com/rushigong">@rushigong</a> - <a href="https://github.com/phasesresearchlab/espei/issues/265">issue 265</a>)</li>
+<li>Add features to support upcoming mobility fitting features that will land in <a href="https://kawin.org/">Kawin</a> (<a href="https://github.com/nury12n">@nury12n</a> - <a href="https://github.com/phasesresearchlab/espei/issues/264">issue 264</a>)</li>
+<li>Improve debug log messages in ZPF error to handle convergence failures due to underdetermined chemical potentials (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/274">issue 274</a>)</li>
+</ul>
+</section>
+<section id="bug-fixes" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes">Bug fixes</h3>
+<ul>
+<li>Fix <code>TypeError</code> from expired deprecations in NumPy 2.4.2 (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/285">issue 285</a>)</li>
+<li>Support installing from Git URLs (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/287">issue 287</a>)</li>
+<li>Fix a bug where duplicated excluded model contribution entries resulted in datasets being incorrectly filtered out (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/263">issue 263</a>)</li>
+</ul>
+</section>
+<section id="dependencies" class="level3">
+<h3 class="anchored" data-anchor-id="dependencies">Dependencies</h3>
+<ul>
+<li>Removed <code>pkg_resources</code> dependency for plugin discovery, preferring the currently reccomended <code>importlib.metadata.entry_points</code> (<a href="https://github.com/jmmshn">@jmmshn</a> - <a href="https://github.com/phasesresearchlab/espei/issues/266">issue 266</a>)</li>
+<li>Use <a href="https://docs.astral.sh/uv/">uv</a> for package management in CI. We reccomend using <code>uv</code> for development. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/273">issue 273</a>)</li>
+</ul>
+<p><strong>Thank you to our new contributors!</strong></p>
+<ul>
+<li><a href="https://github.com/nury12n">@nury12n</a></li>
+<li><a href="https://github.com/jmmshn">@jmmshn</a></li>
+<li><a href="https://github.com/rushigong">@rushigong</a></li>
+</ul>
+</section>
+</section>
+<section id="section-1" class="level2">
+<h2 class="anchored" data-anchor-id="section-1">0.9.0 (2024-08-12)</h2>
+<section id="improvements-1" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-1">Improvements</h3>
+<ul>
+<li>Migrate to PyCalphad Workspace (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/256">issue 256</a>)
+<ul>
+<li>PyCalphad’s <code>IsolatedPhase</code> feature improves accuracy and elimintes the need for a heuristic to perform constrained equilibria when computing the likelihood for phase diagram data.</li>
+<li>ESPEI users will likely see a small 2-4x performance regression in MCMC as some of the heavily optimized code paths in ESPEI were removed in favor of the versions implemented in <code>Workspace</code>. We are looking in to further optimizations and utilizing Jansson derivatives to compute likelihood gradients that will enable us to use more performant optimization and MCMC methods.</li>
+</ul></li>
+</ul>
+</section>
+<section id="dependencies-1" class="level3">
+<h3 class="anchored" data-anchor-id="dependencies-1">Dependencies</h3>
+<ul>
+<li>Update minimum required PyCalphad version to 0.11 (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/259">issue 259</a>)</li>
+<li>Add NumPy 2.0 support (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/255">issue 255</a>)</li>
+</ul>
+</section>
+<section id="deprecations" class="level3">
+<h3 class="anchored" data-anchor-id="deprecations">Deprecations</h3>
+<ul>
+<li>Remove code scheduled for deprecation in ESPEI 0.9: deprecations (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/257">issue 257</a>)
+<ul>
+<li><code>espei.plot</code>: <code>plot_parameters</code> is replaced with <code>plot_interaction</code> and <code>plot_endmember</code>. <code>eqdataplot</code> and <code>multiplot</code> are replaced with using <code>dataplot</code> combined with the relevant PyCalphad phase diagram plotting code.</li>
+<li>ESPEI YAML input: <code>scheduler: "None"</code> is replaced by <code>scheduler: null</code></li>
+</ul></li>
+</ul>
+</section>
+</section>
+<section id="section-2" class="level2">
+<h2 class="anchored" data-anchor-id="section-2">0.8.10 (2024-01-30)</h2>
+<section id="improvements-2" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-2">Improvements</h3>
+<ul>
+<li>Add a generic framework for property model parameter generation (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/251">issue 251</a>)</li>
+<li>Improve performance for generating candidate models with many features (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/254">issue 254</a>)</li>
+<li>MCMC: Replace one of the initial MCMC chains with the initial parameter values. This should improve convergence and prevent significant regression compared to input parameters. (<a href="https://github.com/toastedcrumpets">@toastedcrumpets</a> - <a href="https://github.com/phasesresearchlab/espei/issues/249">issue 249</a>)</li>
+<li>Support checking only a single dataset from command line (<a href="https://github.com/zhyrek">@zhyrek</a> - <a href="https://github.com/phasesresearchlab/espei/issues/244">issue 244</a>)</li>
+</ul>
+</section>
+<section id="bug-fixes-1" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-1">Bug fixes</h3>
+<ul>
+<li>Fix <code>dataplot()</code> for ternary cases with that use <code>__HYPERPLANE__</code> (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/252">issue 252</a>)</li>
+<li>Fix <code>Residual</code> protocol for MCMC for newer Python versions (3.11+) (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/253">issue 253</a>)</li>
+<li>Correctly pass parameters through <code>calculate_activity_error()</code> (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/246">issue 246</a>)</li>
+</ul>
+</section>
+<section id="dependencies-2" class="level3">
+<h3 class="anchored" data-anchor-id="dependencies-2">Dependencies</h3>
+<ul>
+<li>Update pycalphad minimum version to 0.10.4 to support new property modeling framework (<a href="https://github.com/bocklund">@bocklund</a>)</li>
+<li>Migrate to pydantic v2 (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/247">issue 247</a>, <a href="https://github.com/phasesresearchlab/espei/issues/248">issue 248</a>)</li>
+<li>[Developer] Add support for Python 3.12 in test framework (<a href="https://github.com/bocklund">@bocklund</a>)</li>
+</ul>
+</section>
+</section>
+<section id="section-3" class="level2">
+<h2 class="anchored" data-anchor-id="section-3">0.8.9 (2022-08-04)</h2>
+<section id="improvements-3" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-3">Improvements</h3>
+<ul>
+<li>Support varying pressure and P-X plots in <code>dataplot()</code> and <code>ravel_zpf_values()</code> (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/240">issue 240</a>)</li>
+<li>MCMC: Refactor residual/likelihood functions to better support custom user data types and likelihood functions (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/236">issue 236</a>)</li>
+</ul>
+</section>
+<section id="deprecations-1" class="level3">
+<h3 class="anchored" data-anchor-id="deprecations-1">Deprecations</h3>
+<ul>
+<li>Drop Python 3.7 (following NEP-29) (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/237">issue 237</a>)</li>
+<li>Remove custom graph of optimizer history (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/235">issue 235</a>)</li>
+</ul>
+</section>
+</section>
+<section id="section-4" class="level2">
+<h2 class="anchored" data-anchor-id="section-4">0.8.8 (2022-05-22)</h2>
+<section id="improvements-4" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-4">Improvements</h3>
+<ul>
+<li>Generalize entering the <code>__HYPERPLANE__</code> phase in ZPF vertices to control the compositions for the target hyperplane (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/221">issue 221</a>)</li>
+<li>Update for CompositionSet-based solver in pycalphad 0.10.1 (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/232">issue 232</a>)</li>
+<li>Fix generating parameters for symmetry of 4 sublattice FCC models (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/229">issue 229</a>)</li>
+<li>Fix a bug where a trace of all zeros would raise an error.</li>
+</ul>
+</section>
+</section>
+<section id="section-5" class="level2">
+<h2 class="anchored" data-anchor-id="section-5">0.8.7 (2022-02-21)</h2>
+<section id="improvements-5" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-5">Improvements</h3>
+<ul>
+<li>Add support for Python 3.10 (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/227">issue 227</a>)</li>
+<li>Add support for changes in pycalphad 0.10 that use SymEngine as the symbolic backend (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/212">issue 212</a>)</li>
+<li>Performance improvements in parameter selection, which can lead to more than an order of magnitude improvement for phases with large sublattice models (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/225">issue 225</a>)</li>
+</ul>
+</section>
+</section>
+<section id="section-6" class="level2">
+<h2 class="anchored" data-anchor-id="section-6">0.8.6 (2022-01-25)</h2>
+<section id="improvements-6" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-6">Improvements</h3>
+<ul>
+<li>Significant performance improvement in startup time in MCMC for ZPF data and decrease in runtime memory usage (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/210">issue 210</a>)</li>
+<li>Improve sampling of energy surface for finding constrained driving forces in ZPF data, at least one energy surface sample is now guaranteed (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/211">issue 211</a>)</li>
+<li>Fix bug in MCMC when fitting ZPF data for non-pure element species with recent versions of pycalphad (<a href="https://github.com/wahab2604">@wahab2604</a> - <a href="https://github.com/phasesresearchlab/espei/issues/208">issue 208</a>)</li>
+<li>MCMC: Add support for fitting subsets of the database components given in phase models (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/218">issue 218</a>)</li>
+<li>Update dependencies and resolve deprecations (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/222">issue 222</a>, <a href="https://github.com/phasesresearchlab/espei/issues/223">issue 223</a>)</li>
+</ul>
+</section>
+</section>
+<section id="section-7" class="level2">
+<h2 class="anchored" data-anchor-id="section-7">0.8.5 (2021-08-09)</h2>
+<section id="improvements-7" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-7">Improvements</h3>
+<ul>
+<li>Migrate to the new pycalphad internal APIs for the minimizer and <code>calculate</code> utilities (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/201">issue 201</a> and <a href="https://github.com/phasesresearchlab/espei/issues/206">issue 206</a>)</li>
+<li>Improve AICc formulation to have more consistent behavior when the number of data points is small (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/205">issue 205</a>)</li>
+<li>Enable specifying custom pycalphad <code>Model</code> classes in MCMC simulations via the phase models data file (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/202">issue 202</a>)</li>
+</ul>
+</section>
+</section>
+<section id="section-8" class="level2">
+<h2 class="anchored" data-anchor-id="section-8">0.8.4 (2021-06-06)</h2>
+<section id="improvements-8" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-8">Improvements</h3>
+<ul>
+<li>Migrate to pycalphad’s new minimizer (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/196">issue 196</a>)</li>
+<li>Fix a memory issue in large sublattice models by using the new minimizer to implement constrained driving forces (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/196">issue 196</a>)</li>
+<li>Fix a regression where <code>plot_interaction</code> and <code>plot_endmember</code> re-used reference labels and markers (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/187">issue 187</a>)</li>
+<li>Parameter selection now adds and fits only phases which in the phase models and are active (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/188">issue 188</a>)</li>
+<li>Fix a bug where <code>plot_interaction</code> and <code>plot_endmember</code> would raise an error when axes were not passed explicitly (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/191">issue 191</a>)</li>
+<li>Fix a bug where reference keys were assumed to be present in <code>dataplot</code>, <code>plot_interaction</code> and <code>plot_endmember</code> (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/191">issue 191</a>)</li>
+<li>Documentation: Rewrite phase diagram datasets section, switch paper references to RST citations, reorganize sections into how-to/reference material appropriately (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/192">issue 192</a>)</li>
+<li>Documentation: Switch from <code>sphinx_rtd_theme</code> to <code>furo</code> theme (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/193">issue 193</a>)</li>
+</ul>
+</section>
+<section id="deprecations-2" class="level3">
+<h3 class="anchored" data-anchor-id="deprecations-2">Deprecations</h3>
+<ul>
+<li>pycalphad versions lower than 0.9.0 are no longer supported.</li>
+</ul>
+</section>
+</section>
+<section id="section-9" class="level2">
+<h2 class="anchored" data-anchor-id="section-9">0.8.3 (2021-05-08)</h2>
+<section id="improvements-9" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-9">Improvements</h3>
+<ul>
+<li>Fix a bug where excluded model contributions could be double counted (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/181">issue 181</a>)</li>
+<li>Support internal API changes for pycalphad 0.8.5 (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/183">issue 183</a>)</li>
+<li>Fix a regression for ZPF error calculations introduced in <a href="https://github.com/phasesresearchlab/espei/issues/181">issue 181</a> where prescribed phase compositions of stoichiometric phases that used to work no longer work because the phase composition of a stoichiometric phase may be unsatisfiable (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/185">issue 185</a>).</li>
+<li>Fix a bug in ZPF error calculations where stoichiometric phases could give incorrect energies for exact equilibrium when prescribed mass balance conditions could not be satisfied. The fix now computes the driving force exactly in all cases for stoichiometric compounds. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/185">issue 185</a>)</li>
+</ul>
+</section>
+</section>
+<section id="section-10" class="level2">
+<h2 class="anchored" data-anchor-id="section-10">0.8.2 (2021-05-05)</h2>
+<section id="improvements-10" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-10">Improvements</h3>
+<ul>
+<li>Fix weighting in model selection (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/176">issue 176</a>)</li>
+</ul>
+</section>
+<section id="deprecations-3" class="level3">
+<h3 class="anchored" data-anchor-id="deprecations-3">Deprecations</h3>
+<ul>
+<li><code>plot_parameters</code> is deprecated in favor of <code>plot_interaction</code> and <code>plot_endmember</code> (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/177">issue 177</a>)</li>
+</ul>
+</section>
+</section>
+<section id="section-11" class="level2">
+<h2 class="anchored" data-anchor-id="section-11">0.8.1 (2021-04-22)</h2>
+<p>This is a minor release that fixes a performance regression and retires unused utility code.</p>
+<ul>
+<li>Fixes a performance regression in <code>_sample_solution_constitution</code> that could cause getting ZPF data for MCMC to be extremely slow. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/174">issue 174</a>)</li>
+<li>The <code>flexible_open_string</code> and <code>add_bibtex_to_bib_database</code> utilities were removed. Both were unusued in ESPEI. ESPEI no longer depends on <code>bibtexparser</code>. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/171">issue 171</a>)</li>
+</ul>
+</section>
+<section id="section-12" class="level2">
+<h2 class="anchored" data-anchor-id="section-12">0.8 (2021-04-19)</h2>
+<p>This is a major release with bug fixes and a backward compatible public API, but breaking changes in the behavior of parameter selection and MCMC parameter estimation. Some internal functions were deprecated.</p>
+<section id="improvements-11" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-11">Improvements</h3>
+<ul>
+<li>Revamped internal logging. For users, ESPEI now has namespaced logging and filters out all non-ESPEI logs (e.g.&nbsp;dask and matplotlib). This change also fixed a bug where changing the verbosity in Jupyter was not taking effect. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/165">issue 165</a>)</li>
+<li>Fixed a bug where scalar weights of non-equilibrium thermochemical datasets were not being broadcasted correctly and raised errors. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/154">issue 154</a>)</li>
+<li>Fixed a bug where non-equilibrium thermochemical datasets using broadcasted temperatures and compositions were broadcasted against the values incorrectly. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/154">issue 154</a>)</li>
+<li>Allow disabling datasets semantically using <code>disabled: true</code> in JSON datasets. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/153">issue 153</a>)</li>
+<li>Users can now pass custom SER reference data to override SER phases, mass, H298, and S298 for existing elements or new elements. Includes better warnings for common errors when the SER data is incompatible with the phases being fit. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/158">issue 158</a>)</li>
+<li>Fixed a bug in computing activity error in MCMC where species were not correctly generated from the pure comopnents. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/152">issue 152</a>)</li>
+</ul>
+</section>
+<section id="breaking-changes" class="level3">
+<h3 class="anchored" data-anchor-id="breaking-changes">Breaking changes</h3>
+<ul>
+<li>Driving forces in ZPF error are now computed from local minimum solutions rather than global minimum solutions. This change significantly improves the convergence for any phases with stable or metastable miscibility gaps. It also prevents users from prescribing phase composition conditions that cannot be satisfied. See the linked GitHub issue for a detailed description of the rationale and implementation of this change. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/151">issue 151</a>)</li>
+<li>Removed automatically added ideal exclusions, which was deprecated in ESPEI 0.7. Non-equilibrium thermochemical data should use the <code>excluded_model_contributions</code> key to exclude <code>idmix</code>, <code>mag</code> or other model contributions. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/168">issue 168</a>)</li>
+<li>Remove deprecated <code>mcmc.py</code> (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/164">issue 164</a>)</li>
+</ul>
+</section>
+<section id="deprecations-4" class="level3">
+<h3 class="anchored" data-anchor-id="deprecations-4">Deprecations</h3>
+<ul>
+<li>Setting <code>mcmc.scheduler</code> to the string <code>"None"</code> to get a serial scheduler is deprecated. Users should use <code>null</code> in YAML/JSON or <code>None</code> in Python.</li>
+<li>Deprecated <code>multiplot</code> and <code>eqdataplot</code> in favor of having users compose <code>binplot</code> and <code>dataplot</code>. pycalphad’s <code>binplot</code> is much faster than <code>multiplot</code>. The extra functional call added is worth removing the maintenance burden and allows users to understand more explictly the difference between plotting data and plotting the calculated phase diagram. The documentation was updated to reflect this change and no longer uses <code>multiplot</code>. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/162">issue 162</a>)</li>
+</ul>
+</section>
+</section>
+<section id="section-13" class="level2">
+<h2 class="anchored" data-anchor-id="section-13">0.7.12 (2021-03-16)</h2>
+<p>This is a minor bugfix release that updates the SGTE reference state data for carbon and more strictly specifies dependences. No changes to the code were made since 0.7.11.</p>
+</section>
+<section id="section-14" class="level2">
+<h2 class="anchored" data-anchor-id="section-14">0.7.11 (2021-03-12)</h2>
+<p>This is a minor bugfix release with backwards compatible changes.</p>
+<ul>
+<li>Fix numpy v1.20 deprecations (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/147">issue 147</a>)</li>
+<li>Add dataplot tie-line flag (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/145">issue 145</a>)</li>
+<li>Add <code>corner</code> package to dependencies so the recipes now work without installing extra packages</li>
+</ul>
+</section>
+<section id="section-15" class="level2">
+<h2 class="anchored" data-anchor-id="section-15">0.7.10 (2020-11-14)</h2>
+<p>This is a minor bugfix release that addresses a potential inconsistency with hyphen/underscore usage in dask configuration files (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/136">issue 136</a>).</p>
+</section>
+<section id="section-16" class="level2">
+<h2 class="anchored" data-anchor-id="section-16">0.7.9 (2020-11-12)</h2>
+<p>This is a minor maintenance release that automatically disables work stealing (users are no longer required to configure this themselves) (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/134">issue 134</a>).</p>
+</section>
+<section id="section-17" class="level2">
+<h2 class="anchored" data-anchor-id="section-17">0.7.8 (2020-11-10)</h2>
+<p>This is a bug fix release with backwards compatible changes.</p>
+<ul>
+<li>Fix a bug triggered by pycalphad 0.8.4 where the new parameter extraction behavior could break the MCMC sampler (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/132">issue 132</a>)</li>
+<li>Fix a bug where some feature matrices had incorrect shape, stemming from using SymPy.Matrix to symbolically manipulate the data (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/130">issue 130</a>)</li>
+<li>Migrate to tinydb v4+ (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/126">issue 126</a>)</li>
+</ul>
+</section>
+<section id="section-18" class="level2">
+<h2 class="anchored" data-anchor-id="section-18">0.7.7 (2020-04-11)</h2>
+<p>This is a minor feature and bug fix release with backwards compatible changes.</p>
+<ul>
+<li>Preliminary support for thermochemical error for arbitrary properties (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/124">issue 124</a>)</li>
+<li>Update the preferred method for disabling tracefile, probfile, logfile, and no scheduler in YAML to use <code>null</code> instead of <code>"None"</code> (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/125">issue 125</a>)</li>
+<li>Fix a bug in <code>truncate_arrays</code> and <code>optimal_parameters</code> to allow some zeros (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/122">issue 122</a>)</li>
+<li>Enable custom unary reference states for parameter generation with <code>entry_points</code> plugin system (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/121">issue 121</a>)</li>
+</ul>
+</section>
+<section id="section-19" class="level2">
+<h2 class="anchored" data-anchor-id="section-19">0.7.6 (2020-03-27)</h2>
+<p>This is a minor bug fix release.</p>
+<ul>
+<li>Fixes a bug introduced in 0.7.5 for calculating likelihood for phase boundary data under equilibrium failures (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/120">issue 120</a>)</li>
+<li>Since Python 2 was dropped, <code>six</code> has been removed as a dependency (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/119">issue 119</a>)</li>
+</ul>
+</section>
+<section id="section-20" class="level2">
+<h2 class="anchored" data-anchor-id="section-20">0.7.5 (2020-03-09)</h2>
+<p>This release includes performance optimizations, bug fixes and new features for MCMC simulations.</p>
+<ul>
+<li>This version of ESPEI now requires pycalphad 0.8.2 or later for the features below.</li>
+<li>Fitting subsystems of a large database is explicitly supported and tested for all implemented MCMC data types. Fixes a bug in ZPF error and activity error where having phases in the database that are inactive in the subsystem would raise errors (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/118">issue 118</a>).</li>
+<li>Computing thermochemical error and phase boundary (ZPF) error are now optimized to reduce overhead time in dependencies (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/117">issue 117</a>)</li>
+<li>A new feature for calculating approximate driving force for phase boundary data is implemented, which can give performance improvements of 3x-10x, depending on the system (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/115">issue 115</a>)</li>
+</ul>
+</section>
+<section id="section-21" class="level2">
+<h2 class="anchored" data-anchor-id="section-21">0.7.4 (2019-12-09)</h2>
+<p>This release includes small fixes for parameter generation.</p>
+<ul>
+<li>Excluded model contributions are fixed for models with different sublattice site ratios and for data that are not endmembers (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/113">issue 113</a>)</li>
+</ul>
+</section>
+<section id="section-22" class="level2">
+<h2 class="anchored" data-anchor-id="section-22">0.7.3 (2019-12-02)</h2>
+<p>This change includes several new features and performance improvements.</p>
+<ul>
+<li>Drop Python 2 support (Python 2 is no longer supported on January 1, 2020).</li>
+<li>Update dask and distributed support to versions &gt;=2. (<a href="https://github.com/bocklund">@bocklund</a>)</li>
+<li>Users can tweak the AICc penalty factor for each phase to nudge parameter selection towards adding more or fewer parameters based on user modeling intuition. (<a href="https://github.com/bocklund">@bocklund</a>)</li>
+<li>Allow for tracefile and probfile to be set to None. (<a href="https://github.com/jwsiegel2510">@jwsiegel2510</a>)</li>
+<li>Weighting individual datasets in single phase fitting is now implemented via scikit-learn. (<a href="https://github.com/bocklund">@bocklund</a>)</li>
+<li>Performance improvements by reducing overhead. (<a href="https://github.com/bocklund">@bocklund</a>)</li>
+<li>Increased solver accuracy by using pycalphad’s exact Hessian solver. (<a href="https://github.com/bocklund">@bocklund</a>)</li>
+<li>Support writing SER reference state information to the <code>ELEMENT</code> keyword in TDBs based on the SGTE unary 5 database. (<a href="https://github.com/bocklund">@bocklund</a>)</li>
+<li>MCMC now calculates the likelihood of the initial parameter set so the starting point can be reasonably compared. (<a href="https://github.com/bocklund">@bocklund</a>)</li>
+<li>Fixed a bug where mis-aligned configurations and site occupancies in single phase datasets passed the dataset checker (<a href="https://github.com/bocklund">@bocklund</a>)</li>
+</ul>
+</section>
+<section id="section-23" class="level2">
+<h2 class="anchored" data-anchor-id="section-23">0.7.2 (2019-06-12)</h2>
+<p>This is a small bugfix release that fixes the inability to provide the EmceeOptimizer a <code>restart_trace</code>.</p>
+</section>
+<section id="section-24" class="level2">
+<h2 class="anchored" data-anchor-id="section-24">0.7.1 (2019-06-03)</h2>
+<p>This is a significant update reflecting many internal improvements, new features, and bug fixes. Users using the YAML input or the <code>run_espei</code> Python API should see entirely backwards compatible changes with ESPEI 0.6.2.</p>
+<p>pycalphad 0.8, which introduced many <a href="https://pycalphad.org/docs/latest/CHANGES.html">key features</a> for these changes is now required. This should almost completely eliminate the time to build phases due to the symengine backend (phases will likely build in less time than to call the MCMC objective function). Users can expect a slight performance improvement for MCMC fitting.</p>
+<section id="improvements-12" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-12">Improvements</h3>
+<ul>
+<li>Priors can now be specified and are documented online.</li>
+<li>Weights for different datasets are added and are supported by a <code>"weight"</code> key at the top level of any dataset.</li>
+<li>Weights for different types of data are added. These are controlled via the input YAML and are documented there.</li>
+<li>A new internal API is introduced for generic fitting of parameters to datasets in the <code>OptimizerBase</code> class. The MCMC optimizer in emcee was migrated to this API (the <code>mcmc_fit</code> function is now deprecated, but still works until the next major version of ESPEI). A simple SciPy-based optimizer was implemented using this API.</li>
+<li>Parameter selection can now be passed initial databases with parameters (e.g.&nbsp;for adding magnetic or other parameters manually).</li>
+<li>pycalphad’s reference state support can now be used to properly reference out different types of model contributions (ideal mixing, magnetic, etc.). This is especially useful for DFT thermochemical data which does not include model contributions from ideal mixing or magnetic heat capacity. Useful for experimental data which does include ideal mixing (previously ESPEI assumed all data</li>
+<li>Datasets and input YAML files now have a tag system where tags that are specified in the input YAML can override any keys/values in the JSON datasets at runtime. This is useful for tagging data with different weights/model contribution exclusions (e.g.&nbsp;DFT tags may get lower weights and can be set to exclude model contributions). If no tags are applied, removing ideal mixing from all thermochemical data is applied automatically for backwards compatibility. This backwards compatibility feature will be removed in the next major version of ESPEI (all model contributions will be included by default and exclusions must be specified manually).</li>
+</ul>
+</section>
+<section id="bug-fixes-2" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-2">Bug fixes</h3>
+<ul>
+<li>Bug fixed where asymmetric ternary parameters were not properly replaced in SymPy</li>
+<li>Fixed error where ZPF error was considering the chemical potentials of stoichiometric phases in the target hyperplane (they are meaningless)</li>
+<li>Report the actual file paths when dask’s work-stealing is set to false.</li>
+<li>Errors in the ZPF error function are no longer swallowed with -np.inf error. Any errors should be reported as bugs.</li>
+<li>Fix bug where subsets of symbols to fit are not built properly for thermochemical data</li>
+</ul>
+</section>
+<section id="other" class="level3">
+<h3 class="anchored" data-anchor-id="other">Other</h3>
+<ul>
+<li>Documentation recipe added for <code>plot_parameters</code></li>
+<li>[Developer] ZPF and thermochemical datasets now have an function to get all the data up front in a dictionary that can be used in the functions for separation of concerns and calculation efficiency by not recalculating the same thing every iteration.</li>
+<li>[Developer] a function to generate the a context dict to pass to lnprob now exists. It gets the datasets automatically using the above.</li>
+<li>[Developer] transition to pycalphad’s new build_callables function, taking care of the <code>v.N</code> state variable.</li>
+<li>[Developer] Load all YAML safely, silencing warnings.</li>
+</ul>
+</section>
+</section>
+<section id="section-25" class="level2">
+<h2 class="anchored" data-anchor-id="section-25">0.6.2 (2018-11-27)</h2>
+<p>This backwards-compatible release includes several bug fixes and improvements.</p>
+<ul>
+<li>Updated branding to include the new ESPEI logo. See the logo in the <code>docs/_static</code> directory.</li>
+<li>Add support for fitting excess heat capacity.</li>
+<li>Bug fix for broken potassium unary.</li>
+<li>Documentation improvements for recipes</li>
+<li>pycalphad 0.7.1 fixes for dask, sympy, and gmpy2 should mean that ESPEI should not require package upgrade or downgrades. Please report any installations issues in <a href="https://gitter.im/PhasesResearchLab/ESPEI">ESPEI’s Gitter Channel</a>.</li>
+<li>[Developers] ESPEI’s <code>eq_callables_dict</code> is now <code>pycalphad.codegen.callables.build_callables</code>.</li>
+<li>[Developers] matplotlib plotting tests are removed because nose is no longer supported.</li>
+</ul>
+</section>
+<section id="section-26" class="level2">
+<h2 class="anchored" data-anchor-id="section-26">0.6.1 (2018-08-28)</h2>
+<p>This a major release with several important features and bug fixes.</p>
+<ul>
+<li>Enable use of ridge regression alpha for parameter selection via the <code>parameter_generation.ridge_alpha</code> input parameter.</li>
+<li>Add ternary parameter selection. Works by default, just add data.</li>
+<li>Set memory limit to zero to avoid dask killing workers near the dask memory limits.</li>
+<li>Remove ideal mixing from plotting models so that <code>plot_parameters</code> gives the correct entropy values.</li>
+<li>Add <a href="https://github.com/PhasesResearchLab/ESPEI/blob/master/docs/recipes.rst">recipes documentation</a> that contains some Python code for common utility operations.</li>
+<li>Add documentation for running custom distributed schedulers in ESPEI</li>
+</ul>
+</section>
+<section id="section-27" class="level2">
+<h2 class="anchored" data-anchor-id="section-27">0.6 (2018-07-02)</h2>
+<p>This is a update including <em>breaking changes to the input files</em> and several minor improvements.</p>
+<ul>
+<li>Update input file schema and Python API to be more consistent so that the <code>trace</code> always refers to the collection of chains and <code>chain</code> refers to individual chains. Additionally removed some redundancy in the parameters nested under the <code>mcmc</code> heading, e.g.&nbsp;<code>mcmc_steps</code> is now <code>iterations</code> and <code>mcmc_save_interval</code> is now <code>save_interval</code> in the input file and Python API. See <a href="http://espei.org/en/latest/writing_input.html">Writing Input</a> documentation for all of the updates.</li>
+<li>The default save interval is now 1, which is more reasonable for most MCMC systems with significant numbers of phase equilibria.</li>
+<li>Bug fixes for plotting and some better plotting defaults for plotting input data</li>
+<li>Dataset parsing and cleaning improvements.</li>
+<li>Documentation improvements (see the <a href="http://readthedocs.org/projects/espei/downloads/pdf/latest/">PDF</a>!)</li>
+</ul>
+</section>
+<section id="section-28" class="level2">
+<h2 class="anchored" data-anchor-id="section-28">0.5.2 (2018-04-28)</h2>
+<p>This is a major bugfix release for MCMC multi-phase fitting runs for single phase data.</p>
+<ul>
+<li>Fixed a major issue where single phase thermochemical data was always compared to Gibbs energy, giving incorrect errors in MCMC runs.</li>
+<li>Single phase errors in ESPEI incorrectly compared values with ideal mixing contributions to data, which is excess only.</li>
+<li>Fixed a bug where single phase thermochemical data with that are dependent on composition and pressure and/or temperature were not fit correctly.</li>
+<li>Added utilities for analyzing ESPEI results and add them to the Cu-Mg example docs.</li>
+</ul>
+</section>
+<section id="section-29" class="level2">
+<h2 class="anchored" data-anchor-id="section-29">0.5.1 (2018-04-17)</h2>
+<p>This is a minor bugfix release.</p>
+<ul>
+<li>Parameter generation for phases with vacancies would produce incorrect parameters because the vacancy site fractions were not being correctly removed from the contributions due to their treatment as <code>Species</code> objects in <code>pycalphad &gt;=0.7</code>.</li>
+</ul>
+</section>
+<section id="section-30" class="level2">
+<h2 class="anchored" data-anchor-id="section-30">0.5 (2018-04-03)</h2>
+<ul>
+<li>Parameter selection now uses the corrected AIC, which further prevents overparameterization where there is sparse training data.</li>
+<li>Activity and single phase thermochemical data can now be included in MCMC fitting runs. Including single phase data can help anchor metastable phases to DFT data when they are not on the stable phase diagram. See the <a href="http://espei.org/en/latest/input_data.html">Gathering input data</a> documentation for information on how to input activity data.</li>
+<li>Dataset checking has been improved. Now there are checks to make sure sublattice interactions are properly sorted and mole fractions sum to less than 1.0 in ZPF data.</li>
+<li>Support for fitting phases with arbitrary pycalphad Models in MCMC, including (charged and neutral) species and ionic liquids. There are several consequences of this:
+<ul>
+<li>ESPEI requires support on <code>pycalphad &gt;=0.7</code></li>
+<li>ESPEI now uses pycalphad <code>Model</code> objects directly. Using the JIT compiled Models has shown up to a <em>50% performance improvement</em> in MCMC runs.</li>
+<li>Using JIT compiled <code>Model</code> objects required the use of <code>cloudpickle</code> everywhere. Due to challenges in overriding <code>pickle</code> for upstream packages, we now rely solely on <code>dask</code> for scheduler tasks, including <code>mpi</code> via <code>dask-mpi</code>. Note that users must turn off <code>work-stealing</code> in their <code>~/.dask/config.yaml</code> file.</li>
+</ul></li>
+<li>[Developers] Each method for calculating error in MCMC has been moved into a module for that method in an <code>error_functions</code> subpackage. One top level function from each module should be imported into the <code>mcmc.py</code> and used in <code>lnprob</code>. Developers should then just customize <code>lnprob</code>.</li>
+<li>[Developers] Significant internal docs improvements: all non-trivial functions have complete docstrings.</li>
+</ul>
+</section>
+<section id="section-31" class="level2">
+<h2 class="anchored" data-anchor-id="section-31">0.4.1 (2018-02-05)</h2>
+<ul>
+<li>Enable plotting of isothermal sections with data using <code>dataplot</code> (and <code>multiplot</code>, etc.)</li>
+<li>Tielines are now plotted in <code>dataplot</code> for isothermal sections and T-x phase diagrams</li>
+<li>Add a useful <code>ravel_conditions</code> method to unpack conditions from datasets</li>
+</ul>
+</section>
+<section id="section-32" class="level2">
+<h2 class="anchored" data-anchor-id="section-32">0.4 (2017-12-29)</h2>
+<ul>
+<li>MCMC is now deterministic by default (can be toggled off with the <code>mcmc.deterministic</code> setting).</li>
+<li>Added support for having no scheduler (running with no parallelism) with the <code>mcmc.scheduler</code> option set to <code>None</code>. This may be useful for debugging.</li>
+<li>Logging improvements
+<ul>
+<li>Extraneous warnings that may be confusing for users and dirty the log are silenced.</li>
+<li>A warning is added for when there are no datasets found.</li>
+<li>Fixed a bug where logging was silenced with the dask scheduler</li>
+</ul></li>
+<li>Add <code>optimal_parameters</code> utility function as a helper to get optimal parameter sets for analysis</li>
+<li>Several improvements to plotting
+<ul>
+<li>Users can now plot phase diagram data alone with <code>dataplot</code>, useful for checking datasets visually. This changes the API for <code>dataplot</code> to no longer infer the conditions from an equilibrium <code>Dataset</code> (from pycalphad). That functionality is preserved in <code>eqdataplot</code>.</li>
+<li>Experimental data points are now plotted with unique symbols depending on the reference key in the dataset. This is for both phase diagram and single phase parameter plots.</li>
+<li>Options to control plotting parameters (e.g.&nbsp;symbol size) and take user supplied Axes and Figures in the plotting functions. The symbol size is now smaller by default.</li>
+</ul></li>
+<li>Documentation improvements for API and separation of theory from the Cu-Mg example</li>
+<li>Fixes a bug where elements with single character names would not find the correct reference state (which are typically named GHSERCC for the example of C).</li>
+<li>[Developer] All MCMC code is moved from the <code>paramselect</code> module to the <code>mcmc</code> module to separate these tasks</li>
+<li>[Developer] Support for arbitrary user reference states (so long as the reference state is in the <code>refdata</code> module and follows the same format as SGTE91)</li>
+</ul>
+</section>
+<section id="post2-2017-10-31" class="level2">
+<h2 class="anchored" data-anchor-id="post2-2017-10-31">0.3.1.post2 (2017-10-31)</h2>
+<ul>
+<li>Propagate the new entry point to setup.py</li>
+</ul>
+</section>
+<section id="post1-2017-10-31" class="level2">
+<h2 class="anchored" data-anchor-id="post1-2017-10-31">0.3.1.post1 (2017-10-31)</h2>
+<ul>
+<li>Fix for module name/function conflict in entry point</li>
+</ul>
+</section>
+<section id="section-33" class="level2">
+<h2 class="anchored" data-anchor-id="section-33">0.3.1 (2017-10-31)</h2>
+<ul>
+<li>ESPEI is much easier to run interactively in Python and in Jupyter Notebooks</li>
+<li>Reference data is now included in ESPEI instead of in pycalphad</li>
+<li>Several reference data fixes including support for single character elements (‘V’, ‘B’, ‘C’, …)</li>
+<li>Support for using multiprocessing to parallelize MCMC runs, used by default (@olivia-higgins)</li>
+<li>Improved documentation for installing and developing ESPEI</li>
+</ul>
+</section>
+<section id="post2-2017-09-20" class="level2">
+<h2 class="anchored" data-anchor-id="post2-2017-09-20">0.3.post2 (2017-09-20)</h2>
+<ul>
+<li>Add input-schema.yaml file to installer</li>
+</ul>
+</section>
+<section id="post1-2017-09-20" class="level2">
+<h2 class="anchored" data-anchor-id="post1-2017-09-20">0.3.post1 (2017-09-20)</h2>
+<ul>
+<li>Add LICENSE to manifest</li>
+</ul>
+</section>
+<section id="section-34" class="level2">
+<h2 class="anchored" data-anchor-id="section-34">0.3 (2017-09-20)</h2>
+<ul>
+<li><strong>ESPEI input is now described by a file.</strong> This change is breaking. Old command line arguments are not supported. See <a href="http://espei.org/en/latest/writing_input.html">Writing input files</a> for a full description of all the inputs.</li>
+<li>New input options are supported, including modifying the number of chains and standard deviation from the mean</li>
+<li>ESPEI is now available on conda-forge</li>
+<li>TinyDB 2 support is dropped in favor of TinyDB 3 for conda-forge deployment</li>
+<li>Allow for restarting previous mcmc calculations with a trace file</li>
+<li>Add Cu-Mg example to documentation</li>
+</ul>
+</section>
+<section id="section-35" class="level2">
+<h2 class="anchored" data-anchor-id="section-35">0.2.1 (2017-08-17)</h2>
+<p>Fixes to the 0.2 release plotting interface</p>
+<ul>
+<li><code>multiplot</code> is renamed from <code>multi_plot</code>, as in docs.</li>
+<li>Fixed an issue where phases in datasets, but not in equilibrium were not plotted by dataplot and raised an error.</li>
+</ul>
+</section>
+<section id="section-36" class="level2">
+<h2 class="anchored" data-anchor-id="section-36">0.2 (2017-08-15)</h2>
+<ul>
+<li><p>New <code>multiplot</code> interface for convenient plotting of phase diagrams + data. <code>dataplot</code> function underlies key data plotting features and can be used with <code>eqplot</code>. See their API docs for examples. Will break existing code using multiplot.</p></li>
+<li><p>MPI support for local/HPC runs. Only single node runs are explicitly supported currently. Use <code>--scheduler='MPIPool'</code> command line option. Requires <code>mpi4py</code>.</p></li>
+<li><p>Default debug reporting of acceptance ratios</p></li>
+<li><p>Option (and default) to output the log probability array matching the trace. Use <code>--probfile</code> option to control.</p></li>
+<li><p>Optimal parameters are now chosen based on lowest error in chain.</p></li>
+<li><p>Bug fixes including</p>
+<blockquote class="blockquote">
+<ul>
+<li>py2/3 compatibility</li>
+<li>Unicode datasets</li>
+<li>handling of singular matrix errors from pycalphad’s <code>equilibrium</code></li>
+<li>reporting of failed conditions</li>
+</ul>
+</blockquote></li>
+</ul>
+</section>
+<section id="section-37" class="level2">
+<h2 class="anchored" data-anchor-id="section-37">0.1.5 (2017-08-02)</h2>
+<ul>
+<li>Significant error checking of JSON inputs.</li>
+<li>Add new <code>--check-datasets</code> option to check the datasets at path. It should be run before you run ESPEI fittings. All errors must be resolved before you run.</li>
+<li>Move the espei script module from <code>fit.py</code> to <code>run_espei.py</code>.</li>
+<li>Better docs building with mocking</li>
+<li>Google docstrings are now NumPy docstrings</li>
+</ul>
+</section>
+<section id="section-38" class="level2">
+<h2 class="anchored" data-anchor-id="section-38">0.1.4 (2017-07-24)</h2>
+<ul>
+<li>Documentation improvements for usage and API docs</li>
+<li>Fail fast on JSON errors</li>
+</ul>
+</section>
+<section id="section-39" class="level2">
+<h2 class="anchored" data-anchor-id="section-39">0.1.3 (2017-06-23)</h2>
+<ul>
+<li>Fix bad version pinning in setup.py</li>
+<li>Explicitly support Python 2.7</li>
+</ul>
+</section>
+<section id="section-40" class="level2">
+<h2 class="anchored" data-anchor-id="section-40">0.1.2 (2017-06-23)</h2>
+<ul>
+<li>Fix dask incompatibility due to new API usage</li>
+</ul>
+</section>
+<section id="section-41" class="level2">
+<h2 class="anchored" data-anchor-id="section-41">0.1.1 (2017-06-23)</h2>
+<ul>
+<li>Fix a bug that caused logging to raise if bokeh isn’t installed</li>
+</ul>
+</section>
+<section id="section-42" class="level2">
+<h2 class="anchored" data-anchor-id="section-42">0.1 (2017-06-23)</h2>
+<p>ESPEI is now a package! New features include</p>
+<ul>
+<li>Fork <a href="https://github.com/richardotis/pycalphad-fitting" class="uri">https://github.com/richardotis/pycalphad-fitting</a></li>
+<li>Use emcee for MCMC fitting rather than pymc</li>
+<li>Support single-phase only fitting</li>
+<li>More control options for running ESPEI from the command line</li>
+<li>Better support for incremental saving of the chain</li>
+<li>Control over output with logging over printing</li>
+<li>Significant code cleanup</li>
+<li>Better usage documentation</li>
+</ul>
+
+
+</section>
+</section>
+
+<a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
+<!--
+Version switcher for the versioned gh-pages deployment.
+
+Each deployed version lives in its own directory (0.9.1/, dev/, ...) and
+switcher.json at the site root lists them. _version.html, written by the
+pre-render script, sets window.ESPEI_DOCS_VERSION to this build's directory
+name. Nothing is shown when the page is not served from a versioned directory,
+e.g. a local quarto preview.
+-->
+<style>
+  .espei-version-switcher { margin: 0.25rem 0 0.5rem; }
+  .espei-version-switcher select {
+    width: 100%; padding: 0.15rem 0.4rem; font-size: 0.85em;
+    border: 1px solid var(--bs-border-color, #ccc); border-radius: 0.25rem;
+    background-color: var(--bs-body-bg, #fff); color: var(--bs-body-color, #212529);
+  }
+  .espei-version-banner {
+    padding: 0.5rem 1rem; margin-bottom: 1rem; font-size: 0.9em;
+    background-color: var(--bs-warning-bg-subtle, #fff3cd); color: var(--bs-body-color, #212529);
+    border: 1px solid var(--bs-warning-border-subtle, #ffe69c); border-radius: 0.25rem;
+  }
+</style>
+<script>
+(function () {
+  var current = window.ESPEI_DOCS_VERSION;
+  if (!current) { return; }
+  var path = window.location.pathname;
+  var marker = "/" + current + "/";
+  var idx = path.indexOf(marker);
+  if (idx < 0) { return; }
+  var root = path.slice(0, idx + 1);
+  var page = path.slice(idx + marker.length);
+
+  function navigateTo(entry) {
+    var target = root + entry.url + page;
+    fetch(target, { method: "HEAD" }).then(function (r) {
+      window.location.href = r.ok ? target : root + entry.url;
+    }).catch(function () { window.location.href = root + entry.url; });
+  }
+
+  fetch(root + "switcher.json").then(function (r) { return r.json(); }).then(function (versions) {
+    var select = document.createElement("select");
+    select.setAttribute("aria-label", "Documentation version");
+    var latest = null;
+    versions.forEach(function (entry) {
+      var option = document.createElement("option");
+      option.value = entry.version;
+      option.textContent = entry.name;
+      option.selected = entry.version === current;
+      select.appendChild(option);
+      if (entry.preferred) { latest = entry; }
+    });
+    select.addEventListener("change", function () {
+      var entry = versions.find(function (e) { return e.version === select.value; });
+      if (entry) { navigateTo(entry); }
+    });
+    var container = document.createElement("div");
+    container.className = "espei-version-switcher";
+    container.appendChild(select);
+    var header = document.querySelector("#quarto-sidebar .sidebar-header");
+    if (header) { header.appendChild(container); }
+
+    if (latest && latest.version !== current) {
+      var banner = document.createElement("div");
+      banner.className = "espei-version-banner";
+      var text = current === "dev"
+        ? "This is the documentation for the development version of ESPEI. "
+        : "This is the documentation for ESPEI " + current + ", which is not the latest release. ";
+      banner.appendChild(document.createTextNode(text));
+      var link = document.createElement("a");
+      link.href = "#";
+      link.textContent = "Switch to " + latest.name + ".";
+      link.addEventListener("click", function (ev) { ev.preventDefault(); navigateTo(latest); });
+      banner.appendChild(link);
+      var main = document.querySelector("main#quarto-document-content") || document.querySelector("main");
+      if (main) { main.insertBefore(banner, main.firstChild); }
+    }
+  }).catch(function () {});
+})();
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    // Ensure there is a toggle, if there isn't float one in the top right
+    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+      const a = window.document.createElement('a');
+      a.classList.add('top-right');
+      a.classList.add('quarto-color-scheme-toggle');
+      a.href = "";
+      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+      const i = window.document.createElement("i");
+      i.classList.add('bi');
+      a.appendChild(i);
+      window.document.body.appendChild(a);
+    }
+    setColorSchemeToggle(hasAlternateSentinel())
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../developer/design.html" class="pagination-link" aria-label="Design Guidelines">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Design Guidelines</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p>Copyright © Materials Genome Foundation</p>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/phasesresearchlab/espei/edit/master/docs/developer/release_notes.md" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/phasesresearchlab/espei/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

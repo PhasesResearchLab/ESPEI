@@ -1,5 +1,10 @@
 [
   {
+    "name": "dev",
+    "version": "dev",
+    "url": "dev/"
+  },
+  {
     "name": "0.9.1 (latest)",
     "version": "0.9.1",
     "url": "0.9.1/",

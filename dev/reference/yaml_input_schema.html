@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>YAML Input Schema – ESPEI</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../reference/api/index.html" rel="next">
+<link href="../reference/dataset_schema.html" rel="prev">
+<link href="../_static/ESPEI-logo.png" rel="icon" type="image/png">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-b85bc7c33db8c58e0ec93c3465666fed.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-3e9b1289f5f353c49b617ce48ad2bc38.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-2279885434f9d2f3f2cf8d7423a1a79b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-3e9b1289f5f353c49b617ce48ad2bc38.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script>window.ESPEI_DOCS_VERSION = "dev";</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+    const toggleBodyColorMode = (bsSheetEl) => {
+      const mode = bsSheetEl.getAttribute("data-mode");
+      const bodyEl = window.document.querySelector("body");
+      if (mode === "dark") {
+        bodyEl.classList.add("quarto-dark");
+        bodyEl.classList.remove("quarto-light");
+      } else {
+        bodyEl.classList.add("quarto-light");
+        bodyEl.classList.remove("quarto-dark");
+      }
+    }
+    const toggleBodyColorPrimary = () => {
+      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
+      if (bsSheetEl) {
+        toggleBodyColorMode(bsSheetEl);
+      }
+    }
+    const setColorSchemeToggle = (alternate) => {
+      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+      for (let i=0; i < toggles.length; i++) {
+        const toggle = toggles[i];
+        if (toggle) {
+          if (alternate) {
+            toggle.classList.add("alternate");
+          } else {
+            toggle.classList.remove("alternate");
+          }
+        }
+      }
+    };
+    const toggleColorMode = (alternate) => {
+      // Switch the stylesheets
+      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
+      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+      manageTransitions('#quarto-margin-sidebar .nav-link', false);
+      if (alternate) {
+        // note: dark is layered on light, we don't disable primary!
+        enableStylesheet(alternateStylesheets);
+        for (const sheetNode of alternateStylesheets) {
+          if (sheetNode.id === "quarto-bootstrap") {
+            toggleBodyColorMode(sheetNode);
+          }
+        }
+      } else {
+        disableStylesheet(alternateStylesheets);
+        enableStylesheet(primaryStylesheets)
+        toggleBodyColorPrimary();
+      }
+      manageTransitions('#quarto-margin-sidebar .nav-link', true);
+      // Switch the toggles
+      setColorSchemeToggle(alternate)
+      // Hack to workaround the fact that safari doesn't
+      // properly recolor the scrollbar when toggling (#1455)
+      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+        manageTransitions("body", false);
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          manageTransitions("body", true);
+        }, 40);
+      }
+    }
+    const disableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        stylesheet.rel = 'disabled-stylesheet';
+      }
+    }
+    const enableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
+          stylesheet.rel = 'stylesheet';
+        }
+      }
+    }
+    const manageTransitions = (selector, allowTransitions) => {
+      const els = window.document.querySelectorAll(selector);
+      for (let i=0; i < els.length; i++) {
+        const el = els[i];
+        if (allowTransitions) {
+          el.classList.remove('notransition');
+        } else {
+          el.classList.add('notransition');
+        }
+      }
+    }
+    const isFileUrl = () => {
+      return window.location.protocol === 'file:';
+    }
+    const hasAlternateSentinel = () => {
+      let styleSentinel = getColorSchemeSentinel();
+      if (styleSentinel !== null) {
+        return styleSentinel === "alternate";
+      } else {
+        return false;
+      }
+    }
+    const setStyleSentinel = (alternate) => {
+      const value = alternate ? "alternate" : "default";
+      if (!isFileUrl()) {
+        window.localStorage.setItem("quarto-color-scheme", value);
+      } else {
+        localAlternateSentinel = value;
+      }
+    }
+    const getColorSchemeSentinel = () => {
+      if (!isFileUrl()) {
+        const storageValue = window.localStorage.getItem("quarto-color-scheme");
+        return storageValue != null ? storageValue : localAlternateSentinel;
+      } else {
+        return localAlternateSentinel;
+      }
+    }
+    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+      let newTheme = '';
+      if(authorPrefersDark) {
+        newTheme = isAlternate ? baseTheme : alternateTheme;
+      } else {
+        newTheme = isAlternate ? alternateTheme : baseTheme;
+      }
+      const changeGiscusTheme = () => {
+        // From: https://github.com/giscus/giscus/issues/336
+        const sendMessage = (message) => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          if (!iframe) return;
+          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+        }
+        sendMessage({
+          setConfig: {
+            theme: newTheme
+          }
+        });
+      }
+      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+      if (isGiscussLoaded) {
+        changeGiscusTheme();
+      }
+    };
+    const authorPrefersDark = false;
+    const darkModeDefault = authorPrefersDark;
+      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+    // Dark / light mode switch
+    window.quartoToggleColorScheme = () => {
+      // Read the current dark / light value
+      let toAlternate = !hasAlternateSentinel();
+      toggleColorMode(toAlternate);
+      setStyleSentinel(toAlternate);
+      toggleGiscusIfUsed(toAlternate, darkModeDefault);
+      window.dispatchEvent(new Event('resize'));
+    };
+    // Switch to dark mode if need be
+    if (hasAlternateSentinel()) {
+      toggleColorMode(true);
+    } else {
+      toggleColorMode(false);
+    }
+  </script>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/phase_models_schema.html">Reference</a></li><li class="breadcrumb-item"><a href="../reference/yaml_input_schema.html">YAML Input Schema</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header sidebar-header-stacked">
+      <a href="../index.html" class="sidebar-logo-link">
+      <img src="../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo light-content py-0 d-lg-inline d-none">
+      <img src="../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
+      </a>
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">ESPEI v0.9.2.dev6+ga8f2b5115</a> 
+        <div class="sidebar-tools-main">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Home</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../installation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Installation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../quickstart.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quickstart</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Tutorials</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tutorials/cu-mg-example/cu-mg-example.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Cu-Mg Example</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tutorials/custom-model-parameter-selection/custom_model_parameter_selection.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generating Custom Model Parameters</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">How-To</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
+ <span class="menu-text">Recipes</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/optimal_parameters/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Get optimal MCMC parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/plot-phase-diagram-data/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Plot phase diagram data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/plot-thermochemical-data/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Plot Thermochemical Data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/mcmc-corner-plots/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Corner Plots</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/mcmc-probability-convergence/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Probability Convergence Plots</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/mcmc-parameter-traces/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Parameter Trace Plots</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/recipes/zpf-driving-forces/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Plot ZPF Driving Forces</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/specifying_priors.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Priors</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/custom_unary_data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Custom unary reference states</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../how-to/schedulers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Alternative Schedulers</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Reference</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/phase_models_schema.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Phase Models Schema</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/dataset_schema.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ESPEI Dataset Schema</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/yaml_input_schema.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">YAML Input Schema</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="../reference/api/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">API Reference</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">API Reference</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/generate_parameters.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">generate_parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/run_espei.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">run_espei</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.datasets</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/datasets.load_datasets.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">datasets.load_datasets</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/datasets.recursive_glob.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">datasets.recursive_glob</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.analsys</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/analysis.truncate_arrays.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">analysis.truncate_arrays</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.error_functions</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/error_functions.residual_base.residual_function_registry.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">error_functions.residual_base.residual_function_registry</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/error_functions.residual_base.ResidualFunction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">error_functions.residual_base.ResidualFunction</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/error_functions.activity_error.ActivityResidual.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">error_functions.activity_error.ActivityResidual</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/error_functions.zpf_error.ZPFResidual.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">error_functions.zpf_error.ZPFResidual</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/error_functions.equilibrium_thermochemical_error.EquilibriumPropertyResidual.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">error_functions.equilibrium_thermochemical_error.EquilibriumPropertyResidual</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/error_functions.non_equilibrium_thermochemical_error.FixedConfigurationPropertyResidual.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">error_functions.non_equilibrium_thermochemical_error.FixedConfigurationPropertyResidual</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.parameter_selection.fitting_descriptions</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-10" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/parameter_selection.fitting_descriptions.ModelFittingDescription.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">parameter_selection.fitting_descriptions.ModelFittingDescription</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.parameter_selection.fitting_steps</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-11" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/parameter_selection.fitting_steps.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">parameter_selection.fitting_steps</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-12" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.utils</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-12" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-12" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/utils.database_symbols_to_fit.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.database_symbols_to_fit</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/utils.optimal_parameters.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.optimal_parameters</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-13" role="navigation" aria-expanded="false">
+ <span class="menu-text">espei.plot</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-13" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-13" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/plot.dataplot.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">plot.dataplot</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/plot.plot_interaction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">plot.plot_interaction</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/api/plot.plot_endmember.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">plot.plot_endmember</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-14" role="navigation" aria-expanded="true">
+ <span class="menu-text">Developer</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-14" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-14" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../developer/contributing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Contributing Guide</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../developer/design.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design Guidelines</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../developer/release_notes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Release Notes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#system" id="toc-system" class="nav-link active" data-scroll-target="#system">system</a>
+  <ul class="collapse">
+  <li><a href="#phase_models" id="toc-phase_models" class="nav-link" data-scroll-target="#phase_models">phase_models</a></li>
+  <li><a href="#datasets" id="toc-datasets" class="nav-link" data-scroll-target="#datasets">datasets</a></li>
+  <li><a href="#tags" id="toc-tags" class="nav-link" data-scroll-target="#tags">tags</a></li>
+  </ul></li>
+  <li><a href="#output" id="toc-output" class="nav-link" data-scroll-target="#output">output</a>
+  <ul class="collapse">
+  <li><a href="#verbosity" id="toc-verbosity" class="nav-link" data-scroll-target="#verbosity">verbosity</a></li>
+  <li><a href="#logfile" id="toc-logfile" class="nav-link" data-scroll-target="#logfile">logfile</a></li>
+  <li><a href="#output_db" id="toc-output_db" class="nav-link" data-scroll-target="#output_db">output_db</a></li>
+  <li><a href="#tracefile" id="toc-tracefile" class="nav-link" data-scroll-target="#tracefile">tracefile</a></li>
+  <li><a href="#probfile" id="toc-probfile" class="nav-link" data-scroll-target="#probfile">probfile</a></li>
+  </ul></li>
+  <li><a href="#generate_parameters" id="toc-generate_parameters" class="nav-link" data-scroll-target="#generate_parameters">generate_parameters</a>
+  <ul class="collapse">
+  <li><a href="#excess_model" id="toc-excess_model" class="nav-link" data-scroll-target="#excess_model">excess_model</a></li>
+  <li><a href="#input_yaml_generate_ref_state" id="toc-input_yaml_generate_ref_state" class="nav-link" data-scroll-target="#input_yaml_generate_ref_state">ref_state</a></li>
+  <li><a href="#ridge_alpha" id="toc-ridge_alpha" class="nav-link" data-scroll-target="#ridge_alpha">ridge_alpha</a></li>
+  <li><a href="#aicc_penalty_factor" id="toc-aicc_penalty_factor" class="nav-link" data-scroll-target="#aicc_penalty_factor">aicc_penalty_factor</a></li>
+  <li><a href="#input_db" id="toc-input_db" class="nav-link" data-scroll-target="#input_db">input_db</a></li>
+  <li><a href="#fitting_description" id="toc-fitting_description" class="nav-link" data-scroll-target="#fitting_description">fitting_description</a></li>
+  </ul></li>
+  <li><a href="#mcmc" id="toc-mcmc" class="nav-link" data-scroll-target="#mcmc">mcmc</a>
+  <ul class="collapse">
+  <li><a href="#iterations" id="toc-iterations" class="nav-link" data-scroll-target="#iterations">iterations</a></li>
+  <li><a href="#prior" id="toc-prior" class="nav-link" data-scroll-target="#prior">prior</a></li>
+  <li><a href="#save_interval" id="toc-save_interval" class="nav-link" data-scroll-target="#save_interval">save_interval</a></li>
+  <li><a href="#cores" id="toc-cores" class="nav-link" data-scroll-target="#cores">cores</a></li>
+  <li><a href="#scheduler" id="toc-scheduler" class="nav-link" data-scroll-target="#scheduler">scheduler</a></li>
+  <li><a href="#input_db-1" id="toc-input_db-1" class="nav-link" data-scroll-target="#input_db-1">input_db</a></li>
+  <li><a href="#restart_trace" id="toc-restart_trace" class="nav-link" data-scroll-target="#restart_trace">restart_trace</a></li>
+  <li><a href="#chains_per_parameter" id="toc-chains_per_parameter" class="nav-link" data-scroll-target="#chains_per_parameter">chains_per_parameter</a></li>
+  <li><a href="#chain_std_deviation" id="toc-chain_std_deviation" class="nav-link" data-scroll-target="#chain_std_deviation">chain_std_deviation</a></li>
+  <li><a href="#approximate_equilibrium" id="toc-approximate_equilibrium" class="nav-link" data-scroll-target="#approximate_equilibrium">approximate_equilibrium</a></li>
+  <li><a href="#deterministic" id="toc-deterministic" class="nav-link" data-scroll-target="#deterministic">deterministic</a></li>
+  <li><a href="#data_weights" id="toc-data_weights" class="nav-link" data-scroll-target="#data_weights">data_weights</a></li>
+  <li><a href="#input_mcmc_symbols" id="toc-input_mcmc_symbols" class="nav-link" data-scroll-target="#input_mcmc_symbols">symbols</a></li>
+  </ul></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/phasesresearchlab/espei/edit/master/docs/reference/yaml_input_schema.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/phasesresearchlab/espei/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/phase_models_schema.html">Reference</a></li><li class="breadcrumb-item"><a href="../reference/yaml_input_schema.html">YAML Input Schema</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">YAML Input Schema</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>This page aims to completely describe the ESPEI input file in the YAML format. Possibly useful links are the <a href="http://www.yaml.org/refcard.html">YAML refcard</a> and the (possibly less useful) <a href="http://www.yaml.org/spec/">Full YAML specification</a>. These are all key value pairs in the format</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">key</span><span class="kw">:</span><span class="at"> value</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>They are nested for purely organizational purposes.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">top_level_key</span><span class="kw">:</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">key</span><span class="kw">:</span><span class="at"> value</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>As long as keys are nested under the correct heading, they have no required order. All of the possible keys are</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">system</span><span class="kw">:</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="at">  phase_models</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="at">  datasets</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="at">  tags</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">output</span><span class="kw">:</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="at">  verbosity</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="at">  logfile</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="at">  output_db</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="at">  tracefile</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="at">  probfile</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="fu">generate_parameters</span><span class="kw">:</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="at">  excess_model</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="at">  ref_state</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="at">  ridge_alpha</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="at">  aicc_penalty_factor</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="at">  input_db</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="at">  fitting_description</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="fu">mcmc</span><span class="kw">:</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="at">  iterations</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="at">  prior</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="at">  save_interval</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="at">  cores</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="at">  scheduler</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="at">  input_db</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="at">  restart_trace</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="at">  chains_per_parameter</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="at">  chain_std_deviation</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="at">  deterministic</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="at">  approximate_equilibrium</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="at">  data_weights</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="at">  symbols</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The next sections describe each of the keys individually. If a setting has a default of <code>required</code> it must be set explicitly.</p>
+<section id="system" class="level2">
+<h2 class="anchored" data-anchor-id="system">system</h2>
+<p>The <code>system</code> key is intended to describe the specific system you are fitting, including the components, phases, and the data to fit to.</p>
+<section id="phase_models" class="level3">
+<h3 class="anchored" data-anchor-id="phase_models">phase_models</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>string</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>required</p>
+</dd>
+</dl>
+<p>The JSON file describing the Calphad models for each phase. See the <a href="../reference/phase_models_schema.html">phase models description</a> for an example of how to write this file.</p>
+</section>
+<section id="datasets" class="level3">
+<h3 class="anchored" data-anchor-id="datasets">datasets</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>string</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>required</p>
+</dd>
+</dl>
+<p>The path to a directory containing JSON files of input datasets. The file extension to each of the datasets must be named as <code>.json</code>, but they can otherwise be named freely.</p>
+<p>For an examples of writing these input JSON files, see the <a href="../reference/dataset_schema.html">dataset schema page</a>.</p>
+</section>
+<section id="tags" class="level3">
+<h3 class="anchored" data-anchor-id="tags">tags</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>dict</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>required</p>
+</dd>
+</dl>
+<p>Mapping of keys to values to add to datasets with matching tags. These can be used to dynamically drive values in datasets without adjusting the datasets themselves. Useful for adjusting weights or other values in datasets in bulk. For an examples of using tags in input JSON files, see the <a href="../reference/dataset_schema.html#tags">Tags section in the dataset schema</a>.</p>
+</section>
+</section>
+<section id="output" class="level2">
+<h2 class="anchored" data-anchor-id="output">output</h2>
+<section id="verbosity" class="level3">
+<h3 class="anchored" data-anchor-id="verbosity">verbosity</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>int</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>0</p>
+</dd>
+</dl>
+<p>Controls the logging level. Most users will probably want to use <code>Info</code> or <code>Trace</code>.</p>
+<p><code>Warning</code> logs should almost never occur and this log level will be relatively quiet. <code>Debug</code> is a fire hose of information, but may be useful in fixing calculation errors or adjusting weights.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Value</th>
+<th style="text-align: left;">Log Level</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">Warning</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">Info</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">Trace</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">Debug</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="logfile" class="level3">
+<h3 class="anchored" data-anchor-id="logfile">logfile</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>string</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>null</p>
+</dd>
+</dl>
+<p>Name of the file that the logs (controlled by <code>verbosity</code>) will be output to. The default is <code>None</code> (in Python, <code>null</code> in YAML), meaning the logging will be output to stdout and stderr.</p>
+</section>
+<section id="output_db" class="level3">
+<h3 class="anchored" data-anchor-id="output_db">output_db</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>string</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>out.tdb</p>
+</dd>
+</dl>
+<p>The database to write out. Can be any file format that can be written by a pycalphad <a href="https://pycalphad.org/docs/latest/api/pycalphad.io.html?highlight=database#pycalphad.io.database.Database">Database</a>.</p>
+</section>
+<section id="tracefile" class="level3">
+<h3 class="anchored" data-anchor-id="tracefile">tracefile</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>string</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>trace.npy</p>
+</dd>
+</dl>
+<p>Name of the file that the MCMC trace is written to. The array has shape <code>(number of chains, iterations, number of parameters)</code>.</p>
+<p>The array is preallocated and padded with zeros, so if you selected to take 2000 MCMC iterations, but only got through 1500, the last 500 values would be all 0.</p>
+<p>You must choose a unique file name. An error will be raised if file specified by <code>tracefile</code> already exists. If you don't want a file to be output (e.g.&nbsp;for debugging), you can enter <code>null</code>.</p>
+</section>
+<section id="probfile" class="level3">
+<h3 class="anchored" data-anchor-id="probfile">probfile</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>string</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>lnprob.npy</p>
+</dd>
+</dl>
+<p>Name of the file that the MCMC ln probabilities are written to. The array has shape <code>(number of chains, iterations)</code>.</p>
+<p>The array is preallocated and padded with zeros, so if you selected to take 2000 MCMC iterations, but only got through 1500, the last 500 values would be all 0.</p>
+<p>You must choose a unique file name. An error will be raised if file specified by <code>probfile</code> already exists. If you don't want a file to be output (e.g.&nbsp;for debugging), you can enter <code>null</code>.</p>
+</section>
+</section>
+<section id="generate_parameters" class="level2">
+<h2 class="anchored" data-anchor-id="generate_parameters">generate_parameters</h2>
+<p>The options in <code>generate_parameters</code> are used to control parameter selection and fitting to single phase data. This should be used if you have input thermochemical data, such as heat capacities and mixing energies.</p>
+<p>Generate parameters will use the <a href="https://en.wikipedia.org/wiki/Akaike_information_criterion">Akaike information criterion</a> to select model parameters and fit them, creating a database.</p>
+<section id="excess_model" class="level3">
+<h3 class="anchored" data-anchor-id="excess_model">excess_model</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>string</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>required</p>
+</dd>
+<dt>options</dt>
+<dd>
+<p>linear</p>
+</dd>
+</dl>
+<p>Which type of model to use for excess mixing parameters. Currently only <span class="title-ref">linear</span> is supported.</p>
+<p>The <span class="title-ref">exponential</span> model is planned, as well as support for custom models.</p>
+</section>
+<section id="input_yaml_generate_ref_state" class="level3">
+<h3 class="anchored" data-anchor-id="input_yaml_generate_ref_state">ref_state</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>string</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>required</p>
+</dd>
+<dt>options</dt>
+<dd>
+<p>SGTE91 | SR2016</p>
+</dd>
+</dl>
+<p>The reference state to use for the pure elements and lattice stabilities. Currently only <span class="title-ref">SGTE91</span> and <span class="title-ref">SR2016</span> (for certain elements) is supported.</p>
+<p>There are plans to extend to support custom reference states.</p>
+</section>
+<section id="ridge_alpha" class="level3">
+<h3 class="anchored" data-anchor-id="ridge_alpha">ridge_alpha</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>float</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>1.0e-100</p>
+</dd>
+</dl>
+<p>Controls the ridge regression hyperparameter, <span class="math inline">\(\alpha\)</span>, as given in the following equation for the ridge regression problem</p>
+<p><span class="math display">\[\min_w || Xw - y||^2_2 + \alpha ||w||^2_2\]</span></p>
+<p><code>ridge_alpha</code> should be a positive floating point number which scales the relative contribution of parameter magnitudes to the residuals.</p>
+<p>If an exponential form is used, the floating point value must have a decimal place before the <code>e</code>, that is <code>1e-4</code> is invalid while <code>1.e-4</code> is valid. More generally, the floating point must match the following regular expression per the <a href="http://yaml.org/type/float.html">YAML 1.1 spec</a>: <code>[-+]?([0-9][0-9_]*)?\.[0-9.]*([eE][-+][0-9]+)?</code>.</p>
+</section>
+<section id="aicc_penalty_factor" class="level3">
+<h3 class="anchored" data-anchor-id="aicc_penalty_factor">aicc_penalty_factor</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>dict</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>null</p>
+</dd>
+</dl>
+<p>This parameter is a mapping from a phase name and property to a penalty factor to apply to the AICc number of parameters. The default is <code>null</code>, which means that all the penalty factors are one (1) for all phases, which means no bias for more or fewer parameters compared to the textbook definition of AICc. If phases or data are not included, the penalty factors remain one.</p>
+<p>Increasing the penalty factor will increase the penalty for more parameters, so it will bias parameter selection to choose fewer parameters. This can be especially useful when there is not many data points and an exact fit is possible (e.g.&nbsp;4 points and 4 parameters), but modeling intutition would suggest that fewer parameters are required. A negative penalty factor will bias ESPEI's parameter selection to choose more parameters, which can be useful for generating more degrees of freedom for MCMC.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">aicc_penalty_factor</span><span class="kw">:</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">BCC_A2</span><span class="kw">:</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">HM</span><span class="kw">:</span><span class="at"> </span><span class="fl">5.0</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">SM</span><span class="kw">:</span><span class="at"> </span><span class="fl">5.0</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">LIQUID</span><span class="kw">:</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">HM</span><span class="kw">:</span><span class="at"> </span><span class="fl">2.0</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">SM</span><span class="kw">:</span><span class="at"> </span><span class="fl">2.0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="input_db" class="level3">
+<h3 class="anchored" data-anchor-id="input_db">input_db</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>string</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>null</p>
+</dd>
+</dl>
+<p>A file path that can be read as a pycalphad <a href="https://pycalphad.org/docs/latest/api/pycalphad.io.html?highlight=database#pycalphad.io.database.Database">Database</a>, which can provide existing parameters to add as a starting point for parameter generation, for example magnetic parameters.</p>
+<p>If you have single phase data, ESPEI will try to fit parameters to that data regardless of whether or not parameters were passed in for that phase. You must be careful to only add initial parameters that do not have data that ESPEI will try to fit. For example, do not include liquid enthalpy of mixing data for ESPEI to fit if you are providing an initial set of parameters.</p>
+</section>
+<section id="fitting_description" class="level3">
+<h3 class="anchored" data-anchor-id="fitting_description">fitting_description</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>string</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>espei.parameter_selection.fitting_descriptions.gibbs_energy_fitting_description</p>
+</dd>
+</dl>
+<p>This is a string for the fully qualified import path for a <code>ModelFittingDescription</code> instance. ESPEI currently provides three built-in fitting descriptions that are available to use:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># the default, fit Gibbs energy (G/L) parameters to HM/SM/CPM data:</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">fitting-description</span><span class="kw">:</span><span class="at"> espei.parameter_selection.fitting_descriptions.gibbs_energy_fitting_description</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># fit molar volume (V0 and VA) parameters to V0/VM data:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu">fitting-description</span><span class="kw">:</span><span class="at"> espei.parameter_selection.fitting_descriptions.molar_volume_fitting_description</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># a combination that fits volume and Gibbs energy parameters</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">fitting-description</span><span class="kw">:</span><span class="at"> espei.parameter_selection.fitting_descriptions.molar_volume_gibbs_energy_fitting_description</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The <code>ModelFittingDescription</code> instance can be from any module that is importable from the Python environment where ESPEI is installed. For example, the Gibbs energy fitting description is importable as:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> espei.parameter_selection.fitting_descriptions <span class="im">import</span> gibbs_energy_fitting_description</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Because the fitting description given can be in <em>any</em> importable module, users can provide their own fitting descriptions that use ESPEI's built-in <span class="title-ref">FittingStep</span> objects, custom fitting steps, or a combination ESPEI's fitting steps and custom fitting steps. The <a href="../tutorials/custom-model-parameter-selection/custom_model_parameter_selection.html">Generating Custom Model Parameters</a> tutorial gives an example of how to fit a custom PyCalphad model that uses custom parameters for BCC elastic constants.</p>
+</section>
+</section>
+<section id="mcmc" class="level2">
+<h2 class="anchored" data-anchor-id="mcmc">mcmc</h2>
+<p>The options in <code>mcmc</code> control how Markov Chain Monte Carlo is performed using the emcee package.</p>
+<p>In order to run an MCMC fitting, you need to specify one and only one source of parameters somewhere in the input file. The parameters can come from including a <code>generate_parameters</code> step, or by specifying the <code>mcmc.input_db</code> key with a file to load as pycalphad Database.</p>
+<p>If you choose to use the parameters from a database, you can then further control settings based on whether it is the first MCMC run for a system (you are starting fresh) or whether you are continuing from a previous run (a 'restart').</p>
+<section id="iterations" class="level3">
+<h3 class="anchored" data-anchor-id="iterations">iterations</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>int</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>required</p>
+</dd>
+</dl>
+<p>Number of iterations to perform in emcee. Each iteration consists of accepting one step for each chain in the ensemble.</p>
+</section>
+<section id="prior" class="level3">
+<h3 class="anchored" data-anchor-id="prior">prior</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>list or dict</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>{'name': 'zero'}</p>
+</dd>
+</dl>
+<p>Either a single prior dictionary or a list of prior dictionaries corresponding to the number of parameters. See <a href="../how-to/specifying_priors.html">Specifying Priors</a> for examples and details on writing priors.</p>
+</section>
+<section id="save_interval" class="level3">
+<h3 class="anchored" data-anchor-id="save_interval">save_interval</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>int</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>1</p>
+</dd>
+</dl>
+<p>Controls the interval (in number of iterations) for saving the MCMC chain and probability files. By default, new files will be written out every iteration. For large files (many mcmc iterations and chains per parameter), these might become expensive to write out to disk.</p>
+</section>
+<section id="cores" class="level3">
+<h3 class="anchored" data-anchor-id="cores">cores</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>int</p>
+</dd>
+<dt>min</dt>
+<dd>
+<p>1</p>
+</dd>
+</dl>
+<p>How many cores from available cores to use during parallelization with dask or emcee. If the chosen number of cores is larger than available, then this value is ignored and espei defaults to using the number available.</p>
+<p>Cores does not take affect for MPIPool scheduler option. MPIPool requires the number of processors be set directly with MPI.</p>
+</section>
+<section id="scheduler" class="level3">
+<h3 class="anchored" data-anchor-id="scheduler">scheduler</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>string</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>dask</p>
+</dd>
+<dt>options</dt>
+<dd>
+<p>dask | null | JSON file</p>
+</dd>
+</dl>
+<p>Which scheduler to use for parallelization. You can choose from either <code>dask</code>, <code>null</code>, or pass the path to a JSON scheduler file created by dask-distributed.</p>
+<p>Choosing <code>dask</code> allows for the choice of cores used through the cores key.</p>
+<p>Choosing <code>null</code> will result in no parallel scheduler being used. This is useful for debugging.</p>
+<p>Passing the path to a JSON scheduler file will use the resources set up by the scheduler. JSON file schedulers are most useful because schedulers can be started on MPI clusters using <code>dask-mpi</code> command. See the <a href="../how-to/schedulers.html#mpi-based-dask-scheduler">alternative schedulers page</a> for more information.</p>
+</section>
+<section id="input_db-1" class="level3">
+<h3 class="anchored" data-anchor-id="input_db-1">input_db</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>string</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>null</p>
+</dd>
+</dl>
+<p>A file path that can be read as a pycalphad <a href="https://pycalphad.org/docs/latest/api/pycalphad.io.html?highlight=database#pycalphad.io.database.Database">Database</a>. The parameters to fit will be taken from this database.</p>
+<p>For a parameter to be fit, it must be a symbol where the name starts with <code>VV</code>, e.g.&nbsp;<code>VV0001</code>. For a <code>TDB</code> formatted database, this means that the free parameters must be functions of a single value that are used in your parameters. For example, the following is a valid symbol to fit:</p>
+<pre><code>FUNCTION VV0000  298.15  10000; 6000 N !</code></pre>
+</section>
+<section id="restart_trace" class="level3">
+<h3 class="anchored" data-anchor-id="restart_trace">restart_trace</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>string</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>null</p>
+</dd>
+</dl>
+<p>If you have run a previous MCMC calculation, then you will have a trace file that describes the position and history of all of the chains from the run. You can use these chains to start the emcee run and pick up from where you left off in the MCMC run by passing the trace file (e.g. <code>chain.npy</code>) to this key.</p>
+<p>If you are restarting from a previous calculation, you must also specify the same database file (with <code>input_db</code>) as you used to run that calculation.</p>
+</section>
+<section id="chains_per_parameter" class="level3">
+<h3 class="anchored" data-anchor-id="chains_per_parameter">chains_per_parameter</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>int</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>2</p>
+</dd>
+</dl>
+<p>This controls the number of chains to run in the MCMC calculation as an integer multiple of the number of parameters.</p>
+<p>This parameter can only be used when initializing the first MCMC run. If you are restarting a calculation, the number of chains per parameter is fixed by the number you chose previously.</p>
+<p>Ensemble samplers require at least <code>2*p</code> chains for <code>p</code> fitting parameters to be able to make proposals. If <code>chains_per_parameter = 2</code>, then the number of chains if there are 10 parameters to fit is 20.</p>
+<p>The value of <code>chains_per_parameter</code> must be an <strong>EVEN integer</strong>.</p>
+</section>
+<section id="chain_std_deviation" class="level3">
+<h3 class="anchored" data-anchor-id="chain_std_deviation">chain_std_deviation</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>float</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>0.1</p>
+</dd>
+</dl>
+<p>The standard deviation to use when initializing chains in a Gaussian distribution from a set of parameters as a fraction of the parameter.</p>
+<p>A value of 0.1 means that for parameters with values <code>(-1.5, 2000, 50000)</code> the chains will be initialized using those values as the mean and <code>(0.15, 200, 5000)</code> as standard deviations for each parameter, respectively.</p>
+<p>This parameter can only be used when initializing the first MCMC run. If you are restarting a calculation, the standard deviation for your chains are fixed by the value you chose previously.</p>
+<p>You may technically set this to any positive value, you would like. Be warned that too small of a standard deviation may cause convergence to a local minimum in parameter space and slow convergence, while a standard deviation that is too large may cause convergence to meaningless thermodynamic descriptions.</p>
+</section>
+<section id="approximate_equilibrium" class="level3">
+<h3 class="anchored" data-anchor-id="approximate_equilibrium">approximate_equilibrium</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>bool</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>False</p>
+</dd>
+</dl>
+<p>If True, an approximate version of pycalphad's <code>equilibrium()</code> function will be used to calculate the driving force for phase boundary data. It uses pycalphad's <code>starting_point</code> to construct a approximate equilibrium hyperplanes of the lowest energy solution from a numerical sampling of each active phases's internal degrees of freedom. This can give speedups of up to 10x for calculating the ZPF likelihood, but may miss low energy solutions that are not sampled well numerically, especially for phases with many sublattices, which have low energy solutions far from the endmembers.</p>
+</section>
+<section id="deterministic" class="level3">
+<h3 class="anchored" data-anchor-id="deterministic">deterministic</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>bool</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>True</p>
+</dd>
+</dl>
+<p>Toggles whether ESPEI runs are deterministic. If this is True, running ESPEI with the same Database and initial settings (either the same <code>chains_per_parameter</code> and <code>chain_std_deviation</code> or the same <code>restart_trace</code>) will result in exactly the same results.</p>
+<p>Starting two runs with the same TDB or with parameter generation (which is deterministic) will result in the chains being at exactly the same position after 100 iterations. If these are both restarted after 100 iterations for another 50 iterations, then the final chain after 150 iterations will be the same.</p>
+<p>It is important to note that this is only explictly True when <em>starting</em> at the same point. If Run 1 and Run 2 are started with the same initial parameters and Run 1 proceeds 50 iterations while Run 2 proceeds 100 iterations, restarting Run 1 for 100 iterations and Run 2 for 50 iterations (so they are both at 150 total iterations) will <strong>NOT</strong> give the same result.</p>
+</section>
+<section id="data_weights" class="level3">
+<h3 class="anchored" data-anchor-id="data_weights">data_weights</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>dict</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>{'ZPF': 1.0, 'ACR': 1.0, 'HM': 1.0, 'SM': 1.0, 'CPM': 1.0}</p>
+</dd>
+</dl>
+<p>Each type of data can be weighted: zero phase fraction (<code>ZPF</code>), activity (<code>ACR</code>) and the different types of thermochemical error. These weights are used to modify the initial standard deviation of each data type by</p>
+<p><span class="math display">\[\sigma = \frac{\sigma_{\mathrm{initial}}} {w}\]</span></p>
+</section>
+<section id="input_mcmc_symbols" class="level3">
+<h3 class="anchored" data-anchor-id="input_mcmc_symbols">symbols</h3>
+<dl>
+<dt>type</dt>
+<dd>
+<p>list[str]</p>
+</dd>
+<dt>default</dt>
+<dd>
+<p>null</p>
+</dd>
+</dl>
+<p>By default, any symbol in the database following the naming pattern <span class="title-ref">VV####</span> where <span class="title-ref">####</span> is any number is optimized by ESPEI. If this option is set, this can be used to manually fit a subset of the degrees of freedom in the system, or fit degrees of freedom that do not folow the naming convention of 'VV####':</p>
+<pre><code>symbols: ['VV0000', 'FF0000', ...]</code></pre>
+
+
+</section>
+</section>
+
+<a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
+<!--
+Version switcher for the versioned gh-pages deployment.
+
+Each deployed version lives in its own directory (0.9.1/, dev/, ...) and
+switcher.json at the site root lists them. _version.html, written by the
+pre-render script, sets window.ESPEI_DOCS_VERSION to this build's directory
+name. Nothing is shown when the page is not served from a versioned directory,
+e.g. a local quarto preview.
+-->
+<style>
+  .espei-version-switcher { margin: 0.25rem 0 0.5rem; }
+  .espei-version-switcher select {
+    width: 100%; padding: 0.15rem 0.4rem; font-size: 0.85em;
+    border: 1px solid var(--bs-border-color, #ccc); border-radius: 0.25rem;
+    background-color: var(--bs-body-bg, #fff); color: var(--bs-body-color, #212529);
+  }
+  .espei-version-banner {
+    padding: 0.5rem 1rem; margin-bottom: 1rem; font-size: 0.9em;
+    background-color: var(--bs-warning-bg-subtle, #fff3cd); color: var(--bs-body-color, #212529);
+    border: 1px solid var(--bs-warning-border-subtle, #ffe69c); border-radius: 0.25rem;
+  }
+</style>
+<script>
+(function () {
+  var current = window.ESPEI_DOCS_VERSION;
+  if (!current) { return; }
+  var path = window.location.pathname;
+  var marker = "/" + current + "/";
+  var idx = path.indexOf(marker);
+  if (idx < 0) { return; }
+  var root = path.slice(0, idx + 1);
+  var page = path.slice(idx + marker.length);
+
+  function navigateTo(entry) {
+    var target = root + entry.url + page;
+    fetch(target, { method: "HEAD" }).then(function (r) {
+      window.location.href = r.ok ? target : root + entry.url;
+    }).catch(function () { window.location.href = root + entry.url; });
+  }
+
+  fetch(root + "switcher.json").then(function (r) { return r.json(); }).then(function (versions) {
+    var select = document.createElement("select");
+    select.setAttribute("aria-label", "Documentation version");
+    var latest = null;
+    versions.forEach(function (entry) {
+      var option = document.createElement("option");
+      option.value = entry.version;
+      option.textContent = entry.name;
+      option.selected = entry.version === current;
+      select.appendChild(option);
+      if (entry.preferred) { latest = entry; }
+    });
+    select.addEventListener("change", function () {
+      var entry = versions.find(function (e) { return e.version === select.value; });
+      if (entry) { navigateTo(entry); }
+    });
+    var container = document.createElement("div");
+    container.className = "espei-version-switcher";
+    container.appendChild(select);
+    var header = document.querySelector("#quarto-sidebar .sidebar-header");
+    if (header) { header.appendChild(container); }
+
+    if (latest && latest.version !== current) {
+      var banner = document.createElement("div");
+      banner.className = "espei-version-banner";
+      var text = current === "dev"
+        ? "This is the documentation for the development version of ESPEI. "
+        : "This is the documentation for ESPEI " + current + ", which is not the latest release. ";
+      banner.appendChild(document.createTextNode(text));
+      var link = document.createElement("a");
+      link.href = "#";
+      link.textContent = "Switch to " + latest.name + ".";
+      link.addEventListener("click", function (ev) { ev.preventDefault(); navigateTo(latest); });
+      banner.appendChild(link);
+      var main = document.querySelector("main#quarto-document-content") || document.querySelector("main");
+      if (main) { main.insertBefore(banner, main.firstChild); }
+    }
+  }).catch(function () {});
+})();
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    // Ensure there is a toggle, if there isn't float one in the top right
+    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+      const a = window.document.createElement('a');
+      a.classList.add('top-right');
+      a.classList.add('quarto-color-scheme-toggle');
+      a.href = "";
+      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+      const i = window.document.createElement("i");
+      i.classList.add('bi');
+      a.appendChild(i);
+      window.document.body.appendChild(a);
+    }
+    setColorSchemeToggle(hasAlternateSentinel())
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../reference/dataset_schema.html" class="pagination-link" aria-label="ESPEI Dataset Schema">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">ESPEI Dataset Schema</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../reference/api/index.html" class="pagination-link" aria-label="API Reference">
+        <span class="nav-page-text">API Reference</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p>Copyright © Materials Genome Foundation</p>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/phasesresearchlab/espei/edit/master/docs/reference/yaml_input_schema.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/phasesresearchlab/espei/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>
