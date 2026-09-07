@@ -19,7 +19,7 @@ to fit thermochemical data and phase diagram data simultaneously.
 ## Input data
 
 All datasets and input files for this tutorial can be found at the
-[GitHub repository for this website](https://github.com/materialsgenomefoundation/espei.org) in the [Cu-Mg example directory](https://github.com/materialsgenomefoundation/espei.org/blob/main/tutorials/cu-mg-example).
+[ESPEI GitHub repository](https://github.com/phasesresearchlab/espei) in the [Cu-Mg example directory](https://github.com/phasesresearchlab/espei/tree/master/docs/tutorials/cu-mg-example).
 The input files will be very breifly explained in this tutorial so that you are able to
 know their use. More detailed description of the files is found on the relevant schema reference documentation pages.
 
@@ -64,7 +64,7 @@ ESPEI has a tool to help find and report problems in your
 datasets. This is automatically run when you load the datasets, but will
 fail on the first error. Running the following commmand (assuming from
 here on that you are in the `cu-mg-example` tutorial folder from
-[GitHub](https://github.com/materialsgenomefoundation/espei.org/blob/main/tutorials/cu-mg-example)):
+[GitHub](https://github.com/phasesresearchlab/espei/tree/master/docs/tutorials/cu-mg-example)):
 
 ``` bash
 espei --check-datasets input-data

@@ -7,3 +7,5 @@ _sidebar.yml
 html.json
 tutorials/cu-mg-example/mcmc-log.txt
 *.pyc
+_variables.yml
+_version.html

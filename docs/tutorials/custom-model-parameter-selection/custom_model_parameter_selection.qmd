@@ -27,7 +27,7 @@ generated parameters for three types of elastic constant parameters
 using DFT data from the literature.
 
 **To run ESPEI and generate the output in this tutorial, download the
-files from [GitHub]({{< var doc_repo_url >}}/tree/main/tutorials/custom-model-parameter-selection)**.
+files from [GitHub](https://github.com/phasesresearchlab/espei/tree/master/docs/tutorials/custom-model-parameter-selection)**.
 
 ## Implementing the elastic constant model
 

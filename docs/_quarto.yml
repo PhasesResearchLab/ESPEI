@@ -1,5 +1,6 @@
 project:
   type: website
+  pre-render: _scripts/pre_render.py
 
 website:
   favicon: _static/ESPEI-logo.png
@@ -7,7 +8,7 @@ website:
   title: "ESPEI"
   sidebar:
     logo: "_static/ESPEI-logo-withtext.png"
-    title: "ESPEI v0.9.0"
+    title: "ESPEI v{{< var version >}}"
     style: "floating"
     search: true
     collapse-level: 2
@@ -91,7 +92,9 @@ website:
   page-navigation: true
   back-to-top-navigation: true
   page-footer: "Copyright © Materials Genome Foundation"
-  repo-url: https://github.com/materialsgenomefoundation/espei.org
+  repo-url: https://github.com/phasesresearchlab/espei
+  repo-subdir: docs
+  repo-branch: master
   repo-actions: [edit, issue]
 
 bibliography: references.bib
