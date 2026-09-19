@@ -1,0 +1,15 @@
+{
+    "components": ["CR", "NI"],
+    "phases": ["BCC_A2", "FCC_A1"],
+    "conditions": {
+        "T": [1473.0],
+        "P": [101325.0]
+    },
+    "output": "ZPF",
+    "values": [
+        [["FCC_A1", ["NI"], [0.508]], ["BCC_A2", ["NI"], [0.282]]]
+    ],
+    "reference": "Zhang (2014)", "bibtex": "zhang2014",
+    "comment": "Digitized diffusion data from Figure 4b",
+    "author": "Bocklund, Brandon"
+}

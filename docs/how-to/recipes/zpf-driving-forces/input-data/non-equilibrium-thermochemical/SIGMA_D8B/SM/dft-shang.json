@@ -1,0 +1,19 @@
+{
+  "components": ["CR", "NI"],
+  "phases": ["SIGMA_D8B"],
+  "solver": {
+   "mode": "manual",
+   "sublattice_site_ratios": [10, 4, 16],
+   "sublattice_configurations": [["NI", "CR", "CR"], ["CR", "NI", "CR"], ["NI", "NI", "CR"], ["CR", "CR", "NI"], ["NI", "CR", "NI"], ["CR", "NI", "NI"]]
+  },
+"conditions": {
+ "P": 101325,
+ "T": 300
+},
+"output": "SM_FORM",
+"values": [[[2.73, 6.48, 3.97, 3.5, 3.01, 3.5]]],
+"reference": "Shang DFT", "bibtex": "",
+"author": "Bocklund, Brandon",
+"tags": ["dft"],
+"comment": "From ShunLi's 5 sublattice model; converted from 5 sublattice model [2, 4, 8, 8, 8], by mapping onto indices [0, 1, 2, 0, 2]"
+}

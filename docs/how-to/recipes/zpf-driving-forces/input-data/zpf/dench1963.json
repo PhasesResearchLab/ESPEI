@@ -1,0 +1,19 @@
+{
+    "components": ["CR", "NI"],
+    "phases": ["BCC_A2", "FCC_A1"],
+    "conditions": {
+        "T": [1556, 1512, 1481, 1403, 1347],
+        "P": [101325.0]
+    },
+    "output": "ZPF",
+    "values": [
+        [["BCC_A2", ["CR"], [0.647]], ["FCC_A1", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.672]], ["FCC_A1", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.697]], ["FCC_A1", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.797]], ["FCC_A1", ["CR"], [null]]],
+        [["BCC_A2", ["CR"], [0.898]], ["FCC_A1", ["CR"], [null]]]
+    ],
+    "reference": "Dench (1963)", "bibtex": "dench1963",
+    "comment": "Digitized from figure 8",
+    "author": "Bocklund, Brandon"
+}

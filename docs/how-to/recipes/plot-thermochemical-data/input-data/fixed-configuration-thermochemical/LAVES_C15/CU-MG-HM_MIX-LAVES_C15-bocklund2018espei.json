@@ -1,0 +1,27 @@
+{
+  "components": ["CU", "MG"],
+  "phases": ["LAVES_C15"],
+  "solver": {
+	  "mode": "manual",
+	  "sublattice_site_ratios": [1, 2],
+	    "sublattice_occupancies": [
+          [[0.5, 0.5], 1.0],
+          [1.0, [0.5, 0.5]]
+      ],
+	    "sublattice_configurations": [
+          [["CU", "MG"], "MG"],
+          ["CU", ["CU", "MG"]]
+			]
+  },
+  "conditions": {
+	  "P": 101325,
+	  "T": 298.15
+  },
+  "output": "HM_MIX",
+    "values":   [[[
+        1770,
+        1481
+                ]]],
+  "reference": "Bocklund (2019)",
+  "comment": "Constrained DFT calculations"
+}

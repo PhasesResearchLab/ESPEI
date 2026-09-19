@@ -1,0 +1,80 @@
+<!--
+Version switcher for the versioned gh-pages deployment.
+
+Each deployed version lives in its own directory (0.9.1/, dev/, ...) and
+switcher.json at the site root lists them. _version.html, written by the
+pre-render script, sets window.ESPEI_DOCS_VERSION to this build's directory
+name. Nothing is shown when the page is not served from a versioned directory,
+e.g. a local quarto preview.
+-->
+<style>
+  .espei-version-switcher { margin: 0.25rem 0 0.5rem; }
+  .espei-version-switcher select {
+    width: 100%; padding: 0.15rem 0.4rem; font-size: 0.85em;
+    border: 1px solid var(--bs-border-color, #ccc); border-radius: 0.25rem;
+    background-color: var(--bs-body-bg, #fff); color: var(--bs-body-color, #212529);
+  }
+  .espei-version-banner {
+    padding: 0.5rem 1rem; margin-bottom: 1rem; font-size: 0.9em;
+    background-color: var(--bs-warning-bg-subtle, #fff3cd); color: var(--bs-body-color, #212529);
+    border: 1px solid var(--bs-warning-border-subtle, #ffe69c); border-radius: 0.25rem;
+  }
+</style>
+<script>
+(function () {
+  var current = window.ESPEI_DOCS_VERSION;
+  if (!current) { return; }
+  var path = window.location.pathname;
+  var marker = "/" + current + "/";
+  var idx = path.indexOf(marker);
+  if (idx < 0) { return; }
+  var root = path.slice(0, idx + 1);
+  var page = path.slice(idx + marker.length);
+
+  function navigateTo(entry) {
+    var target = root + entry.url + page;
+    fetch(target, { method: "HEAD" }).then(function (r) {
+      window.location.href = r.ok ? target : root + entry.url;
+    }).catch(function () { window.location.href = root + entry.url; });
+  }
+
+  fetch(root + "switcher.json").then(function (r) { return r.json(); }).then(function (versions) {
+    var select = document.createElement("select");
+    select.setAttribute("aria-label", "Documentation version");
+    var latest = null;
+    versions.forEach(function (entry) {
+      var option = document.createElement("option");
+      option.value = entry.version;
+      option.textContent = entry.name;
+      option.selected = entry.version === current;
+      select.appendChild(option);
+      if (entry.preferred) { latest = entry; }
+    });
+    select.addEventListener("change", function () {
+      var entry = versions.find(function (e) { return e.version === select.value; });
+      if (entry) { navigateTo(entry); }
+    });
+    var container = document.createElement("div");
+    container.className = "espei-version-switcher";
+    container.appendChild(select);
+    var header = document.querySelector("#quarto-sidebar .sidebar-header");
+    if (header) { header.appendChild(container); }
+
+    if (latest && latest.version !== current) {
+      var banner = document.createElement("div");
+      banner.className = "espei-version-banner";
+      var text = current === "dev"
+        ? "This is the documentation for the development version of ESPEI. "
+        : "This is the documentation for ESPEI " + current + ", which is not the latest release. ";
+      banner.appendChild(document.createTextNode(text));
+      var link = document.createElement("a");
+      link.href = "#";
+      link.textContent = "Switch to " + latest.name + ".";
+      link.addEventListener("click", function (ev) { ev.preventDefault(); navigateTo(latest); });
+      banner.appendChild(link);
+      var main = document.querySelector("main#quarto-document-content") || document.querySelector("main");
+      if (main) { main.insertBefore(banner, main.firstChild); }
+    }
+  }).catch(function () {});
+})();
+</script>

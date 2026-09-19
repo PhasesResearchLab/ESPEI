@@ -1,0 +1,27 @@
+{
+  "components": ["CU", "MG"],
+  "phases": ["HCP_A3"],
+  "solver": {
+	  "mode": "manual",
+	  "sublattice_site_ratios": [1],
+	  "sublattice_occupancies": [
+				[[0.96875, 0.03125]],
+        [[0.03125, 0.96875]]
+		],
+	  "sublattice_configurations": [
+        [["CU", "MG"]],
+        [["CU", "MG"]]
+		]
+  },
+  "conditions": {
+	  "P": 101325,
+	  "T": 298.15
+  },
+  "output": "HM_MIX",
+    "values":   [[[
+        -497,
+        536
+    ]]],
+  "reference": "Gao (2014)",
+  "comment": "Fully relaxed DFT calculations from table 5"
+}

@@ -1,0 +1,12 @@
+{
+    "components": ["TI", "VA"],
+    "phases": ["BCC_A2"],
+    "output": "C11",
+    "values": [[[93]]],
+    "conditions": {"T": 298.15, "P": 101325},
+    "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3], "sublattice_configurations": [["TI", "VA"]], "sublattice_occupancies": [[1.0, 1.0]]},
+    "reference": "Marker (2018)",
+    "bibtex": "marker2018binary_elastic",
+    "comment": "Values pulled from Table 4 (DFT calculations).",
+    "tags": []
+}

@@ -1,0 +1,16 @@
+system:
+  phase_models: phase_models.json
+  datasets: elastic-datasets
+generate_parameters:
+  excess_model: linear
+  ref_state: SGTE91
+  # This can be any module that is importable with Python.
+  # It can be something local to the directory where you run ESPEI, or provided
+  # by an package you have installed. To know if it will work, start a Python
+  # interpreter in the same place where you will run the ESPEI executable and
+  # try to do the import:
+  # >>> from custom_elastic_model import elastic_fitting_description
+  # if that works, then ESPEI should also be able to use it.
+  fitting_description: custom_elastic_model.elastic_fitting_description
+output:
+  output_db: Ti-elastic.tdb

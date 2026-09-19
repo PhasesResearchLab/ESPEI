@@ -1,0 +1,22 @@
+{
+  "components": ["NI", "CR"],
+  "phases": ["CRNI2"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": [2, 1],
+    "sublattice_configurations": [
+      ["NI", "CR"]
+    ],
+    "sublattice_occupancies": [
+      [1.0, 1.0]
+    ]
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 298.15
+  },
+  "output": "HM_FORM",
+  "values": [[[-1883]]],
+  "tags": ["dft"],
+  "reference": "dft"
+}

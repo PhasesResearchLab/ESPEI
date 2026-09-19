@@ -1,0 +1,22 @@
+{
+  "components": ["CR", "NI"],
+  "phases": ["BCC_A2"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": [1],
+    "sublattice_configurations": [[["CR", "NI"]], [["CR", "NI"]]],
+    "sublattice_occupancies": [
+      [[0.40, 0.60]],
+      [[0.20, 0.80]]
+    ]
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 1583
+  },
+  "output": "HM_MIX",
+    "values":   [[[2000, 0]]],
+    "tags": ["dft"],
+    "reference": "Estimated", "bibtex": "estimated",
+  "comment": "Estimated data to prevent the extreme negative enthalpy of BCC on Ni-rich side."
+}

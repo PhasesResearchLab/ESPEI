@@ -1,0 +1,19 @@
+{
+    "components": ["CR", "NI"],
+    "phases": ["BCC_A2", "FCC_A1"],
+    "conditions": {
+        "T": [1073, 1173, 1273, 1373, 1548],
+        "P": [101325.0]
+    },
+    "output": "ZPF",
+    "values": [
+        [["FCC_A1", ["CR"], [0.3866]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["CR"], [0.3975]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["CR"], [0.4480]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["CR"], [0.4643]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["CR"], [0.4984]], ["BCC_A2", ["NI"], [null]]]
+    ],
+    "reference": "Bechtoldt (1961)", "bibtex": "bechtoldt1961",
+    "comment": "Digitized from figure 5, points in figure 4 were too far apart to identify a boundary properly.",
+    "author": "Bocklund, Brandon"
+}

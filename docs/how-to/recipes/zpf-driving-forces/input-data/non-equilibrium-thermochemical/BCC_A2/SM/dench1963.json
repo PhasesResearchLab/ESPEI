@@ -1,0 +1,10 @@
+{
+  "components": ["CR", "NI"],
+  "phases": ["BCC_A2"],
+  "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]], [["CR", "NI"]]], "sublattice_occupancies": [[[0.904, 0.096]], [[0.903, 0.097]], [[0.903, 0.097]], [[0.804, 0.196]], [[0.805, 0.195]], [[0.702, 0.298]], [[0.703, 0.297]], [[0.677, 0.323]]]},
+  "conditions": {"P": 101325, "T": 1538.15},
+  "output": "SM_FORM",
+  "values": [[[1.52, 1.72, 1.74, 2.63, 2.71, 3.02, 2.95, 2.99]]],
+  "reference": "Estimated from Dench (1963)", "bibtex": "dench1963",
+  "comment": "Estimated from enthalpy using tau=3000.0",
+  "tags": ["estimated-entropy"]}
