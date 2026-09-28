@@ -97,7 +97,7 @@ def test_get_response_vector_AL_NI_VA_interaction():
     """)
     mod = Model(dbf, ['AL', 'NI', 'VA'], 'BCC_B2')
     dd = {ky: 0.0 for ky in mod.models.keys()}
-    dd['GM'] = NEW_GM
+    dd['G'] = NEW_GM * mod._site_ratio_normalization
     mod.models = dd
     print(mod.HM)
     config_tup = (('AL',), ('NI', 'VA'), ('VA',))
