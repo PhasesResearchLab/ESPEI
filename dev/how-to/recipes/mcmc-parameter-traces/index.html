@@ -71,7 +71,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../../../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../../../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../../../">
-<link href="../../../how-to/recipes/zpf-driving-forces/index.html" rel="next">
+<link href="../../../how-to/recipes/mcmc-corner-plots/index.html" rel="next">
 <link href="../../../how-to/recipes/mcmc-probability-convergence/index.html" rel="prev">
 <link href="../../../_static/ESPEI-logo.png" rel="icon" type="image/png">
 <script src="../../../site_libs/quarto-html/quarto.js" type="module"></script>
@@ -85,9 +85,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../../../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../../../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../../site_libs/bootstrap/bootstrap-3e9b1289f5f353c49b617ce48ad2bc38.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../../../site_libs/bootstrap/bootstrap-dark-2279885434f9d2f3f2cf8d7423a1a79b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../../../site_libs/bootstrap/bootstrap-3e9b1289f5f353c49b617ce48ad2bc38.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../../../site_libs/bootstrap/bootstrap-55617497126496852ff9f5a59253c640.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../../../site_libs/bootstrap/bootstrap-dark-f67d6d0c9e52dc93d369a7ba4ec07921.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../../../site_libs/bootstrap/bootstrap-55617497126496852ff9f5a59253c640.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "sidebar",
   "copy-button": false,
@@ -311,7 +311,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <img src="../../../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../../../">ESPEI v0.9.2.dev8+g18558411f</a> 
+      <a href="../../../">ESPEI v0.9.2.dev9+g25d650a14</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -391,20 +391,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../../how-to/recipes/plot-phase-diagram-data/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Plot phase diagram data</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
   <a href="../../../how-to/recipes/plot-thermochemical-data/index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Plot Thermochemical Data</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../../how-to/recipes/mcmc-corner-plots/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">MCMC Corner Plots</span></a>
+  <a href="../../../how-to/recipes/plot-phase-diagram-data/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Plot phase diagram data</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -417,6 +411,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../../../how-to/recipes/mcmc-parameter-traces/index.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">MCMC Parameter Trace Plots</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../how-to/recipes/mcmc-corner-plots/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Corner Plots</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -751,7 +751,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <p>Looking at how each parameter chain evolves across the chains can show if any particular chains are diverging from the rest, if there are multiple modes being explored, or how wide the distribution of parameters are relative to each other.</p>
 <p>Each line corresponds to one chain in the ensemble.</p>
-<div id="78c52432" class="cell" data-execution_count="1">
+<div id="f7dc08bc" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> espei.analysis <span class="im">import</span> truncate_arrays</span>
@@ -782,7 +782,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>and if we plot again after 500 iterations of burn-in:</p>
-<div id="079e2e17" class="cell" data-execution_count="2">
+<div id="53194955" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>burn_in_iterations <span class="op">=</span> <span class="dv">500</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(nrows<span class="op">=</span>num_parameters, gridspec_kw<span class="op">=</span><span class="bu">dict</span>(hspace<span class="op">=</span><span class="fl">0.4</span>), figsize<span class="op">=</span>(<span class="dv">4</span>, <span class="dv">3</span><span class="op">*</span>num_parameters))</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> parameter <span class="kw">in</span> <span class="bu">range</span>(num_parameters):</span>
@@ -1303,8 +1303,8 @@ e.g. a local quarto preview.
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../../../how-to/recipes/zpf-driving-forces/index.html" class="pagination-link" aria-label="Plot ZPF Driving Forces">
-        <span class="nav-page-text">Plot ZPF Driving Forces</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="../../../how-to/recipes/mcmc-corner-plots/index.html" class="pagination-link" aria-label="MCMC Corner Plots">
+        <span class="nav-page-text">MCMC Corner Plots</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
