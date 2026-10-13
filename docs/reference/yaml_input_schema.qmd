@@ -648,7 +648,7 @@ type
 
 default
 
-:   {\'ZPF\': 1.0, \'ACR\': 1.0, \'HM\': 1.0, \'SM\': 1.0, \'CPM\': 1.0}
+:   {\'ZPF\': 1.0, \'ACR\': 1.0, \'GM\': 1.0, \'HM\': 1.0, \'SM\': 1.0, \'CPM\': 1.0}
 
 Each type of data can be weighted: zero phase fraction (`ZPF`), activity
 (`ACR`) and the different types of thermochemical error. These weights

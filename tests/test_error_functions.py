@@ -15,6 +15,7 @@ from tinydb import where
 from pycalphad import Database
 
 from espei.paramselect import generate_parameters
+from espei.parameter_selection.fitting_descriptions import joint_gibbs_energy_fitting_description
 from espei.error_functions import *
 from espei.error_functions.activity_error import ActivityResidual
 from espei.error_functions.equilibrium_thermochemical_error import calc_prop_differences, EquilibriumPropertyResidual
@@ -330,6 +331,103 @@ def test_non_equilibrium_thermochemical_error_for_of_enthalpy_mixing(datasets_db
     thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
     error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
+
+
+def test_non_equilibrium_thermochemical_error_for_gibbs_energy_of_mixing(datasets_db):
+    """Tests that error in Gibbs energy of mixing data (including ideal mixing) is calculated correctly"""
+    phase_models = {
+        "components": ["AL", "B"],
+        "phases": {
+            "LIQUID" : {
+                "sublattice_model": [["AL", "B"]],
+                "sublattice_site_ratios": [1]
+            },
+            "FCC_A1" : {
+                "sublattice_model": [["AL", "B"]],
+                "sublattice_site_ratios": [1]
+            }
+        }
+    }
+
+    dataset_mixing = {
+        "components": ["AL", "B"],
+        "phases": ["FCC_A1"],
+        "solver": {
+            "sublattice_site_ratios": [1],
+            "sublattice_occupancies": [[[0.5, 0.5]]],
+            "sublattice_configurations": [[["AL", "B"]]],
+            "mode": "manual"
+        },
+        "conditions": {
+            "P": 101325,
+            "T": 600
+        },
+        "output": "GM_MIX",
+        "values": [[[-5000]]],
+    }
+    datasets_db.insert(dataset_mixing)
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=joint_gibbs_energy_fitting_description)
+    assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 1
+    phases = list(dbf.phases.keys())
+    comps = list(dbf.elements)
+
+    # the error should be exactly 0 because we are only fitting to one point
+    zero_error_prob = scipy.stats.norm(loc=0, scale=500.0).logpdf(0.0)  # GM weight = 500
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
+    assert len(thermochemical_data) == 1
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
+    assert np.isclose(error, zero_error_prob, atol=1e-6)
+
+
+def test_non_equilibrium_thermochemical_error_for_gibbs_energy_of_formation(datasets_db):
+    """Tests that error in Gibbs energy of formation data is calculated correctly"""
+    # CUMG2 in CU_MG_TDB: G = GHSERCU + 2*GHSERMG + VV0000, so GM_FORM = VV0000/3 at all temperatures
+    gm_form = -32429.6/3
+    dataset_formation = {
+        "components": ["CU", "MG"],
+        "phases": ["CUMG2"],
+        "solver": {
+            "sublattice_site_ratios": [1, 2],
+            "sublattice_configurations": [["CU", "MG"]],
+            "mode": "manual"
+        },
+        "conditions": {
+            "P": 101325,
+            "T": [300, 500, 800]
+        },
+        "output": "GM_FORM",
+        "values": [[[gm_form], [gm_form], [gm_form + 500]]],
+    }
+    datasets_db.insert(dataset_formation)
+
+    dbf = Database(CU_MG_TDB)
+    phases = list(dbf.phases.keys())
+    comps = ['CU', 'MG', 'VA']
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
+    expected_prob = 2*scipy.stats.norm(loc=0, scale=500.0).logpdf(0.0) + scipy.stats.norm(loc=0, scale=500.0).logpdf(500.0)
+    assert np.isclose(error, expected_prob, atol=1e-6)
+
+
+def test_get_thermochemical_data_gibbs_energy_weight(datasets_db):
+    """Tests that the GM data weight modifies the standard deviation of GM data"""
+    datasets_db.insert({
+        "components": ["CU", "MG"],
+        "phases": ["CUMG2"],
+        "solver": {
+            "sublattice_site_ratios": [1, 2],
+            "sublattice_configurations": [["CU", "MG"]],
+            "mode": "manual"
+        },
+        "conditions": {"P": 101325, "T": 300},
+        "output": "GM_FORM",
+        "values": [[[-10000]]],
+    })
+    dbf = Database(CU_MG_TDB)
+    thermochemical_data = get_thermochemical_data(dbf, ['CU', 'MG', 'VA'], list(dbf.phases.keys()), datasets_db, weight_dict={'GM': 2.0}, symbols_to_fit=[])
+    assert len(thermochemical_data) == 1
+    assert np.allclose(thermochemical_data[0]['weights'], 250.0)
 
 
 def test_subsystem_non_equilibrium_thermochemcial_probability(datasets_db):

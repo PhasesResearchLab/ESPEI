@@ -1,5 +1,5 @@
 """
-Calculate error due to thermochemical quantities: heat capacity, entropy, enthalpy.
+Calculate error due to thermochemical quantities: heat capacity, entropy, enthalpy, Gibbs energy.
 """
 
 import logging
@@ -290,11 +290,12 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
 
     # estimated from NIST TRC uncertainties
     property_std_deviation = {
+        'GM': 500.0/weight_dict.get('GM', 1.0),  # J/mol
         'HM': 500.0/weight_dict.get('HM', 1.0),  # J/mol
         'SM':   0.2/weight_dict.get('SM', 1.0),  # J/K-mol
         'CPM':  0.2/weight_dict.get('CPM', 1.0),  # J/K-mol
     }
-    properties = ['HM_FORM', 'SM_FORM', 'CPM_FORM', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
+    properties = ['GM_FORM', 'HM_FORM', 'SM_FORM', 'CPM_FORM', 'GM_MIX', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
 
     ref_states = []
     for el in get_pure_elements(dbf, comps):
