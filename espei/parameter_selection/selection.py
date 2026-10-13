@@ -89,14 +89,34 @@ def score_model(feature_matrix, data_quantities, model_coefficients, feature_lis
     n = data_quantities.size
     pk = k*p
     aic = n * np.log(rss / n) + 2.0 * pk
-    if pk >= (n - 1.0):
-        # Prevent the denominator of the proper mAICc from blowing up (pk = n - 1) or negative (pk > n - 1)
-        correction = (2.0 * p**2 * k**2 + 2.0 * pk) * (-n + pk + 3.0)
-    else:
-        correction = (2.0 * p**2 * k**2 + 2.0 * pk) / (n - pk - 1.0)
+    correction = aicc_correction(pk, n)
     aicc = aic + correction  # model score
     _log.debug('%s rss: %s, AIC: %s, AICc: %s', feature_list, rss, aic, aicc)
     return aicc
+
+
+def aicc_correction(pk, n):
+    """
+    Return the small sample size correction term of the modified AICc.
+
+    Parameters
+    ----------
+    pk : float
+        Penalized number of parameters, i.e. the number of parameters, :math:`k`,
+        multiplied by the AICc penalty factor, :math:`p`.
+    n : int
+        Number of data points.
+
+    Returns
+    -------
+    float
+
+    """
+    if pk >= (n - 1.0):
+        # Prevent the denominator of the proper mAICc from blowing up (pk = n - 1) or negative (pk > n - 1)
+        return (2.0 * pk**2 + 2.0 * pk) * (-n + pk + 3.0)
+    else:
+        return (2.0 * pk**2 + 2.0 * pk) / (n - pk - 1.0)
 
 
 def select_model(candidate_models, ridge_alpha, weights, aicc_factor=None):

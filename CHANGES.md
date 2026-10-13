@@ -1,5 +1,11 @@
 # Release Notes
 
+## Unreleased
+
+### Improvements
+
+- Add an opt-in `joint_gibbs_energy_fitting_description` that fits GM, HM, SM and CPM data simultaneously during parameter selection, using the temperature dependence of HM, SM and GM data that the default sequential fit discards. `FittingStep` subclasses can now customize how their data are queried (`get_data`) and how parameters are selected (`select_parameters`).
+
 ## 0.9.1 (2026-06-05)
 
 ### Improvements

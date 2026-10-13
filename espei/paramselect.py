@@ -25,19 +25,15 @@ from collections import OrderedDict
 import numpy as np
 import symengine
 from symengine import Symbol
-from symengine.lib.symengine_wrapper import ImmutableDenseMatrix
 from tinydb import where
 import tinydb
 from pycalphad import Database, variables as v
 
 import espei.refdata
 from espei.database_utils import initialize_database
-from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter
-from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples, get_sample_condition_dicts
-from espei.parameter_selection.model_building import build_redlich_kister_candidate_models
-from espei.parameter_selection.selection import select_model
+from espei.parameter_selection.model_building import build_feature_matrix as _build_feature_matrix  # backwards compatibility
 from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
-    tuplify, recursive_tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
+    tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
 from espei.utils import PickleableTinyDB, sigfigs, extract_aliases
 from espei.parameter_selection.fitting_descriptions import gibbs_energy_fitting_description
 
@@ -85,40 +81,6 @@ def has_symbol(expr, check_symbol):
         if check_degree > eps:
             return False
     return True
-
-
-def _build_feature_matrix(sample_condition_dicts: List[Dict[Symbol, float]], symbolic_coefficients: List[Symbol]):
-    """
-    Builds A for solving x = A\\b. A is an MxN matrix of M sampled data points and N is the symbolic coefficients.
-
-    Parameters
-    ----------
-    sample_condition_dicts : List[Dict[Symbol, float]]
-        List of length ``M`` containing the conditions (T, P, YS, Z, V_I, V_J, V_K) for
-        each sampled point.
-    symbolic_coefficients : List[Symbol]
-        Symbolic coefficients of length ```N`` (e.g. ``v.T``, ``YS``) of the features
-        corresponding to the variables that will be fit.
-
-    Returns
-    -------
-    ArrayLike
-        MxN array of coefficients with sampled data conditions plugged in.
-    """
-    M = len(sample_condition_dicts)
-    N = len(symbolic_coefficients)
-    feature_matrix = np.empty((M, N))
-    coeffs = ImmutableDenseMatrix([symbolic_coefficients])  # see https://github.com/symengine/symengine.py/issues/485
-    for i in range(M):
-        # Profiling-guided optimization
-        # At the time, we got a 3x performance speedup compared to calling subs
-        # on individual elements of symbolic_coefficients:
-        #     symbolic_coefficients[j].subs(sample_condition_dicts[i])
-        # The biggest speedup was moving the inner loop to the IDenseMatrix,
-        # while dump_real avoids allocating an extra list because you cannot
-        # assign feature_matrix[i, :] to the result of coeffs.xreplace
-        coeffs.xreplace(sample_condition_dicts[i]).dump_real(feature_matrix[i, :])
-    return feature_matrix
 
 
 def get_next_symbol(dbf):
@@ -259,8 +221,6 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
 
     """
     aicc_feature_factors = aicc_phase_penalty if aicc_phase_penalty is not None else {}
-    solver_qry = (where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
-    config_tup = tuple(map(tuplify, configuration))
     if interaction_test(configuration):
         _log.debug('ENDMEMBERS FROM INTERACTION: %s', endmembers_from_interaction(configuration))
     # fixed_model is our previously fit partial model from previous steps
@@ -280,35 +240,18 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
             _log.trace('Parameter L already in the database for configuration %s. Skipping.', configuration)
             continue
         # Search for relevant data
-        desired_props = [fitting_step.data_types_read + refstate for refstate in fitting_step.supported_reference_states]
-        desired_data = get_prop_data(comps, phase_name, desired_props, datasets, additional_query=solver_qry)
-        desired_data = filter_configurations(desired_data, configuration, symmetry)
-        desired_data = filter_temperatures(desired_data)
-        _log.trace('%s: datasets found: %s', desired_props, len(desired_data))
+        desired_data = fitting_step.get_data(comps, phase_name, configuration, symmetry, datasets)
         if len(desired_data) > 0:
-            # Build the candidate model feature matricies and response vector (A, b in Ax=b)
             if fixed_model is None:
                 fixed_model = fitting_description.model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
-            calculate_dict = get_prop_samples(desired_data, config_tup)
-            sample_condition_dicts = get_sample_condition_dicts(calculate_dict, config_tup, phase_name)
-            response_vector = fitting_step.get_response_vector(fixed_model, fixed_portions, desired_data, sample_condition_dicts)
-            candidate_models = []
-            feature_sets = build_redlich_kister_candidate_models(configuration, fitting_step.get_feature_sets())
-            for features in feature_sets:
-                feature_matrix = _build_feature_matrix(sample_condition_dicts, list(map(fitting_step.transform_feature, features)))
-                candidate_model = (features, feature_matrix, response_vector)
-                candidate_models.append(candidate_model)
-
-            # Fit and select a model from the candidates
-            aicc_factor = aicc_feature_factors.get(fitting_step.data_types_read, 1.0)
-            weights = calculate_dict['weights']
-            assert len(sample_condition_dicts) == len(weights)
-            selected_model = select_model(candidate_models, ridge_alpha, weights=weights, aicc_factor=aicc_factor)
-            selected_features, selected_values = selected_model
-            parameters.update(zip(*(selected_features, selected_values)))
-            fixed_portion = np.array(selected_features, dtype=np.object_)
-            fixed_portion = np.dot(fixed_portion, selected_values)
-            fixed_portions.append(fixed_portion)
+            # Build candidate models, then fit and select a model from the candidates
+            selected_model = fitting_step.select_parameters(fixed_model, fixed_portions, desired_data, configuration, ridge_alpha, aicc_feature_factors)
+            if selected_model is not None:
+                selected_features, selected_values = selected_model
+                parameters.update(zip(*(selected_features, selected_values)))
+                fixed_portion = np.array(selected_features, dtype=np.object_)
+                fixed_portion = np.dot(fixed_portion, selected_values)
+                fixed_portions.append(fixed_portion)
 
         # If we have a Gibbs energy type model, each step contributes to the
         # same parameter type, so we can't insert_parameter during each step.
