@@ -281,25 +281,27 @@ def get_prop_data(comps, phase_name, prop, datasets, additional_query=None) -> L
         List of components to get data for
     phase_name : str
         Name of the phase to get data for
-    prop : str
-        Property to get data for
+    prop : Union[str, List[str]]
+        Property or properties to get data for. Properties are matched exactly,
+        e.g. ``"HM"`` matches absolute enthalpy data, but not ``"HM_FORM"`` data.
     datasets : espei.utils.PickleableTinyDB
         Datasets to search for data
     additional_query : tinydb.Query
-        A TinyDB Query object to search for. If None, a Query() will be created that does nothing.
+        A TinyDB Query object to search for. If None, no additional query is applied.
 
     Returns
     -------
     List[Dataset]
 
     """
-    if additional_query is None:
-        additional_query = tinydb.Query()
-    # TODO: we should only search and get phases that have the same sublattice_site_ratios as the phase in the database
-    desired_data = datasets.search(
-        (tinydb.where('output').test(lambda x: x in prop)) &
+    props = [prop] if isinstance(prop, str) else list(prop)
+    query = (
+        (tinydb.where('output').test(lambda x: x in props)) &
         (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
-        (tinydb.where('phases') == [phase_name]) &
-        additional_query
+        (tinydb.where('phases') == [phase_name])
     )
+    if additional_query is not None:
+        query = query & additional_query
+    # TODO: we should only search and get phases that have the same sublattice_site_ratios as the phase in the database
+    desired_data = datasets.search(query)
     return copy.deepcopy(desired_data)

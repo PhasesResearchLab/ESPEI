@@ -295,7 +295,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
         'SM':   0.2/weight_dict.get('SM', 1.0),  # J/K-mol
         'CPM':  0.2/weight_dict.get('CPM', 1.0),  # J/K-mol
     }
-    properties = ['GM_FORM', 'HM_FORM', 'SM_FORM', 'CPM_FORM', 'GM_MIX', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
+    properties = ['GM', 'HM', 'SM', 'CPM', 'GM_FORM', 'HM_FORM', 'SM_FORM', 'CPM_FORM', 'GM_MIX', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
 
     ref_states = []
     for el in get_pure_elements(dbf, comps):

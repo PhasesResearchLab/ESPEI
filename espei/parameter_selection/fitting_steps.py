@@ -53,11 +53,12 @@ class FittingStep():
         Parameters
         ----------
         fixed_model : Model
-            Model with all lower order (in composition) terms already fit. Pure
-            element reference state (GHSER functions) should be set to zero.
+            Model with all lower order (in composition) terms already fit.
         fixed_portions : [symengine.Basic]
-            SymEngine expressions for model parameters and interaction productions for
-            higher order (in T) terms for this property, e.g. [0, 3.0*YS*v.T]. In
+            SymEngine expressions for the parts of the parameter being fit
+            that are already known, i.e. the reference part of the parameter
+            (e.g. GHSER functions for endmember Gibbs energies) and the terms
+            fit by previous steps, e.g. [GHSERAL, 3.0*YS*v.T]. In
             [qty]/mole-formula.
         data : [Dict[str, Any]]
             ESPEI single phase datasets for this property.
@@ -116,11 +117,11 @@ class FittingStep():
         Parameters
         ----------
         fixed_model : Model
-            Model with all lower order (in composition) terms already fit. Pure
-            element reference state (GHSER functions) should be set to zero.
+            Model with all lower order (in composition) terms already fit.
         fixed_portions : [symengine.Basic]
-            SymEngine expressions for model parameters fit by previous steps
-            for the same parameter, in [qty]/mole-formula.
+            SymEngine expressions for the known parts of the parameter being
+            fit (reference part and terms fit by previous steps), in
+            [qty]/mole-formula.
         desired_data : [Dataset]
             Datasets returned by ``get_data``.
         configuration : Tuple[Union[str, Tuple[str]]]
@@ -257,7 +258,7 @@ class AbstractLinearPropertyStep(FittingStep):
 class StepHM(FittingStep):
     parameter_name: str = "G"
     data_types_read: str = "HM"
-    supported_reference_states: [str] = ["_MIX", "_FORM"]
+    supported_reference_states: [str] = ["", "_MIX", "_FORM"]
     features: [symengine.Expr] = [symengine.S.One]
 
     @classmethod
@@ -267,24 +268,53 @@ class StepHM(FittingStep):
         return expr - v.T*symengine.diff(expr, v.T)
 
     @classmethod
+    def get_formation_reference(cls, fixed_model: Model) -> symengine.Expr:
+        """
+        Return the Gibbs energy of the pure element reference state of
+        ``_FORM`` data in J/mole-formula as a function of site fractions.
+
+        The reference state is the stable element reference (SER) defined by
+        the GHSER functions (e.g. ``GHSERAL``) in the Database. Subclasses can
+        override this to use a different definition of the reference state.
+
+        Parameters
+        ----------
+        fixed_model : pycalphad.Model
+            Model of the phase being fit.
+
+        Returns
+        -------
+        symengine.Expr
+
+        """
+        reference = symengine.S.Zero
+        for subl_idx, (site_ratio, constituents) in enumerate(zip(fixed_model.site_ratios, fixed_model.constituents)):
+            for species in constituents:
+                for element, amount in species.constituents.items():
+                    if element == "VA":
+                        continue
+                    ghser = symengine.Symbol("GHSER" + (element.upper()*2)[:2])
+                    reference += site_ratio * amount * v.Y(fixed_model.phase_name, subl_idx, species) * ghser
+        return fixed_model.symbol_replace(reference, fixed_model._symbols)
+
+    @classmethod
     def shift_reference_state(cls, desired_data: [Dataset], fixed_model: Model, mole_atoms_per_mole_formula_unit: symengine.Expr) -> ArrayLike:  # np.object_
         """
-        Shift _MIX or _FORM data to a common reference state in per mole-atom units.
+        Shift absolute, _MIX or _FORM data to absolute values in per mole-formula units.
 
         Parameters
         ----------
         desired_data : List[Dict[str, Any]]
             ESPEI single phase dataset
         fixed_model : pycalphad.Model
-            Model with all lower order (in composition) terms already fit. Pure
-            element reference state (GHSER functions) should be set to zero.
+            Model with all lower order (in composition) terms already fit.
         mole_atoms_per_mole_formula_unit : float
             Number of moles of atoms in every mole atom unit.
 
         Returns
         -------
         np.ndarray
-            Data for this feature in [qty]/mole-formula in a common reference state.
+            Absolute data for this feature in [qty]/mole-formula.
 
         Raises
         ------
@@ -299,16 +329,20 @@ class StepHM(FittingStep):
 
         """
         total_response = []
+        formation_reference = None  # delay instantiation until needed
         for dataset in desired_data:
             values = np.asarray(dataset['values'], dtype=np.object_)*mole_atoms_per_mole_formula_unit
             unique_excluded_contributions = set(dataset.get('excluded_model_contributions', []))
             for config_idx in range(len(dataset['solver']['sublattice_configurations'])):
                 occupancy = dataset['solver'].get('sublattice_occupancies', None)
-                if dataset['output'].endswith('_FORM'):
-                    # we don't shift the reference state because we assume our
-                    # models are already in the formation reference state (by us
-                    # setting GHSERXX functions to zero explictly)
+                if dataset['output'] == cls.data_types_read:
+                    # absolute data need no shift
                     pass
+                elif dataset['output'].endswith('_FORM'):
+                    # add the pure element reference (already per mole-formula)
+                    if formation_reference is None:
+                        formation_reference = cls.transform_feature(cls.get_formation_reference(fixed_model))
+                    values[..., config_idx] += formation_reference
                 elif dataset['output'].endswith('_MIX'):
                     if occupancy is None:
                         raise ValueError('Cannot have a _MIX property without sublattice occupancies.')

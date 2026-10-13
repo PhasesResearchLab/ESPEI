@@ -117,6 +117,35 @@ def _endmember_reference(dbf, phase_name, configuration):
     return reference
 
 
+def get_parameter_reference(dbf, phase_name, configuration, parameter_name):
+    """
+    Return the reference part of a parameter that is not fit.
+
+    Endmember Gibbs energy parameters are the sum of the pure element (SER)
+    Gibbs energies, i.e. the GHSER functions weighted by the site ratios,
+    plus the fitted terms. All other parameters have no reference part.
+
+    Parameters
+    ----------
+    dbf : Database
+        Database with the phase.
+    phase_name : str
+        Name of the phase.
+    configuration : Tuple[Union[str, Tuple[str]]]
+        Sublattice configuration of the parameter.
+    parameter_name : str
+        Type of the parameter, e.g. "G".
+
+    Returns
+    -------
+    symengine.Expr
+
+    """
+    if interaction_test(configuration) or parameter_name != "G":
+        return symengine.S.Zero
+    return symengine.S(_endmember_reference(dbf, phase_name, configuration))
+
+
 def insert_parameter(dbf, phase_name, configuration, parameter_name, parameters, symmetry):
     numdigits = 6  # number of significant figures, might cause rounding errors
     # Organize parameters by polynomial degree
@@ -169,9 +198,9 @@ def insert_parameter(dbf, phase_name, configuration, parameter_name, parameters,
         if is_endmember:
             break  # we forced a degree=0, any continued iterations is duplicated work.
     _log.trace('Polynomial coefs: %s', degree_polys)
-    if is_endmember and parameter_name == "G":
-        # We need to add GHSER functions IFF we're fitting a Gibbs energy parameter
-        degree_polys[0] += _endmember_reference(dbf, phase_name, configuration)
+    # Add the reference part (e.g. GHSER functions for endmember Gibbs energies).
+    # Always degree 0 because of the short-circuit for endmembers in the previous loop
+    degree_polys[0] += get_parameter_reference(dbf, phase_name, configuration, parameter_name)
     # Insert into database
     symmetric_configurations = generate_symmetric_group(configuration, symmetry)
     for degree in np.arange(degree_polys.shape[0]):
@@ -223,8 +252,11 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
     aicc_feature_factors = aicc_phase_penalty if aicc_phase_penalty is not None else {}
     if interaction_test(configuration):
         _log.debug('ENDMEMBERS FROM INTERACTION: %s', endmembers_from_interaction(configuration))
-    # fixed_model is our previously fit partial model from previous steps
-    # Subtract out all of these contributions (zero out reference state because these are formation properties)
+    # fixed_model is our previously fit partial model from previous steps.
+    # Its properties are absolute (i.e. include the pure element reference
+    # contributions), and fitting steps shift data into absolute values.
+    # fixed_portions are the parts of the parameter being fit that are already
+    # known: the reference part, then the terms fit by each previous step.
     fixed_model = None  # Profiling suggests we delay instantiation
     fixed_portions = [0]
     parameters = {}
@@ -243,7 +275,9 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
         desired_data = fitting_step.get_data(comps, phase_name, configuration, symmetry, datasets)
         if len(desired_data) > 0:
             if fixed_model is None:
-                fixed_model = fitting_description.model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
+                fixed_model = fitting_description.model(dbf, comps, phase_name)
+                parameter_reference = get_parameter_reference(dbf, phase_name, configuration, fitting_step.parameter_name)
+                fixed_portions = [fixed_model.symbol_replace(parameter_reference, fixed_model._symbols)]
             # Build candidate models, then fit and select a model from the candidates
             selected_model = fitting_step.select_parameters(fixed_model, fixed_portions, desired_data, configuration, ridge_alpha, aicc_feature_factors)
             if selected_model is not None:

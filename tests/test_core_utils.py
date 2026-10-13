@@ -55,6 +55,25 @@ def test_get_data_for_a_minimal_example():
     assert desired_data['values'] == np.array([[[34720.0]]])
 
 
+def test_get_prop_data_matches_property_names_exactly():
+    """An absolute property (e.g. HM) is distinct from the same property in another reference state (e.g. HM_FORM)"""
+    datasets = PickleableTinyDB(storage=MemoryStorage)
+    for output in ["HM", "HM_FORM", "HM_MIX"]:
+        datasets.insert({
+            "components": ["CU", "MG"],
+            "phases": ["CUMG2"],
+            "solver": {"mode": "manual", "sublattice_site_ratios": [1, 2], "sublattice_configurations": [["CU", "MG"]]},
+            "conditions": {"P": 101325, "T": 298.15},
+            "output": output,
+            "values": [[[0.0]]],
+        })
+    for prop in ["HM", "HM_FORM", "HM_MIX"]:
+        desired_data = get_prop_data(["CU", "MG"], "CUMG2", prop, datasets)
+        assert [d["output"] for d in desired_data] == [prop]
+    desired_data = get_prop_data(["CU", "MG"], "CUMG2", ["HM", "HM_MIX"], datasets)
+    assert sorted(d["output"] for d in desired_data) == ["HM", "HM_MIX"]
+
+
 def test_recursive_map():
     """Test that recursive map function works"""
 

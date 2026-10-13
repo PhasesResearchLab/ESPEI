@@ -6,6 +6,11 @@
 
 - Add an opt-in `joint_gibbs_energy_fitting_description` that fits GM, HM, SM and CPM data simultaneously during parameter selection, using the temperature dependence of HM, SM and GM data that the default sequential fit discards. `FittingStep` subclasses can now customize how their data are queried (`get_data`) and how parameters are selected (`select_parameters`).
 - Support `GM_FORM` and `GM_MIX` non-equilibrium thermochemical data in MCMC, weighted by the new `GM` key in `data_weights`.
+- Support absolute (SER referenced) `GM`, `HM`, `SM` and `CPM` non-equilibrium thermochemical data in parameter generation (sequential and joint fitting descriptions) and MCMC ([issue 81](https://github.com/phasesresearchlab/espei/issues/81)). The fixed model used in parameter generation is no longer built with the `GHSER` functions set to zero; data in any reference state are shifted to absolute values instead, and the reference for `_FORM` data is defined by `StepHM.get_formation_reference`.
+
+### Bug fixes
+
+- Fix `get_prop_data` matching property names as substrings (e.g. `HM` data were returned for `HM_FORM` queries) and raising an error when no `additional_query` is given.
 
 ## 0.9.1 (2026-06-05)
 

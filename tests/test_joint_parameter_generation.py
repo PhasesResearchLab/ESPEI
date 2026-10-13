@@ -8,6 +8,7 @@ from pycalphad import Database, variables as v
 from tinydb import where
 
 from espei.paramselect import generate_parameters
+from espei.refdata import SGTE91, SGTE91Stable
 from espei.parameter_selection.fitting_descriptions import gibbs_energy_fitting_description, joint_gibbs_energy_fitting_description
 from .testing_data import *
 from .fixtures import datasets_db
@@ -90,6 +91,21 @@ def _formation_datasets(compound, outputs, temperatures=None, noise=None):
             "values": [[[float(val)] for val in values]],
             "reference": "Generated from a CALPHAD database",
         })
+    return datasets
+
+
+def _absolute_datasets(compound, outputs, temperatures=None, noise=None):
+    """Like _formation_datasets, but absolute (SER referenced) using ESPEI's SGTE91 unary data"""
+    phase_models, configuration, _, _ = compound
+    phase_name = list(phase_models["phases"].keys())[0]
+    site_ratios = phase_models["phases"][phase_name]["sublattice_site_ratios"]
+    ser_gibbs_energy = sum(ratio*SGTE91Stable[el] for ratio, el in zip(site_ratios, configuration)) / sum(site_ratios)
+    datasets = _formation_datasets(compound, outputs, temperatures=temperatures, noise=noise)
+    for ds in datasets:
+        prop = ds["output"].split("_")[0]
+        ser_values = _evaluate(_property(ser_gibbs_energy, prop), ds["conditions"]["T"])
+        ds["values"] = [[[val[0] + ser] for val, ser in zip(ds["values"][0], ser_values)]]
+        ds["output"] = prop
     return datasets
 
 
@@ -275,3 +291,67 @@ def test_joint_fit_gm_mix_data(datasets_db):
     assert params[0]['parameter_order'] == 0
     fitted = symengine.S(params[0]['parameter']).xreplace({symengine.Symbol(name): val for name, val in _fitted_symbols(dbf).items()})
     assert np.allclose(_evaluate(fitted, temperatures), _evaluate(L0, temperatures), atol=0.1)
+
+
+@pytest.mark.parametrize("compound", [CU2MG, CORUNDUM], ids=["CU2MG", "CORUNDUM"])
+@pytest.mark.parametrize("fitting_description, outputs, temperatures", [
+    (gibbs_energy_fitting_description, ["HM", "SM", "CPM"], {"HM": [298.15], "SM": [298.15]}),
+    (gibbs_energy_fitting_description, ["HM", "SM", "CPM"], None),
+    (joint_gibbs_energy_fitting_description, ["GM", "HM", "SM", "CPM"], None),
+    (joint_gibbs_energy_fitting_description, ["HM"], None),
+], ids=["sequential-typical", "sequential", "joint", "joint-HM-only"])
+def test_absolute_data_fit_the_same_parameters_as_formation_data(datasets_db, compound, fitting_description, outputs, temperatures):
+    """Absolute (SER referenced) data and the equivalent formation data should fit the same parameters"""
+    phase_models, _, _, default_temperatures = compound
+    rng = np.random.default_rng(1234)
+    num_temperatures = {out: len(temperatures.get(out, default_temperatures)) if temperatures is not None else len(default_temperatures) for out in outputs}
+    noise_std_dev = {"GM": 50.0, "HM": 50.0, "SM": 0.05, "CPM": 0.05}
+    noise = {out: rng.normal(0.0, noise_std_dev[out], num_temperatures[out]) for out in outputs}
+    formation_datasets = _formation_datasets(compound, outputs, temperatures=temperatures, noise=noise)
+    absolute_datasets = _absolute_datasets(compound, outputs, temperatures=temperatures, noise=noise)
+    dbf_formation = _fit(phase_models, formation_datasets, fitting_description, datasets_db)
+    dbf_absolute = _fit(phase_models, absolute_datasets, fitting_description, datasets_db)
+    assert len(_fitted_symbols(dbf_absolute)) > 0
+    _assert_equivalent_databases(dbf_formation, dbf_absolute)
+
+
+@pytest.mark.parametrize("fitting_description, prop, temperatures", [
+    (gibbs_energy_fitting_description, "HM", [298.15]),
+    (joint_gibbs_energy_fitting_description, "GM", [300, 500, 700, 900]),
+], ids=["sequential-HM", "joint-GM"])
+def test_absolute_mixing_data_fit_excess_parameters(datasets_db, fitting_description, prop, temperatures):
+    """Absolute data for a solution phase fit the excess Gibbs energy relative to the endmember lattice stabilities"""
+    # FCC_A1 L0 from the Cu-Mg assessment in pycalphad's test databases (cumg.tdb)
+    L0 = -22279.28 + 5.868*v.T
+    unaries = {symengine.Symbol('GHSERCU'): SGTE91Stable['CU'], symengine.Symbol('GHSERMG'): SGTE91Stable['MG']}
+    g_fcc_cu = SGTE91[('CU', 'FCC_A1')].xreplace(unaries)
+    g_fcc_mg = SGTE91[('MG', 'FCC_A1')].xreplace(unaries)
+    phase_models = {"components": ["CU", "MG", "VA"], "phases": {"FCC_A1": {"sublattice_model": [["CU", "MG"], ["VA"]], "sublattice_site_ratios": [1, 1]}}}
+    x_mg = [0.1, 0.25, 0.5, 0.75, 0.9]
+    values = []
+    for T in temperatures:
+        row = []
+        for x in x_mg:
+            gibbs_energy = (1-x)*g_fcc_cu + x*g_fcc_mg + v.R*v.T*(x*symengine.log(x) + (1-x)*symengine.log(1-x)) + x*(1-x)*L0
+            row.append(float(_property(gibbs_energy, prop).xreplace({v.T: T})))
+        values.append(row)
+    dataset = {
+        "components": ["CU", "MG", "VA"],
+        "phases": ["FCC_A1"],
+        "solver": {
+            "mode": "manual",
+            "sublattice_site_ratios": [1, 1],
+            "sublattice_configurations": [[["CU", "MG"], "VA"] for _ in x_mg],
+            "sublattice_occupancies": [[[1-x, x], 1] for x in x_mg],
+        },
+        "conditions": {"P": 101325, "T": temperatures},
+        "output": prop,
+        "values": [values],
+        "reference": "Generated from a CALPHAD database",
+    }
+    dbf = _fit(phase_models, [dataset], fitting_description, datasets_db)
+    params = dbf._parameters.search((where('phase_name') == 'FCC_A1') & (where('parameter_type') == 'L'))
+    assert len(params) == 1
+    assert params[0]['parameter_order'] == 0
+    fitted = symengine.S(params[0]['parameter']).xreplace({symengine.Symbol(name): val for name, val in _fitted_symbols(dbf).items()})
+    assert np.allclose(_evaluate(_property(fitted, prop), temperatures), _evaluate(_property(L0, prop), temperatures), atol=0.1)

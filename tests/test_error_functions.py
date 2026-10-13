@@ -430,6 +430,67 @@ def test_get_thermochemical_data_gibbs_energy_weight(datasets_db):
     assert np.allclose(thermochemical_data[0]['weights'], 250.0)
 
 
+@pytest.mark.parametrize("prop, std_dev", [("GM", 500.0), ("HM", 500.0), ("SM", 0.2), ("CPM", 0.2)])
+def test_non_equilibrium_thermochemical_error_for_absolute_properties(datasets_db, prop, std_dev):
+    """Tests that error in absolute (SER referenced) property data is calculated correctly"""
+    import symengine
+    from pycalphad import variables as v
+    from espei.refdata import SGTE91Stable
+    # CUMG2 in CU_MG_TDB: G = GHSERCU + 2*GHSERMG + VV0000 (per formula unit, 3 moles of atoms)
+    gibbs_energy = (SGTE91Stable['CU'] + 2*SGTE91Stable['MG'] - 32429.6)/3
+    prop_expr = {
+        "GM": gibbs_energy,
+        "HM": gibbs_energy - v.T*symengine.diff(gibbs_energy, v.T),
+        "SM": -symengine.diff(gibbs_energy, v.T),
+        "CPM": -v.T*symengine.diff(gibbs_energy, v.T, 2),
+    }[prop]
+    temperatures = [300, 500, 800, 1000]  # 1000 K is above the GHSERMG breakpoint
+    values = [float(prop_expr.xreplace({v.T: T})) for T in temperatures]
+    values[-1] += std_dev  # one point is off by one standard deviation
+    datasets_db.insert({
+        "components": ["CU", "MG"],
+        "phases": ["CUMG2"],
+        "solver": {
+            "sublattice_site_ratios": [1, 2],
+            "sublattice_configurations": [["CU", "MG"]],
+            "mode": "manual"
+        },
+        "conditions": {"P": 101325, "T": temperatures},
+        "output": prop,
+        "values": [[[val] for val in values]],
+    })
+
+    dbf = Database(CU_MG_TDB)
+    thermochemical_data = get_thermochemical_data(dbf, ['CU', 'MG', 'VA'], list(dbf.phases.keys()), datasets_db, symbols_to_fit=[])
+    assert len(thermochemical_data) == 1
+    assert thermochemical_data[0]['prop'] == prop
+    error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
+    expected_prob = 3*scipy.stats.norm(loc=0, scale=std_dev).logpdf(0.0) + scipy.stats.norm(loc=0, scale=std_dev).logpdf(std_dev)
+    assert np.isclose(error, expected_prob, atol=1e-6)
+
+
+def test_get_thermochemical_data_separates_absolute_and_formation_data(datasets_db):
+    """Absolute HM data and HM_FORM data are separate thermochemical data"""
+    for output, value in (("HM", -30000.0), ("HM_FORM", -10000.0)):
+        datasets_db.insert({
+            "components": ["CU", "MG"],
+            "phases": ["CUMG2"],
+            "solver": {
+                "sublattice_site_ratios": [1, 2],
+                "sublattice_configurations": [["CU", "MG"]],
+                "mode": "manual"
+            },
+            "conditions": {"P": 101325, "T": 300},
+            "output": output,
+            "values": [[[value]]],
+        })
+    dbf = Database(CU_MG_TDB)
+    thermochemical_data = get_thermochemical_data(dbf, ['CU', 'MG', 'VA'], list(dbf.phases.keys()), datasets_db, symbols_to_fit=[])
+    assert sorted(data['prop'] for data in thermochemical_data) == ['HM', 'HM_FORM']
+    for data in thermochemical_data:
+        assert data['calculate_dict']['values'].size == 1
+
+
 def test_subsystem_non_equilibrium_thermochemcial_probability(datasets_db):
     """Test binary Cr-Ni data produces the same probability regardless of whether the main system is a binary or ternary."""
 
