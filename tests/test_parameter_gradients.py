@@ -244,6 +244,19 @@ def test_masked_hyperplane_vertex_is_masked_from_the_gradient(datasets_db):
 
 
 @requires_backend
+@pytest.mark.parametrize('elements', [['A', 'B', 'C'], ['A', 'B', 'C', 'D']])
+def test_tangent_is_finite_at_a_dilute_reference_state(elements):
+    """Right-hand sides at rounding level, at a pure-A reference state, are not mistaken for infeasible ones"""
+    dbf = Database(ABCD_GRADIENT_TDB)
+    symbols = database_symbols_to_fit(dbf)
+    conds = {v.N: 1, v.P: 101325, v.T: 1150, **{v.X(el): 0.0 for el in elements[1:]}}
+    wks = Workspace(dbf, elements + ['VA'], ['LIQUID'], conditions=conds, parameters=dict(zip(symbols, _perturbed(dbf, symbols))))
+    tangent = sensitivities.get_tangent(wks, symbols)[0]
+    assert np.all(np.isfinite(tangent['chemical_potentials']))
+    assert np.all(np.isfinite(tangent['phase_amounts']))
+
+
+@requires_backend
 def test_tangent_and_gradient_match_the_analytic_binary():
     """Tangent and property gradients at the analytic binary's two-phase equilibrium match its exact derivatives"""
     dbf = Database(analytic.AB_ANALYTIC_TDB)
