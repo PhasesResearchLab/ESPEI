@@ -1,0 +1,21 @@
+{
+    "components": ["CR", "NI"],
+    "phases": ["BCC_A2", "FCC_A1"],
+    "conditions": {
+        "T": [826, 875, 975, 1077, 1070, 1175, 1230],
+        "P": [101325.0]
+    },
+    "output": "ZPF",
+    "values": [
+        [["FCC_A1", ["CR"], [0.3329]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["CR"], [0.3436]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["CR"], [0.3738]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["CR"], [0.4]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["CR"], [0.4]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["CR"], [0.4282]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["CR"], [0.4403]], ["BCC_A2", ["NI"], [null]]]
+    ],
+    "reference": "Karmazin (1982)", "bibtex": "karmazin1982",
+    "comment": "Digitized from figure 8, ignoring the metastable point within Ni2Cr",
+    "author": "Bocklund, Brandon"
+}

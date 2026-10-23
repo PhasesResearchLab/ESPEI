@@ -7,9 +7,6 @@ _build
 dask-worker-space
 *.egg-info/
 
-# Sphinx documentation
-docs/_build
-
 # Editors
 *.sublime-project
 *.sublime-workspace

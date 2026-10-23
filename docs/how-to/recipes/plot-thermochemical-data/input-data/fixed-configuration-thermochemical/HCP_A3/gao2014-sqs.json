@@ -1,0 +1,31 @@
+{
+  "disabled": true,
+  "components": ["CU", "MG"],
+  "phases": ["HCP_A3"],
+  "solver": {
+	  "mode": "manual",
+	  "sublattice_site_ratios": [1],
+	  "sublattice_occupancies": [
+				[[0.75, 0.25]],
+				[[0.5, 0.5]],
+				[[0.25, 0.75]]
+		],
+	  "sublattice_configurations": [
+        [["CU", "MG"]],
+        [["CU", "MG"]],
+        [["CU", "MG"]]
+		]
+  },
+  "conditions": {
+	  "P": 101325,
+	  "T": 298.15
+  },
+  "output": "HM_MIX",
+    "values":   [[[
+        -3431,
+        -3638,
+        -1348
+    ]]],
+  "reference": "Gao (2014)",
+  "comment": "Fully relaxed DFT calculations from table 5. Disabled for being too low in energy."
+}

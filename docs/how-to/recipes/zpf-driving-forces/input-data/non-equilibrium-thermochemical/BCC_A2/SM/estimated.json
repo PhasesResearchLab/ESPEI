@@ -1,0 +1,10 @@
+{
+  "components": ["CR", "NI"],
+  "phases": ["BCC_A2"],
+  "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["CR", "NI"]], [["CR", "NI"]]], "sublattice_occupancies": [[[0.4, 0.6]], [[0.2, 0.8]]]},
+  "conditions": {"P": 101325, "T": 1583},
+  "output": "SM_MIX",
+  "values": [[[0.67, 0.0]]],
+  "reference": "Estimated", "bibtex": "estimated",
+  "comment": "Estimated from enthalpy using tau=3000.0",
+  "tags": ["estimated-entropy", "dft"]}

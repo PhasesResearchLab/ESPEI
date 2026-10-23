@@ -1,0 +1,25 @@
+{
+  "components": ["CR", "NI"],
+  "phases": ["NI3V_D022"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": [3, 1],
+    "sublattice_configurations": [
+      ["CR", "NI"],
+      ["NI", "CR"]
+    ],
+    "sublattice_occupancies": [
+      [1.0, 1.0],
+      [1.0, 1.0]
+    ]
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 298.15
+  },
+  "output": "HM_FORM",
+    "values":   [[[17689, -1302]]],
+    "tags": ["dft"],
+    "reference": "DFT", "bibtex": "",
+  "author": "Bocklund, Brandon"
+}

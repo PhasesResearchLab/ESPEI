@@ -1,0 +1,33 @@
+{
+    "components": ["CU", "MG"],
+    "phases": ["LAVES_C15"],
+    "conditions": {
+	"P": 101325,
+	"T": [573.15, 673.15, 773.15, 817.15, 817.15, 817.15, 876.15, 876.15, 876.15, 876.15, 922.15, 922.15, 922.15, 922.15, 990.15, 990.15, 990.15, 990.15]
+    },
+    "broadcast_conditions": false,
+    "output": "ZPF",
+    "values":   [
+        [["LAVES_C15", ["MG"], [0.3308]]],
+        [["LAVES_C15", ["MG"], [0.3308]]],
+        [["LAVES_C15", ["MG"], [0.3306]]],
+        [["LAVES_C15", ["MG"], [0.3236]]],
+        [["LAVES_C15", ["MG"], [0.3308]]],
+        [["LAVES_C15", ["MG"], [0.3388]]],
+        [["LAVES_C15", ["MG"], [0.3480]]],
+        [["LAVES_C15", ["MG"], [0.3389]]],
+        [["LAVES_C15", ["MG"], [0.3309]]],
+        [["LAVES_C15", ["MG"], [0.3237]]],
+        [["LAVES_C15", ["MG"], [0.3241]]],
+        [["LAVES_C15", ["MG"], [0.3310]]],
+        [["LAVES_C15", ["MG"], [0.3390]]],
+        [["LAVES_C15", ["MG"], [0.3477]]],
+        [["LAVES_C15", ["MG"], [0.3164]]],
+        [["LAVES_C15", ["MG"], [0.3238]]],
+        [["LAVES_C15", ["MG"], [0.3309]]],
+        [["LAVES_C15", ["MG"], [0.3386]]]
+    ],
+    "reference": "Bagnoud (1978)",
+    "bibtex": "bagnoud1978",
+    "comment": "Single phase from micrograph (Fig 3. left panel). Two phase estimates in another file."
+}

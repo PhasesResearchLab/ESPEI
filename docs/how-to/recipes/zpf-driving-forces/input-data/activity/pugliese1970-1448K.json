@@ -1,0 +1,23 @@
+{
+  "disabled": true,
+  "components": ["CR", "NI"],
+  "phases": ["BCC_A2"],
+  "reference_state": {
+    "phases": ["BCC_A2"],
+    "conditions": {
+      "P": 101325,
+      "T": 1448.15,
+      "X_CR": 1.0
+    }
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 1448.15,
+    "X_CR": [0.25, 0.35, 0.40, 0.45, 0.55, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.98]
+  },
+  "output": "ACR_CR",
+    "values":   [[[0.222, 0.413, 0.53, 0.692, 0.981, 0.98, 0.979, 0.983, 0.979, 0.98, 0.99, 0.112, 0.998]]],
+  "reference": "Pugliese (1970)", "bibtex": "pugliese1970",
+  "comment": "From Table 2",
+  "author": "Bocklund, Brandon"
+}

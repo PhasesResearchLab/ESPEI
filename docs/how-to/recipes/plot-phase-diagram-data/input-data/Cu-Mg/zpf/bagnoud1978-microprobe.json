@@ -1,0 +1,28 @@
+{
+    "components": ["CU", "MG"],
+    "phases": ["LAVES_C15"],
+    "conditions": {
+	"P": 101325,
+	"T": [573.15, 673.15, 817.15, 817.15, 817.15, 876.15, 876.15, 876.15, 876.15, 922.15, 922.15, 990.15, 990.15]
+    },
+    "broadcast_conditions": false,
+    "output": "ZPF",
+    "values":   [
+        [["LAVES_C15", ["MG"], [0.3305]]],
+        [["LAVES_C15", ["MG"], [0.3305]]],
+        [["LAVES_C15", ["MG"], [0.3254]]],
+        [["LAVES_C15", ["MG"], [0.3305]]],
+        [["LAVES_C15", ["MG"], [0.3405]]],
+        [["LAVES_C15", ["MG"], [0.3245]]],
+        [["LAVES_C15", ["MG"], [0.3306]]],
+        [["LAVES_C15", ["MG"], [0.3401]]],
+        [["LAVES_C15", ["MG"], [0.3482]]],
+        [["LAVES_C15", ["MG"], [0.3307]]],
+        [["LAVES_C15", ["MG"], [0.3241]]],
+        [["LAVES_C15", ["MG"], [0.3240]]],
+        [["LAVES_C15", ["MG"], [0.3304]]]
+    ],
+    "reference": "Bagnoud (1978)",
+    "bibtex": "bagnoud1978",
+    "comment": "Single phase from microprobe (Fig 3. right panel). Two phase estimates in another file."
+}

@@ -1,0 +1,38 @@
+{
+  "components": ["CU", "MG"],
+  "phases": ["FCC_A1"],
+  "solver": {
+	  "mode": "manual",
+	  "sublattice_site_ratios": [1],
+	  "sublattice_occupancies": [
+				[[0.96875, 0.03125]],
+				[[0.75, 0.25]],
+				[[0.5, 0.5]],
+				[[0.25, 0.75]],
+        [[0.03125, 0.96875]]
+				    ],
+	  "sublattice_configurations": [
+        [["CU", "MG"]],
+        [["CU", "MG"]],
+        [["CU", "MG"]],
+        [["CU", "MG"]],
+        [["CU", "MG"]]
+				                   ]
+  },
+  "conditions": {
+	  "P": 101325,
+	  "T": 298.15
+  },
+  "output": "SM_MIX",
+    "values":   [[[
+        -0.189,
+        -0.648,
+        -1.204,
+        -1.186,
+        -0.267
+    ]]],
+  "reference": "Estimated from Gao (2014)",
+  "bibtex": "gao2014",
+  "comment": "Estimated from enthalpy by s=h/3000",
+  "tags": ["estimated-entropy", "dft"]
+}

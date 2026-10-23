@@ -1,0 +1,22 @@
+{
+  "components": ["CU", "MG"],
+  "phases": ["LAVES_C15"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": [2, 1],
+      "sublattice_configurations": [["CU", "MG"],
+                                    ["MG", "CU"],
+                                    ["MG", "MG"],
+                                    ["CU", "CU"]]
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 298.15
+  },
+  "output": "SM_FORM",
+    "values":   [[[-5.24, 11.573, 2.333, 5.167]]],
+  "reference": "Estimated from Zhou (2007)",
+  "bibtex": "zhou2007",
+  "comment": "Estimated from enthalpy by s=h/3000",
+  "tags": ["estimated-entropy", "dft"]
+}

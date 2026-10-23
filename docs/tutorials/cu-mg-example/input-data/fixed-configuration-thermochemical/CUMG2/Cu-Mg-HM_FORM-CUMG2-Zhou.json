@@ -1,0 +1,21 @@
+{
+  "disabled": true,
+  "components": ["CU", "MG"],
+  "phases": ["CUMG2"],
+  "solver": {
+    "mode": "manual",
+    "sublattice_site_ratios": [1, 2],
+    "sublattice_configurations": [["CU", "MG"],
+                                  ["MG", "CU"],
+                                  ["MG", "MG"],
+                                  ["CU", "CU"]]
+  },
+  "conditions": {
+    "P": 101325,
+    "T": 298.15
+  },
+  "output": "HM_FORM",
+    "values":   [[[-13200, 38940, 12920, 20390]]],
+  "reference": "Zhou (2007)",
+  "comment": "Uses full sublattice model. DFT reported in S. H. Zhou et al., J. Phase Equilibria Diffus. 28, 158-166 (2007)."
+}

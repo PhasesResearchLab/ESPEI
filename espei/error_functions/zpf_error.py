@@ -72,6 +72,8 @@ def _extract_pot_conds(all_conditions: Dict[v.StateVariable, np.ndarray], idx: i
         # Otherwise treat it as a scalar
         if len(cond_val) > 1:
             cond_val = cond_val[idx]
+        else:
+            cond_val = cond_val[0]  # need to explictly extract scalar for NumPy type conversion
         pot_conds[getattr(v, cond_key)] = float(cond_val)
     return pot_conds
 

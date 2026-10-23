@@ -1,0 +1,46 @@
+{
+    "components": ["CR", "NI"],
+    "phases": ["BCC_A2", "FCC_A1"],
+    "conditions": {
+        "T": [
+            797.15, 797.15, 948.15, 948.15,1018.15,1018.15, 1128.15, 1143.15, 1165.15, 1223.15,  1252.15,  1302.15, 1302.15, 1302.15, 1386.15, 1386.15,
+            797.15, 797.15, 948.15, 948.15, 1018.15, 1018.15, 1273.15, 1273.15, 1302.15, 1373.15, 1386.15, 1386.15
+        ],
+        "P": 101325.0
+    },
+    "output": "ZPF",
+    "values": [
+        [["BCC_A2", ["NI"], [0.016]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.016]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.018]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.018]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.022]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.022]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.027]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.025]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.044]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.048]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.058]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.074]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.074]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.071]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.092]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.094]], ["FCC_A1", ["NI"], [null]]],
+
+        [["FCC_A1", ["CR"], [0.351]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.352]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.404]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.404]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.420]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.421]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.511]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.512]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.488]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.547]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.552]], ["BCC_A2", ["CR"], [null]]],
+        [["FCC_A1", ["CR"], [0.552]], ["BCC_A2", ["CR"], [null]]]
+    ],
+    "reference": "Jette (1934)", "bibtex": "jette1934",
+    "comment": "From Table 1 and 2. When multiple compositions were available, both are included. The At. % and Wt. % columns are incorrectly flipped in table 2. Table 1 seems suspect (e.g. for Ni) but the conversion is correct.",
+    "author": "Bocklund, Brandon"
+}

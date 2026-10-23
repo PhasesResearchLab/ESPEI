@@ -1,0 +1,42 @@
+{
+    "components": ["CR", "NI"],
+    "phases": ["BCC_A2", "FCC_A1", "LIQUID"],
+    "conditions": {
+        "T": [1721, 1701, 1701, 1671, 1636, 1636, 1599, 1584, 1573, 1547, 1537, 1522, 1511, 1496, 1486, 1470, 1462, 1447, 1437, 1434, 1421, 1398, 1595, 1521],
+        "P": [101325.0]
+    },
+    "output": "ZPF",
+    "values": [
+        [["BCC_A2", ["NI"], [0.2045]], ["LIQUID", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.2190]], ["LIQUID", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.2478]], ["LIQUID", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.2663]], ["LIQUID", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.3109]], ["LIQUID", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.3293]], ["LIQUID", ["NI"], [null]]],
+
+        [["BCC_A2", ["NI"], [0.3805]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.3655]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.3479]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.3480]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.3311]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.3207]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.3116]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.2986]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.2849]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.2660]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.2490]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.2360]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.2191]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.1903]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.1760]], ["FCC_A1", ["NI"], [null]]],
+        [["BCC_A2", ["NI"], [0.1617]], ["FCC_A1", ["NI"], [null]]],
+
+        [["FCC_A1", ["NI"], [0.4956]], ["BCC_A2", ["NI"], [null]]],
+        [["FCC_A1", ["NI"], [0.4947]], ["BCC_A2", ["NI"], [null]]]
+    ],
+    "reference": "Bechtoldt (1961)", "bibtex": "bechtoldt1961",
+    "comment": "Digitized from figure 1",
+    "author": "Bocklund, Brandon"
+}
+
+

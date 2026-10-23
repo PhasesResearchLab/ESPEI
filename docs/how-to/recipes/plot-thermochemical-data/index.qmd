@@ -1,0 +1,40 @@
+---
+title: Plot Thermochemical Data
+execute:
+  warning: false
+order: 20
+---
+
+Parameter selection in ESPEI fits Calphad parameters to thermochemical
+data. MCMC can adjust these parameters. In both cases, it may be useful
+to compare the energies of specific interactions to the model
+predictions. The [espei.plot.plot_interaction](../../../reference/api/plot.plot_interaction.qmd)
+code will plot the predicted interaction from the
+database against the available data, if any.
+
+``` {python}
+PHASE_NAME = 'LIQUID'
+# CONFIGURATION must be a tuple of the configuration to be plotted.
+# This can only plot one endmember or interaction at a time.
+# Note that the outside tuples are the whole configuration
+# and the insides are for each individual sublattice.
+# Single sublattices *MUST* have the comma after the
+# object in order to be a tuple, not just parantheses.
+# some examples:
+# ("CU", "MG")  # endmember
+# (("CU", "MG"),)  # (("CU", "MG")) is invalid because it will become ("CU", "MG")
+# ("MG", ("CU", "MG"))
+CONFIGURATION = (("CU", "MG"),)
+
+# Plot the parameter
+import matplotlib.pyplot as plt
+from pycalphad import Database
+from espei.datasets import load_datasets, recursive_glob
+from espei.plot import plot_interaction
+
+dbf = Database("Cu-Mg-generated.tdb")
+comps = sorted(dbf.elements)
+datasets = load_datasets(recursive_glob("input-data"))
+plot_interaction(dbf, comps, PHASE_NAME, CONFIGURATION, "HM_MIX", datasets=datasets)
+plt.show()
+```

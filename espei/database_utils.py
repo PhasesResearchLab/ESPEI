@@ -10,7 +10,7 @@ from espei.utils import extract_aliases
 _log = logging.getLogger(__name__)
 
 def _get_ser_data(element, ref_state, fallback_ref_state="SGTE91") -> Dict[str, Union[str, float]]:
-    """Return a dictionary of the stable element reference (SER) data.
+    """Return a dictionary of the standard element reference (SER) data.
 
     If no SER data is found, returns an empty dictionary.
     """

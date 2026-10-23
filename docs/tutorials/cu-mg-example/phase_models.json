@@ -1,0 +1,25 @@
+{
+  "components": ["CU", "MG"],
+  "phases": {
+         "LIQUID" : {
+            "sublattice_model": [["CU", "MG"]],
+            "sublattice_site_ratios": [1]
+         },
+         "CUMG2": {
+            "sublattice_model": [["CU"], ["MG"]],
+            "sublattice_site_ratios": [1, 2]
+         },
+         "FCC_A1": {
+            "sublattice_model": [["CU", "MG"]],
+            "sublattice_site_ratios": [1]
+         },
+         "HCP_A3": {
+            "sublattice_site_ratios": [1],
+            "sublattice_model": [["CU", "MG"]]
+         },
+         "LAVES_C15": {
+            "sublattice_site_ratios": [2, 1],
+            "sublattice_model": [["CU", "MG"], ["CU", "MG"]]
+         }
+    }
+}

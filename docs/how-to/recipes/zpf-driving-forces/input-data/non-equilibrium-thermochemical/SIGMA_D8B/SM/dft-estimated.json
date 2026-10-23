@@ -1,0 +1,14 @@
+{
+  "components": ["CR", "NI"],
+  "phases": ["SIGMA_D8B"],
+  "solver": {
+    "mode": "manual", "sublattice_site_ratios": [10, 4, 16],
+    "sublattice_configurations": [["CR", "CR", "NI"], ["NI", "CR", "CR"], ["NI", "CR", "NI"]],
+    "sublattice_occupancies": [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]},
+  "conditions": {"P": 101325, "T": 298.15},
+  "output": "SM_FORM",
+  "values": [[[2.13, 1.33, 3.39]]],
+  "reference": "Estimated from DFT", "bibtex": "",
+  "author": "Bocklund, Brandon",
+  "tags": ["estimated-entropy", "dft"],
+  "comment": "Estimated from enthalpy using tau=3000.0. Not entirely sure where this data came from, but the energies were way too high, probably in J/mole-formula."}

@@ -229,11 +229,11 @@ class StepHM(FittingStep):
                     if occupancy is None:
                         raise ValueError('Cannot have a _MIX property without sublattice occupancies.')
                     else:
-                        values[..., config_idx] += cls.transform_feature(fixed_model.models['ref'])*mole_atoms_per_mole_formula_unit
+                        values[..., config_idx] += cls.transform_feature(fixed_model.models['ref'])
                 else:
                     raise ValueError(f'Unknown property to shift: {dataset["output"]}')
                 for excluded_contrib in unique_excluded_contributions:
-                    values[..., config_idx] += cls.transform_feature(fixed_model.models[excluded_contrib])*mole_atoms_per_mole_formula_unit
+                    values[..., config_idx] += cls.transform_feature(fixed_model.models[excluded_contrib])
             total_response.append(values.flatten())
         return total_response
 
@@ -253,8 +253,8 @@ class StepHM(FittingStep):
         site_fractions = list(itertools.chain(*site_fractions))
 
         data_qtys = np.concatenate(cls.shift_reference_state(data, fixed_model, mole_atoms_per_mole_formula_unit), axis=-1)
-        # Remove existing partial model contributions from the data, convert to per mole-formula units
-        data_qtys = data_qtys - cls.transform_feature(fixed_model.ast)*mole_atoms_per_mole_formula_unit
+        # Remove existing partial model contributions from the data
+        data_qtys = data_qtys - cls.transform_feature(fixed_model.ast)
         # Subtract out high-order (in T) parameters we've already fit, already in per mole-formula units
         data_qtys = data_qtys - cls.transform_feature(sum(fixed_portions))
         # If any site fractions show up in our rhs that aren't in these
