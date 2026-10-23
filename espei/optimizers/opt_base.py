@@ -4,7 +4,7 @@ from espei.utils import unpack_piecewise, database_symbols_to_fit
 from .utils import OptimizerError
 
 class OptimizerBase(object):
-    """Base class for ESPEI optimizers"""
+    """Enable fitting and replaying fitting steps"""
     def __init__(self, dbf):
         self.orig_dbf = copy.deepcopy(dbf)
         self.dbf = copy.deepcopy(dbf)
