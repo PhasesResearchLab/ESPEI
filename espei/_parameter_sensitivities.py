@@ -61,12 +61,18 @@ def _phase_kernels(phase_record_factory, phase_name, property_name, include_mixe
     return kernels[key]
 
 
+_PARAMETER_POSITIONS = weakref.WeakKeyDictionary()
+
+
 def _parameter_indices(phase_record, inputs: Sequence[str]) -> np.ndarray:
-    names = [str(s) for s in phase_record.phase_record_factory.param_symbols]
-    missing = [str(name) for name in inputs if str(name) not in names]
+    factory = phase_record.phase_record_factory
+    positions = _PARAMETER_POSITIONS.get(factory)
+    if positions is None:
+        positions = _PARAMETER_POSITIONS[factory] = {str(s): i for i, s in enumerate(factory.param_symbols)}
+    missing = [str(name) for name in inputs if str(name) not in positions]
     if missing:
-        raise ValueError(f"{missing} are not parameters of the phase records ({names})")
-    return np.array([names.index(str(name)) for name in inputs], dtype=int)
+        raise ValueError(f"{missing} are not parameters of the phase records ({list(positions)})")
+    return np.array([positions[str(name)] for name in inputs], dtype=int)
 
 
 def _parameter_partials(compset, property_name, mixed=False):
