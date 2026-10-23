@@ -211,7 +211,7 @@ def _fixed_compset(phase_record, str_statevar_dict: Dict[str, float], site_fract
     """CompositionSet at the given state variables and site fractions."""
     compset = CompositionSet(phase_record)
     statevars = np.array([float(np.squeeze(str_statevar_dict[str(sv)])) for sv in phase_record.state_variables])
-    site_fractions = np.ascontiguousarray(np.asarray(site_fractions, dtype=np.float64)[:phase_record.phase_dof])
+    site_fractions = np.array(site_fractions[:phase_record.phase_dof], dtype=np.float64)
     compset.update(site_fractions, 1.0, statevars)
     return compset
 
