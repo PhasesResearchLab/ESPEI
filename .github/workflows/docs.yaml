@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0  # fetch the entire repo history, required to guarantee setuptools_scm will pick up the tags
       - uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           enable-cache: true
       - uses: quarto-dev/quarto-actions/setup@v2
         with:
