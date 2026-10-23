@@ -21,6 +21,7 @@ from pycalphad.property_framework.metaproperties import find_first_compset
 from pycalphad.core.solver import Solver, SolverResult
 
 
+from espei import _parameter_sensitivities as sensitivities
 from espei.datasets import Dataset
 from espei.core_utils import ravel_conditions, get_prop_data, filter_temperatures
 from espei.parameter_selection.redlich_kister import calc_interaction_product
@@ -28,7 +29,7 @@ from espei.phase_models import PhaseModelSpecification
 from espei.sublattice_tools import canonicalize, recursive_tuplify, tuplify
 from espei.typing import SymbolName
 from espei.utils import database_symbols_to_fit, PickleableTinyDB
-from .residual_base import ResidualFunction, residual_function_registry
+from .residual_base import ResidualFunction, gaussian_likelihood_gradient, residual_function_registry
 
 _log = logging.getLogger(__name__)
 
@@ -363,7 +364,8 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
     return all_data_dicts
 
 
-def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfigurationCalculationData, parameters):
+def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfigurationCalculationData, parameters, compute_gradient=False):
+    """Differences between the property and the data at each sample, and with ``compute_gradient`` their gradients, shape (samples, parameters)."""
     species = calc_data['species']
     phase_name = calc_data['phase_name']
     models = calc_data['model']  # Dict[PhaseName: Model]
@@ -381,7 +383,9 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
             constituent_list.append(const)
         counter = counter + 1
 
+    names = [str(name) for name in parameters]
     differences = []
+    gradients = []
     for index in range(len(sample_values)):
         cond_dict = {}
         for sv_key, sv_val in str_statevar_dict.items():
@@ -419,10 +423,14 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         results = wks.get(iso_phase(output))
         sample_differences = results - sample_values[index]
         differences.append(sample_differences)
+        if compute_gradient:
+            gradients.append(sensitivities.fixed_configuration_gradient(compset, output, names))
+    if compute_gradient:
+        return differences, np.reshape(np.asarray(gradients, dtype=np.float64), (len(differences), len(names)))
     return differences
 
 
-def calculate_non_equilibrium_thermochemical_probability(thermochemical_data: List[FixedConfigurationCalculationData], dbf, parameters=None):
+def calculate_non_equilibrium_thermochemical_probability(thermochemical_data: List[FixedConfigurationCalculationData], dbf, parameters=None, compute_gradient=False):
     """
     Calculate the weighted single phase error in the Database
 
@@ -432,26 +440,38 @@ def calculate_non_equilibrium_thermochemical_probability(thermochemical_data: Li
         List of thermochemical data dicts
     parameters : np.ndarray
         Array of parameters to calculate the error with.
+    compute_gradient : bool
+        If True, also return the gradient of the probability.
 
     Returns
     -------
     float
-        A single float of the residual sum of square errors
+        A single float of the residual sum of square errors, and with
+        ``compute_gradient`` its gradient (NaN where the sum is not finite)
 
     """
     if parameters is None:
         parameters = {}
 
     prob_error = 0.0
+    prob_gradient = np.zeros(len(parameters))
     for data in thermochemical_data:
         phase_name = data['phase_name']
         sample_values = data['calculate_dict']['values']
-        differences = compute_fixed_configuration_property_differences(dbf, data, parameters)
+        if compute_gradient:
+            differences, gradients = compute_fixed_configuration_property_differences(dbf, data, parameters, compute_gradient=True)
+        else:
+            differences = compute_fixed_configuration_property_differences(dbf, data, parameters)
         differences = np.array(differences)
         probabilities = norm.logpdf(differences, loc=0, scale=data['weights'])
         prob_sum = np.sum(probabilities)
         _log.debug("%s(%s) - probability sum: %0.2f, data: %s, differences: %s, probabilities: %s, references: %s", data['prop'], phase_name, prob_sum, sample_values, differences, probabilities, data['calculate_dict']['references'])
         prob_error += prob_sum
+        if compute_gradient:
+            scales = np.broadcast_to(np.asarray(data['weights'], dtype=np.float64), differences.shape)
+            prob_gradient += gaussian_likelihood_gradient(differences, scales, gradients)
+    if compute_gradient:
+        return prob_error, (prob_gradient if np.isfinite(prob_error) else np.full(len(parameters), np.nan))
     return prob_error
 
 
@@ -502,6 +522,10 @@ class FixedConfigurationPropertyResidual(ResidualFunction):
         parameters = {param_name: param for param_name, param in zip(self._symbols_to_fit, parameters.tolist())}
         likelihood = calculate_non_equilibrium_thermochemical_probability(self.thermochemical_data, self.dbf, parameters)
         return likelihood
+
+    def get_likelihood_and_gradient(self, parameters) -> Tuple[float, np.ndarray]:
+        parameters = {param_name: param for param_name, param in zip(self._symbols_to_fit, parameters.tolist())}
+        return calculate_non_equilibrium_thermochemical_probability(self.thermochemical_data, self.dbf, parameters, compute_gradient=True)
 
 
 residual_function_registry.register(FixedConfigurationPropertyResidual)
