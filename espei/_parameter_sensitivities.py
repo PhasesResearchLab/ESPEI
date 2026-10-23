@@ -162,9 +162,11 @@ def _tangent(compsets, cur_conds, chemical_potentials, inputs):
     if not (np.all(np.isfinite(J)) and np.all(np.isfinite(rhs))):
         solution = np.full((J.shape[1], num_inputs), np.nan)
     else:
-        solution = np.linalg.lstsq(J, rhs, rcond=None)[0]
-        residuals = np.sum(np.square(J @ solution - rhs), axis=0)
-        solution[:, residuals > 1e-6 * np.sum(np.square(rhs), axis=0)] = np.nan
+        solution = np.linalg.lstsq(J, rhs, rcond=1e-16)[0]
+        residuals = np.linalg.norm(J @ solution - rhs, axis=0)
+        # infeasible unless the residual is small relative to the right-hand side or at rounding level
+        rounding = 1e3 * np.finfo(np.float64).eps * np.linalg.norm(J) * np.linalg.norm(solution, axis=0)
+        solution[:, (residuals > 1e-3 * np.linalg.norm(rhs, axis=0)) & (residuals > rounding)] = np.nan
     delta_mu = np.zeros((num_inputs, num_components))
     delta_mu[:, free_mu] = solution[:len(free_mu)].T
     delta_statevars = np.zeros((num_inputs, num_statevars))
