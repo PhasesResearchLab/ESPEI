@@ -649,3 +649,14 @@ def test_zpf_error_hyperplane_with_null_phases(datasets_db):
     flat_driving_forces = np.asarray(driving_forces).flatten()
     assert len(flat_driving_forces) == 2  # One for each vertex, HCP_A3 and CUMG2
     assert np.allclose(flat_driving_forces, [-18.05883506, -780.50836135])
+
+
+def test_zpf_data_of_a_subsystem_without_some_fitted_parameters(datasets_db):
+    """Binary ZPF data in a ternary fit: a fitted parameter that enters only the third element has no effect"""
+    datasets_db.insert(A_B_DATASET_ZPF_ALPHA_BETA)
+    dbf = Database(A_B_C_TWO_PHASE_TDB)
+    both = ZPFResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=['VV0000', 'VV0001'])
+    only = ZPFResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=['VV0000'])
+    likelihood = both.get_likelihood(np.array([-10000.0, -5000.0]))
+    assert np.isfinite(likelihood)
+    assert likelihood == only.get_likelihood(np.array([-10000.0]))

@@ -475,3 +475,14 @@ def test_scipy_optimizer_fits_with_the_gradient(datasets_db):
     np.testing.assert_array_equal(fitted, opt.minimize_result.x)
     assert sum(residual_obj.get_likelihood(fitted) for residual_obj in ctx['residual_objs']) > start_likelihood
     assert dbf.symbols == symbols_before
+
+
+@requires_backend
+def test_zpf_gradient_of_a_subsystem_without_some_fitted_parameters(datasets_db):
+    """Binary ZPF data in a ternary fit: a fitted parameter that enters only the third element has zero gradient"""
+    datasets_db.insert(A_B_DATASET_ZPF_ALPHA_BETA)
+    dbf = Database(A_B_C_TWO_PHASE_TDB)
+    _, gradient = ZPFResidual(dbf, datasets_db, None, ['VV0000', 'VV0001']).get_likelihood_and_gradient(np.array([-10000.0, -5000.0]))
+    _, gradient_only = ZPFResidual(dbf, datasets_db, None, ['VV0000']).get_likelihood_and_gradient(np.array([-10000.0]))
+    assert gradient[1] == 0.0
+    assert gradient[0] != 0.0 and gradient[0] == pytest.approx(gradient_only[0], rel=1e-12)

@@ -1579,3 +1579,35 @@ dataset_multi_valid_ternary_manyT_manyP = {
     ],
     "reference": "testreference",
 }
+
+
+# VV0000 enters only A-B interactions and VV0001 only A-C ones, so A-B data do not depend on VV0001
+A_B_C_TWO_PHASE_TDB = """
+ELEMENT A BLANK 0 0 0 !
+ELEMENT B BLANK 0 0 0 !
+ELEMENT C BLANK 0 0 0 !
+FUNCTION VV0000 1 -10000; 10000 N !
+FUNCTION VV0001 1 -5000; 10000 N !
+TYPE_DEFINITION % SEQ * !
+PHASE ALPHA % 1 1 !
+CONSTITUENT ALPHA : A,B,C : !
+PARAMETER G(ALPHA,A;0) 1 0; 10000 N !
+PARAMETER G(ALPHA,B;0) 1 0; 10000 N !
+PARAMETER G(ALPHA,C;0) 1 0; 10000 N !
+PARAMETER L(ALPHA,A,B;0) 1 VV0000; 10000 N !
+PARAMETER L(ALPHA,A,C;0) 1 VV0001; 10000 N !
+PHASE BETA % 1 1 !
+CONSTITUENT BETA : A,B,C : !
+PARAMETER G(BETA,A;0) 1 3000; 10000 N !
+PARAMETER G(BETA,B;0) 1 -3000; 10000 N !
+PARAMETER G(BETA,C;0) 1 0; 10000 N !
+"""
+
+
+A_B_DATASET_ZPF_ALPHA_BETA = {
+    "components": ["A", "B"], "phases": ["ALPHA", "BETA"], "output": "ZPF",
+    "conditions": {"P": 101325, "T": [600]},
+    "values": [[["ALPHA", ["B"], [0.3]], ["BETA", ["B"], [0.7]]]],
+    "reference": "testing",
+}
+
