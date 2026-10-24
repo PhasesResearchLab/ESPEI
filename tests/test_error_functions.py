@@ -671,3 +671,22 @@ def test_fixed_configuration_residual_excludes_contributions_from_formation_prop
     residuals, _ = residual_func.get_residuals(np.asarray([]))
     # an ideal solution without ideal mixing has no entropy of mixing or of formation
     assert np.allclose(residuals, [0.0], atol=1e-8)
+
+
+@pytest.mark.parametrize('residual_class, dataset', [
+    (ZPFResidual, A_B_DATASET_ZPF_ALPHA_BETA),
+    (ActivityResidual, A_B_DATASET_ACR_A_ALPHA),
+    (EquilibriumPropertyResidual, A_B_DATASET_HM_ALPHA),
+    (FixedConfigurationPropertyResidual, A_B_DATASET_HM_MIX_ALPHA),
+], ids=['ZPF', 'Activity', 'EquilibriumProperty', 'FixedConfigurationProperty'])
+def test_residual_parameters_follow_the_order_of_symbols_to_fit(datasets_db, residual_class, dataset):
+    """The same parameter values give the same likelihood whatever the order of symbols_to_fit"""
+    datasets_db.insert(dataset)
+    dbf = Database(A_B_C_TWO_PHASE_TDB)
+    values = {'VV0000': -12000.0, 'VV0001': -2000.0}
+    likelihoods = []
+    for symbols in (['VV0000', 'VV0001'], ['VV0001', 'VV0000']):
+        residual_func = residual_class(dbf, datasets_db, phase_models=None, symbols_to_fit=symbols)
+        likelihoods.append(residual_func.get_likelihood(np.array([values[s] for s in symbols])))
+    assert np.isfinite(likelihoods[0])
+    assert np.isclose(likelihoods[1], likelihoods[0], rtol=1e-12)

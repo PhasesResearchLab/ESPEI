@@ -1612,6 +1612,33 @@ A_B_DATASET_ZPF_ALPHA_BETA = {
 }
 
 
+A_B_DATASET_ACR_A_ALPHA = {
+    "components": ["A", "B"], "phases": ["ALPHA"], "output": "ACR_A",
+    "reference_state": {"phases": ["ALPHA"], "conditions": {"P": 101325, "T": 600, "X_B": 0.0}},
+    "conditions": {"P": 101325, "T": 600, "X_B": [0.1, 0.2]},
+    "values": [[[0.9, 0.8]]],
+    "reference": "testing",
+}
+
+
+A_B_DATASET_HM_ALPHA = {
+    "components": ["A", "B"], "phases": ["ALPHA"], "output": "HM",
+    "conditions": {"P": 101325, "T": [600], "X_B": [0.3]},
+    "values": [[[0.0]]],
+    "reference": "testing",
+}
+
+
+A_B_DATASET_HM_MIX_ALPHA = {
+    "components": ["A", "B"], "phases": ["ALPHA"], "output": "HM_MIX",
+    "solver": {"mode": "manual", "sublattice_site_ratios": [1],
+               "sublattice_configurations": [[["A", "B"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+    "conditions": {"P": 101325, "T": 600},
+    "values": [[[0.0]]],
+    "reference": "testing",
+}
+
+
 # With L_ALPHA = 0, A_B_REGULAR_SOLUTION_TDB is ideal: without idmix, A0.5B0.5 has no entropy of mixing or formation
 A_B_DATASET_SM_FORM_ALPHA_EXCLUDED_IDMIX = {
     "components": ["A", "B"], "phases": ["ALPHA"], "output": "SM_FORM",

@@ -540,8 +540,11 @@ class ZPFResidual(ResidualFunction):
         # okay if parameters are initialized to zero, we only need the symbol names
         parameters = dict(zip(symbols_to_fit, [0]*len(symbols_to_fit)))
         self.zpf_data = get_zpf_data(database, comps, phases, datasets, parameters, model_dict)
+        # parameters are given in the order of symbols_to_fit; the phase records sort them by name
+        self._sorted_order = np.argsort(symbols_to_fit)
 
     def get_residuals(self, parameters: ArrayLike) -> Tuple[List[float], List[float]]:
+        parameters = np.asarray(parameters)[self._sorted_order]
         driving_forces, weights = calculate_zpf_driving_forces(self.zpf_data, parameters, short_circuit=True)
         # Driving forces and weights are 2D ragged arrays with the shape (len(zpf_data), len(zpf_data['values']))
         residuals = np.concatenate(driving_forces).tolist()
@@ -549,11 +552,16 @@ class ZPFResidual(ResidualFunction):
         return residuals, weights
 
     def get_likelihood(self, parameters) -> float:
+        parameters = np.asarray(parameters)[self._sorted_order]
         likelihood = calculate_zpf_error(self.zpf_data, parameters, data_weight=self.weight)
         return likelihood
 
     def get_likelihood_and_gradient(self, parameters) -> Tuple[float, np.ndarray]:
-        return calculate_zpf_error(self.zpf_data, parameters, data_weight=self.weight, compute_gradient=True)
+        parameters = np.asarray(parameters)[self._sorted_order]
+        likelihood, sorted_gradient = calculate_zpf_error(self.zpf_data, parameters, data_weight=self.weight, compute_gradient=True)
+        gradient = np.empty_like(sorted_gradient)
+        gradient[self._sorted_order] = sorted_gradient
+        return likelihood, gradient
 
 
 residual_function_registry.register(ZPFResidual)

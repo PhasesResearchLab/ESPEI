@@ -67,9 +67,9 @@ class ResidualFunction(Protocol):
         Parameters
         ----------
         parameters : ArrayLike
-            1D parameter vector. The size of the parameters array should match
-            the number of fitting symbols used to build the models. This is
-            _not_ checked.
+            1D parameter vector, in the order of ``symbols_to_fit``. The size of
+            the parameters array should match the number of fitting symbols used
+            to build the models. This is _not_ checked.
 
         Returns
         -------
@@ -86,9 +86,9 @@ class ResidualFunction(Protocol):
         Parameters
         ----------
         parameters : ArrayLike
-            1D parameter vector. The size of the parameters array should match
-            the number of fitting symbols used to build the models. This is
-            _not_ checked.
+            1D parameter vector, in the order of ``symbols_to_fit``. The size of
+            the parameters array should match the number of fitting symbols used
+            to build the models. This is _not_ checked.
 
         Returns
         -------

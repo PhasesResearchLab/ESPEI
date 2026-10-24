@@ -328,8 +328,11 @@ class EquilibriumPropertyResidual(ResidualFunction):
         # okay if parameters are initialized to zero, we only need the symbol names
         parameters = dict(zip(symbols_to_fit, [0]*len(symbols_to_fit)))
         self.property_data = get_equilibrium_thermochemical_data(database, comps, phases, datasets, model_dict, parameters, data_weight_dict=self.weight)
+        # parameters are given in the order of symbols_to_fit; the phase records sort them by name
+        self._sorted_order = np.argsort(symbols_to_fit)
 
     def get_residuals(self, parameters: npt.ArrayLike) -> Tuple[List[float], List[float]]:
+        parameters = np.asarray(parameters)[self._sorted_order]
         residuals = []
         weights = []
         for data in self.property_data:
@@ -339,11 +342,16 @@ class EquilibriumPropertyResidual(ResidualFunction):
         return residuals, weights
 
     def get_likelihood(self, parameters) -> float:
+        parameters = np.asarray(parameters)[self._sorted_order]
         likelihood = calculate_equilibrium_thermochemical_probability(self.property_data, parameters)
         return likelihood
 
     def get_likelihood_and_gradient(self, parameters) -> Tuple[float, np.ndarray]:
-        return calculate_equilibrium_thermochemical_probability(self.property_data, parameters, compute_gradient=True)
+        parameters = np.asarray(parameters)[self._sorted_order]
+        likelihood, sorted_gradient = calculate_equilibrium_thermochemical_probability(self.property_data, parameters, compute_gradient=True)
+        gradient = np.empty_like(sorted_gradient)
+        gradient[self._sorted_order] = sorted_gradient
+        return likelihood, gradient
 
 
 residual_function_registry.register(EquilibriumPropertyResidual)

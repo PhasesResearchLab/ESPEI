@@ -378,8 +378,7 @@ def test_gradients_match_parameters_as_conditions(parameters_as_conditions, syst
 
 @requires_backend
 def test_shuffled_symbols_permute_the_gradient(datasets_db):
-    """The gradient follows each residual's parameter order: activity and fixed-configuration residuals read the
-    parameters in the given order, ZPF and equilibrium-property residuals in sorted order"""
+    """Every residual reads the parameters in the order of symbols_to_fit, so shuffling it permutes the gradient"""
     dbf = _load_system('cu_mg', datasets_db)
     symbols = FD_SYMBOLS['cu_mg']
     order = np.random.default_rng(1).permutation(len(symbols))
@@ -387,14 +386,9 @@ def test_shuffled_symbols_permute_the_gradient(datasets_db):
     x = _perturbed(dbf, symbols)
     for residual_class in RESIDUALS.values():
         likelihood, gradient = residual_class(dbf, datasets_db, None, symbols).get_likelihood_and_gradient(x)
-        shuffled_obj = residual_class(dbf, datasets_db, None, shuffled)
-        if residual_class in (ActivityResidual, FixedConfigurationPropertyResidual):
-            shuffled_likelihood, shuffled_gradient = shuffled_obj.get_likelihood_and_gradient(x[order])
-            np.testing.assert_allclose(shuffled_gradient, gradient[order], rtol=1e-12)
-        else:
-            shuffled_likelihood, shuffled_gradient = shuffled_obj.get_likelihood_and_gradient(x)
-            np.testing.assert_allclose(shuffled_gradient, gradient, rtol=1e-12)
-        assert shuffled_likelihood == pytest.approx(likelihood, rel=1e-12)
+        shuffled_likelihood, shuffled_gradient = residual_class(dbf, datasets_db, None, shuffled).get_likelihood_and_gradient(x[order])
+        assert shuffled_likelihood == pytest.approx(likelihood, rel=1e-12), residual_class.__name__
+        np.testing.assert_allclose(shuffled_gradient, gradient[order], rtol=1e-12, err_msg=residual_class.__name__)
 
 
 @requires_backend
