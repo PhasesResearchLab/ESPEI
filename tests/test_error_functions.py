@@ -660,3 +660,14 @@ def test_zpf_data_of_a_subsystem_without_some_fitted_parameters(datasets_db):
     likelihood = both.get_likelihood(np.array([-10000.0, -5000.0]))
     assert np.isfinite(likelihood)
     assert likelihood == only.get_likelihood(np.array([-10000.0]))
+
+
+@pytest.mark.parametrize('output', ['SM_MIX', 'SM_FORM'])
+def test_fixed_configuration_residual_excludes_contributions_from_formation_properties(datasets_db, output):
+    """Excluded model contributions are removed from _FORM properties, not only from their reference states"""
+    datasets_db.insert({**A_B_DATASET_SM_FORM_ALPHA_EXCLUDED_IDMIX, 'output': output})
+    dbf = Database(A_B_REGULAR_SOLUTION_TDB)
+    residual_func = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[])
+    residuals, _ = residual_func.get_residuals(np.asarray([]))
+    # an ideal solution without ideal mixing has no entropy of mixing or of formation
+    assert np.allclose(residuals, [0.0], atol=1e-8)

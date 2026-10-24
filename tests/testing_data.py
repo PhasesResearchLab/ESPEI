@@ -1611,3 +1611,14 @@ A_B_DATASET_ZPF_ALPHA_BETA = {
     "reference": "testing",
 }
 
+
+# With L_ALPHA = 0, A_B_REGULAR_SOLUTION_TDB is ideal: without idmix, A0.5B0.5 has no entropy of mixing or formation
+A_B_DATASET_SM_FORM_ALPHA_EXCLUDED_IDMIX = {
+    "components": ["A", "B"], "phases": ["ALPHA"], "output": "SM_FORM",
+    "solver": {"mode": "manual", "sublattice_site_ratios": [1],
+               "sublattice_configurations": [[["A", "B"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+    "conditions": {"P": 101325, "T": 300},
+    "excluded_model_contributions": ["idmix"],
+    "values": [[[0.0]]],
+    "reference": "testing",
+}

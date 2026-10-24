@@ -332,11 +332,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                 calculate_dict = get_prop_samples(curr_data, constituents)
                 model_cls = model.get(phase_name, Model)
                 mod = model_cls(dbf, comps, phase_name, parameters=symbols_to_fit)
-                if prop.endswith('_FORM'):
-                    output = ''.join(prop.split('_')[:-1])+"R"
-                    mod.shift_reference_state(ref_states, dbf, contrib_mods={e: symengine.S.Zero for e in exclusion})
-                else:
-                    output = prop
+                # exclude contributions before shift_reference_state, which builds the _FORM properties from them
                 for contrib in exclusion:
                     mod.models[contrib] = symengine.S.Zero
                     try:
@@ -345,6 +341,11 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                         mod.endmember_reference_model.models[contrib] = symengine.S.Zero
                     except AttributeError:
                         mod.reference_model.models[contrib] = symengine.S.Zero
+                if prop.endswith('_FORM'):
+                    output = ''.join(prop.split('_')[:-1])+"R"
+                    mod.shift_reference_state(ref_states, dbf, contrib_mods={e: symengine.S.Zero for e in exclusion})
+                else:
+                    output = prop
                 model_dict = {phase_name: mod}
                 species = sorted(unpack_species(dbf, comps), key=str)
                 data_dict['species'] = species
