@@ -1,8 +1,14 @@
 
+from espei.error_functions.context import setup_context
 from espei.optimizers.opt_base import OptimizerBase
+from espei.optimizers.opt_scipy import SciPyOptimizer
 from pycalphad import Database
 from scipy.optimize import minimize
 import numpy as np
+import pytest
+
+from .fixtures import datasets_db
+from .testing_data import A_B_DATASET_HM_MIX_ALPHA, A_B_REGULAR_SOLUTION_TDB
 
 class TestOptimizer(OptimizerBase):
     def _fit(self, symbol_names, datasets, target_values=None, initial_guess=None):
@@ -30,3 +36,16 @@ def test_optimizer_can_fit():
     for sym, t in zip(syms, targ):
         assert sym in opt.dbf.symbols
         assert np.isclose(opt.dbf.symbols[sym], t)
+
+
+@pytest.mark.parametrize('kwargs', [{}, {'method': 'L-BFGS-B', 'jac': True}], ids=['Powell', 'L-BFGS-B'])
+def test_scipy_optimizer_maximizes_the_likelihood(datasets_db, kwargs):
+    """SciPyOptimizer fits L = 4 HM_MIX(x_B = 0.5), and neither it nor setup_context modifies the Database"""
+    datasets_db.insert({**A_B_DATASET_HM_MIX_ALPHA, 'values': [[[500.0]]]})
+    dbf = Database(A_B_REGULAR_SOLUTION_TDB)
+    symbols_before = dict(dbf.symbols)
+    setup_context(dbf, datasets_db, ['L_ALPHA'])
+    assert dbf.symbols == symbols_before
+    fit_dbf = SciPyOptimizer(dbf).fit(['L_ALPHA'], datasets_db, **kwargs)
+    assert fit_dbf.symbols['L_ALPHA'] == pytest.approx(2000.0, rel=1e-4)
+    assert dbf.symbols == symbols_before
