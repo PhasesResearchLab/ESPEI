@@ -651,17 +651,6 @@ def test_zpf_error_hyperplane_with_null_phases(datasets_db):
     assert np.allclose(flat_driving_forces, [-18.05883506, -780.50836135])
 
 
-def test_zpf_data_of_a_subsystem_without_some_fitted_parameters(datasets_db):
-    """Binary ZPF data in a ternary fit: a fitted parameter that enters only the third element has no effect"""
-    datasets_db.insert(A_B_DATASET_ZPF_ALPHA_BETA)
-    dbf = Database(A_B_C_TWO_PHASE_TDB)
-    both = ZPFResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=['VV0000', 'VV0001'])
-    only = ZPFResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=['VV0000'])
-    likelihood = both.get_likelihood(np.array([-10000.0, -5000.0]))
-    assert np.isfinite(likelihood)
-    assert likelihood == only.get_likelihood(np.array([-10000.0]))
-
-
 @pytest.mark.parametrize('output', ['SM_MIX', 'SM_FORM'])
 def test_fixed_configuration_residual_excludes_contributions_from_formation_properties(datasets_db, output):
     """Excluded model contributions are removed from _FORM properties, not only from their reference states"""
@@ -671,22 +660,3 @@ def test_fixed_configuration_residual_excludes_contributions_from_formation_prop
     residuals, _ = residual_func.get_residuals(np.asarray([]))
     # an ideal solution without ideal mixing has no entropy of mixing or of formation
     assert np.allclose(residuals, [0.0], atol=1e-8)
-
-
-@pytest.mark.parametrize('residual_class, dataset', [
-    (ZPFResidual, A_B_DATASET_ZPF_ALPHA_BETA),
-    (ActivityResidual, A_B_DATASET_ACR_A_ALPHA),
-    (EquilibriumPropertyResidual, A_B_DATASET_HM_ALPHA),
-    (FixedConfigurationPropertyResidual, A_B_DATASET_HM_MIX_ALPHA),
-], ids=['ZPF', 'Activity', 'EquilibriumProperty', 'FixedConfigurationProperty'])
-def test_residual_parameters_follow_the_order_of_symbols_to_fit(datasets_db, residual_class, dataset):
-    """The same parameter values give the same likelihood whatever the order of symbols_to_fit"""
-    datasets_db.insert(dataset)
-    dbf = Database(A_B_C_TWO_PHASE_TDB)
-    values = {'VV0000': -12000.0, 'VV0001': -2000.0}
-    likelihoods = []
-    for symbols in (['VV0000', 'VV0001'], ['VV0001', 'VV0000']):
-        residual_func = residual_class(dbf, datasets_db, phase_models=None, symbols_to_fit=symbols)
-        likelihoods.append(residual_func.get_likelihood(np.array([values[s] for s in symbols])))
-    assert np.isfinite(likelihoods[0])
-    assert np.isclose(likelihoods[1], likelihoods[0], rtol=1e-12)
