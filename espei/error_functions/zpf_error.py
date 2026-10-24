@@ -23,16 +23,18 @@ import numpy as np
 from numpy.typing import ArrayLike
 from pycalphad import Database, Model, Workspace, variables as v
 from pycalphad.property_framework import IsolatedPhase
+from pycalphad.core.composition_set import CompositionSet
 from pycalphad.core.utils import filter_phases, unpack_species
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from scipy.stats import norm
 import tinydb
 
+from espei import _parameter_sensitivities as sensitivities
 from espei.phase_models import PhaseModelSpecification
 from espei.shadow_functions import calculate_, update_phase_record_parameters
 from espei.typing import SymbolName
 from espei.utils import PickleableTinyDB, database_symbols_to_fit
-from .residual_base import ResidualFunction, residual_function_registry
+from .residual_base import ResidualFunction, gaussian_likelihood_gradient, residual_function_registry
 
 _log = logging.getLogger(__name__)
 
@@ -205,9 +207,31 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
     return zpf_data
 
 
-def estimate_hyperplane(phase_region: PhaseRegion, dbf: Database, parameters: np.ndarray, approximate_equilibrium: bool = False) -> np.ndarray:
+def _fixed_compset(phase_record, str_statevar_dict: Dict[str, float], site_fractions: ArrayLike) -> CompositionSet:
+    """CompositionSet at the given state variables and site fractions."""
+    compset = CompositionSet(phase_record)
+    statevars = np.array([float(np.squeeze(str_statevar_dict[str(sv)])) for sv in phase_record.state_variables])
+    site_fractions = np.array(site_fractions[:phase_record.phase_dof], dtype=np.float64)
+    compset.update(site_fractions, 1.0, statevars)
+    return compset
+
+
+def _nanmean_gradient(chempots: Sequence, chempot_gradients: Sequence, num_params: int) -> np.ndarray:
+    """Gradient of the nanmean of the vertices' chemical potentials, shape (elements, parameters)."""
+    if len(chempot_gradients) == 0:
+        return np.full((0, num_params), np.nan)
+    counted = ~np.isnan(np.asarray(chempots, dtype=np.float64))
+    total = np.where(counted[..., np.newaxis], np.asarray(chempot_gradients, dtype=np.float64), 0.0).sum(axis=0)
+    with np.errstate(invalid='ignore', divide='ignore'):
+        return total / counted.sum(axis=0)[:, np.newaxis]
+
+
+def estimate_hyperplane(phase_region: PhaseRegion, dbf: Database, parameters: np.ndarray, approximate_equilibrium: bool = False,
+                        compute_gradient: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
     """
     Calculate the chemical potentials for the target hyperplane, one vertex at a time
+
+    With ``compute_gradient``, also return their gradient, shape (elements, parameters).
 
     Notes
     -----
@@ -218,12 +242,16 @@ def estimate_hyperplane(phase_region: PhaseRegion, dbf: Database, parameters: np
     are taken as the target hyperplane for the given equilibria.
 
     """
+    if compute_gradient and approximate_equilibrium:
+        raise NotImplementedError("Gradients are not implemented for approximate_equilibrium")
     target_hyperplane_chempots = []
+    target_hyperplane_gradients = []
     species = phase_region.species
     phases = phase_region.phases
     models = phase_region.models
     param_keys = list(models.values())[0]._parameters_arg
     parameters_dict = dict(zip(sorted(map(str, param_keys)), parameters))
+    names = list(parameters_dict.keys())
     for vertex in phase_region.hyperplane_vertices:
         update_phase_record_parameters(vertex.phase_record_factory, parameters)
         cond_dict = {**vertex.comp_conds, **phase_region.potential_conds}
@@ -249,23 +277,43 @@ def estimate_hyperplane(phase_region: PhaseRegion, dbf: Database, parameters: np
             if (num_phases == 1) and no_internal_dof:
                 _log.trace("The equilibrium computed at the vertex for %s with composition conditions %s in the phase region %s has underdetermined chemical potentials and will not be considered in the target hyperplane", vertex.phase_name, vertex.comp_conds, phase_region.eq_str())
                 target_hyperplane_chempots.append(np.full_like(MU_values, np.nan))
+                if compute_gradient:
+                    target_hyperplane_gradients.append(np.full((len(active_pure_elements), len(names)), np.nan))
             else:
                 if np.any(np.isnan(MU_values)):
                     _log.info("The equilibrium computed at the vertex for %s with composition conditions %s in the phase region %s has NaN chemical potentials %s", vertex.phase_name, vertex.comp_conds, phase_region.eq_str(), np.asarray(MU_values))
                 target_hyperplane_chempots.append(MU_values)
+                if compute_gradient:
+                    tangent = sensitivities.get_tangent(wks, names)[0]
+                    if tangent is None:
+                        target_hyperplane_gradients.append(np.full((len(active_pure_elements), len(names)), np.nan))
+                    else:
+                        nonvacant_elements = list(vertex.phase_record_factory.nonvacant_elements)
+                        order = [nonvacant_elements.index(el) for el in active_pure_elements]
+                        target_hyperplane_gradients.append(tangent['chemical_potentials'][:, order].T)
     target_hyperplane_mean_chempots = np.nanmean(target_hyperplane_chempots, axis=0, dtype=np.float64)
+    if compute_gradient:
+        return target_hyperplane_mean_chempots, _nanmean_gradient(target_hyperplane_chempots, target_hyperplane_gradients, len(names))
     return target_hyperplane_mean_chempots
 
 
 def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
                                 phase_region: PhaseRegion, dbf: Database, parameter_dict, vertex: RegionVertex,
-                                parameters: np.ndarray, approximate_equilibrium: bool = False) -> Tuple[float,List[float]]:
+                                parameters: np.ndarray, approximate_equilibrium: bool = False,
+                                compute_gradient: bool = False, target_hyperplane_gradient: Optional[np.ndarray] = None,
+                                ) -> Union[float, Tuple[float, np.ndarray]]:
     """Calculate the integrated driving force between the current hyperplane and target hyperplane.
+
+    With ``compute_gradient``, also return its gradient, from the target hyperplane's gradient.
     """
+    if compute_gradient and approximate_equilibrium:
+        raise NotImplementedError("Gradients are not implemented for approximate_equilibrium")
     species = phase_region.species
     models = phase_region.models
     param_keys = list(models.values())[0]._parameters_arg
     parameters_dict = dict(zip(sorted(map(str, param_keys)), parameters))
+    names = list(parameters_dict.keys())
+    driving_force_gradient = None
     current_phase = vertex.phase_name
     cond_dict = {**phase_region.potential_conds, **vertex.comp_conds}
     str_statevar_dict = OrderedDict([(str(key),cond_dict[key]) for key in sorted(phase_region.potential_conds.keys(), key=str)])
@@ -278,6 +326,15 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
         single_eqdata = calculate_(species, [current_phase], str_statevar_dict, models, phase_record_factory, pdens=50)
         df = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(df.max())
+        if compute_gradient:
+            if np.isfinite(driving_force):
+                # Danskin's theorem: the maximum moves with the sampled point it is at
+                idx = np.unravel_index(np.argmax(df), df.shape)
+                compset = _fixed_compset(phase_record_factory[current_phase], str_statevar_dict, single_eqdata.Y[idx])
+                driving_force_gradient = np.asarray(single_eqdata.X[idx]) @ target_hyperplane_gradient \
+                    - sensitivities.fixed_configuration_gradient(compset, 'GM', names)
+            else:
+                driving_force_gradient = np.full(len(names), np.nan)
     elif vertex.is_disordered:
         # Construct disordered sublattice configuration from composition dict
         # Compute energy
@@ -292,7 +349,7 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
             if v.Species("VA") in dof:
                 if num_subl_dof == 1:
                     _log.debug('Cannot predict the site fraction of vacancies in the disordered configuration %s of %s. Returning driving force of zero.', subl, current_phase)
-                    return 0
+                    return (0, np.zeros(len(names))) if compute_gradient else 0
                 else:
                     sitefracs_to_add = [1.0]
             else:
@@ -304,18 +361,34 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
         single_eqdata = calculate_(species, [current_phase], str_statevar_dict, models, phase_record_factory, points=np.asarray([desired_sitefracs]))
         driving_force = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(np.squeeze(driving_force))
+        if compute_gradient:
+            compset = _fixed_compset(phase_record_factory[current_phase], str_statevar_dict, desired_sitefracs)
+            composition = np.reshape(single_eqdata.X, (-1, np.shape(single_eqdata.X)[-1]))[0]
+            driving_force_gradient = composition @ target_hyperplane_gradient \
+                - sensitivities.fixed_configuration_gradient(compset, 'GM', names)
     else:
         wks = Workspace(database=dbf, components=species, phases=current_phase, models=models, phase_record_factory=phase_record_factory, conditions=cond_dict, parameters=parameters_dict)
-        constrained_energy = wks.get(IsolatedPhase(current_phase,wks=wks)('GM'))
+        isolated_phase = IsolatedPhase(current_phase, wks=wks)
+        constrained_energy = wks.get(isolated_phase('GM'))
         driving_force = np.dot(np.squeeze(target_hyperplane_chempots), vertex.composition) - constrained_energy
+        if compute_gradient:
+            if isolated_phase._compset is None or not np.all(np.isfinite(driving_force)):
+                driving_force_gradient = np.full(len(names), np.nan)
+            else:
+                driving_force_gradient = np.asarray(vertex.composition) @ target_hyperplane_gradient \
+                    - sensitivities.isolated_phase_gm_gradient(isolated_phase._compset, names)
+    if compute_gradient:
+        return driving_force, driving_force_gradient
     return driving_force
 
 
 def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
                                  parameters: ArrayLike = None,
                                  approximate_equilibrium: bool = False,
-                                 short_circuit: bool = False
-                                 ) -> Tuple[List[List[float]], List[List[float]]]:
+                                 short_circuit: bool = False,
+                                 compute_gradient: bool = False,
+                                 ) -> Union[Tuple[List[List[float]], List[List[float]]],
+                                            Tuple[List[List[float]], List[List[float]], List[List[np.ndarray]]]]:
     """
     Calculate error due to phase equilibria data
 
@@ -330,12 +403,15 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
         If True, immediately return a size 1 array with a driving force of
         ``np.nan`` (failed hyperplane) or ``np.inf`` (failed driving force).
         Can save computational time if the caller will aggregate driving forces.
+    compute_gradient : bool
+        If True, also return the gradient of each driving force.
 
     Returns
     -------
     Tuple[List[List[float]], List[List[float]]]
         Driving forces and weights as ragged 2D arrays with shape
-        ``(len(zpf_data), len(vertices in each zpf_data))``
+        ``(len(zpf_data), len(vertices in each zpf_data))``, and with
+        ``compute_gradient`` their gradients in the same ragged shape.
 
     Notes
     -----
@@ -347,43 +423,64 @@ def calculate_zpf_driving_forces(zpf_data: Sequence[Dict[str, Any]],
     """
     if parameters is None:
         parameters = np.array([])
+    num_params = np.size(parameters)
     driving_forces = []
     weights = []
+    gradients = []
     for data in zpf_data:
         data_driving_forces = []
         data_weights = []
+        data_gradients = []
         weight = data['weight']
         dataset_ref = data['dataset_reference']
         # for the set of phases and corresponding tie-line verticies in equilibrium
         for phase_region in data['phase_regions']:
             # 1. Calculate the average multiphase hyperplane
             eq_str = phase_region.eq_str()
-            target_hyperplane = estimate_hyperplane(phase_region, data['dbf'], parameters, approximate_equilibrium=approximate_equilibrium)
+            if compute_gradient:
+                target_hyperplane, hyperplane_gradient = estimate_hyperplane(phase_region, data['dbf'], parameters, approximate_equilibrium=approximate_equilibrium, compute_gradient=True)
+            else:
+                target_hyperplane = estimate_hyperplane(phase_region, data['dbf'], parameters, approximate_equilibrium=approximate_equilibrium)
             if np.any(np.isnan(target_hyperplane)):
                 _log.debug('NaN target hyperplane. Equilibria: (%s), driving force: 0.0, reference: %s.', eq_str, dataset_ref)
                 data_driving_forces.extend([0]*len(phase_region.vertices))
                 data_weights.extend([weight]*len(phase_region.vertices))
+                if compute_gradient:
+                    data_gradients.extend([np.zeros(num_params) for _ in phase_region.vertices])
                 continue
             # 2. Calculate the driving force to that hyperplane for each vertex
             for vertex in phase_region.vertices:
-                driving_force = driving_force_to_hyperplane(target_hyperplane, phase_region, data['dbf'], data['parameter_dict'], vertex, parameters,
-                                                            approximate_equilibrium=approximate_equilibrium,
-                                                            )
+                if compute_gradient:
+                    driving_force, driving_force_gradient = driving_force_to_hyperplane(target_hyperplane, phase_region, data['dbf'], data['parameter_dict'], vertex, parameters,
+                                                                                        approximate_equilibrium=approximate_equilibrium,
+                                                                                        compute_gradient=True, target_hyperplane_gradient=hyperplane_gradient,
+                                                                                        )
+                    data_gradients.append(driving_force_gradient)
+                else:
+                    driving_force = driving_force_to_hyperplane(target_hyperplane, phase_region, data['dbf'], data['parameter_dict'], vertex, parameters,
+                                                                approximate_equilibrium=approximate_equilibrium,
+                                                                )
                 if np.isinf(driving_force) and short_circuit:
                     _log.debug('Equilibria: (%s), current phase: %s, hyperplane: %s, driving force: %s, reference: %s. Short circuiting.', eq_str, vertex.phase_name, target_hyperplane, driving_force, dataset_ref)
+                    if compute_gradient:
+                        return [[np.inf]], [[np.inf]], [[np.full(num_params, np.nan)]]
                     return [[np.inf]], [[np.inf]]
                 data_driving_forces.append(driving_force)
                 data_weights.append(weight)
                 _log.debug('Equilibria: (%s), current phase: %s, hyperplane: %s, driving force: %s, reference: %s', eq_str, vertex.phase_name, target_hyperplane, driving_force, dataset_ref)
         driving_forces.append(data_driving_forces)
         weights.append(data_weights)
+        gradients.append(data_gradients)
+    if compute_gradient:
+        return driving_forces, weights, gradients
     return driving_forces, weights
 
 
 def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
                         parameters: np.ndarray = None,
                         data_weight: int = 1.0,
-                        approximate_equilibrium: bool = False) -> float:
+                        approximate_equilibrium: bool = False,
+                        compute_gradient: bool = False) -> Union[float, Tuple[float, np.ndarray]]:
     """
     Calculate the likelihood due to phase equilibria data.
 
@@ -392,19 +489,28 @@ def calculate_zpf_error(zpf_data: Sequence[Dict[str, Any]],
     Returns
     -------
     float
-        Log probability of ZPF driving forces
+        Log probability of ZPF driving forces, and with ``compute_gradient``
+        its gradient (NaN where the log probability is -inf)
 
     """
+    num_params = 0 if parameters is None else np.size(parameters)
     if len(zpf_data) == 0:
-        return 0.0
-    driving_forces, weights = calculate_zpf_driving_forces(zpf_data, parameters, approximate_equilibrium, short_circuit=True)
+        return (0.0, np.zeros(num_params)) if compute_gradient else 0.0
+    if compute_gradient:
+        driving_forces, weights, gradients = calculate_zpf_driving_forces(zpf_data, parameters, approximate_equilibrium, short_circuit=True, compute_gradient=True)
+    else:
+        driving_forces, weights = calculate_zpf_driving_forces(zpf_data, parameters, approximate_equilibrium, short_circuit=True)
     # Driving forces and weights are 2D ragged arrays with the shape (len(zpf_data), len(zpf_data['values']))
     driving_forces = np.concatenate(driving_forces).T
     weights = np.concatenate(weights)
     if np.any(np.logical_or(np.isinf(driving_forces), np.isnan(driving_forces))):
-        return -np.inf
-    log_probabilites = norm.logpdf(driving_forces, loc=0, scale=1000/data_weight/weights)
+        return (-np.inf, np.full(num_params, np.nan)) if compute_gradient else -np.inf
+    scales = 1000/data_weight/weights
+    log_probabilites = norm.logpdf(driving_forces, loc=0, scale=scales)
     _log.debug('Data weight: %s, driving forces: %s, weights: %s, probabilities: %s', data_weight, driving_forces, weights, log_probabilites)
+    if compute_gradient:
+        gradients = np.reshape([g for data_gradients in gradients for g in data_gradients], (driving_forces.size, num_params))
+        return np.sum(log_probabilites), gaussian_likelihood_gradient(driving_forces, scales, gradients)
     return np.sum(log_probabilites)
 
 
@@ -434,8 +540,11 @@ class ZPFResidual(ResidualFunction):
         # okay if parameters are initialized to zero, we only need the symbol names
         parameters = dict(zip(symbols_to_fit, [0]*len(symbols_to_fit)))
         self.zpf_data = get_zpf_data(database, comps, phases, datasets, parameters, model_dict)
+        # parameters are given in the order of symbols_to_fit; the phase records sort them by name
+        self._sorted_order = np.argsort(symbols_to_fit)
 
     def get_residuals(self, parameters: ArrayLike) -> Tuple[List[float], List[float]]:
+        parameters = np.asarray(parameters)[self._sorted_order]
         driving_forces, weights = calculate_zpf_driving_forces(self.zpf_data, parameters, short_circuit=True)
         # Driving forces and weights are 2D ragged arrays with the shape (len(zpf_data), len(zpf_data['values']))
         residuals = np.concatenate(driving_forces).tolist()
@@ -443,8 +552,16 @@ class ZPFResidual(ResidualFunction):
         return residuals, weights
 
     def get_likelihood(self, parameters) -> float:
+        parameters = np.asarray(parameters)[self._sorted_order]
         likelihood = calculate_zpf_error(self.zpf_data, parameters, data_weight=self.weight)
         return likelihood
+
+    def get_likelihood_and_gradient(self, parameters) -> Tuple[float, np.ndarray]:
+        parameters = np.asarray(parameters)[self._sorted_order]
+        likelihood, sorted_gradient = calculate_zpf_error(self.zpf_data, parameters, data_weight=self.weight, compute_gradient=True)
+        gradient = np.empty_like(sorted_gradient)
+        gradient[self._sorted_order] = sorted_gradient
+        return likelihood, gradient
 
 
 residual_function_registry.register(ZPFResidual)

@@ -649,3 +649,14 @@ def test_zpf_error_hyperplane_with_null_phases(datasets_db):
     flat_driving_forces = np.asarray(driving_forces).flatten()
     assert len(flat_driving_forces) == 2  # One for each vertex, HCP_A3 and CUMG2
     assert np.allclose(flat_driving_forces, [-18.05883506, -780.50836135])
+
+
+@pytest.mark.parametrize('output', ['SM_MIX', 'SM_FORM'])
+def test_fixed_configuration_residual_excludes_contributions_from_formation_properties(datasets_db, output):
+    """Excluded model contributions are removed from _FORM properties, not only from their reference states"""
+    datasets_db.insert({**A_B_DATASET_SM_FORM_ALPHA_EXCLUDED_IDMIX, 'output': output})
+    dbf = Database(A_B_REGULAR_SOLUTION_TDB)
+    residual_func = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[])
+    residuals, _ = residual_func.get_residuals(np.asarray([]))
+    # an ideal solution without ideal mixing has no entropy of mixing or of formation
+    assert np.allclose(residuals, [0.0], atol=1e-8)
