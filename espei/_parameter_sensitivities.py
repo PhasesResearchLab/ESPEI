@@ -20,8 +20,6 @@ from pycalphad.core.solver import Solver
 from pycalphad.property_framework import as_property
 from pycalphad.property_framework.computed_property import ModelComputedProperty
 
-BACKEND = 'numpy'
-
 # Positions in the __getstate__ tuples of pycalphad/core/minimizer.pyx
 _COMPSET_STATE_LENGTH = 16
 _E_MATRIX, _MASS_JAC, _C_STATEVARS, _C_COMPONENT, _MOLES_NORMALIZATION, _MOLES_NORMALIZATION_GRAD = 5, 7, 9, 10, 11, 13
