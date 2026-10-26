@@ -16,7 +16,8 @@ from pycalphad.core.utils import instantiate_models, filter_phases, extract_para
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from pycalphad import Workspace, as_property
 
-from espei.error_functions.residual_base import ResidualFunction, residual_function_registry
+from espei import _parameter_sensitivities as sensitivities
+from espei.error_functions.residual_base import ResidualFunction, gaussian_likelihood_gradient, residual_function_registry
 from espei.phase_models import PhaseModelSpecification
 from espei.shadow_functions import update_phase_record_parameters
 from espei.typing import SymbolName
@@ -174,7 +175,8 @@ def get_equilibrium_thermochemical_data(dbf: Database, comps: Sequence[str],
 def calc_prop_differences(eqpropdata: EqPropData,
                           parameters: np.ndarray,
                           approximate_equilibrium: Optional[bool] = False,
-                          ) -> Tuple[np.ndarray, np.ndarray]:
+                          compute_gradient: bool = False,
+                          ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, np.ndarray]]:
     """
     Calculate differences between the expected and calculated values for a property
 
@@ -188,6 +190,8 @@ def calc_prop_differences(eqpropdata: EqPropData,
     approximate_equilibrium : Optional[bool]
         Whether or not to use an approximate version of equilibrium that does
         not refine the solution and uses ``starting_point`` instead.
+    compute_gradient : bool
+        If True, also return the gradients of the differences.
 
     Returns
     -------
@@ -195,8 +199,11 @@ def calc_prop_differences(eqpropdata: EqPropData,
         Pair of
         * differences between the calculated property and expected property
         * weights for this dataset
+        * with ``compute_gradient``, gradients of the differences, shape (samples, parameters)
 
     """
+    if compute_gradient and approximate_equilibrium:
+        raise NotImplementedError("Gradients are not implemented for approximate_equilibrium")
     dbf = eqpropdata.dbf
     species = eqpropdata.species
     phases = eqpropdata.phases
@@ -209,8 +216,12 @@ def calc_prop_differences(eqpropdata: EqPropData,
     weights = np.array(eqpropdata.weight, dtype=np.float64)
     samples = np.array(eqpropdata.samples, dtype=np.float64)
     wks = Workspace(database=dbf, components=species, phases=phases, models=models, phase_record_factory=phase_record_factory, parameters=params_dict)
+    names = list(params_dict.keys())
+    if compute_gradient and output.implementation_units != output.display_units:
+        raise NotImplementedError(f"Gradients of {output} need a unit conversion from {output.implementation_units} to {output.display_units}")
 
     calculated_data = []
+    gradients = [np.empty((0, len(names)))]
     for comp_conds in eqpropdata.composition_conds:
         cond_dict = OrderedDict(**pot_conds, **comp_conds)
         wks.conditions = cond_dict
@@ -219,6 +230,8 @@ def calc_prop_differences(eqpropdata: EqPropData,
         wks.phase_record_factory = phase_record_factory
         vals = wks.get(output)
         calculated_data.extend(np.atleast_1d(vals).tolist())
+        if compute_gradient:
+            gradients.append(np.reshape(sensitivities.get_gradient(wks, output, names), (-1, len(names))))
 
     calculated_data = np.array(calculated_data, dtype=np.float64)
 
@@ -226,13 +239,16 @@ def calc_prop_differences(eqpropdata: EqPropData,
     assert calculated_data.shape == weights.shape, f"Calculated data shape {calculated_data.shape} does not match weights shape {weights.shape}"
     differences = calculated_data - samples
     _log.debug('Output: %s differences: %s, weights: %s, reference: %s', output, differences, weights, eqpropdata.reference)
+    if compute_gradient:
+        return differences, weights, np.concatenate(gradients, axis=0)
     return differences, weights
 
 
 def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Sequence[EqPropData],
                                                      parameters: np.ndarray,
                                                      approximate_equilibrium: Optional[bool] = False,
-                                                     ) -> float:
+                                                     compute_gradient: bool = False,
+                                                     ) -> Union[float, Tuple[float, np.ndarray]]:
     """
     Calculate the total equilibrium thermochemical probability for all EqPropData
 
@@ -246,29 +262,41 @@ def calculate_equilibrium_thermochemical_probability(eq_thermochemical_data: Seq
 
     eq_thermochemical_data : Sequence[EqPropData]
 
+    compute_gradient : bool
+        If True, also return the gradient of the log-probability.
+
     Returns
     -------
     float
-        Sum of log-probability for all thermochemical data.
+        Sum of log-probability for all thermochemical data, and with
+        ``compute_gradient`` its gradient (NaN where the log-probability is -inf).
 
     """
+    num_params = np.size(parameters)
     if len(eq_thermochemical_data) == 0:
-        return 0.0
+        return (0.0, np.zeros(num_params)) if compute_gradient else 0.0
 
     differences = []
     weights = []
+    gradients = []
     for eqpropdata in eq_thermochemical_data:
-        diffs, wts = calc_prop_differences(eqpropdata, parameters, approximate_equilibrium)
+        if compute_gradient:
+            diffs, wts, grads = calc_prop_differences(eqpropdata, parameters, approximate_equilibrium, compute_gradient=True)
+            gradients.append(grads)
+        else:
+            diffs, wts = calc_prop_differences(eqpropdata, parameters, approximate_equilibrium)
         if np.any(np.isinf(diffs) | np.isnan(diffs)):
             # NaN or infinity are assumed calculation failures. If we are
             # calculating log-probability, just bail out and return -infinity.
-            return -np.inf
+            return (-np.inf, np.full(num_params, np.nan)) if compute_gradient else -np.inf
         differences.append(diffs)
         weights.append(wts)
 
     differences = np.concatenate(differences, axis=0)
     weights = np.concatenate(weights, axis=0)
     probs = norm(loc=0.0, scale=weights).logpdf(differences)
+    if compute_gradient:
+        return np.sum(probs), gaussian_likelihood_gradient(differences, weights, np.concatenate(gradients, axis=0))
     return np.sum(probs)
 
 
@@ -300,8 +328,11 @@ class EquilibriumPropertyResidual(ResidualFunction):
         # okay if parameters are initialized to zero, we only need the symbol names
         parameters = dict(zip(symbols_to_fit, [0]*len(symbols_to_fit)))
         self.property_data = get_equilibrium_thermochemical_data(database, comps, phases, datasets, model_dict, parameters, data_weight_dict=self.weight)
+        # parameters are given in the order of symbols_to_fit; the phase records sort them by name
+        self._sorted_order = np.argsort(symbols_to_fit)
 
     def get_residuals(self, parameters: npt.ArrayLike) -> Tuple[List[float], List[float]]:
+        parameters = np.asarray(parameters)[self._sorted_order]
         residuals = []
         weights = []
         for data in self.property_data:
@@ -311,8 +342,16 @@ class EquilibriumPropertyResidual(ResidualFunction):
         return residuals, weights
 
     def get_likelihood(self, parameters) -> float:
+        parameters = np.asarray(parameters)[self._sorted_order]
         likelihood = calculate_equilibrium_thermochemical_probability(self.property_data, parameters)
         return likelihood
+
+    def get_likelihood_and_gradient(self, parameters) -> Tuple[float, np.ndarray]:
+        parameters = np.asarray(parameters)[self._sorted_order]
+        likelihood, sorted_gradient = calculate_equilibrium_thermochemical_probability(self.property_data, parameters, compute_gradient=True)
+        gradient = np.empty_like(sorted_gradient)
+        gradient[self._sorted_order] = sorted_gradient
+        return likelihood, gradient
 
 
 residual_function_registry.register(EquilibriumPropertyResidual)

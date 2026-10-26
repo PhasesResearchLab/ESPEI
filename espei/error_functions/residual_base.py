@@ -1,5 +1,7 @@
 from typing import Dict, List, Optional, Protocol, Tuple, Type
 
+import numpy as np
+import numpy.typing as npt
 from numpy.typing import ArrayLike
 
 from pycalphad import Database
@@ -65,9 +67,9 @@ class ResidualFunction(Protocol):
         Parameters
         ----------
         parameters : ArrayLike
-            1D parameter vector. The size of the parameters array should match
-            the number of fitting symbols used to build the models. This is
-            _not_ checked.
+            1D parameter vector, in the order of ``symbols_to_fit``. The size of
+            the parameters array should match the number of fitting symbols used
+            to build the models. This is _not_ checked.
 
         Returns
         -------
@@ -84,9 +86,9 @@ class ResidualFunction(Protocol):
         Parameters
         ----------
         parameters : ArrayLike
-            1D parameter vector. The size of the parameters array should match
-            the number of fitting symbols used to build the models. This is
-            _not_ checked.
+            1D parameter vector, in the order of ``symbols_to_fit``. The size of
+            the parameters array should match the number of fitting symbols used
+            to build the models. This is _not_ checked.
 
         Returns
         -------
@@ -94,6 +96,21 @@ class ResidualFunction(Protocol):
             Value of log-likelihood for the given set of parameters
         """
         ...
+
+    def get_likelihood_and_gradient(self, parameters: npt.NDArray) -> Tuple[float, npt.NDArray]:
+        """
+        Return the log-likelihood and its gradient with respect to the parameters.
+
+        Optional: residual functions that do not implement it raise NotImplementedError, and
+        optimizers that need gradients report which residual lacks them.
+        """
+        raise NotImplementedError(f"{type(self).__name__} does not provide likelihood gradients")
+
+
+def gaussian_likelihood_gradient(residuals, scales, residual_gradients) -> npt.NDArray:
+    """Gradient of sum(norm(0, scales).logpdf(residuals)) from the residuals' gradients, shape (n, n_params)."""
+    residuals, scales = np.asarray(residuals, dtype=float), np.asarray(scales, dtype=float)
+    return -np.sum((residuals / scales**2)[:, None] * np.asarray(residual_gradients, dtype=float), axis=0)
 
 
 class ResidualRegistry():

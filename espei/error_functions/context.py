@@ -1,10 +1,7 @@
 """Convenience function to create a context for the built in error functions"""
 
 import logging
-import copy
 import time
-
-import symengine
 
 from espei.phase_models import PhaseModelSpecification
 from espei.utils import database_symbols_to_fit
@@ -36,15 +33,13 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
 
     Notes
     -----
-    A copy of the Database is made and used in the context. To commit changes
-    back to the original database, the dbf.symbols.update method should be used.
+    The Database is not modified. Fitted symbols are passed to models as
+    parameters, so their values in the Database are only initial guesses.
     """
     data_weights = data_weights if data_weights is not None else {}
     if phase_models is not None:
         phase_models = PhaseModelSpecification(**phase_models)
 
-    # Copy the database because we replace Piecewise symbols and want to preserve the original database
-    dbf = copy.deepcopy(dbf)
     if symbols_to_fit is None:
         symbols_to_fit = database_symbols_to_fit(dbf)
     else:
@@ -53,10 +48,6 @@ def setup_context(dbf, datasets, symbols_to_fit=None, data_weights=None, phase_m
         raise ValueError("No degrees of freedom. Database must contain symbols starting with 'V' or 'VV', followed by a number.")
     else:
         _log.info("Fitting %s degrees of freedom.", len(symbols_to_fit))
-    for x in symbols_to_fit:
-        if isinstance(dbf.symbols[x], symengine.Piecewise):
-            _log.debug("Replacing %s in database", x)
-            dbf.symbols[x] = dbf.symbols[x].args[0]
 
     residual_objs = []
     for residual_func_class in residual_function_registry.get_registered_residual_functions():

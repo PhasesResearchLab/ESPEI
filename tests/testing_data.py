@@ -1579,3 +1579,106 @@ dataset_multi_valid_ternary_manyT_manyP = {
     ],
     "reference": "testreference",
 }
+
+
+# VV0000, VV0001 and VV0002 enter only A-B, A-C and B-C interactions, so A-B data do not depend on VV0001 or VV0002
+A_B_C_TWO_PHASE_TDB = """
+ELEMENT A BLANK 0 0 0 !
+ELEMENT B BLANK 0 0 0 !
+ELEMENT C BLANK 0 0 0 !
+FUNCTION VV0000 1 -10000; 10000 N !
+FUNCTION VV0001 1 -5000; 10000 N !
+FUNCTION VV0002 1 10000; 10000 N !
+TYPE_DEFINITION % SEQ * !
+PHASE ALPHA % 1 1 !
+CONSTITUENT ALPHA : A,B,C : !
+PARAMETER G(ALPHA,A;0) 1 0; 10000 N !
+PARAMETER G(ALPHA,B;0) 1 0; 10000 N !
+PARAMETER G(ALPHA,C;0) 1 0; 10000 N !
+PARAMETER L(ALPHA,A,B;0) 1 VV0000; 10000 N !
+PARAMETER L(ALPHA,A,C;0) 1 VV0001; 10000 N !
+PARAMETER L(ALPHA,B,C;1) 1 VV0002; 10000 N !
+PHASE BETA % 1 1 !
+CONSTITUENT BETA : A,B,C : !
+PARAMETER G(BETA,A;0) 1 3000; 10000 N !
+PARAMETER G(BETA,B;0) 1 -3000; 10000 N !
+PARAMETER G(BETA,C;0) 1 0; 10000 N !
+"""
+
+
+A_B_DATASET_ZPF_ALPHA_BETA = {
+    "components": ["A", "B"], "phases": ["ALPHA", "BETA"], "output": "ZPF",
+    "conditions": {"P": 101325, "T": [600]},
+    "values": [[["ALPHA", ["B"], [0.3]], ["BETA", ["B"], [0.7]]]],
+    "reference": "testing",
+}
+
+
+A_B_DATASET_ACR_A_ALPHA = {
+    "components": ["A", "B"], "phases": ["ALPHA"], "output": "ACR_A",
+    "reference_state": {"phases": ["ALPHA"], "conditions": {"P": 101325, "T": 600, "X_B": 0.0}},
+    "conditions": {"P": 101325, "T": 600, "X_B": [0.1, 0.2]},
+    "values": [[[0.9, 0.8]]],
+    "reference": "testing",
+}
+
+
+A_B_DATASET_HM_ALPHA = {
+    "components": ["A", "B"], "phases": ["ALPHA"], "output": "HM",
+    "conditions": {"P": 101325, "T": [600], "X_B": [0.3]},
+    "values": [[[0.0]]],
+    "reference": "testing",
+}
+
+
+A_B_DATASET_HM_MIX_ALPHA = {
+    "components": ["A", "B"], "phases": ["ALPHA"], "output": "HM_MIX",
+    "solver": {"mode": "manual", "sublattice_site_ratios": [1],
+               "sublattice_configurations": [[["A", "B"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+    "conditions": {"P": 101325, "T": 600},
+    "values": [[[0.0]]],
+    "reference": "testing",
+}
+
+
+# With L_ALPHA = 0, A_B_REGULAR_SOLUTION_TDB is ideal: without idmix, A0.5B0.5 has no entropy of mixing or formation
+A_B_DATASET_SM_FORM_ALPHA_EXCLUDED_IDMIX = {
+    "components": ["A", "B"], "phases": ["ALPHA"], "output": "SM_FORM",
+    "solver": {"mode": "manual", "sublattice_site_ratios": [1],
+               "sublattice_configurations": [[["A", "B"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+    "conditions": {"P": 101325, "T": 300},
+    "excluded_model_contributions": ["idmix"],
+    "values": [[[0.0]]],
+    "reference": "testing",
+}
+
+
+# Two-phase binary whose exact parameter derivatives were solved symbolically
+A_B_ANALYTIC_TDB = """
+ELEMENT VA VACUUM 0 0 0 !
+ELEMENT A BLANK 1 0 0 !
+ELEMENT B BLANK 1 0 0 !
+FUNCTION VV0000 298.15 -13800; 6000 N !
+FUNCTION VV0001 298.15 2.0; 6000 N !
+FUNCTION VV0002 298.15 1500; 6000 N !
+FUNCTION VV0003 298.15 -3000; 6000 N !
+FUNCTION VV0004 298.15 -16000; 6000 N !
+TYPE_DEFINITION % SEQ * !
+PHASE ALPHA % 1 1 !
+CONSTITUENT ALPHA : A,B : !
+PHASE BETA % 2 1 1 !
+CONSTITUENT BETA : A,B : A,B,VA : !
+PARAMETER G(ALPHA,A;0) 298.15 0; 6000 N !
+PARAMETER G(ALPHA,B;0) 298.15 2000-1.0*T; 6000 N !
+PARAMETER L(ALPHA,A,B;0) 298.15 VV0000+VV0001*T; 6000 N !
+PARAMETER L(ALPHA,A,B;1) 298.15 VV0002; 6000 N !
+PARAMETER G(BETA,A:A;0) 298.15 9000; 6000 N !
+PARAMETER G(BETA,A:B;0) 298.15 VV0004-2*T; 6000 N !
+PARAMETER G(BETA,B:A;0) 298.15 15000; 6000 N !
+PARAMETER G(BETA,B:B;0) 298.15 7000; 6000 N !
+PARAMETER G(BETA,A:VA;0) 298.15 6200+2*T; 6000 N !
+PARAMETER G(BETA,B:VA;0) 298.15 6000; 6000 N !
+PARAMETER L(BETA,A,B:VA;0) 298.15 VV0003; 6000 N !
+PARAMETER L(BETA,A:A,B;0) 298.15 8000; 6000 N !
+PARAMETER L(BETA,B:A,B;0) 298.15 8000; 6000 N !
+"""

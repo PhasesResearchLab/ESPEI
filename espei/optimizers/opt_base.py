@@ -3,11 +3,18 @@ from espei.datasets import load_datasets
 from espei.utils import unpack_piecewise, database_symbols_to_fit
 from .utils import OptimizerError
 
+def _copy_database(dbf):
+    "Copy of a Database whose symbols can be updated without changing the original."
+    # pycalphad's Database.__deepcopy__ shares symbols (and phases) with the original
+    dbf_copy = copy.deepcopy(dbf)
+    dbf_copy.symbols = dict(dbf.symbols)
+    return dbf_copy
+
 class OptimizerBase(object):
     """Enable fitting and replaying fitting steps"""
     def __init__(self, dbf):
-        self.orig_dbf = copy.deepcopy(dbf)
-        self.dbf = copy.deepcopy(dbf)
+        self.orig_dbf = _copy_database(dbf)
+        self.dbf = _copy_database(dbf)
 
     def _fit(self, symbols, datasets, *args, **kwargs):
         """
