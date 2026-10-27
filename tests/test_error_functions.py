@@ -128,6 +128,35 @@ def test_fixed_configuration_residual_with_internal_degrees_of_freedom(datasets_
     assert np.allclose(residuals, [0.0])
 
 
+CU_O_CHARGED_TDB = """ELEMENT VA VACUUM 0 0 0 !
+ELEMENT CU FCC_A1 63.546 5004.1 33.15 !
+ELEMENT O 1/2_MOLE_O2(G) 15.999 4341.0 102.52 !
+SPECIES CU+1 CU1/+1 !
+SPECIES CU2O CU2O1 !
+TYPE_DEFINITION % SEQ * !
+PHASE ALPHA % 1 1 !
+CONSTITUENT ALPHA :CU+1,CU2O: !
+PARAMETER L(ALPHA,CU+1,CU2O;0) 1 -20000; 10000 N !
+"""
+
+
+def test_fixed_configuration_residual_with_charged_species(datasets_db):
+    """Site fractions of species whose escaped names sort differently than their names are not swapped"""
+    dbf = Database(CU_O_CHARGED_TDB)
+    datasets_db.insert({
+        "components": ["CU", "O"], "phases": ["ALPHA"], "output": "HM_MIX",
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1.0],
+                   "sublattice_configurations": [[["CU+1", "CU2O"]]], "sublattice_occupancies": [[[0.2, 0.8]]]},
+        "conditions": {"P": 101325, "T": 1000}, "values": [[[0.0]]], "reference": "charged species",
+    })
+
+    residual_func = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[])
+
+    # HM_MIX = L0 y(CU+1) y(CU2O) / (y(CU+1) + 3 y(CU2O)) per mole of atoms
+    residuals, weights = residual_func.get_residuals(np.asarray([]))
+    assert np.allclose(residuals, [-20000 * 0.2 * 0.8 / (0.2 + 3 * 0.8)])
+
+
 def test_get_thermochemical_data_filters_configurations_when_all_configurations_are_invalid(datasets_db):
     datasets_db.insert(CU_MG_HM_MIX_CUMG2_ALL_INVALID)  # No valid configurations
 
