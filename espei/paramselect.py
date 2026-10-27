@@ -45,7 +45,8 @@ _log = logging.getLogger(__name__)
 
 
 def _param_present_in_database(dbf, phase_name, configuration, param_type):
-    const_arr = tuple([tuple(map(lambda x: v.Species(x), subl)) for subl in map(tuplify, configuration)])
+    species = {sp.name: sp for sp in dbf.species}
+    const_arr = tuple([tuple(species[name] for name in subl) for subl in map(tuplify, configuration)])
     # parameter order doesn't matter here, since the generated might not exactly match. Always override.
     query = (where('phase_name') == phase_name) & \
             (where('parameter_type') == param_type) & \
@@ -142,6 +143,19 @@ def get_next_symbol(dbf):
     return symbol_name
 
 
+def _endmember_reference(dbf, phase_name, configuration):
+    """Return the GHSER reference energy of an endmember per mole of formula."""
+    # TODO: generalize for models with composition dependent site ratios, e.g. ionic liquids
+    species = {sp.name: sp for sp in dbf.species}
+    reference = 0
+    for name, ratio in zip(configuration, dbf.phases[phase_name].sublattices):
+        for el, amount in species[name].constituents.items():
+            if el not in ("VA", "/-"):
+                # e.g. GHSERAL for AL and GHSERBB for B
+                reference += ratio * amount * Symbol("GHSER" + (el.upper()*2)[:2])
+    return reference
+
+
 def insert_parameter(dbf, phase_name, configuration, parameter_name, parameters, symmetry):
     numdigits = 6  # number of significant figures, might cause rounding errors
     # Organize parameters by polynomial degree
@@ -196,13 +210,7 @@ def insert_parameter(dbf, phase_name, configuration, parameter_name, parameters,
     _log.trace('Polynomial coefs: %s', degree_polys)
     if is_endmember and parameter_name == "G":
         # We need to add GHSER functions IFF we're fitting a Gibbs energy parameter
-        site_ratios = dbf.phases[phase_name].sublattices
-        for subl, ratio in zip(configuration, site_ratios):
-            if subl == "VA":
-                continue
-            subl = (subl.upper()*2)[:2]  # TODO: pure element assumption
-            degree = 0  # always 0 because short-circuit in the previous loop
-            degree_polys[degree] += ratio * Symbol(f"GHSER{subl}")
+        degree_polys[0] += _endmember_reference(dbf, phase_name, configuration)
     # Insert into database
     symmetric_configurations = generate_symmetric_group(configuration, symmetry)
     for degree in np.arange(degree_polys.shape[0]):
@@ -356,7 +364,6 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
     if not hasattr(dbf, 'varcounter'):
         dbf.varcounter = 0
     phase_obj = dbf.phases[phase_name]
-    # TODO: assumed pure elements - add proper support for Species objects
     subl_model = [sorted([sp.name for sp in subl]) for subl in phase_obj.constituents]
     site_ratios = phase_obj.sublattices
     # First fit endmembers

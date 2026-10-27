@@ -1,6 +1,8 @@
+import json
 import pytest
 import numpy as np
-from espei.datasets import DatasetError, check_dataset, clean_dataset, apply_tags
+from espei.datasets import DatasetError, DatasetWarning, check_dataset, clean_dataset, apply_tags, load_datasets
+from espei.phase_models import PhaseModelSpecification
 
 from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, LI_SN_LIQUID_DATA, dataset_multi_valid_ternary
 from .fixtures import datasets_db
@@ -373,7 +375,8 @@ def test_check_datasets_raises_with_incorrect_components():
     with pytest.raises(DatasetError):
         check_dataset(dataset_single_incorrect_components_overspecified)
     with pytest.raises(DatasetError):
-        check_dataset(dataset_single_incorrect_components_underspecified)
+        # without the phase models, NI can't be told apart from a species
+        check_dataset(dataset_single_incorrect_components_underspecified, species=PhaseModelSpecification(components=["AL", "NI", "VA"], phases={}).get_species())
     with pytest.raises(DatasetError):
         check_dataset(dataset_multi_incorrect_components_overspecified)
     with pytest.raises(DatasetError):
@@ -436,12 +439,39 @@ def test_check_datasets_raises_if_configs_occupancies_not_aligned(datasets_db):
         check_dataset(dataset_mismatched_configs_occupancies)
 
 
-# Expected to fail, since the dataset checker cannot determine that species are used in the configurations and components should only contain pure elements.
-@pytest.mark.xfail
-def test_non_equilibrium_thermo_data_with_species_passes_checker():
-    """Non-equilibrium thermochemical data that use species in the configurations should pass the dataset checker.
-    """
-    check_dataset(LI_SN_LIQUID_DATA)
+LI_SN_SPECIES = PhaseModelSpecification(components=["LI", "SN"], species={"LI4SN": {"constituents": {"LI": 4, "SN": 1}}}, phases={}).get_species()
+
+
+@pytest.mark.parametrize("dataset", [
+    LI_SN_LIQUID_DATA,
+    {**LI_SN_LIQUID_DATA, "components": ["CU", "MG"]},  # outside the system, so species aren't resolved
+])
+def test_non_equilibrium_thermo_data_with_species_passes_checker(dataset):
+    """Non-equilibrium thermochemical data that use species in the configurations should pass the dataset checker."""
+    check_dataset(dataset, species=LI_SN_SPECIES)
+
+
+@pytest.mark.parametrize("dataset, species, message", [
+    ({**LI_SN_LIQUID_DATA, "components": ["LI", "LI4SN", "SN"]}, LI_SN_SPECIES, "are species"),
+    ({**LI_SN_LIQUID_DATA, "solver": {**LI_SN_LIQUID_DATA["solver"], "sublattice_configurations": [[["LI", "LI5SN"]], [["LI5SN", "SN"]]]}}, LI_SN_SPECIES, "LI5SN is not defined"),
+])
+def test_non_equilibrium_thermo_data_with_invalid_species_raises(dataset, species, message):
+    """Species in configurations must be defined, and species can't be components."""
+    with pytest.raises(DatasetError, match=message):
+        check_dataset(dataset, species=species)
+
+
+def test_species_without_phase_models_are_reported_not_checked(tmp_path):
+    """Without phase models, species in configurations give a DatasetWarning, and the other checks still run."""
+    endmember = {**LI_SN_LIQUID_DATA, "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [["LI4SN"]]}, "values": [[[0]]]}
+    with pytest.warns(DatasetWarning, match="LI4SN.*--phase-models"):
+        check_dataset(endmember)
+    with pytest.raises(DatasetError, match="sorted"):
+        check_dataset({**LI_SN_LIQUID_DATA, "solver": {**LI_SN_LIQUID_DATA["solver"], "sublattice_configurations": [[["LI4SN", "LI"]], [["LI4SN", "SN"]]]}})
+    path = tmp_path / "li-sn.json"
+    path.write_text(json.dumps(LI_SN_LIQUID_DATA))
+    with pytest.warns(DatasetWarning, match="li-sn.json: Species LI4SN"):
+        load_datasets([str(path)])
 
 
 def test_applying_tags(datasets_db):
