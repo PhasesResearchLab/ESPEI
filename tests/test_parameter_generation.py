@@ -897,3 +897,47 @@ def test_molar_volume_mixing_and_absolute_value_produce_the_same_parameter(datas
     assert np.isclose(dbf.symbols['VV0000'], 1e-5, atol=1e-14)
     assert np.isclose(dbf.symbols['VV0001'], 2e-5, atol=1e-14)
     assert np.isclose(dbf.symbols['VV0002'], 4 * -0.05e-5, atol=1e-14)
+
+
+def test_species_parameters_are_fit(datasets_db):
+    """Species endmembers are fit relative to the GHSER functions of their elements."""
+    phase_models = {
+        "components": ["LI", "SN"],
+        "species": {"LI4SN": {"constituents": {"LI": 4, "SN": 1}}},
+        "phases": {"LIQUID": {"sublattice_model": [["LI", "LI4SN", "SN"]], "sublattice_site_ratios": [1]}},
+    }
+    solver = {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [["LI4SN"]]}
+    # G(LIQUID,LI4SN) = 4 GHSERLI + GHSERSN - 50000 + 10 T and L0(LI4SN,SN) = -20000, per mole of formula
+    datasets_db.insert({"components": ["LI", "SN"], "phases": ["LIQUID"], "solver": solver, "output": "HM_FORM",
+                        "conditions": {"P": 101325, "T": 1000}, "values": [[[-50000 / 5]]]})
+    datasets_db.insert({"components": ["LI", "SN"], "phases": ["LIQUID"], "solver": solver, "output": "SM_FORM",
+                        "conditions": {"P": 101325, "T": 1000}, "values": [[[-10 / 5]]]})
+    datasets_db.insert({"components": ["LI", "SN"], "phases": ["LIQUID"], "output": "HM_MIX",
+                        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [[["LI4SN", "SN"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+                        "conditions": {"P": 101325, "T": 1000}, "values": [[[-20000 * 0.5 * 0.5 / (0.5 * 5 + 0.5 * 1)]]]})
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+
+    params = dbf._parameters.search((where('phase_name') == 'LIQUID') & (where('parameter_type') == 'G') & (where('constituent_array') == ((v.Species('LI4SN'),),)))
+    assert len(params) == 1
+    assert params[0]['parameter'].diff(Symbol('GHSERLI')) == 4.0
+    assert params[0]['parameter'].diff(Symbol('GHSERSN')) == 1.0
+    assert dbf.symbols['VV0000'] == 10.0  # entropy
+    assert dbf.symbols['VV0001'] == -50000.0  # enthalpy
+    assert dbf.symbols['VV0002'] == -20000.0  # L0(LI4SN,SN)
+
+
+def test_species_parameters_in_input_database_are_not_duplicated(datasets_db):
+    """Species named unlike their formulas are matched by name to the parameters of the input database."""
+    phase_models = {
+        "components": ["CU", "MG", "VA"],
+        "phases": {"LIQUID": {"sublattice_model": [["COMPA", "COMPB", "COMPC"]], "sublattice_site_ratios": [1]}},
+    }
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', dbf=Database.from_string(CU_MG_TDB_ASSOC, fmt='tdb'))
+
+    params = dbf._parameters.search((where('phase_name') == 'LIQUID') & (where('parameter_type') == 'G'))
+    endmembers = {p['constituent_array'][0][0].name: p['parameter'] for p in params if len(p['constituent_array'][0]) == 1}
+    assert len(endmembers) == len([p for p in params if len(p['constituent_array'][0]) == 1])
+    assert sorted(endmembers) == ['COMPA', 'COMPB', 'COMPC']
+    # COMPB is CU1MG2 and has no parameter in the input database
+    assert endmembers['COMPB'] == 1.0*Symbol('GHSERCU') + 2.0*Symbol('GHSERMG')
