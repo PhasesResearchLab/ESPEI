@@ -436,6 +436,8 @@ class ZPFResidual(ResidualFunction):
         self.zpf_data = get_zpf_data(database, comps, phases, datasets, parameters, model_dict)
 
     def get_residuals(self, parameters: ArrayLike) -> Tuple[List[float], List[float]]:
+        if len(self.zpf_data) == 0:
+            return [], []
         driving_forces, weights = calculate_zpf_driving_forces(self.zpf_data, parameters, short_circuit=True)
         # Driving forces and weights are 2D ragged arrays with the shape (len(zpf_data), len(zpf_data['values']))
         residuals = np.concatenate(driving_forces).tolist()

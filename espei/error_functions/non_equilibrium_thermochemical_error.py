@@ -475,7 +475,7 @@ class FixedConfigurationPropertyResidual(ResidualFunction):
             comps = sorted(phase_models.components)
             model_dict = phase_models.get_model_dict()
         else:
-            comps = sorted(database.elements)
+            comps = sorted(set(database.elements) - {'/-'})
             model_dict = dict()
         phases = sorted(filter_phases(database, unpack_species(database, comps), database.phases.keys()))
         if symbols_to_fit is None:
