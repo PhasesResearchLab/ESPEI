@@ -359,6 +359,18 @@ def test_zpf_residual_function(datasets_db):
     assert np.isclose(likelihood, zero_error_prob, rtol=1e-6)
 
 
+def test_zpf_residual_function_without_data(datasets_db):
+    """ZPF residuals are empty without ZPF data"""
+    dbf = Database(CU_MG_TDB)
+
+    residual_func = ZPFResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[])
+
+    residuals, weights = residual_func.get_residuals(np.asarray([]))
+    assert residuals == []
+    assert weights == []
+    assert residual_func.get_likelihood(np.asarray([])) == 0.0
+
+
 def test_subsystem_zpf_probability(datasets_db):
     """Test binary Cr-Ni data produces the same probability regardless of whether the main system is a binary or ternary."""
 
