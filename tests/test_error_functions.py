@@ -128,6 +128,25 @@ def test_fixed_configuration_residual_with_internal_degrees_of_freedom(datasets_
     assert np.allclose(residuals, [0.0])
 
 
+def test_fixed_configuration_residual_with_electron_element(datasets_db):
+    """Fixed configuration residuals work for databases that declare the electron (/-)"""
+    dbf = Database("ELEMENT /- ELECTRON_GAS 0.0 0.0 0.0 !\n" + A_B_REGULAR_SOLUTION_TDB)
+    datasets_db.insert({
+        "components": ["A", "B"], "phases": ["ALPHA"], "output": "HM_MIX",
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1],
+                   "sublattice_configurations": [[["A", "B"]], [["A", "B"]]],
+                   "sublattice_occupancies": [[[0.5, 0.5]], [[0.2, 0.8]]]},
+        "conditions": {"P": 101325, "T": 600}, "values": [[[0.0, 0.0]]], "reference": "regular solution",
+    })
+
+    residual_func = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=['L_ALPHA'])
+
+    # HM_MIX = L x_A x_B for a regular solution
+    residuals, weights = residual_func.get_residuals(np.asarray([2000.0]))
+    assert len(residuals) == len(weights)
+    assert np.allclose(residuals, [500.0, 320.0])
+
+
 def test_get_thermochemical_data_filters_configurations_when_all_configurations_are_invalid(datasets_db):
     datasets_db.insert(CU_MG_HM_MIX_CUMG2_ALL_INVALID)  # No valid configurations
 
