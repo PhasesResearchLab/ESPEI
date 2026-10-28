@@ -2,7 +2,6 @@ import numpy as np
 import tinydb
 
 from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter, ravel_zpf_values
-from espei.datasets import recursive_map
 from espei.sublattice_tools import recursive_tuplify
 from espei.utils import PickleableTinyDB, MemoryStorage
 from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
@@ -53,19 +52,6 @@ def test_get_data_for_a_minimal_example():
     assert desired_data['conditions']['T'] == 298.15
     assert desired_data['output'] == 'HM_FORM'
     assert desired_data['values'] == np.array([[[34720.0]]])
-
-
-def test_recursive_map():
-    """Test that recursive map function works"""
-
-    strings = [[["1.0"], ["5.5", "8.8"], ["10.7"]]]
-    floats = [[[1.0], [5.5, 8.8], [10.7]]]
-
-    assert recursive_map(float, strings) == floats
-    assert recursive_map(str, floats) == strings
-    assert recursive_map(float, "1.234") == 1.234
-    assert recursive_map(int, ["1", "2", "5"]) == [1, 2, 5]
-    assert recursive_map(float, ["1.0", ["0.5", "0.5"]]) == [1.0, [0.5, 0.5]]
 
 
 def test_get_prop_samples_ravels_correctly():
