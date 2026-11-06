@@ -75,16 +75,15 @@ def has_symbol(expr, check_symbol):
     Workaround for SymEngine not supporting Basic.has() with non-Symbol arguments.
     Only works for detecting subsets of multiplication of variables.
     """
-    try:
+    if isinstance(check_symbol, Symbol):
         return expr.has(check_symbol)
-    except TypeError:
-        expr_poly = _poly_degrees(expr)
-        check_poly = _poly_degrees(check_symbol)
-        for cs, check_degree in check_poly.items():
-            eps = expr_poly.get(cs, 0)
-            if check_degree > eps:
-                return False
-        return True
+    expr_poly = _poly_degrees(expr)
+    check_poly = _poly_degrees(check_symbol)
+    for cs, check_degree in check_poly.items():
+        eps = expr_poly.get(cs, 0)
+        if check_degree > eps:
+            return False
+    return True
 
 
 def _build_feature_matrix(sample_condition_dicts: List[Dict[Symbol, float]], symbolic_coefficients: List[Symbol]):
