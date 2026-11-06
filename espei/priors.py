@@ -228,7 +228,7 @@ def build_prior_specs(prior_spec, parameters):
             prior_specs.append(spec)
         elif hasattr(spec, "logpdf"):
             # this is an instance of a prior we'll add it to the spec list and it should be handled later
-            prior_spec.append(spec)
+            prior_specs.append(spec)
         else:
             raise ValueError("Unknown prior spec {}. Should be either a PriorSpec instance or a dict".format(spec))
     return prior_specs
