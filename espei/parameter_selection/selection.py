@@ -39,7 +39,12 @@ def fit_model(feature_matrix, data_quantities, ridge_alpha, weights=None):
     if ridge_alpha is not None:
         clf = Ridge(fit_intercept=False, alpha=ridge_alpha)
     else:
-        clf = LinearRegression(fit_intercept=False)
+        # Features of different magnitudes (e.g. 1/T and T**3) make the
+        # feature matrix poorly conditioned. Use the conventional cutoff for
+        # small singular values, rather than scikit-learn's default tol (1e-6),
+        # which discards features that the data determine.
+        tol = max(np.shape(feature_matrix)) * np.finfo(float).eps
+        clf = LinearRegression(fit_intercept=False, tol=tol)
     clf.fit(feature_matrix, data_quantities, sample_weight=weights)
     return clf.coef_
 

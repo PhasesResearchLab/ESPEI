@@ -6,7 +6,7 @@ from tinydb.storages import MemoryStorage
 import numpy as np
 from pycalphad import Database, Model, variables as v
 import scipy
-from symengine import Symbol
+from symengine import S, Symbol, log
 
 from espei.logger import config_logger
 from espei.paramselect import generate_parameters
@@ -89,6 +89,41 @@ def test_formation_energies_are_fit(datasets_db):
     assert dbf.symbols['VV0000'] == -0.9  # heat capacity
     assert dbf.symbols['VV0001'] == 12.0278  # entropy
     assert dbf.symbols['VV0002'] == -15268.3  # enthalpy
+
+
+def test_heat_capacity_terms_of_different_magnitudes_are_fit(datasets_db):
+    """Heat capacity terms spanning many orders of magnitude are all recovered from exact formation data."""
+    # Formation Gibbs energy of Cu2Mg (G - 2*GHSERCU - GHSERMG for 298.15 K < T < 923 K) from
+    # the Cu-Mg assessment in pycalphad's cumg.tdb (M. Palumbo, T. Abe and K. Hashimoto, NIMS 2008).
+    # The heat capacity features (-1, -2*T, -2/T**2, -6*T**2) are poorly conditioned.
+    features = [S.One, v.T, v.T*log(v.T), v.T**2, v.T**(-1), v.T**3]
+    coefficients = [-30782.734, -39.917831, 5.1333452, 0.00430863, -40404.0, -4.524307e-06]
+    gm_form = sum(c*f for c, f in zip(coefficients, features)) / 3  # per mole of atoms
+    properties = {
+        "HM_FORM": gm_form - v.T*gm_form.diff(v.T),
+        "SM_FORM": -gm_form.diff(v.T),
+        "CPM_FORM": -v.T*gm_form.diff(v.T).diff(v.T),
+    }
+    temperatures = {"HM_FORM": [298.15], "SM_FORM": [298.15], "CPM_FORM": [298.15] + list(range(300, 901, 50))}
+    for output, prop in properties.items():
+        datasets_db.insert({
+            "components": ["CU", "MG"],
+            "phases": ["CU2MG"],
+            "solver": {"sublattice_site_ratios": [2, 1], "sublattice_configurations": [["CU", "MG"]], "mode": "manual"},
+            "conditions": {"P": 101325, "T": temperatures[output]},
+            "output": output,
+            "values": [[[float(prop.subs({v.T: T}))] for T in temperatures[output]]],
+        })
+    phase_models = {"components": ["CU", "MG"], "phases": {"CU2MG": {"sublattice_model": [["CU"], ["MG"]], "sublattice_site_ratios": [2, 1]}}}
+
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+
+    (param,) = dbf._parameters.search((where('parameter_type') == 'G') & (where('phase_name') == 'CU2MG'))
+    fitted_symbols = {Symbol(name): value for name, value in dbf.symbols.items() if name.startswith('VV')}
+    fitted_gm_form = S(param['parameter']).xreplace(fitted_symbols).xreplace({Symbol('GHSERCU'): 0, Symbol('GHSERMG'): 0})
+    fitted_coefficients = fitted_gm_form.as_coefficients_dict()
+    for feature, coefficient in zip(features, coefficients):
+        assert float(fitted_coefficients[feature]) == pytest.approx(coefficient, rel=1e-5), feature
 
 
 def test_mixing_energies_are_fit(datasets_db):
