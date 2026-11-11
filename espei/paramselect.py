@@ -404,11 +404,9 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
         symmetric_endmembers = generate_symmetric_group(endmember, symmetry)
         all_endmembers.extend(symmetric_endmembers)
         _log.trace('ENDMEMBER: %s', endmember)
-        if has_gibbs_fitting_step:
-            # Special case to add pure element lattice stabilities IFF we fit G parameters
-            if _param_present_in_database(dbf, phase_name, endmember, "G"):
-                _log.trace('Parameter G already in the database for configuration %s. Skipping.', endmember)
-                continue
+        # Special case to add pure element lattice stabilities IFF we fit G parameters.
+        # Endmembers with a Gibbs energy in the database keep it, and their other parameters are still fit.
+        if has_gibbs_fitting_step and not _param_present_in_database(dbf, phase_name, endmember, "G"):
             # Some endmembers are fixed by our choice of standard lattice stabilities, e.g., SGTE91
             # If a (phase, pure component endmember) tuple is fixed, we should use that value instead of fitting
             endmember_comps = list(set(endmember))
