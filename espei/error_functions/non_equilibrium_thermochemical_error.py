@@ -13,8 +13,8 @@ import numpy.typing as npt
 from symengine import Symbol
 from tinydb import where
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
-from pycalphad import Database, Model, ReferenceState, variables as v
-from pycalphad.core.utils import unpack_species, get_pure_elements, filter_phases
+from pycalphad import Database, Model, variables as v
+from pycalphad.core.utils import unpack_species, filter_phases
 from pycalphad import Workspace
 from pycalphad.property_framework import IsolatedPhase
 from pycalphad.property_framework.metaproperties import find_first_compset
@@ -25,6 +25,7 @@ from espei.datasets import Dataset
 from espei.core_utils import ravel_conditions, get_prop_data, filter_temperatures
 from espei.parameter_selection.redlich_kister import calc_interaction_product
 from espei.phase_models import PhaseModelSpecification
+from espei.reference_states import _set_referenced_property
 from espei.sublattice_tools import canonicalize, recursive_tuplify, tuplify
 from espei.typing import SymbolName
 from espei.utils import database_symbols_to_fit, PickleableTinyDB
@@ -299,10 +300,6 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
     property_std_deviation = {prop: std/weight_dict.get(prop, 1.0) for prop, std in PROPERTY_STD_DEVIATION.items()}
     properties = ['GM', 'HM', 'SM', 'CPM', 'GM_FORM', 'HM_FORM', 'SM_FORM', 'CPM_FORM', 'GM_MIX', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
 
-    ref_states = []
-    for el in get_pure_elements(dbf, comps):
-        ref_state = ReferenceState(el, dbf.refstates[el]['phase'])
-        ref_states.append(ref_state)
     all_data_dicts = []
     for phase_name in phases:
         if phase_name not in dbf.phases:
@@ -324,29 +321,21 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                     # species, calculate_dict, phase_record_factory, model, output, weights
                 }
                 # get all the data with these model exclusions
+                exc_search = where('excluded_model_contributions').test(lambda x: tuple(sorted(set(x))) == exclusion)
                 if exclusion == tuple([]):
-                    exc_search = (~where('excluded_model_contributions').exists()) & (where('solver').exists())
-                else:
-                    exc_search = (where('excluded_model_contributions').test(lambda x: tuple(sorted(set(x))) == exclusion)) & (where('solver').exists())
+                    # datasets without excluded_model_contributions also exclude nothing
+                    exc_search = exc_search | ~where('excluded_model_contributions').exists()
+                exc_search = exc_search & where('solver').exists()
                 curr_data = get_prop_data(comps, phase_name, prop, datasets, additional_query=exc_search)
                 curr_data = filter_sublattice_configurations(curr_data, constituents)
                 curr_data = filter_temperatures(curr_data)
                 calculate_dict = get_prop_samples(curr_data, constituents)
                 model_cls = model.get(phase_name, Model)
                 mod = model_cls(dbf, comps, phase_name, parameters=symbols_to_fit)
-                if prop.endswith('_FORM'):
-                    output = ''.join(prop.split('_')[:-1])+"R"
-                    mod.shift_reference_state(ref_states, dbf, contrib_mods={e: symengine.S.Zero for e in exclusion})
-                else:
-                    output = prop
+                # Excluded contributions are removed from both the phase and its reference state
                 for contrib in exclusion:
                     mod.models[contrib] = symengine.S.Zero
-                    try:
-                        # TODO: we can remove this try/except block when pycalphad 0.8.5
-                        # is released with these internal API changes
-                        mod.endmember_reference_model.models[contrib] = symengine.S.Zero
-                    except AttributeError:
-                        mod.reference_model.models[contrib] = symengine.S.Zero
+                output = _set_referenced_property(mod, prop, exclusion, dbf=dbf, model_classes=model, parameters=symbols_to_fit)
                 model_dict = {phase_name: mod}
                 species = sorted(unpack_species(dbf, comps), key=str)
                 data_dict['species'] = species

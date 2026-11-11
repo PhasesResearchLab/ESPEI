@@ -1,0 +1,109 @@
+---
+title: "Reference States"
+---
+
+Fixed configuration thermochemical data (e.g. `HM_FORM`, `SM_MIX` or
+`CPM`) compare a phase at known site fractions to a reference state.
+Two independent choices in a dataset define what its values mean:
+
+1.  The **reference state**, the suffix of `output`, chooses *which
+    configurations* are subtracted from the phase.
+2.  The **`excluded_model_contributions`** choose *which physics* is
+    included, in both the phase and its reference state.
+
+The suffix never changes which physics is included, and the excluded
+contributions never change which configurations are subtracted.
+Parameter generation and MCMC use the same definitions.
+
+## Which configurations are subtracted
+
+| `output` | Reference state |
+|----------|-----------------|
+| `HM` | None. The data are absolute. |
+| `HM_FORM` | The pure elements in their stable element reference (SER) phases, weighted by the amount of each element in the phase. |
+| `HM_MIX` | The endmembers of the phase, weighted by the product of their site fractions. |
+
+The same applies to `GM`, `SM` and `CPM`. Absolute `GM` and `HM` use the
+SER convention: the enthalpy of the pure elements in their SER phases is
+zero at 298.15 K.
+
+For a phase with site fractions $y$, $N(y)$ moles of atoms per formula
+unit, and Gibbs energy $G(y)$ per formula unit, a property $P$ (e.g. the
+enthalpy, for `HM_FORM` and `HM_MIX`) per mole of atoms is
+
+$$
+P^\mathrm{FORM} = \frac{1}{N(y)} P\left[G(y) - \sum_i n_i(y)\, G_i^\mathrm{SER}\right],
+\qquad
+P^\mathrm{MIX} = \frac{1}{N(y)} P\left[G(y) - \sum_e \Big(\prod_s y_{s,e_s}\Big)\, G(e)\right]
+$$
+
+where $n_i(y)$ is the number of moles of element $i$ per formula unit,
+$G_i^\mathrm{SER}$ is the Gibbs energy of a mole of pure $i$ in its SER
+phase, and the sum over $e$ runs over the endmembers of the phase, with
+$e_s$ the constituent of endmember $e$ in sublattice $s$.
+
+For a single sublattice of pure elements, `_MIX` is the usual mixing
+quantity: the reference is the pure elements in the same phase. ESPEI
+generalizes this to species and to several sublattices:
+
+-   For one sublattice `(A, A2B3, B)` with site fractions
+    `[0.25, 0.5, 0.25]`, the reference is 0.25 of `A`, 0.5 of `A2B3` and
+    0.25 of `B`.
+-   For `(A,B)1(A)1` with site fractions `[[0.25, 0.75], [1.0]]`, the
+    reference is 0.25 of `A:A` and 0.75 of `B:A`.
+
+Each endmember in the reference has its own physics. For example, its
+magnetic energy uses its own Curie temperature and magnetic moment, not
+values interpolated to the composition of the mixture. At an endmember,
+`_MIX` quantities are zero by definition, so `_MIX` data only inform
+interaction parameters.
+
+## Which physics is included
+
+Unless a contribution is excluded, every contribution of pycalphad's
+`Model` in the current database is included in both the phase and its
+reference state: `ref`, `idmix`, `xsmix`, `mag`, `2st`, `ein`, `vol` and
+`ord`. Excluding a contribution removes it from both. Use exclusions
+when the data do not contain that physics, for example:
+
+-   Calorimetric formation enthalpies of a compound in Al-Fe include the
+    magnetic enthalpy of the pure Fe reference, so they should not
+    exclude anything. The `_FORM` reference includes the magnetic
+    contribution of pure Fe in its SER phase, `BCC_A2`.
+-   DFT energies do not include Calphad magnetic models, and SQS
+    energies of mixtures do not include ideal mixing. Datasets from
+    these calculations should exclude `["idmix", "mag"]`. For a
+    magnetic phase, the magnetic part of the comparison is then zero,
+    whether the magnetism comes from endmember or interaction
+    parameters.
+
+[Tags](dataset_schema.qmd#tags) can add `excluded_model_contributions`
+to many datasets at once.
+
+## During parameter generation
+
+Reference states are computed from the database as it is when each
+parameter is fit:
+
+-   The lattice stabilities of the pure elements in every phase are added
+    when the database is initialized, before any phase is fit. This means
+    `_FORM` references do not depend on the order that phases are fit in.
+-   Endmembers are fit before interactions, so the `_MIX` reference of
+    interaction data uses the fitted endmembers.
+-   Physical parameters (e.g. `TC`, `BMAGN` or `THETA`) come from the
+    input database. Contributions that are fit later, for example by
+    custom fitting steps, are only in the references after they are fit.
+
+In MCMC, the references are computed from the current parameters at
+every step.
+
+Endmember Gibbs energy parameters are written relative to the `GHSER`
+functions, e.g. `G(AL2FE,AL:FE) = 2 GHSERAL + GHSERFE + a + b T`. When an
+SER phase has physical contributions, such as magnetic bcc Fe, the
+fitted coefficients include the difference between the full SER phase
+and its `GHSER` function.
+
+If the SER phase of an element is not in the database, the `_FORM`
+reference uses the element's `GHSER` function instead, with a warning.
+This function has no physical contributions, such as magnetism, so
+include the SER phases in the phase models when they have them.

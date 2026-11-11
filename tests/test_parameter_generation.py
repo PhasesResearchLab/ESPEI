@@ -878,7 +878,11 @@ def test_molar_volume_model_fits(datasets_db):
     V0_tern_truth = 0.99e-5  # from data
     assert np.isclose(V0_tern, V0_tern_truth, atol=1e-14)
 
-    VM_tern_em_mix = float(mod.VM.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf()) - float(mod.endmember_reference_model.VM.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf())
+    # VM_MIX is relative to the mechanical mixture of the pure endmembers' VM
+    VM_tern_em_mix = float(mod.VM.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf())
+    for el in ["MO", "TA", "W"]:
+        pure_el = {v.Y("BCC_A2", 0, sp): float(sp == el) for sp in ["MO", "TA", "W"]}
+        VM_tern_em_mix -= 0.333333 * float(mod.VM.subs({v.T: 298.15, **pure_el, **mod._symbols}).evalf())
     VM_tern_em_mix_truth = 1.0e-6  # from data
     assert np.isclose(VM_tern_em_mix, VM_tern_em_mix_truth, atol=1e-14)
 

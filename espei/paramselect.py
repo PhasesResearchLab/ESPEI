@@ -26,32 +26,19 @@ from collections import OrderedDict
 import numpy as np
 import symengine
 from symengine import Symbol
-from tinydb import where
 import tinydb
 from pycalphad import Database, variables as v
 
 import espei.refdata
-from espei.database_utils import initialize_database
+from espei.database_utils import initialize_database, _param_present_in_database
 from espei.parameter_selection.model_building import build_redlich_kister_candidate_models
 from espei.parameter_selection.selection import select_model
 from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
     tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
-from espei.utils import PickleableTinyDB, sigfigs, extract_aliases
+from espei.utils import PickleableTinyDB, sigfigs
 from espei.parameter_selection.fitting_descriptions import gibbs_energy_fitting_description
 
 _log = logging.getLogger(__name__)
-
-
-def _param_present_in_database(dbf, phase_name, configuration, param_type):
-    species = {sp.name: sp for sp in dbf.species}
-    const_arr = tuple([tuple(species[name] for name in subl) for subl in map(tuplify, configuration)])
-    # parameter order doesn't matter here, since the generated might not exactly match. Always override.
-    query = (where('phase_name') == phase_name) & \
-            (where('parameter_type') == param_type) & \
-            (where('constituent_array') == const_arr)
-    search_result = dbf._parameters.search(query)
-    if len(search_result) > 0:
-        return True
 
 
 def _stable_sort_key(x):
@@ -340,7 +327,7 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
             fixed_portions = [0]
 
 
-def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_penalty=None, aliases=None, fitting_description=gibbs_energy_fitting_description):
+def phase_fit(dbf, phase_name, symmetry, datasets, ridge_alpha, aicc_penalty=None, fitting_description=gibbs_energy_fitting_description):
     """Generate an initial CALPHAD model for a given phase and sublattice model.
 
     Parameters
@@ -353,16 +340,11 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
         Sublattice model symmetry.
     datasets : PickleableTinyDB
         All datasets to consider for the calculation.
-    refdata : dict
-        Maps tuple(element, phase_name) -> SymEngine object defining
-        energy relative to SER
     ridge_alpha : float
         Value of the :math:`\\alpha` hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
         with ordinary least squares regression. For now, the parameter is applied to all features.
     aicc_penalty : dict
         Map of phase name to feature to a multiplication factor for the AICc's parameter penalty.
-    aliases : Dict[str, str]
-        Mapping of possible aliases to the Database phase names.
     fitting_description : Type[ModelFittingDescription]
         ModelFittingDescription object describing the fitting steps and model
 
@@ -378,58 +360,20 @@ def phase_fit(dbf, phase_name, symmetry, datasets, refdata, ridge_alpha, aicc_pe
         dbf.varcounter = 0
     phase_obj = dbf.phases[phase_name]
     subl_model = [sorted([sp.name for sp in subl]) for subl in phase_obj.constituents]
-    site_ratios = phase_obj.sublattices
     # First fit endmembers
     all_em_count = len(generate_endmembers(subl_model))  # number of total endmembers
     endmembers = generate_endmembers(subl_model, symmetry)
-    # TODO: use the global aliases dictionary passed in as-is instead of converting it to a phase-local dict
     # TODO: use the aliases dictionary in dataset queries to find relevant data
-    if aliases is None:
-        aliases = [phase_name]
-    else:
-        aliases = sorted([alias for alias, database_phase in aliases.items() if database_phase == phase_name])
     _log.info('FITTING: %s', phase_name)
     _log.trace('%s endmembers (%s distinct by symmetry)', all_em_count, len(endmembers))
-
-    parameter_types_to_fit = sorted(set([step.parameter_name for step in fitting_description.fitting_steps]))
-    # Special case Gibbs energy fitting as we need to do things like add lattice stabilities
-    if "G" in parameter_types_to_fit:
-        parameter_types_to_fit.append("L")  # G and L are both valid for interactions
-        has_gibbs_fitting_step = True
-    else:
-        has_gibbs_fitting_step = False
 
     all_endmembers = []
     for endmember in endmembers:
         symmetric_endmembers = generate_symmetric_group(endmember, symmetry)
         all_endmembers.extend(symmetric_endmembers)
         _log.trace('ENDMEMBER: %s', endmember)
-        # Special case to add pure element lattice stabilities IFF we fit G parameters.
-        # Endmembers with a Gibbs energy in the database keep it, and their other parameters are still fit.
-        if has_gibbs_fitting_step and not _param_present_in_database(dbf, phase_name, endmember, "G"):
-            # Some endmembers are fixed by our choice of standard lattice stabilities, e.g., SGTE91
-            # If a (phase, pure component endmember) tuple is fixed, we should use that value instead of fitting
-            endmember_comps = list(set(endmember))
-            # only one non-VA component, or two components but the other is VA and its only the last sublattice
-            if ((len(endmember_comps) == 1) and (endmember_comps[0] != 'VA')) or\
-                    ((len(endmember_comps) == 2) and (endmember[-1] == 'VA') and (len(set(endmember[:-1])) == 1)):
-                # this is a "pure component endmember"
-                # try all phase name aliases until we get run out or get a hit
-                em_comp = list(set(endmember_comps) - {'VA'})[0]
-                sym_name = None
-                for name in aliases:
-                    sym_name = 'G'+name[:3].upper()+em_comp.upper()
-                    stability = refdata.get((em_comp.upper(), name.upper()), None)
-                    if stability is not None:
-                        dbf.symbols[sym_name] = stability
-                        break
-                if dbf.symbols.get(sym_name, None) is not None:
-                    num_moles = sum([sites for elem, sites in zip(endmember, site_ratios) if elem != 'VA'])
-                    _log.trace("Found lattice stability: %s", sym_name)
-                    _log.debug("%s = %s", sym_name, dbf.symbols[sym_name])
-                    for em in symmetric_endmembers:
-                        dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, num_moles * Symbol(sym_name))
-        # fit_parameters knows how to skip endmember Gibbs energies if we added a lattice stability parameter
+        # fit_parameters knows how to skip parameters that are already in the
+        # database, e.g. endmember Gibbs energies fixed by lattice stabilities
         fit_parameters(dbf, sorted(dbf.elements), phase_name, endmember, symmetry, datasets, ridge_alpha, aicc_phase_penalty=aicc_phase_penalty, fitting_description=fitting_description)
 
     for interaction_order, order_name in ((2, "BINARY"), (3, "TERNARY")):
@@ -477,9 +421,9 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
     np.set_printoptions(linewidth=sys.maxsize)
     _log.info('Generating parameters.')
     _log.trace('Found the following user reference states: %s', espei.refdata.INSERTED_USER_REFERENCE_STATES)
-    refdata = getattr(espei.refdata, ref_state)
-    aliases = extract_aliases(phase_models)
-    dbf = initialize_database(phase_models, ref_state, dbf)
+    # Lattice stabilities are the endmember Gibbs energies of the pure elements, which are only needed to fit Gibbs energies
+    fits_gibbs_energy = any(step.parameter_name == "G" for step in fitting_description.fitting_steps)
+    dbf = initialize_database(phase_models, ref_state, dbf, lattice_stabilities=fits_gibbs_energy)
     # Fit phases in alphabetic order so the VV#### counter is constistent between runs
     for phase_name, phase_data in sorted(phase_models['phases'].items(), key=operator.itemgetter(0)):
         if phase_name in dbf.phases:
@@ -492,7 +436,7 @@ def generate_parameters(phase_models, datasets, ref_state, excess_model, ridge_a
                 & dataset.solver.exists()
             )
             phase_filtered_datasets.insert_multiple(datasets.search(single_phase_thermochemical_query))
-            phase_fit(dbf, phase_name, symmetry, phase_filtered_datasets, refdata, ridge_alpha, aicc_penalty=aicc_penalty_factor, aliases=aliases, fitting_description=fitting_description)
+            phase_fit(dbf, phase_name, symmetry, phase_filtered_datasets, ridge_alpha, aicc_penalty=aicc_penalty_factor, fitting_description=fitting_description)
     _log.info('Finished generating parameters.')
     np.set_printoptions(linewidth=75)
     return dbf

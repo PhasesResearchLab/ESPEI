@@ -35,8 +35,7 @@ heat capacity for BCC_B2.
     > and if there were mixing (as in the next example) it might be
     > `["AL", ["AL", "NI"], "VA"]`. Mixing also means that the
     > `sublattice_occupancies` key must be specified, but that is not
-    > the case in this example. It is important to note that any mixing
-    > configurations must have any ideal mixing contributions removed.
+    > the case in this example.
     > Regardless of whether there is mixing or not, the length of this
     > list should always equal the number of sublattices in the phase,
     > though the sub-lists can have mixing up to the number of
@@ -54,7 +53,7 @@ heat capacity for BCC_B2.
 -   The type of quantity is expressed using the `output` key. This can
     in principle be any thermodynamic quantity, but currently only
     `GM*`, `CPM*`, `SM*`, and `HM*` are supported, where `*` is the
-    reference state:
+    reference state (see [Reference States](reference_states.qmd)):
 
     -   `_FORM`: formation quantities, relative to the pure elements in
         their stable element reference (SER) phases, e.g. `HM_FORM`.
@@ -74,15 +73,14 @@ heat capacity for BCC_B2.
     there is one pressure scalar, one sublattice configuration, and 12
     temperatures.
 
--   There is also a key, `excluded_model_contributions`, which will make
-    those contributions of pycalphad\'s `Model` not be fit to when doing
-    parameter selection or MCMC. This is useful for cases where the type
-    of data used does not include some specific `Model` contributions
-    that parameters may already exist for. For example, DFT formation
+-   The optional `excluded_model_contributions` key lists contributions
+    of pycalphad\'s `Model` (e.g. `"idmix"` or `"mag"`) that the data do
+    not include. They are removed from both the phase and its reference
+    state in parameter selection and MCMC. For example, DFT formation
     energies do not include ideal mixing or (Calphad-type) magnetic
-    model contributions, but formation energies from experiments would
-    include these contributions so experimental formation energies
-    should not be excluded.
+    model contributions, but formation energies from experiments do, so
+    experimental data should not exclude them. See
+    [Reference States](reference_states.qmd).
 
 ``` JSON
 {
@@ -392,7 +390,9 @@ that have the `"dft"` tag:
     (`[["A", "B"], "A"]`).
 2.  Make sure you use the right units (`J/mole-atom`, mole fractions,
     Kelvin, Pascal)
-3.  Mixing configurations should not have ideal mixing contributions.
+3.  Data that do not include some physics, e.g. DFT energies of mixing
+    configurations without ideal mixing, should list it in
+    `excluded_model_contributions`.
 4.  All types of data can have a `weight` key at the top level that will
     weight the standard deviation parameter in parameter selection and
     MCMC runs for that dataset. If a single dataset should have different weights applied,

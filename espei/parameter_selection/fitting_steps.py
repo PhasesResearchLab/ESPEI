@@ -9,7 +9,8 @@ from pycalphad import Model, variables as v
 from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter
 from espei.error_functions.non_equilibrium_thermochemical_error import PROPERTY_STD_DEVIATION, get_prop_samples, get_sample_condition_dicts
 from espei.parameter_selection.model_building import make_successive, build_feature_matrix
-from espei.sublattice_tools import recursive_tuplify, tuplify
+from espei.reference_states import _split_property_reference, _reference_property
+from espei.sublattice_tools import interaction_test, recursive_tuplify, tuplify
 from espei.utils import build_sitefractions
 
 _log = logging.getLogger(__name__)
@@ -38,6 +39,16 @@ def _data_site_fractions(phase_name: str, data: [Dataset]) -> List[Dict[v.SiteFr
         for _ in ds['conditions']['T']:
             site_fractions.extend(build_sitefractions(phase_name, configurations, occupancies))
     return site_fractions
+
+
+def _fixed_model_reference_property(fixed_model: Model, prop: str, reference: str, excluded_contributions=()) -> symengine.Expr:
+    """Property of the reference state of a fixed model, per mole of atoms."""
+    if reference != "_FORM":
+        return _reference_property(fixed_model, prop, reference, excluded_contributions)
+    # _FORM references are other phases in the Database (the SER phases).
+    # Fitting steps are only given the Model, so the Database comes from it.
+    dbf = fixed_model._dbe
+    return _reference_property(fixed_model, prop, reference, excluded_contributions, dbf=dbf, model_classes=dict.fromkeys(dbf.phases, type(fixed_model)))
 
 
 class FittingStep():
@@ -114,7 +125,12 @@ class FittingStep():
 
         """
         solver_qry = (where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
-        desired_props = [step.data_types_read + refstate for step in (cls.data_steps or (cls,)) for refstate in step.supported_reference_states]
+        # The _MIX reference state of an endmember is the endmember itself,
+        # so _MIX data carry no information about endmember parameters.
+        is_interaction = interaction_test(configuration)
+        desired_props = [step.data_types_read + refstate for step in (cls.data_steps or (cls,)) for refstate in step.supported_reference_states if is_interaction or refstate != "_MIX"]
+        if len(desired_props) == 0:
+            return []
         desired_data = get_prop_data(comps, phase_name, desired_props, datasets, additional_query=solver_qry)
         desired_data = filter_configurations(desired_data, configuration, symmetry)
         desired_data = filter_temperatures(desired_data)
@@ -209,18 +225,8 @@ class AbstractLinearPropertyStep(FittingStep):
         total_response = []
         for dataset in desired_data:
             values = np.asarray(dataset['values'], dtype=np.object_)
-            for config_idx in range(len(dataset['solver']['sublattice_configurations'])):
-                occupancy = dataset['solver'].get('sublattice_occupancies', None)
-                if dataset['output'].endswith('_FORM'):
-                    raise NotImplementedError(f"The formation reference state for data type {dataset['output']} is not yet supported for {cls.parameter_name} parameters.")
-                elif dataset['output'].endswith('_MIX'):
-                    # we treat this using the special "endmember" reference
-                    # state (i.e. where the property of interest is zero for all
-                    # the endmembers). To shift our VM_MIX data into VM, we need
-                    # to add the VM computed from the endmember reference model.
-                    values[..., config_idx] += getattr(fixed_model.endmember_reference_model, cls.data_types_read)
-                else:
-                    pass
+            _, reference = _split_property_reference(dataset['output'])
+            values = values + _fixed_model_reference_property(fixed_model, cls.data_types_read, reference)
             total_response.append(values.flatten())
         return total_response
 
@@ -272,36 +278,6 @@ class StepGM(FittingStep):
         return expr
 
     @classmethod
-    def get_formation_reference(cls, fixed_model: Model) -> symengine.Expr:
-        """
-        Return the Gibbs energy of the pure element reference state of
-        ``_FORM`` data in J/mole-formula as a function of site fractions.
-
-        The reference state is the stable element reference (SER) defined by
-        the GHSER functions (e.g. ``GHSERAL``) in the Database. Subclasses can
-        override this to use a different definition of the reference state.
-
-        Parameters
-        ----------
-        fixed_model : pycalphad.Model
-            Model of the phase being fit.
-
-        Returns
-        -------
-        symengine.Expr
-
-        """
-        reference = symengine.S.Zero
-        for subl_idx, (site_ratio, constituents) in enumerate(zip(fixed_model.site_ratios, fixed_model.constituents)):
-            for species in constituents:
-                for element, amount in species.constituents.items():
-                    if element == "VA":
-                        continue
-                    ghser = symengine.Symbol("GHSER" + (element.upper()*2)[:2])
-                    reference += site_ratio * amount * v.Y(fixed_model.phase_name, subl_idx, species) * ghser
-        return fixed_model.symbol_replace(reference, fixed_model._symbols)
-
-    @classmethod
     def shift_reference_state(cls, desired_data: [Dataset], fixed_model: Model, mole_atoms_per_mole_formula_unit: symengine.Expr) -> ArrayLike:  # np.object_
         """
         Shift absolute, _MIX or _FORM data to absolute values in per mole-formula units.
@@ -332,30 +308,19 @@ class StepGM(FittingStep):
         [qty]/mole-formula.
 
         """
+        shifts = {}  # (reference, exclusions) -> shift, shared by datasets
         total_response = []
-        formation_reference = None  # delay instantiation until needed
         for dataset in desired_data:
-            values = np.asarray(dataset['values'], dtype=np.object_)*mole_atoms_per_mole_formula_unit
-            unique_excluded_contributions = set(dataset.get('excluded_model_contributions', []))
-            for config_idx in range(len(dataset['solver']['sublattice_configurations'])):
-                occupancy = dataset['solver'].get('sublattice_occupancies', None)
-                if dataset['output'] == cls.data_types_read:
-                    # absolute data need no shift
-                    pass
-                elif dataset['output'].endswith('_FORM'):
-                    # add the pure element reference (already per mole-formula)
-                    if formation_reference is None:
-                        formation_reference = cls.transform_feature(cls.get_formation_reference(fixed_model))
-                    values[..., config_idx] += formation_reference
-                elif dataset['output'].endswith('_MIX'):
-                    if occupancy is None:
-                        raise ValueError('Cannot have a _MIX property without sublattice occupancies.')
-                    else:
-                        values[..., config_idx] += cls.transform_feature(fixed_model.models['ref'])
-                else:
-                    raise ValueError(f'Unknown property to shift: {dataset["output"]}')
-                for excluded_contrib in unique_excluded_contributions:
-                    values[..., config_idx] += cls.transform_feature(fixed_model.models[excluded_contrib])
+            data_type, reference = _split_property_reference(dataset['output'])
+            if data_type != cls.data_types_read:
+                raise ValueError(f'Unknown property to shift: {dataset["output"]}')
+            exclusions = tuple(sorted(set(dataset.get('excluded_model_contributions', []))))
+            if (reference, exclusions) not in shifts:
+                # Excluded contributions are removed from the phase and its reference in the data, but the fixed model has them
+                reference_property = _fixed_model_reference_property(fixed_model, data_type, reference, exclusions)
+                excluded_energy = symengine.Add(*[fixed_model.models[contrib] for contrib in exclusions])
+                shifts[(reference, exclusions)] = reference_property*mole_atoms_per_mole_formula_unit + cls.transform_feature(excluded_energy)
+            values = np.asarray(dataset['values'], dtype=np.object_)*mole_atoms_per_mole_formula_unit + shifts[(reference, exclusions)]
             total_response.append(values.flatten())
         return total_response
 

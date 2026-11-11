@@ -17,6 +17,7 @@ from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_conditi
 from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples, get_sample_condition_dicts
 from espei.utils import bib_marker_map
 from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter, ravel_zpf_values
+from espei.reference_states import _split_property_reference, _reference_property, _set_referenced_property
 from espei.sublattice_tools import canonicalize, recursive_tuplify, endmembers_from_interaction
 from espei.utils import build_sitefractions
 
@@ -291,10 +292,11 @@ def _get_interaction_predicted_values(dbf, comps, phase_name, configuration, out
     second_endpoint = _translate_endmember_to_array(endpoints[1], mod.ast.atoms(v.SiteFraction))
     grid = np.linspace(0, 1, num=100)
     point_matrix = grid[None].T * second_endpoint + (1 - grid)[None].T * first_endpoint
+    prop = _set_referenced_property(mod, output, dbf=dbf)
     # TODO: Real temperature support
     predicted_values = calculate(
-        dbf, comps, [phase_name], output=output,
-        T=298.15, P=101325, points=point_matrix, model=mod)[output].values.flatten()
+        dbf, comps, [phase_name], output=prop,
+        T=298.15, P=101325, points=point_matrix, model=mod)[prop].values.flatten()
     return grid, predicted_values
 
 
@@ -347,10 +349,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     ax.plot(grid, predicted_values, **plot_kwargs)
 
     # Plot the observed values from the datasets
-    # TODO: model exclusions handling
-    # TODO: better reference state handling
-    mod_srf = Model(dbf, comps, phase_name, parameters={'GHSER'+c.upper(): 0 for c in comps})
-    mod_srf.models = {'ref': mod_srf.models['ref']}
+    ref_mod = Model(dbf, comps, phase_name)
 
     # _MIX assumption
     prop = output.split('_MIX')[0]
@@ -398,24 +397,30 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
             interactions = np.array([cond_dict[Symbol('YS')] for cond_dict in sample_condition_dicts])
             indep_var_data = 1 - (interactions+1)/2
         if data['output'].endswith('_FORM'):
-            # All the _FORM data we have still has the lattice stability contribution
-            # Need to zero it out to shift formation data to mixing
+            # Shift formation data to mixing data:
+            # P_MIX = P_FORM - (P of the _MIX reference - P of the _FORM reference)
+            data_type, _ = _split_property_reference(data['output'])
+            excluded_contributions = data.get('excluded_model_contributions', [])
             temps = data['conditions'].get('T', 298.15)
             pressures = data['conditions'].get('P', 101325)
             points = build_sitefractions(phase_name, data['solver']['sublattice_configurations'],
                                             data['solver']['sublattice_occupancies'])
+            reference_shift = (_reference_property(ref_mod, data_type, '_MIX', excluded_contributions) -
+                               _reference_property(ref_mod, data_type, '_FORM', excluded_contributions, dbf=dbf))
+            shift_name = data_type + '_MIX_MINUS_FORM'
+            setattr(ref_mod, shift_name, reference_shift)
             for point_idx in range(len(points)):
-                missing_variables = mod_srf.ast.atoms(v.SiteFraction) - set(points[point_idx].keys())
+                missing_variables = ref_mod.ast.atoms(v.SiteFraction) - set(points[point_idx].keys())
                 # Set unoccupied values to zero
                 points[point_idx].update({key: 0 for key in missing_variables})
                 # Change entry to a sorted array of site fractions
                 points[point_idx] = list(OrderedDict(sorted(points[point_idx].items(), key=str)).values())
             points = np.array(points, dtype=np.float64)
             # TODO: Real temperature support
-            stability = calculate(dbf, comps, [phase_name], output=data['output'][:-5],
+            stability = calculate(dbf, comps, [phase_name], output=shift_name,
                                     T=temps, P=pressures, points=points,
-                                    model=mod_srf)
-            response_data -= stability[data['output'][:-5]].values.squeeze()
+                                    model=ref_mod)
+            response_data -= stability[shift_name].values.squeeze()
 
         response_data += np.array(data['values'], dtype=np.float64)
         response_data = response_data.flatten()
@@ -492,13 +497,8 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
     endpoints = endmembers_from_interaction(configuration)
     if len(endpoints) != 1:
         raise ValueError(f"The configuration passed to `plot_endmember` must be an endmebmer configuration. Got {configuration}")
-    if output.endswith('_FORM'):
-        # TODO: better reference state handling
-        mod = Model(dbf, comps, phase_name, parameters={'GHSER'+(c.upper()*2)[:2]: 0 for c in comps})
-        prop = output[:-5]
-    else:
-        mod = Model(dbf, comps, phase_name)
-        prop = output
+    mod = Model(dbf, comps, phase_name)
+    prop = _set_referenced_property(mod, output, dbf=dbf)
     endmember = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))
     # Set up the domain of the calculation
     species = unpack_species(dbf, comps)
