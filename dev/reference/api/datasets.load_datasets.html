@@ -311,7 +311,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <img src="../../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../../">ESPEI v0.9.2.dev15+g2a5fa1ff2</a> 
+      <a href="../../">ESPEI v0.9.2.dev16+gfaeb2b19f</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -745,16 +745,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="espei.datasets.load_datasets" class="level1">
 <h1>datasets.load_datasets</h1>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>datasets.load_datasets(dataset_filenames, include_disabled<span class="op">=</span><span class="va">False</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>datasets.load_datasets(dataset_filenames, include_disabled<span class="op">=</span><span class="va">False</span>, species<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Create a PickelableTinyDB with the data from a list of filenames.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 24%">
-<col style="width: 11%">
-<col style="width: 49%">
 <col style="width: 15%">
+<col style="width: 27%">
+<col style="width: 47%">
+<col style="width: 9%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -770,6 +770,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>[str]</td>
 <td>List of filenames to load as datasets</td>
 <td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>species</td>
+<td>Optional[Iterable[v.Species]]</td>
+<td>Species used to check the datasets, see <code>check_dataset</code>.</td>
+<td><code>None</code></td>
 </tr>
 </tbody>
 </table>

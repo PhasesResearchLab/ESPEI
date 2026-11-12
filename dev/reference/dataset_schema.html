@@ -330,7 +330,7 @@ div.csl-indent {
       <img src="../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../">ESPEI v0.9.2.dev15+g2a5fa1ff2</a> 
+      <a href="../">ESPEI v0.9.2.dev16+gfaeb2b19f</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -747,7 +747,7 @@ div.csl-indent {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#non_equilibrium_thermochemical_data" id="toc-non_equilibrium_thermochemical_data" class="nav-link active" data-scroll-target="#non_equilibrium_thermochemical_data">Non-equilibrium Thermochemical Data</a></li>
+  <li><a href="#non_equilibrium_thermochemical_data" id="toc-non_equilibrium_thermochemical_data" class="nav-link active" data-scroll-target="#non_equilibrium_thermochemical_data">Fixed Configuration Thermochemical Data</a></li>
   <li><a href="#equilibrium-thermochemical-data" id="toc-equilibrium-thermochemical-data" class="nav-link" data-scroll-target="#equilibrium-thermochemical-data">Equilibrium Thermochemical Data</a></li>
   <li><a href="#phase_boundary_data" id="toc-phase_boundary_data" class="nav-link" data-scroll-target="#phase_boundary_data">Phase Diagram Data</a>
   <ul class="collapse">
@@ -807,16 +807,16 @@ div.csl-indent {
 </div>
 </div>
 <section id="non_equilibrium_thermochemical_data" class="level2">
-<h2 class="anchored" data-anchor-id="non_equilibrium_thermochemical_data">Non-equilibrium Thermochemical Data</h2>
-<p>Non-equilibrium thermochemical data is used where the internal degrees of freedom for a phase are known. This type of data is the only data that can be used for parameter generation, but it can also be used in Bayesian parameter estimation.</p>
+<h2 class="anchored" data-anchor-id="non_equilibrium_thermochemical_data">Fixed Configuration Thermochemical Data</h2>
+<p>Fixed configuration (or “non-equilibrium”) thermochemical data is used where the site fractions for a phase are known. This type of data is the only data that can be used for parameter generation, but it can also be used in Bayesian parameter estimation.</p>
 <p>Two examples follow. The first dataset has some data for the formation heat capacity for BCC_B2.</p>
 <ul>
 <li><p>The <code>components</code> and <code>phases</code> keys simply describe those found in this entry.</p></li>
 <li><p>Use the <code>reference</code> key for bookkeeping the source of the data.</p></li>
 <li><p>The <code>comment</code> key and value can be used anywhere in the data to keep notes for your reference. It takes no effect.</p></li>
-<li><p>The <code>solver</code> the internal degrees of freedom and and site ratios are described for the phase.</p>
+<li><p>In <code>solver</code> the site fractions and and site ratios are described for the phase.</p>
 <blockquote class="blockquote">
-<p><code>sublattice_configurations</code> is a list of different configurations, that should correspond to the sublattices for the phase descriptions. Non-mixing sublattices are represented as a string, while mixing sublattices are represented as a lists. Thus an endmember for <code>BCC_B2</code> (as in this example) is <code>["AL", "NI", VA"]</code> and if there were mixing (as in the next example) it might be <code>["AL", ["AL", "NI"], "VA"]</code>. Mixing also means that the <code>sublattice_occupancies</code> key must be specified, but that is not the case in this example. It is important to note that any mixing configurations must have any ideal mixing contributions removed. Regardless of whether there is mixing or not, the length of this list should always equal the number of sublattices in the phase, though the sub-lists can have mixing up to the number of components in that sublattice. Note that the <code>sublattice_configurations</code> is a <em>list</em> of these lists. That is, there can be multiple sublattice configurations in a single dataset. See the second example in this section for such an example.</p>
+<p><code>sublattice_configurations</code> is a list of different configurations, that should correspond to the sublattices for the phase descriptions. Non-mixing sublattices are represented as a string, while mixing sublattices are represented as a lists. Thus an endmember for <code>BCC_B2</code> (as in this example) is <code>["AL", "NI", VA"]</code> and if there were mixing (as in the next example) it might be <code>["AL", ["AL", "NI"], "VA"]</code>. Mixing also means that the <code>sublattice_occupancies</code> key must be specified, but that is not the case in this example. It is important to note that any mixing configurations must have any ideal mixing contributions removed. Regardless of whether there is mixing or not, the length of this list should always equal the number of sublattices in the phase, though the sub-lists can have mixing up to the number of components in that sublattice. Note that the <code>sublattice_configurations</code> is a <em>list</em> of these lists. That is, there can be multiple sublattice configurations in a single dataset. See the second example in this section for such an example. Constituents are species names, which can be elements or species that are declared in the either the <a href="../reference/phase_models_schema.html#species">phase models</a> or the input database.</p>
 </blockquote></li>
 <li><p>The <code>conditions</code> describe temperatures (<code>T</code>) and pressures (<code>P</code>) as either scalars or one-dimensional lists.</p></li>
 <li><p>The type of quantity is expressed using the <code>output</code> key. This can in principle be any thermodynamic quantity, but currently only <code>CPM*</code>, <code>SM*</code>, and <code>HM*</code> (where <code>*</code> is either nothing, <code>_MIX</code> or <code>_FORM</code>) are supported. Support for changing reference states is planned but not yet implemented, so all thermodynamic quantities must be formation quantities (e.g.&nbsp;<code>HM_FORM</code> or <code>HM_MIX</code>, etc.). This is tracked by <a href="https://github.com/phasesresearchlab/espei/issues/85">ESPEI issue #85</a> on GitHub.</p></li>
@@ -897,14 +897,14 @@ div.csl-indent {
 </section>
 <section id="equilibrium-thermochemical-data" class="level2">
 <h2 class="anchored" data-anchor-id="equilibrium-thermochemical-data">Equilibrium Thermochemical Data</h2>
-<p>Equilibrium thermochemical data is used when the internal degrees of freedom are not known. This is typically true for experimental thermochemical data. Some cases where this type of data is useful, compared to non-equilibrium thermochemical data are:</p>
+<p>Equilibrium thermochemical data is used when the internal degrees of freedom (site fractions) are not known. This is typically true for experimental thermochemical data. Some cases where this type of data is useful, compared to non-equilibrium thermochemical data are:</p>
 <ol type="1">
 <li>Activity data</li>
 <li>Enthalpy of formation data in region with two or more phases in equilibrium</li>
 <li>Enthalpy of formation for a phase with multiple sublattice, e.g.&nbsp;the σ phase</li>
 </ol>
 <p>This type of data can not be used in parameter selection, because a core assumption of parameter selection is that the site fractions are known.</p>
-<p>Activity data is similar to non-equilibrium thermochemical data, except we must enter a reference state and the <code>solver</code> key is no longer required, since we do not know the internal degrees of freedom. A key detail is that the <code>phases</code> key must specify all phases that are possible to form.</p>
+<p>Activity data is similar to non-equilibrium thermochemical data, except we must enter a reference state and the <code>solver</code> key is no longer required, since we do not know the site fractions. A key detail is that the <code>phases</code> key must specify all phases that are possible to form.</p>
 <p>An example for Mg activties in Cu-Mg follows, with data digitized from S.P. Garg, Y.J. Bhatt, C. V. Sundaram, Thermodynamic study of liquid Cu-Mg alloys by vapor pressure measurements, Metall. Trans. 4 (1973) 283–289. <a href="doi:10.1007/BF02649628" class="uri">doi:10.1007/BF02649628</a>.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"components"</span><span class="fu">:</span> <span class="ot">[</span><span class="st">"CU"</span><span class="ot">,</span> <span class="st">"MG"</span><span class="ot">,</span> <span class="st">"VA"</span><span class="ot">]</span><span class="fu">,</span></span>
