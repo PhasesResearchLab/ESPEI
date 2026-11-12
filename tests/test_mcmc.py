@@ -140,6 +140,18 @@ def test_parameter_initialization():
     assert np.all(np.isclose(deterministic_params, expected_parameters))
 
 
+def test_get_priors_keeps_frozen_scipy_priors_aligned():
+    """Frozen SciPy priors stay aligned with their parameters (gh-300)."""
+    spec = {'name': 'normal', 'scale_relative': 0.1, 'loc_identity': 1.0}
+    frozen = norm(loc=-5000, scale=1)
+    priors = [spec, frozen, spec]
+    prior_rvs = EmceeOptimizer.get_priors(priors, ['VV0000', 'VV0001', 'VV0002'], [10.0, 20.0, 30.0])['prior_rvs']
+    assert len(priors) == 3
+    assert len(prior_rvs) == 3
+    assert prior_rvs[1] is frozen
+    assert [rv.mean() for rv in prior_rvs] == [10.0, -5000.0, 30.0]
+
+
 def test_emcee_opitmizer_can_restart(datasets_db):
     """A restart trace can be passed to the Emcee optimizer """
     dbf = Database.from_string(CU_MG_TDB, fmt='tdb')
