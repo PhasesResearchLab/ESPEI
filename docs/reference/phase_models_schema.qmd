@@ -77,3 +77,39 @@ and `FCC_L10` can both have `FCC_A1` as an alias.
     }
 }
 ```
+
+## Species
+
+Sublattice models can contain species, such as associates, molecules or
+ions, as well as elements. Species are declared with the optional
+`species` key, where each species is named by its key and defined by its
+`constituents`, a dictionary of elements and their amounts, and an
+optional integer `charge` (default `0`). Species in an input database
+(e.g. `generate_parameters.input_db`) can be used without declaring them
+in the phase models.
+
+The `components` must be elements, and the constituents of each species
+must be elements in `components` or in the input database. A species
+cannot have the name of an element, and a species declared in the phase
+models must match a species with the same name in the input database.
+
+``` JSON
+{
+  "components": ["CU", "O", "VA"],
+  "species": {
+    "CU2O": {"constituents": {"CU": 2, "O": 1}},
+    "CU+2": {"constituents": {"CU": 1}, "charge": 2},
+    "O-2": {"constituents": {"O": 1}, "charge": -2}
+  },
+  "phases": {
+    "LIQUID": {
+      "sublattice_model": [["CU", "CU2O", "O"]],
+      "sublattice_site_ratios": [1]
+    },
+    "TENORITE": {
+      "sublattice_model": [["CU+2"], ["O-2"]],
+      "sublattice_site_ratios": [1, 1]
+    }
+  }
+}
+```

@@ -28,8 +28,9 @@ import espei
 from espei.validation import schema
 from espei import generate_parameters
 from espei.utils import ImmediateClient, database_symbols_to_fit, import_qualified_object
-from espei.datasets import DatasetError, load_datasets, recursive_glob, apply_tags
+from espei.datasets import DatasetError, DatasetWarning, load_datasets, recursive_glob, apply_tags
 from espei.optimizers.opt_mcmc import EmceeOptimizer
+from espei.phase_models import PhaseModelSpecification
 
 _log = logging.getLogger(__name__)
 
@@ -49,6 +50,12 @@ parser.add_argument(
     metavar="PATH",
     default=None,
     help="Check input datasets at the path. Does not run ESPEI.")
+
+parser.add_argument(
+    "--phase-models",
+    metavar="PATH",
+    default=None,
+    help="Phase models used to resolve species when checking datasets with `--check-datasets`.")
 
 parser.add_argument("--version", "-v", action='version',
                     version='%(prog)s version '+str(espei.__version__))
@@ -148,10 +155,22 @@ def run_espei(run_settings):
 
     log_version_info()
 
+    with open(system_settings['phase_models']) as fp:
+        phase_models = json.load(fp)
+
+    # species are checked against the Database the run starts from
+    input_dbf = None
+    if generate_parameters_settings is not None:
+        if generate_parameters_settings.get('input_db') is not None:
+            input_dbf = Database(generate_parameters_settings['input_db'])
+    elif mcmc_settings is not None and mcmc_settings.get('input_db'):
+        input_dbf = Database(mcmc_settings['input_db'])
+    species = PhaseModelSpecification(**phase_models).get_species(input_dbf)
+
     # load datasets and handle i/o
     _log.trace('Loading and checking datasets.')
     dataset_path = system_settings['datasets']
-    datasets = load_datasets(sorted(recursive_glob(dataset_path, '*.json')))
+    datasets = load_datasets(sorted(recursive_glob(dataset_path, '*.json')), species=species)
     apply_tags(datasets, system_settings.get('tags', dict()))
     removed_ids = datasets.remove(where('disabled') == True)
     if len(removed_ids) > 0:
@@ -160,18 +179,12 @@ def run_espei(run_settings):
         _log.warning('No datasets were found in the path %s. This should be a directory containing dataset files ending in `.json`.', dataset_path)
     _log.trace('Finished checking datasets')
 
-    with open(system_settings['phase_models']) as fp:
-        phase_models = json.load(fp)
-
     if generate_parameters_settings is not None:
         refdata = generate_parameters_settings['ref_state']
         excess_model = generate_parameters_settings['excess_model']
         ridge_alpha = generate_parameters_settings['ridge_alpha']
         aicc_penalty = generate_parameters_settings['aicc_penalty_factor']
-        input_dbf = generate_parameters_settings.get('input_db', None)
         fitting_description = generate_parameters_settings['fitting_description']
-        if input_dbf is not None:
-            input_dbf = Database(input_dbf)
         dbf = generate_parameters(phase_models, datasets, refdata, excess_model,
                                   ridge_alpha=ridge_alpha, dbf=input_dbf,
                                   aicc_penalty_factor=aicc_penalty, fitting_description=fitting_description)
@@ -282,11 +295,23 @@ def main():
         if(len(dataset_filenames) == 0):
             errors.append(OSError("No input .json files detected at "+str(os.path.normpath(args.check_datasets))+", is your path correct?"))
 
-        for dataset in dataset_filenames:
-            try:
-                load_datasets([dataset])
-            except (ValueError, DatasetError) as e:
-                errors.append(e)
+        species = None
+        if args.phase_models is not None:
+            with open(args.phase_models) as fp:
+                species = PhaseModelSpecification(**json.load(fp)).get_species()
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", DatasetWarning)
+            for dataset in dataset_filenames:
+                try:
+                    load_datasets([dataset], species=species)
+                except (ValueError, DatasetError) as e:
+                    errors.append(e)
+        for w in caught:
+            if issubclass(w.category, DatasetWarning):
+                print(f"Warning: {w.message}")
+            else:
+                warnings.warn_explicit(w.message, w.category, w.filename, w.lineno)
         if len(errors) > 0:
             print(*errors, sep='\n')
             return 1

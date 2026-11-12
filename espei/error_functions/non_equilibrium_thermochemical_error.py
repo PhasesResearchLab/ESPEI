@@ -411,7 +411,8 @@ def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfig
         # We then get a composition set and we use a special "NoSolveSolver" to
         # ensure that we don't change from the data-specified DOF.
         compset = find_first_compset(phase_name, wks)
-        new_sitefracs = np.array([sf for _, sf in sorted(dof.items(), key=lambda y: (y[0].phase_name, y[0].sublattice_index, y[0].species.name))])
+        # same order as Model.site_fractions
+        new_sitefracs = np.array([sf for _, sf in sorted(dof.items(), key=lambda y: str(y[0]))])
         new_statevars = np.array(compset.dof[:len(compset.phase_record.state_variables)])  # no updates expected
         compset.update(new_sitefracs, 1.0, new_statevars)
         iso_phase = IsolatedPhase(compset, wks=wks)
