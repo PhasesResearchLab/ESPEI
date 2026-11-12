@@ -17,7 +17,7 @@ from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_conditi
 from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples, get_sample_condition_dicts
 from espei.utils import bib_marker_map
 from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter, ravel_zpf_values
-from espei.reference_states import _split_property_reference, _reference_property, _set_referenced_property
+from espei.reference_states import _set_referenced_property
 from espei.sublattice_tools import canonicalize, recursive_tuplify, endmembers_from_interaction
 from espei.utils import build_sitefractions
 
@@ -284,9 +284,25 @@ def dataplot(comps, phases, conds, datasets, tielines=True, ax=None, legend_gene
     return ax
 
 
+def _data_shift_model(dbf, comps, phase_name, output, data):
+    """
+    Model with a ``SHIFT`` property that shifts the values of a dataset to ``output`` with all the physics of the model.
+
+    The shift adds back the dataset's excluded model contributions and converts its reference state to that of ``output``.
+    """
+    exclusions = sorted(set(data.get('excluded_model_contributions', [])))
+    plot_model = Model(dbf, comps, phase_name)
+    plot_prop = _set_referenced_property(plot_model, output, dbf=dbf)
+    data_model = Model(dbf, comps, phase_name)
+    for contrib in exclusions:
+        data_model.models[contrib] = 0
+    data_prop = _set_referenced_property(data_model, data['output'], exclusions, dbf=dbf)
+    plot_model.SHIFT = getattr(plot_model, plot_prop) - getattr(data_model, data_prop)
+    return plot_model
+
+
 def _get_interaction_predicted_values(dbf, comps, phase_name, configuration, output):
     mod = Model(dbf, comps, phase_name)
-    mod.models['idmix'] = 0  # TODO: better reference state handling
     endpoints = endmembers_from_interaction(configuration)
     first_endpoint = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))
     second_endpoint = _translate_endmember_to_array(endpoints[1], mod.ast.atoms(v.SiteFraction))
@@ -349,8 +365,6 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     ax.plot(grid, predicted_values, **plot_kwargs)
 
     # Plot the observed values from the datasets
-    ref_mod = Model(dbf, comps, phase_name)
-
     # _MIX assumption
     prop = output.split('_MIX')[0]
     desired_props = (f"{prop}_MIX", f"{prop}_FORM")
@@ -396,31 +410,23 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
         else:
             interactions = np.array([cond_dict[Symbol('YS')] for cond_dict in sample_condition_dicts])
             indep_var_data = 1 - (interactions+1)/2
-        if data['output'].endswith('_FORM'):
-            # Shift formation data to mixing data:
-            # P_MIX = P_FORM - (P of the _MIX reference - P of the _FORM reference)
-            data_type, _ = _split_property_reference(data['output'])
-            excluded_contributions = data.get('excluded_model_contributions', [])
+        if data['output'] != output or len(data.get('excluded_model_contributions', [])) > 0:
+            # Shift the data to the plotted property with all the physics of the model
             temps = data['conditions'].get('T', 298.15)
             pressures = data['conditions'].get('P', 101325)
+            shift_model = _data_shift_model(dbf, comps, phase_name, output, data)
             points = build_sitefractions(phase_name, data['solver']['sublattice_configurations'],
                                             data['solver']['sublattice_occupancies'])
-            reference_shift = (_reference_property(ref_mod, data_type, '_MIX', excluded_contributions) -
-                               _reference_property(ref_mod, data_type, '_FORM', excluded_contributions, dbf=dbf))
-            shift_name = data_type + '_MIX_MINUS_FORM'
-            setattr(ref_mod, shift_name, reference_shift)
             for point_idx in range(len(points)):
-                missing_variables = ref_mod.ast.atoms(v.SiteFraction) - set(points[point_idx].keys())
+                missing_variables = shift_model.ast.atoms(v.SiteFraction) - set(points[point_idx].keys())
                 # Set unoccupied values to zero
                 points[point_idx].update({key: 0 for key in missing_variables})
                 # Change entry to a sorted array of site fractions
                 points[point_idx] = list(OrderedDict(sorted(points[point_idx].items(), key=str)).values())
             points = np.array(points, dtype=np.float64)
             # TODO: Real temperature support
-            stability = calculate(dbf, comps, [phase_name], output=shift_name,
-                                    T=temps, P=pressures, points=points,
-                                    model=ref_mod)
-            response_data -= stability[shift_name].values.squeeze()
+            shift = calculate(dbf, comps, [phase_name], output='SHIFT', T=temps, P=pressures, points=points, model=shift_model)
+            response_data += shift['SHIFT'].values.squeeze()
 
         response_data += np.array(data['values'], dtype=np.float64)
         response_data = response_data.flatten()
@@ -513,13 +519,17 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
     ax.plot(potential_grid, predicted_values, **plot_kwargs)
 
     # Plot observed values
-    # TODO: model exclusions handling
     bib_reference_keys = sorted({entry.get('reference', '') for entry in desired_data})
     symbol_map = bib_marker_map(bib_reference_keys)
     for data in desired_data:
         indep_var_data = None
         response_data = np.zeros_like(data['values'], dtype=np.float64)
         indep_var_data = np.array(data['conditions'][x], dtype=np.float64).flatten()
+        if len(data.get('excluded_model_contributions', [])) > 0:
+            # Shift the data to the plotted property with all the physics of the model
+            shift_model = _data_shift_model(dbf, comps, phase_name, output, data)
+            shift = calculate(dbf, comps, [phase_name], output='SHIFT', T=indep_var_data, P=data['conditions'].get('P', 101325), points=endmember, model=shift_model)
+            response_data += shift['SHIFT'].values.reshape(response_data.shape)
 
         response_data += np.array(data['values'], dtype=np.float64)
         response_data = response_data.flatten()
