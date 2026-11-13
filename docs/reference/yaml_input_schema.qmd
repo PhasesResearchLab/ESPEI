@@ -352,17 +352,23 @@ default
 :   espei.parameter_selection.fitting_descriptions.gibbs_energy_fitting_description
 
 This is a string for the fully qualified import path for a
-`ModelFittingDescription` instance. ESPEI currently provides three
+`ModelFittingDescription` instance. ESPEI currently provides four
 built-in fitting descriptions that are available to use:
 
 ``` yaml
-# the default, fit Gibbs energy (G/L) parameters to GM/HM/SM/CPM data:
+# the default, fit Gibbs energy (G/L) parameters to HM/SM/CPM data:
 fitting-description: espei.parameter_selection.fitting_descriptions.gibbs_energy_fitting_description
+# fit Gibbs energy (G/L) parameters to GM/HM/SM/CPM data in one step:
+fitting-description: espei.parameter_selection.fitting_descriptions.simultaneous_gibbs_energy_fitting_description
 # fit molar volume (V0 and VA) parameters to V0/VM data:
 fitting-description: espei.parameter_selection.fitting_descriptions.molar_volume_fitting_description
 # a combination that fits volume and Gibbs energy parameters
 fitting-description: espei.parameter_selection.fitting_descriptions.molar_volume_gibbs_energy_fitting_description
 ```
+
+The default fits CPM, then SM, then HM data. The simultaneous
+description also fits the temperature dependence of HM and SM data, e.g.
+heat capacity parameters to HM data at many temperatures.
 
 The `ModelFittingDescription` instance can be from any module that is
 importable from the Python environment where ESPEI is installed. For

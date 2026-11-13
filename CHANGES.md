@@ -4,7 +4,7 @@
 
 ### Improvements
 
-- Fit Gibbs energy parameters to Gibbs energy (`GM`) data, to the temperature dependence of `HM` and `SM` data, and to absolute data without a reference state, with the data weighted by their standard deviations as in MCMC ([\@bocklund](https://github.com/bocklund) - [issue XXX](https://github.com/phasesresearchlab/espei/issues/XXX))
+- Fit Gibbs energy parameters to Gibbs energy (`GM`) data and to the temperature dependence of `HM` and `SM` data with the new `simultaneous_gibbs_energy_fitting_description`, and to absolute data without a reference state ([\@bocklund](https://github.com/bocklund) - [issue XXX](https://github.com/phasesresearchlab/espei/issues/XXX))
 
 ## 0.9.1 (2026-06-05)
 

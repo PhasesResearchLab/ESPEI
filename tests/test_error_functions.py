@@ -15,6 +15,7 @@ from tinydb import where
 from pycalphad import Database
 
 from espei.paramselect import generate_parameters
+from espei.parameter_selection.fitting_descriptions import simultaneous_gibbs_energy_fitting_description
 from espei.error_functions import *
 from espei.error_functions.activity_error import ActivityResidual
 from espei.error_functions.equilibrium_thermochemical_error import calc_prop_differences, EquilibriumPropertyResidual
@@ -366,7 +367,7 @@ def test_non_equilibrium_thermochemical_error_for_gibbs_energy_of_mixing(dataset
     }
     datasets_db.insert(dataset_mixing)
 
-    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=simultaneous_gibbs_energy_fitting_description)
     assert len(dbf._parameters.search(where('parameter_type') == 'L')) == 1
     phases = list(dbf.phases.keys())
     comps = list(dbf.elements)

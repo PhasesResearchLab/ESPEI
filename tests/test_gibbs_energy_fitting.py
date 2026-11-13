@@ -1,4 +1,4 @@
-"""Fitting Gibbs energy parameters to GM, HM, SM and CPM data together"""
+"""Fitting Gibbs energy parameters to GM, HM, SM and CPM data in one step"""
 
 import numpy as np
 import pytest
@@ -8,8 +8,7 @@ from tinydb import where
 
 from espei.paramselect import generate_parameters
 from espei.refdata import SGTE91, SGTE91Stable
-from espei.parameter_selection.fitting_descriptions import ModelFittingDescription
-from espei.parameter_selection.fitting_steps import StepCPM, StepSM, StepHM
+from espei.parameter_selection.fitting_descriptions import simultaneous_gibbs_energy_fitting_description as SIMULTANEOUS
 
 from .fixtures import datasets_db
 
@@ -52,7 +51,7 @@ def test_temperature_dependent_enthalpies_fit_the_heat_capacity(datasets_db):
     """HM data at many temperatures fit heat capacity features without CPM data"""
     datasets_db.insert(_cu2mg_dataset("HM", TEMPERATURES))
     datasets_db.insert(_cu2mg_dataset("SM", [298.15]))
-    fitted = _fitted_formation(generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear'))
+    fitted = _fitted_formation(generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', fitting_description=SIMULTANEOUS))
     for T in TEMPERATURES:
         assert np.isclose(_value(_property(fitted, "CPM"), T), _value(_property(CU2MG_FORMATION, "CPM"), T), atol=0.01)
 
@@ -62,16 +61,16 @@ def test_decoupled_data_fit_the_same_parameters_as_sequential_steps(datasets_db)
     datasets_db.insert(_cu2mg_dataset("CPM", TEMPERATURES))
     datasets_db.insert(_cu2mg_dataset("HM", [298.15]))
     datasets_db.insert(_cu2mg_dataset("SM", [298.15]))
-    together = generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear')
-    sequential = generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', fitting_description=ModelFittingDescription([StepCPM, StepSM, StepHM]))
-    assert {s: val for s, val in together.symbols.items() if s.startswith('VV')} == {s: val for s, val in sequential.symbols.items() if s.startswith('VV')}
+    simultaneous = generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', fitting_description=SIMULTANEOUS)
+    sequential = generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear')
+    assert {s: val for s, val in simultaneous.symbols.items() if s.startswith('VV')} == {s: val for s, val in sequential.symbols.items() if s.startswith('VV')}
 
 
 def test_gibbs_energy_and_enthalpy_at_one_temperature_fit_the_entropy(datasets_db):
     """GM and HM data at the same temperature determine the entropy, S = (H - G)/T"""
     datasets_db.insert(_cu2mg_dataset("GM", [298.15]))
     datasets_db.insert(_cu2mg_dataset("HM", [298.15]))
-    fitted = _fitted_formation(generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear'))
+    fitted = _fitted_formation(generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', fitting_description=SIMULTANEOUS))
     assert np.isclose(_value(_property(fitted, "SM"), 298.15), _value(_property(CU2MG_FORMATION, "SM"), 298.15), atol=1e-3)
 
 
@@ -79,7 +78,7 @@ def test_enthalpies_of_different_sources_near_298_K_do_not_fit_a_heat_capacity(d
     """HM data at 298.15 K and 300 K that disagree do not fit a heat capacity, which would be about 800/(300 - 298.15) J/mol-K"""
     datasets_db.insert(_cu2mg_dataset("HM", [298.15]))
     datasets_db.insert(_cu2mg_dataset("HM", [300], offset=800.0))
-    fitted = _fitted_formation(generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear'))
+    fitted = _fitted_formation(generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', fitting_description=SIMULTANEOUS))
     assert _value(_property(fitted, "CPM"), 298.15) == 0.0
 
 
@@ -87,12 +86,12 @@ def test_absolute_data_fit_the_same_parameters_as_formation_data(datasets_db):
     """Absolute data are formation data plus the GHSER functions of the pure elements"""
     datasets_db.insert(_cu2mg_dataset("HM", TEMPERATURES))
     datasets_db.insert(_cu2mg_dataset("SM", [298.15]))
-    formation = generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear')
+    formation = generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', fitting_description=SIMULTANEOUS)
     ser = (2*SGTE91Stable['CU'] + SGTE91Stable['MG']) / 3
     for ds in datasets_db.all():
         prop = ds['output'].split('_')[0]
         datasets_db.update({'output': prop, 'values': [[[val[0] + _value(_property(ser, prop), T)] for val, T in zip(ds['values'][0], ds['conditions']['T'])]]}, doc_ids=[ds.doc_id])
-    absolute = generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear')
+    absolute = generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', fitting_description=SIMULTANEOUS)
     assert {s: val for s, val in formation.symbols.items() if s.startswith('VV')} == pytest.approx({s: val for s, val in absolute.symbols.items() if s.startswith('VV')}, rel=1e-5)
 
 
@@ -118,7 +117,7 @@ def test_mixing_data_fit_the_excess_gibbs_energy(datasets_db, prop, temperatures
         "conditions": {"P": 101325, "T": temperatures}, "values": [values],
     })
     phase_models = {"components": ["CU", "MG", "VA"], "phases": {"FCC_A1": {"sublattice_model": [["CU", "MG"], ["VA"]], "sublattice_site_ratios": [1, 1]}}}
-    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=SIMULTANEOUS)
     params = dbf._parameters.search((where('phase_name') == 'FCC_A1') & (where('parameter_type') == 'L'))
     assert len(params) == 1 and params[0]['parameter_order'] == 0
     fitted = symengine.S(params[0]['parameter']).xreplace({symengine.Symbol(s): val for s, val in dbf.symbols.items() if s.startswith('VV')})
