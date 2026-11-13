@@ -56,19 +56,15 @@ heat capacity for BCC_B2.
     `GM*`, `CPM*`, `SM*`, and `HM*` are supported, where `*` is the
     reference state:
 
-    -   `_FORM`: formation quantities, relative to the standard element
-        reference (SER) defined by the `GHSER` functions of the unary
-        reference data, e.g. `HM_FORM`.
+    -   `_FORM`: formation quantities, relative to the pure elements in
+        their stable element reference (SER) phases, e.g. `HM_FORM`.
     -   `_MIX`: mixing quantities, relative to the endmembers of the
-        phase, e.g. `HM_MIX`.
-    -   nothing: absolute quantities, e.g. `CPM` for measured heat
-        capacities or `SM` for third law entropies. Absolute `HM` and
-        `GM` follow the SER convention, i.e. the enthalpy of the pure
-        elements in their standard reference state is zero at 298.15 K.
-
-    `GM*` data are only used for parameter generation by the joint Gibbs
-    energy fitting description (see
-    [fitting_description](yaml_input_schema.qmd#fitting_description)).
+        phase weighted by their site fractions, e.g. `HM_MIX`.
+    -   nothing: absolute quantities, e.g. `SM` for third law
+        entropies. Absolute `HM` and `GM` are relative to the enthalpy
+        of the pure elements in their SER phases at 298.15 K, as in the
+        unary reference data. This requires the database to describe
+        the SER phases fully, e.g. the magnetism of bcc Fe.
 
 -   `values` is a 3-dimensional array where each value is the `output`
     for a specific condition of pressure, temperature, and sublattice

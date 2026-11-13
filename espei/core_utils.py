@@ -282,8 +282,7 @@ def get_prop_data(comps, phase_name, prop, datasets, additional_query=None) -> L
     phase_name : str
         Name of the phase to get data for
     prop : Union[str, List[str]]
-        Property or properties to get data for. Properties are matched exactly,
-        e.g. ``"HM"`` matches absolute enthalpy data, but not ``"HM_FORM"`` data.
+        Property or properties to get data for including reference state in the string.
     datasets : espei.utils.PickleableTinyDB
         Datasets to search for data
     additional_query : tinydb.Query
