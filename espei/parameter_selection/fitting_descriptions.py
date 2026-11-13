@@ -16,8 +16,6 @@ class ModelFittingDescription():
 
 
 molar_volume_fitting_description = ModelFittingDescription([StepV0, StepLogVA])
-gibbs_energy_fitting_description = ModelFittingDescription([StepCPM, StepSM, StepHM])
-molar_volume_gibbs_energy_fitting_description = ModelFittingDescription([StepV0, StepLogVA, StepCPM, StepSM, StepHM])
+gibbs_energy_fitting_description = ModelFittingDescription([StepGibbsEnergy])
+molar_volume_gibbs_energy_fitting_description = ModelFittingDescription([StepV0, StepLogVA, StepGibbsEnergy])
 
-# Opt-in: fit GM, HM, SM and CPM data in one step instead of sequentially
-joint_gibbs_energy_fitting_description = ModelFittingDescription([StepJointGibbsEnergy])

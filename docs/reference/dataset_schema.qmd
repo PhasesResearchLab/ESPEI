@@ -394,8 +394,8 @@ that have the `"dft"` tag:
     Kelvin, Pascal)
 3.  Mixing configurations should not have ideal mixing contributions.
 4.  All types of data can have a `weight` key at the top level that will
-    weight the standard deviation parameter in MCMC runs for that
-    dataset. If a single dataset should have different weights applied,
+    weight the standard deviation parameter in parameter selection and
+    MCMC runs for that dataset. If a single dataset should have different weights applied,
     multiple datasets should be created.
 
 [^1]: `ZPF` after the \"Zero Phase Fraction\" method

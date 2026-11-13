@@ -18,6 +18,7 @@ Choose parameter set with best AICc score.
 
 import sys
 from typing import List, Dict
+import itertools
 import logging
 import operator
 from collections import OrderedDict
@@ -31,7 +32,8 @@ from pycalphad import Database, variables as v
 
 import espei.refdata
 from espei.database_utils import initialize_database
-from espei.parameter_selection.model_building import build_feature_matrix as _build_feature_matrix  # backwards compatibility
+from espei.parameter_selection.model_building import build_redlich_kister_candidate_models
+from espei.parameter_selection.selection import select_model
 from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
     tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
 from espei.utils import PickleableTinyDB, sigfigs, extract_aliases
@@ -180,13 +182,64 @@ def insert_parameter(dbf, phase_name, configuration, parameter_name, parameters,
                 dbf.add_parameter(parameter_name, phase_name, tuple(map(tuplify, symmetric_config)), degree, degree_polys[degree])
 
 
+def _select_parameters(fitting_step, fixed_model, fixed_portions, desired_data, configuration, ridge_alpha, aicc_feature_factors):
+    """Return the selected features and their coefficients for the data of a fitting step, or None without candidates."""
+    # Each feature belongs to the first data step that has it. The data
+    # of that step always fit some of its features, as in a sequential
+    # fit, and other data can fit them if they resolve them.
+    data_steps = fitting_step.data_steps or (fitting_step,)
+    groups = []  # (data step, feature sets of its features)
+    for step in data_steps:
+        own_features = [f for f in step.features if next(s for s in data_steps if f in s.features) is step]
+        feature_sets = [list(fs) for fs in dict.fromkeys(tuple(f for f in fs if f in own_features) for fs in step.get_feature_sets()) if len(fs) > 0]
+        if len(feature_sets) > 0:
+            groups.append((step, feature_sets))
+    # Linear system of all the features of all the candidate models at the data
+    features = list(fitting_step.features)
+    for step, feature_sets in groups:
+        features.extend(itertools.chain(*build_redlich_kister_candidate_models(configuration, feature_sets)))
+    features = list(dict.fromkeys(features))
+    feature_matrix, response, std_deviation = fitting_step.get_linear_system(fixed_model, fixed_portions, desired_data, configuration, features)
+    column = {f: j for j, f in enumerate(features)}
+    # A step feature (e.g. T*log(T)) that the data cannot tell apart
+    # from the step features before it (e.g. a constant, for
+    # enthalpies at one temperature) is not a candidate
+    scaled_matrix = feature_matrix / std_deviation[:, np.newaxis]
+    resolved = []
+    for feature in fitting_step.features:
+        trial = scaled_matrix[:, [column[f] for f in resolved + [feature]]]
+        norms = np.linalg.norm(trial, axis=0)
+        if np.all(norms > 0) and np.linalg.matrix_rank(trial / norms) == len(resolved) + 1:
+            resolved.append(feature)
+    group_choices = []
+    penalty_factors = np.ones(len(features))
+    for step, feature_sets in groups:
+        feature_sets = [list(fs) for fs in dict.fromkeys(tuple(f for f in fs if f in resolved) for fs in feature_sets) if len(fs) > 0]
+        choices = build_redlich_kister_candidate_models(configuration, feature_sets) if len(feature_sets) > 0 else []
+        for f in itertools.chain(*choices):
+            penalty_factors[column[f]] = aicc_feature_factors.get(step.data_types_read, 1.0)
+        outputs = [step.data_types_read + refstate for refstate in step.supported_reference_states]
+        if not any(ds['output'] in outputs for ds in desired_data):
+            # optional without data of its own
+            temperatures = [T for ds in desired_data for T in np.atleast_1d(ds['conditions']['T'])]
+            choices = [[]] + (choices if max(temperatures) - min(temperatures) >= step.min_temperature_range else [])
+        if len(choices) > 0:
+            group_choices.append(choices)
+    candidates = [[column[f] for f in itertools.chain(*choice)] for choice in itertools.product(*group_choices)]
+    candidates = [candidate for candidate in candidates if len(candidate) > 0]
+    if len(candidates) == 0:
+        return None
+    estimate_scale = any(step.data_std_deviation is None for step in data_steps)
+    selected_columns, selected_values = select_model(feature_matrix, response, std_deviation, candidates, penalty_factors, ridge_alpha, estimate_scale)
+    return [features[j] for j in selected_columns], selected_values
+
+
 def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ridge_alpha=None, aicc_phase_penalty=None, fitting_description=gibbs_energy_fitting_description):
     """
     Find suitable linear model parameters for the given phase.
-    We do this by successively fitting heat capacities, entropies and
-    enthalpies of formation, and selecting against criteria to prevent
-    overfitting. The "best" set of parameters minimizes the error
-    without overfitting.
+    Each fitting step fits candidate models to its data and selects the
+    one with the lowest Akaike information criterion, which minimizes the
+    error without overfitting.
 
     Parameters
     ----------
@@ -250,8 +303,7 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
                 if fitting_step.parameter_name == "G" and not interaction_test(configuration):
                     # The GHSER functions of endmember Gibbs energies are known, so they are not fit
                     fixed_portions = [fixed_model.symbol_replace(_endmember_reference(dbf, phase_name, configuration), fixed_model._symbols)]
-            # Build candidate models, then fit and select a model from the candidates
-            selected_model = fitting_step.select_parameters(fixed_model, fixed_portions, desired_data, configuration, ridge_alpha, aicc_feature_factors)
+            selected_model = _select_parameters(fitting_step, fixed_model, fixed_portions, desired_data, configuration, ridge_alpha, aicc_feature_factors)
             if selected_model is not None:
                 selected_features, selected_values = selected_model
                 for feature, value in zip(selected_features, selected_values):

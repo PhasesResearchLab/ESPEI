@@ -32,6 +32,14 @@ from .residual_base import ResidualFunction, residual_function_registry
 
 _log = logging.getLogger(__name__)
 
+# Standard deviations of fixed configuration data, estimated from NIST TRC uncertainties
+PROPERTY_STD_DEVIATION = {
+    'GM': 500.0,  # J/mol
+    'HM': 500.0,  # J/mol
+    'SM': 0.2,  # J/K-mol
+    'CPM': 0.2,  # J/K-mol
+}
+
 class NoSolveSolver(Solver):
     def solve(self, composition_sets, conditions):
         """
@@ -288,13 +296,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
 
     species_comps = set(unpack_species(dbf, comps))
 
-    # estimated from NIST TRC uncertainties
-    property_std_deviation = {
-        'GM': 500.0/weight_dict.get('GM', 1.0),  # J/mol
-        'HM': 500.0/weight_dict.get('HM', 1.0),  # J/mol
-        'SM':   0.2/weight_dict.get('SM', 1.0),  # J/K-mol
-        'CPM':  0.2/weight_dict.get('CPM', 1.0),  # J/K-mol
-    }
+    property_std_deviation = {prop: std/weight_dict.get(prop, 1.0) for prop, std in PROPERTY_STD_DEVIATION.items()}
     properties = ['GM', 'HM', 'SM', 'CPM', 'GM_FORM', 'HM_FORM', 'SM_FORM', 'CPM_FORM', 'GM_MIX', 'HM_MIX', 'SM_MIX', 'CPM_MIX']
 
     ref_states = []

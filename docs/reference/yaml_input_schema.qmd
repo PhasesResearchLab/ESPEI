@@ -352,33 +352,17 @@ default
 :   espei.parameter_selection.fitting_descriptions.gibbs_energy_fitting_description
 
 This is a string for the fully qualified import path for a
-`ModelFittingDescription` instance. ESPEI currently provides four
+`ModelFittingDescription` instance. ESPEI currently provides three
 built-in fitting descriptions that are available to use:
 
 ``` yaml
-# the default, fit Gibbs energy (G/L) parameters to HM/SM/CPM data:
+# the default, fit Gibbs energy (G/L) parameters to GM/HM/SM/CPM data:
 fitting-description: espei.parameter_selection.fitting_descriptions.gibbs_energy_fitting_description
-# fit Gibbs energy (G/L) parameters to GM/HM/SM/CPM data simultaneously:
-fitting-description: espei.parameter_selection.fitting_descriptions.joint_gibbs_energy_fitting_description
 # fit molar volume (V0 and VA) parameters to V0/VM data:
 fitting-description: espei.parameter_selection.fitting_descriptions.molar_volume_fitting_description
 # a combination that fits volume and Gibbs energy parameters
 fitting-description: espei.parameter_selection.fitting_descriptions.molar_volume_gibbs_energy_fitting_description
 ```
-
-The default Gibbs energy fitting description fits heat capacity (CPM)
-data first, then entropy (SM) data, then enthalpy (HM) data, fixing the
-parameters selected in each step. Each step only fits the features of
-its own data type, so the temperature dependence of HM or SM data is not
-used to fit heat capacity features. The joint Gibbs energy fitting
-description instead fits GM, HM, SM and CPM data in one step, so data at
-many temperatures for any of these quantities can be used to fit heat
-capacity features. When the data are decoupled, the joint fit selects
-the same parameters as the default. For example, CPM data at many
-temperatures with HM and SM data at a single temperature are decoupled.
-GM data (`GM_FORM` and `GM_MIX`) are only used by the joint fitting
-description. See `espei.parameter_selection.fitting_steps.StepJointGibbsEnergy`
-for details.
 
 The `ModelFittingDescription` instance can be from any module that is
 importable from the Python environment where ESPEI is installed. For
