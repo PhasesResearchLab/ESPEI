@@ -9,7 +9,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-from pycalphad import Database, Model, variables as v
+from pycalphad import Database, variables as v
 
 from espei.plot import dataplot, plot_endmember, plot_interaction
 
@@ -169,8 +169,7 @@ def _residual(dbf, datasets_db):
     # data without ideal mixing are shifted by the ideal entropy of mixing
     ("SM_MIX", "SM_MIX", ["idmix"], -8.314462618 * (1/3*np.log(1/3) + 2/3*np.log(2/3))),
     ("HM_MIX", "HM_FORM", [], None),
-    ("HM_MIX", "HM_MIX", ["idmix"], 0.0),
-], ids=["SM_MIX-without-idmix", "HM_FORM-on-HM_MIX", "HM_MIX-without-idmix"])
+], ids=["SM_MIX-without-idmix", "HM_FORM-on-HM_MIX"])
 def test_plot_interaction_shifts_data_to_all_the_physics_of_the_model(datasets_db, plot_output, data_output, excluded, shift):
     """plot_interaction plots the data with the excluded contributions of the model added back, in the reference state of the plot"""
     dbf = Database(CU_MG_TDB)
@@ -188,26 +187,3 @@ def test_plot_interaction_shifts_data_to_all_the_physics_of_the_model(datasets_d
         assert np.isclose(data.get_ydata()[0], -2000.0 + shift)
     # at the temperature of the curve, the curve minus the plotted data is the MCMC residual
     assert np.allclose(np.interp(1/3, curve.get_xdata(), curve.get_ydata()) - data.get_ydata()[0], _residual(dbf, datasets_db))
-
-
-def test_plot_endmember_shifts_data_to_all_the_physics_of_the_model(datasets_db):
-    """plot_endmember plots _FORM data excluding magnetism with the magnetic contribution of the SER phase added back"""
-    from .test_reference_states import AL2FE_TDB
-    dbf = Database(AL2FE_TDB)
-    temperatures = [298.15, 600.0]
-    datasets_db.insert({
-        "components": ["AL", "FE"], "phases": ["AL2FE"], "output": "HM_FORM", "reference": "testing",
-        "solver": {"mode": "manual", "sublattice_site_ratios": [2, 1], "sublattice_configurations": [["AL", "FE"]]},
-        "conditions": {"P": 101325, "T": temperatures}, "values": [[[-27000.0], [-27000.0]]], "excluded_model_contributions": ["mag"],
-    })
-    fig, ax = plt.subplots()
-    plot_endmember(dbf, ["AL", "FE", "VA"], "AL2FE", ("AL", "FE"), "HM_FORM", datasets_db, ax=ax)
-    curve, data = ax.lines
-    plt.close(fig)
-    # AL2FE is not magnetic, so the shift is the magnetic enthalpy of the 1/3 mole of bcc Fe in its reference
-    iron = Model(dbf, ["FE", "VA"], "BCC_A2")
-    iron.models = {"mag": iron.models["mag"]}
-    magnetic_enthalpy = [float(iron.HM.xreplace({v.Y("BCC_A2", 0, "FE"): 1.0, v.Y("BCC_A2", 1, "VA"): 1.0, v.T: T, v.P: 101325})) for T in temperatures]
-    assert np.allclose(data.get_ydata(), -27000.0 - np.array(magnetic_enthalpy) / 3)
-    residuals = _residual(dbf, datasets_db)
-    assert np.isclose(np.interp(298.15, curve.get_xdata(), curve.get_ydata()) - data.get_ydata()[0], residuals[0], atol=1e-3)

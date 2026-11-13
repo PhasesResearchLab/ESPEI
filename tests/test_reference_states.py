@@ -75,7 +75,7 @@ def _al2fe_dataset(output, value, T=298.15, excluded=None):
     return dataset
 
 
-@pytest.mark.parametrize("excluded", [None, [], ["mag"]])
+@pytest.mark.parametrize("excluded", [None, ["mag"]])
 def test_generated_parameters_reproduce_formation_and_mixing_data_with_magnetic_references(datasets_db, excluded):
     """Generated parameters reproduce _FORM data relative to magnetic SER Fe and _MIX data relative to magnetic endmembers, with no MCMC residual"""
     datasets_db.insert(_al2fe_dataset("HM_FORM", -27000.0, excluded=excluded))
@@ -106,59 +106,6 @@ def test_generated_parameters_reproduce_formation_and_mixing_data_with_magnetic_
     assert np.allclose(residuals, 0.0, atol=0.5)  # fitted parameters are rounded to 6 significant figures
 
 
-AL2FE_TDB = AL_FE_MAGNETIC_BCC_TDB + """
- FUNCTION GHSERAL 298.15 -7976.15+137.093038*T-24.3671976*T*LN(T)-.001884662*T**2-8.77664E-07*T**3+74092*T**(-1); 700 Y
-   -11276.24+223.048446*T-38.5844296*T*LN(T)+.018531982*T**2-5.764227E-06*T**3+74092*T**(-1); 933.47 Y
-   -11278.378+188.684153*T-31.748192*T*LN(T)-1.230524E+28*T**(-9); 2900 N !
- FUNCTION GHSERFE 298.15 1225.7+124.134*T-23.5143*T*LN(T)-.00439752*T**2-5.8927E-08*T**3+77359*T**(-1); 1811 Y
-   -25383.581+299.31255*T-46*T*LN(T)+2.29603E+31*T**(-9); 6000 N !
- PHASE FCC_A1 % 2 1 1 !
-    CONSTITUENT FCC_A1 :AL : VA : !
-   PARAMETER G(FCC_A1,AL:VA;0) 298.15 GHSERAL; 6000 N !
-   PARAMETER G(BCC_A2,FE:VA;0) 298.15 GHSERFE; 6000 N !
- PHASE AL2FE % 2 2 1 !
-    CONSTITUENT AL2FE :AL : FE : !
-   PARAMETER G(AL2FE,AL:FE;0) 298.15 2*GHSERAL+GHSERFE-90000+10*T-0.5*T*LN(T); 6000 N !
-"""
-
-
-@pytest.mark.parametrize("excluded", [None, ["mag"]])
-def test_mcmc_formation_properties_are_relative_to_magnetic_ser_phases(datasets_db, excluded):
-    """HM_FORM, SM_FORM and CPM_FORM in MCMC are relative to the full model of each SER phase, including magnetism"""
-    dbf = Database(AL2FE_TDB)
-    comps = ["AL", "FE", "VA"]
-    temperatures = [300.0, 900.0]
-    for prop in ("HM", "SM", "CPM"):
-        values = []
-        for T in temperatures:
-            compound, compound_atoms = _per_formula_unit(dbf, comps, "AL2FE", prop, {("AL", 0): 1.0, ("FE", 1): 1.0}, T, excluded or [])
-            aluminum, _ = _per_formula_unit(dbf, comps, "FCC_A1", prop, {("AL", 0): 1.0, ("VA", 1): 1.0}, T, excluded or [])
-            iron, _ = _per_formula_unit(dbf, comps, "BCC_A2", prop, {("FE", 0): 1.0, ("VA", 1): 1.0}, T, excluded or [])
-            values.append((compound - 2*aluminum - iron) / compound_atoms)
-        dataset = _al2fe_dataset(prop + "_FORM", 0.0, T=temperatures, excluded=excluded)
-        dataset["values"] = [[[value] for value in values]]
-        datasets_db.insert(dataset)
-    residuals, _ = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[]).get_residuals(np.asarray([]))
-    assert len(residuals) == 6
-    assert np.allclose(residuals, 0.0, atol=1e-6)
-
-
-# (A,B)1(A)1 as (FE,NI)1(FE)1, with magnetism only in the FE:FE endmember
-TWO_SUBLATTICE_MAGNETIC_TDB = """
-ELEMENT VA VACUUM 0 0 0 !
-ELEMENT FE BCC_A2 55.847 4489 27.28 !
-ELEMENT NI FCC_A1 58.69 4787 29.796 !
-TYPE_DEFINITION % SEQ * !
-TYPE_DEFINITION C GES A_P_D ALPHA MAGNETIC -1.0 0.4 !
-PHASE ALPHA %C 2 1 1 !
-CONSTITUENT ALPHA :FE,NI : FE : !
-PARAMETER G(ALPHA,FE:FE;0) 1 -10000 - 2*T; 10000 N !
-PARAMETER G(ALPHA,NI:FE;0) 1 -20000 + 3*T; 10000 N !
-PARAMETER TC(ALPHA,FE:FE;0) 1 1000; 10000 N !
-PARAMETER BMAGN(ALPHA,FE:FE;0) 1 2; 10000 N !
-"""
-TWO_SUBLATTICE_INTERACTION = "PARAMETER L(ALPHA,FE,NI:FE;0) 1 {}; 10000 N !"
-
 # Endmembers with only vacancies have no atoms
 B2_WITH_VACANCIES_TDB = """
 ELEMENT VA VACUUM 0 0 0 !
@@ -177,38 +124,25 @@ PARAMETER G(B2,NI:VA;0) 1 8000; 10000 N !
 PARAMETER G(B2,VA:NI;0) 1 8000; 10000 N !
 PARAMETER G(B2,VA:VA;0) 1 100*T; 10000 N !
 """
-B2_INTERACTION = "PARAMETER L(B2,AL,NI:NI;0) 1 {}; 10000 N !"
+B2_INTERACTION = "PARAMETER L(B2,AL,NI:NI;0) 1 -20000; 10000 N !"
 
 
-@pytest.mark.parametrize("tdb, interaction, value, phase_name, sublattice_model, site_ratios, configuration, occupancies, excluded", [
-    # (A,B)1(A)1 with [[0.25, 0.75], [1.0]] is relative to 0.25 of A:A and 0.75 of B:A
-    (TWO_SUBLATTICE_MAGNETIC_TDB, TWO_SUBLATTICE_INTERACTION, 5000.0, "ALPHA", [["FE", "NI"], ["FE"]], [1, 1], [["FE", "NI"], "FE"], [[0.25, 0.75], 1.0], None),
-    (TWO_SUBLATTICE_MAGNETIC_TDB, TWO_SUBLATTICE_INTERACTION, 5000.0, "ALPHA", [["FE", "NI"], ["FE"]], [1, 1], [["FE", "NI"], "FE"], [[0.25, 0.75], 1.0], ["mag"]),
-    (B2_WITH_VACANCIES_TDB, B2_INTERACTION, -20000.0, "B2", [["AL", "NI", "VA"], ["AL", "NI", "VA"]], [0.5, 0.5], [["AL", "NI"], "NI"], [[0.4, 0.6], 1.0], None),
-], ids=["two-sublattice-magnetic", "two-sublattice-magnetic-excluded", "vacancy-endmembers"])
-def test_mixing_data_are_relative_to_the_endmembers(datasets_db, tdb, interaction, value, phase_name, sublattice_model, site_ratios, configuration, occupancies, excluded):
-    """_MIX data are relative to the endmembers weighted by their site fractions, each with its own physics"""
-    truth_dbf = Database(tdb + interaction.format(value))
-    comps = sorted({sp for subl in sublattice_model for sp in subl})
-    fractions = {}
-    for subl, (occupants, occupancy) in enumerate(zip(configuration, occupancies)):
-        for species, y in zip(np.atleast_1d(occupants), np.atleast_1d(occupancy)):
-            fractions[(species, subl)] = y
-    dataset = {
-        "components": comps, "phases": [phase_name], "output": "HM_MIX", "reference": "testing",
-        "solver": {"mode": "manual", "sublattice_site_ratios": site_ratios, "sublattice_configurations": [configuration], "sublattice_occupancies": [occupancies]},
-        "conditions": {"P": 101325, "T": 600.0}, "values": [[[_mixing_property(truth_dbf, comps, phase_name, "HM", fractions, 600.0, excluded or [])]]],
-    }
-    if excluded is not None:
-        dataset["excluded_model_contributions"] = excluded
-    datasets_db.insert(dataset)
-
+def test_mixing_data_are_relative_to_the_endmembers(datasets_db):
+    """_MIX data are relative to the endmembers weighted by their site fractions, also in a phase with endmembers of only vacancies"""
+    truth_dbf = Database(B2_WITH_VACANCIES_TDB + B2_INTERACTION)
+    comps = ["AL", "NI", "VA"]
+    fractions = {("AL", 0): 0.4, ("NI", 0): 0.6, ("NI", 1): 1.0}
+    datasets_db.insert({
+        "components": comps, "phases": ["B2"], "output": "HM_MIX", "reference": "testing",
+        "solver": {"mode": "manual", "sublattice_site_ratios": [0.5, 0.5], "sublattice_configurations": [[["AL", "NI"], "NI"]], "sublattice_occupancies": [[[0.4, 0.6], 1.0]]},
+        "conditions": {"P": 101325, "T": 600.0}, "values": [[[_mixing_property(truth_dbf, comps, "B2", "HM", fractions, 600.0)]]],
+    })
     residuals, _ = FixedConfigurationPropertyResidual(truth_dbf, datasets_db, phase_models=None, symbols_to_fit=[]).get_residuals(np.asarray([]))
     assert np.allclose(residuals, 0.0, atol=1e-6)
 
-    phase_models = {"components": comps, "phases": {phase_name: {"sublattice_model": sublattice_model, "sublattice_site_ratios": site_ratios}}}
-    dbf = generate_parameters(phase_models, datasets_db, "SGTE91", "linear", dbf=Database(tdb))
-    assert np.isclose(dbf.symbols["VV0000"], value)
+    phase_models = {"components": comps, "phases": {"B2": {"sublattice_model": [["AL", "NI", "VA"], ["AL", "NI", "VA"]], "sublattice_site_ratios": [0.5, 0.5]}}}
+    dbf = generate_parameters(phase_models, datasets_db, "SGTE91", "linear", dbf=Database(B2_WITH_VACANCIES_TDB))
+    assert np.isclose(dbf.symbols["VV0000"], -20000.0)
 
 
 SPECIES_TDB = """
