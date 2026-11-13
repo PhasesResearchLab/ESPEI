@@ -95,7 +95,7 @@ def select_model(feature_matrix, data_quantities, std_deviation, weights, candid
     opt_model = None
     for columns in candidates:
         columns = list(columns)
-        # The weights scale the data linearly in the fit, but squared in the RSS
+        # TODO: The weights scale the data linearly in the fit, but squared in the RSS. Unify with MCMC in the future
         coefficients = fit_model(feature_matrix[:, columns], data_quantities, ridge_alpha, weights=weights / relative_std_deviation**2)
         rss = np.sum(((feature_matrix[:, columns] @ coefficients - data_quantities) * weights / relative_std_deviation)**2)
         rss = max(rss, 1.0e-16)
