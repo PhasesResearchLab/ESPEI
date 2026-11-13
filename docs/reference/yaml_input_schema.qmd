@@ -368,7 +368,10 @@ fitting-description: espei.parameter_selection.fitting_descriptions.molar_volume
 
 The default fits CPM, then SM, then HM data. The simultaneous
 description also fits the temperature dependence of HM and SM data, e.g.
-heat capacity parameters to HM data at many temperatures.
+heat capacity parameters to HM data at many temperatures. Parameters
+without data of their own type are only fit if the data of one
+`reference` determine them, since data of different references can
+disagree.
 
 The `ModelFittingDescription` instance can be from any module that is
 importable from the Python environment where ESPEI is installed. For

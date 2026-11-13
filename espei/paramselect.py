@@ -182,6 +182,17 @@ def insert_parameter(dbf, phase_name, configuration, parameter_name, parameters,
                 dbf.add_parameter(parameter_name, phase_name, tuple(map(tuplify, symmetric_config)), degree, degree_polys[degree])
 
 
+def _resolved_columns(feature_matrix, columns):
+    """Return the columns that the rows of the feature matrix tell apart from the columns before them."""
+    resolved = []
+    for j in columns:
+        trial = feature_matrix[:, resolved + [j]]
+        norms = np.linalg.norm(trial, axis=0)
+        if np.all(norms > 0) and np.linalg.matrix_rank(trial / norms) == len(resolved) + 1:
+            resolved.append(j)
+    return resolved
+
+
 def _select_parameters(fitting_step, fixed_model, fixed_portions, desired_data, configuration, ridge_alpha, aicc_feature_factors):
     """Return the selected features and their coefficients for the data of a fitting step, or None without candidates."""
     # Each feature belongs to the first data step that has it. The data
@@ -194,35 +205,36 @@ def _select_parameters(fitting_step, fixed_model, fixed_portions, desired_data, 
         feature_sets = [list(fs) for fs in dict.fromkeys(tuple(f for f in fs if f in own_features) for fs in step.get_feature_sets()) if len(fs) > 0]
         if len(feature_sets) > 0:
             groups.append((step, feature_sets))
-    # Linear system of all the features of all the candidate models at the data
+    # Linear system of all the features of all the candidate models at the data of each reference
     features = list(fitting_step.features)
     for step, feature_sets in groups:
         features.extend(itertools.chain(*build_redlich_kister_candidate_models(configuration, feature_sets)))
     features = list(dict.fromkeys(features))
-    feature_matrix, response, std_deviation, weights = fitting_step.get_linear_system(fixed_model, fixed_portions, desired_data, configuration, features)
+    references = list(dict.fromkeys(ds.get('reference') for ds in desired_data))
+    linear_systems = [fitting_step.get_linear_system(fixed_model, fixed_portions, [ds for ds in desired_data if ds.get('reference') == ref], configuration, features) for ref in references]
+    feature_matrix, response, std_deviation, weights = map(np.concatenate, zip(*linear_systems))
     column = {f: j for j, f in enumerate(features)}
     # A step feature (e.g. T*log(T)) that the data cannot tell apart
     # from the step features before it (e.g. a constant, for
     # enthalpies at one temperature) is not a candidate
-    scaled_matrix = feature_matrix / std_deviation[:, np.newaxis]
-    resolved = []
-    for feature in fitting_step.features:
-        trial = scaled_matrix[:, [column[f] for f in resolved + [feature]]]
-        norms = np.linalg.norm(trial, axis=0)
-        if np.all(norms > 0) and np.linalg.matrix_rank(trial / norms) == len(resolved) + 1:
-            resolved.append(feature)
+    step_columns = [column[f] for f in fitting_step.features]
+    resolved = set(_resolved_columns(feature_matrix / std_deviation[:, np.newaxis], step_columns))
+    # Data of different references can disagree, e.g. HM data at 298.15 K and 300 K,
+    # so features without data of their own must be resolved by the data of one reference
+    resolved_by_one_reference = set().union(*(_resolved_columns(A / std[:, np.newaxis], step_columns) for A, _, std, _ in linear_systems))
     group_choices = []
     penalty_factors = np.ones(len(features))
     for step, feature_sets in groups:
-        feature_sets = [list(fs) for fs in dict.fromkeys(tuple(f for f in fs if f in resolved) for fs in feature_sets) if len(fs) > 0]
+        outputs = [step.data_types_read + refstate for refstate in step.supported_reference_states]
+        has_data = any(ds['output'] in outputs for ds in desired_data)
+        allowed = resolved if has_data else resolved & resolved_by_one_reference
+        feature_sets = [list(fs) for fs in dict.fromkeys(tuple(f for f in fs if column[f] in allowed) for fs in feature_sets) if len(fs) > 0]
         choices = build_redlich_kister_candidate_models(configuration, feature_sets) if len(feature_sets) > 0 else []
         for f in itertools.chain(*choices):
             penalty_factors[column[f]] = aicc_feature_factors.get(step.data_types_read, 1.0)
-        outputs = [step.data_types_read + refstate for refstate in step.supported_reference_states]
-        if not any(ds['output'] in outputs for ds in desired_data):
+        if not has_data:
             # optional without data of its own
-            temperatures = [T for ds in desired_data for T in np.atleast_1d(ds['conditions']['T'])]
-            choices = [[]] + (choices if max(temperatures) - min(temperatures) >= step.min_temperature_range else [])
+            choices = [[]] + choices
         if len(choices) > 0:
             group_choices.append(choices)
     candidates = [[column[f] for f in itertools.chain(*choice)] for choice in itertools.product(*group_choices)]

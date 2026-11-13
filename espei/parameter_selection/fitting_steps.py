@@ -50,8 +50,6 @@ class FittingStep():
     data_std_deviation: float = 1.0
     # Steps whose data this step reads, e.g. data of several properties. If empty, only this step.
     data_steps: Tuple[Type["FittingStep"], ...] = ()
-    # Without data of this step, its features can only be fit to other data over this temperature range (K)
-    min_temperature_range: float = 0.0
 
     @classmethod
     def transform_feature(cls, expr: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
@@ -420,8 +418,6 @@ class StepCPM(StepGM):
     data_types_read: str = "CPM"
     features: [symengine.Expr] = [v.T * symengine.log(v.T), v.T**2, v.T**-1, v.T**3]
     data_std_deviation: float = PROPERTY_STD_DEVIATION["CPM"]
-    # e.g. HM data of different sources at 298.15 K and 300 K must not fit a heat capacity
-    min_temperature_range: float = 100.0
 
     @classmethod
     def transform_feature(cls, expr: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:

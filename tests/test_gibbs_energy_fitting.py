@@ -32,9 +32,9 @@ def _value(expr, T):
     return float(symengine.S(expr).xreplace({v.T: T}))
 
 
-def _cu2mg_dataset(prop, temperatures, offset=0.0):
+def _cu2mg_dataset(prop, temperatures, offset=0.0, reference="Cu-Mg assessment"):
     """CU2MG _FORM data per mole of atoms"""
-    return {"components": ["CU", "MG"], "phases": ["CU2MG"], "output": prop + "_FORM", "reference": "Cu-Mg assessment",
+    return {"components": ["CU", "MG"], "phases": ["CU2MG"], "output": prop + "_FORM", "reference": reference,
             "solver": {"mode": "manual", "sublattice_site_ratios": [2, 1], "sublattice_configurations": [["CU", "MG"]]},
             "conditions": {"P": 101325, "T": temperatures}, "values": [[[_value(_property(CU2MG_FORMATION, prop), T) + offset] for T in temperatures]]}
 
@@ -74,10 +74,12 @@ def test_gibbs_energy_and_enthalpy_at_one_temperature_fit_the_entropy(datasets_d
     assert np.isclose(_value(_property(fitted, "SM"), 298.15), _value(_property(CU2MG_FORMATION, "SM"), 298.15), atol=1e-3)
 
 
-def test_enthalpies_of_different_sources_near_298_K_do_not_fit_a_heat_capacity(datasets_db):
-    """HM data at 298.15 K and 300 K that disagree do not fit a heat capacity, which would be about 800/(300 - 298.15) J/mol-K"""
+@pytest.mark.parametrize("temperature", [300, 1273])
+def test_enthalpies_of_different_references_do_not_fit_a_heat_capacity(datasets_db, temperature):
+    """HM data of different references that disagree do not fit a heat capacity"""
     datasets_db.insert(_cu2mg_dataset("HM", [298.15]))
-    datasets_db.insert(_cu2mg_dataset("HM", [300], offset=800.0))
+    datasets_db.insert(_cu2mg_dataset("HM", [temperature], offset=800.0, reference="another source"))
+    datasets_db.insert(_cu2mg_dataset("SM", [298.15]))
     fitted = _fitted_formation(generate_parameters(CU2MG_PHASE_MODELS, datasets_db, 'SGTE91', 'linear', fitting_description=SIMULTANEOUS))
     assert _value(_property(fitted, "CPM"), 298.15) == 0.0
 
