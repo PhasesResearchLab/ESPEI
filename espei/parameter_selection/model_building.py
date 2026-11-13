@@ -2,10 +2,13 @@
 Building candidate models
 """
 
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 import itertools
+import numpy as np
 from pycalphad.core.cache import cacheit
 import symengine
+from symengine import Symbol
+from symengine.lib.symengine_wrapper import ImmutableDenseMatrix
 from espei.sublattice_tools import interaction_test
 
 def make_successive(xs: List[object]):
@@ -79,7 +82,7 @@ def build_candidate_models(feature_sets: List[List[symengine.Symbol]], interacti
 
     Using this more complex algorithm generates significantly more candidates
     for typical usage where M=4 (L0, L1, L2, L3). Typically we are performance
-    limited at the espei.paramselect._build_feature_matrix step where we use
+    limited at the build_feature_matrix step where we use
     symengine to xreplace the symbolic features generated here with concrete
     values. Significant performance gains in that function should allow us to
     raise the `complex_algorithm_candidate_limit` ceiling.
@@ -203,3 +206,37 @@ def build_redlich_kister_candidate_models(
         return ternary_feature_sets
     else:
         raise ValueError(f"Interaction order not known for configuration {configuration}")
+
+
+def build_feature_matrix(sample_condition_dicts: List[Dict[Symbol, float]], symbolic_coefficients: List[Symbol]):
+    """
+    Builds A for solving x = A\\b. A is an MxN matrix of M sampled data points and N is the symbolic coefficients.
+
+    Parameters
+    ----------
+    sample_condition_dicts : List[Dict[Symbol, float]]
+        List of length ``M`` containing the conditions (T, P, YS, Z, V_I, V_J, V_K) for
+        each sampled point.
+    symbolic_coefficients : List[Symbol]
+        Symbolic coefficients of length ```N`` (e.g. ``v.T``, ``YS``) of the features
+        corresponding to the variables that will be fit.
+
+    Returns
+    -------
+    ArrayLike
+        MxN array of coefficients with sampled data conditions plugged in.
+    """
+    M = len(sample_condition_dicts)
+    N = len(symbolic_coefficients)
+    feature_matrix = np.empty((M, N))
+    coeffs = ImmutableDenseMatrix([symbolic_coefficients])  # see https://github.com/symengine/symengine.py/issues/485
+    for i in range(M):
+        # Profiling-guided optimization
+        # At the time, we got a 3x performance speedup compared to calling subs
+        # on individual elements of symbolic_coefficients:
+        #     symbolic_coefficients[j].subs(sample_condition_dicts[i])
+        # The biggest speedup was moving the inner loop to the IDenseMatrix,
+        # while dump_real avoids allocating an extra list because you cannot
+        # assign feature_matrix[i, :] to the result of coeffs.xreplace
+        coeffs.xreplace(sample_condition_dicts[i]).dump_real(feature_matrix[i, :])
+    return feature_matrix

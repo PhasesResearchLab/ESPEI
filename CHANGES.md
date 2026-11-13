@@ -1,5 +1,11 @@
 # Release Notes
 
+## Unreleased
+
+### Improvements
+
+- Fit Gibbs energy parameters to Gibbs energy (`GM`) data and to the temperature dependence of `HM` and `SM` data with the new `simultaneous_gibbs_energy_fitting_description`, and to absolute data without a reference state ([\@bocklund](https://github.com/bocklund) - [issue 304](https://github.com/phasesresearchlab/espei/issues/304))
+
 ## 0.9.1 (2026-06-05)
 
 ### Improvements

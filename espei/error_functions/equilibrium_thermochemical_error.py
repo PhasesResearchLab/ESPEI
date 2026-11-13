@@ -16,6 +16,7 @@ from pycalphad.core.utils import instantiate_models, filter_phases, extract_para
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from pycalphad import Workspace, as_property
 
+from espei.error_functions.non_equilibrium_thermochemical_error import PROPERTY_STD_DEVIATION
 from espei.error_functions.residual_base import ResidualFunction, residual_function_registry
 from espei.phase_models import PhaseModelSpecification
 from espei.shadow_functions import update_phase_record_parameters
@@ -68,12 +69,6 @@ def build_eqpropdata(data: tinydb.database.Document,
     """
     parameters = parameters if parameters is not None else {}
     data_weight_dict = data_weight_dict if data_weight_dict is not None else {}
-    property_std_deviation = {
-        'HM': 500.0,  # J/mol
-        'SM':   0.2,  # J/K-mol
-        'CPM':  0.2,  # J/K-mol
-    }
-
     params_keys, _ = extract_parameters(parameters)
 
     data_comps = list(set(data['components']).union({'VA'}))
@@ -112,7 +107,7 @@ def build_eqpropdata(data: tinydb.database.Document,
     # Build weights, should be the same size as the values
     total_num_calculations = len(rav_comp_conds)*np.prod([len(vals) for vals in pot_conds.values()])
     dataset_weights = np.array(data.get('weight', 1.0)) * np.ones(total_num_calculations)
-    weights = (property_std_deviation.get(property_output, 1.0)/data_weight_dict.get(property_output, 1.0)/dataset_weights).flatten()
+    weights = (PROPERTY_STD_DEVIATION.get(property_output, 1.0)/data_weight_dict.get(property_output, 1.0)/dataset_weights).flatten()
 
     return EqPropData(dbf, species, data_phases, pot_conds, rav_comp_conds, models, params_keys, phase_record_factory, output, samples, weights, reference)
 

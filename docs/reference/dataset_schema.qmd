@@ -53,11 +53,18 @@ heat capacity for BCC_B2.
 
 -   The type of quantity is expressed using the `output` key. This can
     in principle be any thermodynamic quantity, but currently only
-    `CPM*`, `SM*`, and `HM*` (where `*` is either nothing, `_MIX` or
-    `_FORM`) are supported. Support for changing reference states is
-    planned but not yet implemented, so all thermodynamic quantities
-    must be formation quantities (e.g. `HM_FORM` or `HM_MIX`, etc.).
-    This is tracked by [ESPEI issue #85](https://github.com/phasesresearchlab/espei/issues/85) on GitHub.
+    `GM*`, `CPM*`, `SM*`, and `HM*` are supported, where `*` is the
+    reference state:
+
+    -   `_FORM`: formation quantities, relative to the pure elements in
+        their stable element reference (SER) phases, e.g. `HM_FORM`.
+    -   `_MIX`: mixing quantities, relative to the endmembers of the
+        phase weighted by their site fractions, e.g. `HM_MIX`.
+    -   nothing: absolute quantities, e.g. `SM` for third law
+        entropies. Absolute `HM` and `GM` are relative to the enthalpy
+        of the pure elements in their SER phases at 298.15 K, as in the
+        unary reference data. This requires the database to describe
+        the SER phases fully, e.g. the magnetism of bcc Fe.
 
 -   `values` is a 3-dimensional array where each value is the `output`
     for a specific condition of pressure, temperature, and sublattice
@@ -387,8 +394,8 @@ that have the `"dft"` tag:
     Kelvin, Pascal)
 3.  Mixing configurations should not have ideal mixing contributions.
 4.  All types of data can have a `weight` key at the top level that will
-    weight the standard deviation parameter in MCMC runs for that
-    dataset. If a single dataset should have different weights applied,
+    weight the standard deviation parameter in parameter selection and
+    MCMC runs for that dataset. If a single dataset should have different weights applied,
     multiple datasets should be created.
 
 [^1]: `ZPF` after the \"Zero Phase Fraction\" method

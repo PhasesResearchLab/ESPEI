@@ -87,6 +87,9 @@ def test_get_response_vector_AL_NI_VA_interaction():
     ELEMENT NI FCC_A1 58.69 4787.0 29.796 !
     ELEMENT VA VACUUM 0.0 0.0 0.0 !
 
+    FUNCTION GHSERAL 298.15 -7976.15+137.093038*T-24.3671976*T*LN(T); 6000 N !
+    FUNCTION GHSERNI 298.15 -5179.159+117.854*T-22.096*T*LN(T); 6000 N !
+
     TYPE_DEFINITION % SEQ * !
     DEFINE_SYSTEM_DEFAULT ELEMENT 2 !
     DEFAULT_COMMAND DEFINE_SYSTEM_ELEMENT VA !
@@ -95,9 +98,15 @@ def test_get_response_vector_AL_NI_VA_interaction():
     CONSTITUENT BCC_B2 :AL,NI,VA:AL,NI,VA:VA: !
 
     """)
+    # The fixed model is absolute, so add the pure element (SER) reference
+    # to the formation Gibbs energy, per mole of formula units
+    GHSERAL = -7976.15 + 137.093038*T - 24.3671976*T*log(T)
+    GHSERNI = -5179.159 + 117.854*T - 22.096*T*log(T)
+    Y = lambda subl, sp: v.SiteFraction("BCC_B2", subl, sp)
+    SER_G = 0.5*(Y(0, "AL")*GHSERAL + Y(0, "NI")*GHSERNI) + 0.5*(Y(1, "AL")*GHSERAL + Y(1, "NI")*GHSERNI)
     mod = Model(dbf, ['AL', 'NI', 'VA'], 'BCC_B2')
     dd = {ky: 0.0 for ky in mod.models.keys()}
-    dd['G'] = NEW_GM * mod._site_ratio_normalization
+    dd['G'] = NEW_GM * mod._site_ratio_normalization + SER_G
     mod.models = dd
     print(mod.HM)
     config_tup = (('AL',), ('NI', 'VA'), ('VA',))

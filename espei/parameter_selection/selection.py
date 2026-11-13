@@ -48,85 +48,66 @@ def fit_model(feature_matrix, data_quantities, ridge_alpha, weights=None):
     return clf.coef_
 
 
-def score_model(feature_matrix, data_quantities, model_coefficients, feature_list, weights, aicc_factor=None, rss_numerical_limit=1.0e-16):
+def select_model(feature_matrix, data_quantities, std_deviation, weights, candidates, penalty_factors=None, ridge_alpha=None):
     """
-    Use the modified AICc to score a model that has been fit.
+    Return the candidate model with the lowest modified AICc and its coefficients.
 
-    The modified AICc is given by
+    The modified AICc of a candidate with :math:`k` features is
 
     .. math::
 
        \\mathrm{mAICc} = n \\ln \\frac{\\mathrm{RSS}}{n} + 2pk + \\frac {2p^2k^2 + 2pk} {n - pk - 1}
 
+    where :math:`p` is the penalty factor and the residual sum of squares
+    (RSS) of the :math:`n` data points is multiplied by their weights and
+    divided by their standard deviations relative to the most precise data.
+    The scale of the standard deviations is estimated from the RSS.
+
     Parameters
     ----------
     feature_matrix : ArrayLike
-        (:math:`M \\times N`) regressor matrix. The transformed model inputs (y_i, T, P, etc.)
+        (:math:`n \\times N`) values of all the features of the candidates at the data.
     data_quantities : ArrayLike
-        Size (:math:`M`) response vector. Target values of the output (e.g. HM_MIX) to reproduce.
-    model_coefficients : list
-        Size (:math:`N`) list of fitted model coefficients to be scored.
-    feature_list : list
-        Polynomial coefficients corresponding to each column of ``feature_matrix``.
-        Has shape (N,). Purely a logging aid.
-    aicc_factor : float
-        Multiplication factor for the AICc's parameter penalty.
-    rss_numerical_limit : float
-        Anything with an absolute value smaller than this is set to zero.
+        Size (:math:`n`) response vector to reproduce.
+    std_deviation : ArrayLike
+        Size (:math:`n`) standard deviation of each data point. Only the ratios matter.
+    weights : ArrayLike
+        Size (:math:`n`) weight of each data point.
+    candidates : List[Sequence[int]]
+        Each candidate is the columns of ``feature_matrix`` in the model.
+    penalty_factors : Optional[ArrayLike]
+        Size (:math:`N`) AICc penalty factor of each feature. Defaults to 1.
+    ridge_alpha : Optional[float]
+        Value of the :math:`\\alpha` hyperparameter used in ridge regression.
+        If None, ordinary least squares is used.
 
     Returns
     -------
-    float
-        A model score
+    Tuple[Sequence[int], ArrayLike]
+        Columns and coefficients of the selected candidate.
 
     """
-    p = aicc_factor if aicc_factor is not None else 1.0
-    k = len(feature_list)
-    rss = np.square((np.dot(feature_matrix, model_coefficients) - data_quantities.astype(np.float64))*np.array(weights)).sum()
-    if np.abs(rss) < rss_numerical_limit:
-        rss = rss_numerical_limit
-    # Compute the corrected Akaike Information Criterion
     n = data_quantities.size
-    pk = k*p
-    aic = n * np.log(rss / n) + 2.0 * pk
-    if pk >= (n - 1.0):
-        # Prevent the denominator of the proper mAICc from blowing up (pk = n - 1) or negative (pk > n - 1)
-        correction = (2.0 * p**2 * k**2 + 2.0 * pk) * (-n + pk + 3.0)
-    else:
-        correction = (2.0 * p**2 * k**2 + 2.0 * pk) / (n - pk - 1.0)
-    aicc = aic + correction  # model score
-    _log.debug('%s rss: %s, AIC: %s, AICc: %s', feature_list, rss, aic, aicc)
-    return aicc
-
-
-def select_model(candidate_models, ridge_alpha, weights, aicc_factor=None):
-    """
-    Select a model from a series of candidates by fitting and scoring them
-
-    Parameters
-    ----------
-    candidate_models : list
-        List of tuples of (features, feature_matrix, data_quantities)
-    ridge_alpha : float
-        Value of the :math:`\\alpha` hyperparameter used in ridge regression. Defaults to 1.0e-100, which should be degenerate
-        with ordinary least squares regression. For now, the parameter is applied to all features.
-    aicc_factor : float
-        Multiplication factor for the AICc's parameter penalty.
-
-    Returns
-    -------
-    tuple
-        Tuple of (feature_list, model_coefficients) for the highest scoring model
-    """
-    opt_model_score = np.inf
-    opt_model = None  # will hold a (feature_list, model_coefficients)
-    for feature_list, feature_matrix, data_quantities in candidate_models:
-        model_coefficients = fit_model(feature_matrix, data_quantities, ridge_alpha, weights=weights)
-        model_score = score_model(feature_matrix, data_quantities, model_coefficients, feature_list, weights, aicc_factor=aicc_factor)
-        if np.isneginf(model_score):  # exact fit, stop here
-            return (feature_list, model_coefficients)
-        if model_score < opt_model_score:
-            opt_model_score = model_score
-            opt_model = (feature_list, model_coefficients)
-    _log.trace('selected model features: %s, cofficients: %s, model score: %s', opt_model[0], list(opt_model[1]), opt_model_score)
+    # 1 for the most precise data, so ridge_alpha and the RSS have the units of these data
+    relative_std_deviation = std_deviation / std_deviation.min()
+    penalty_factors = np.ones(feature_matrix.shape[1]) if penalty_factors is None else np.asarray(penalty_factors, dtype=float)
+    opt_score = np.inf
+    opt_model = None
+    for columns in candidates:
+        columns = list(columns)
+        # TODO: The weights scale the data linearly in the fit, but squared in the RSS. Unify with MCMC in the future
+        coefficients = fit_model(feature_matrix[:, columns], data_quantities, ridge_alpha, weights=weights / relative_std_deviation**2)
+        rss = np.sum(((feature_matrix[:, columns] @ coefficients - data_quantities) * weights / relative_std_deviation)**2)
+        rss = max(rss, 1.0e-16)
+        pk = penalty_factors[columns].sum()
+        if pk >= (n - 1.0):
+            # Prevent the denominator of the proper mAICc from blowing up (pk = n - 1) or negative (pk > n - 1)
+            score = n * np.log(rss / n) + 2.0 * pk + (2.0 * pk**2 + 2.0 * pk) * (-n + pk + 3.0)
+        else:
+            score = n * np.log(rss / n) + 2.0 * pk + (2.0 * pk**2 + 2.0 * pk) / (n - pk - 1.0)
+        _log.debug('columns %s rss: %s, score: %s', columns, rss, score)
+        if score < opt_score:
+            opt_score = score
+            opt_model = (columns, coefficients)
+    _log.trace('selected model columns: %s, coefficients: %s, model score: %s', opt_model[0], list(opt_model[1]), opt_score)
     return opt_model

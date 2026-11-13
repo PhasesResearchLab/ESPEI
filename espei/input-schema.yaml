@@ -130,6 +130,6 @@ mcmc:
       required: True
     data_weights:
       type: dict
-      default: {'ZPF': 1.0, 'ACR': 1.0, 'HM': 1.0, 'SM': 1.0, 'CPM': 1.0}
+      default: {'ZPF': 1.0, 'ACR': 1.0, 'GM': 1.0, 'HM': 1.0, 'SM': 1.0, 'CPM': 1.0}
     symbols:
       type: list
