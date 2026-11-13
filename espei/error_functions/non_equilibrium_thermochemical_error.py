@@ -32,7 +32,7 @@ from .residual_base import ResidualFunction, residual_function_registry
 
 _log = logging.getLogger(__name__)
 
-# Standard deviations of fixed configuration data, estimated from NIST TRC uncertainties
+# Standard deviations of GM, HM, SM and CPM data, estimated from NIST TRC uncertainties
 PROPERTY_STD_DEVIATION = {
     'GM': 500.0,  # J/mol
     'HM': 500.0,  # J/mol
