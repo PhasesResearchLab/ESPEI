@@ -45,10 +45,7 @@ class FittingStep():
     data_types_read: str
     features: [symengine.Expr]
     supported_reference_states: [str]
-    # Standard deviation of the data relative to the data of other steps
-    # that are fit together. The scale is estimated for each candidate.
     data_std_deviation: float = 1.0
-    # Steps whose data this step reads, e.g. data of several properties. If empty, only this step.
     data_steps: Tuple[Type["FittingStep"], ...] = ()
 
     @classmethod
@@ -428,9 +425,7 @@ class StepCPM(StepGM):
 
 class StepGibbsEnergy(StepGM):
     """Fit Gibbs energy parameters to GM, HM, SM and CPM data together."""
-    # Each feature belongs to the first data step that has it
     data_steps: Tuple[Type[FittingStep], ...] = (StepCPM, StepSM, StepHM, StepGM)
-    # From the constant to the heat capacity features, the order the data resolve them in
     features: [symengine.Expr] = StepHM.features + StepSM.features + StepCPM.features
 
 
