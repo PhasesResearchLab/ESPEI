@@ -48,20 +48,20 @@ def fit_model(feature_matrix, data_quantities, ridge_alpha, weights=None):
     return clf.coef_
 
 
-def select_model(feature_matrix, data_quantities, std_deviation, candidates, penalty_factors=None, ridge_alpha=None, estimate_scale=False):
+def select_model(feature_matrix, data_quantities, std_deviation, weights, candidates, penalty_factors=None, ridge_alpha=None):
     """
     Return the candidate model with the lowest modified AICc and its coefficients.
 
-    The score of a candidate with :math:`k` features is the AIC,
-    :math:`\\chi^2 + 2pk`, where :math:`\\chi^2` is the sum of the squared
-    residuals divided by the standard deviations of the :math:`n` data points
-    and :math:`p` is the penalty factor. If ``estimate_scale``, the standard
-    deviations are only relative and the scale is estimated from the residuals
-    of each candidate, so the score is the modified AICc,
+    The modified AICc of a candidate with :math:`k` features is
 
     .. math::
 
-       \\mathrm{mAICc} = n \\ln \\frac{\\chi^2}{n} + 2pk + \\frac {2p^2k^2 + 2pk} {n - pk - 1}
+       \\mathrm{mAICc} = n \\ln \\frac{\\mathrm{RSS}}{n} + 2pk + \\frac {2p^2k^2 + 2pk} {n - pk - 1}
+
+    where :math:`p` is the penalty factor and the residual sum of squares
+    (RSS) of the :math:`n` data points is multiplied by their weights and
+    divided by their standard deviations relative to the most precise data.
+    The scale of the standard deviations is estimated from the RSS.
 
     Parameters
     ----------
@@ -70,7 +70,9 @@ def select_model(feature_matrix, data_quantities, std_deviation, candidates, pen
     data_quantities : ArrayLike
         Size (:math:`n`) response vector to reproduce.
     std_deviation : ArrayLike
-        Size (:math:`n`) standard deviation of each data point.
+        Size (:math:`n`) standard deviation of each data point. Only the ratios matter.
+    weights : ArrayLike
+        Size (:math:`n`) weight of each data point.
     candidates : List[Sequence[int]]
         Each candidate is the columns of ``feature_matrix`` in the model.
     penalty_factors : Optional[ArrayLike]
@@ -78,8 +80,6 @@ def select_model(feature_matrix, data_quantities, std_deviation, candidates, pen
     ridge_alpha : Optional[float]
         Value of the :math:`\\alpha` hyperparameter used in ridge regression.
         If None, ordinary least squares is used.
-    estimate_scale : bool
-        If True, estimate the scale of the standard deviations.
 
     Returns
     -------
@@ -88,24 +88,24 @@ def select_model(feature_matrix, data_quantities, std_deviation, candidates, pen
 
     """
     n = data_quantities.size
-    # relative to the most precise data, so ridge_alpha has the units of the data without weights
-    weights = (std_deviation.min() / std_deviation)**2
+    # 1 for the most precise data, so ridge_alpha and the RSS have the units of these data
+    relative_std_deviation = std_deviation / std_deviation.min()
     penalty_factors = np.ones(feature_matrix.shape[1]) if penalty_factors is None else np.asarray(penalty_factors, dtype=float)
     opt_score = np.inf
     opt_model = None
     for columns in candidates:
         columns = list(columns)
-        coefficients = fit_model(feature_matrix[:, columns], data_quantities, ridge_alpha, weights=weights)
-        chi2 = np.sum(((feature_matrix[:, columns] @ coefficients - data_quantities) / std_deviation)**2)
+        # The weights scale the data linearly in the fit, but squared in the RSS
+        coefficients = fit_model(feature_matrix[:, columns], data_quantities, ridge_alpha, weights=weights / relative_std_deviation**2)
+        rss = np.sum(((feature_matrix[:, columns] @ coefficients - data_quantities) * weights / relative_std_deviation)**2)
+        rss = max(rss, 1.0e-16)
         pk = penalty_factors[columns].sum()
-        if not estimate_scale:
-            score = chi2 + 2.0 * pk
-        elif pk >= (n - 1.0):
+        if pk >= (n - 1.0):
             # Prevent the denominator of the proper mAICc from blowing up (pk = n - 1) or negative (pk > n - 1)
-            score = n * np.log(max(chi2, 1.0e-16) / n) + 2.0 * pk + (2.0 * pk**2 + 2.0 * pk) * (-n + pk + 3.0)
+            score = n * np.log(rss / n) + 2.0 * pk + (2.0 * pk**2 + 2.0 * pk) * (-n + pk + 3.0)
         else:
-            score = n * np.log(max(chi2, 1.0e-16) / n) + 2.0 * pk + (2.0 * pk**2 + 2.0 * pk) / (n - pk - 1.0)
-        _log.debug('columns %s chi2: %s, score: %s', columns, chi2, score)
+            score = n * np.log(rss / n) + 2.0 * pk + (2.0 * pk**2 + 2.0 * pk) / (n - pk - 1.0)
+        _log.debug('columns %s rss: %s, score: %s', columns, rss, score)
         if score < opt_score:
             opt_score = score
             opt_model = (columns, coefficients)

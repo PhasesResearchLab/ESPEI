@@ -34,8 +34,8 @@ def _value(expr, T):
 
 
 def _cu2mg_dataset(prop, temperatures, offset=0.0):
-    """CU2MG _FORM data per mole of atoms, as precise as DFT data (standard deviations divided by 100)"""
-    return {"components": ["CU", "MG"], "phases": ["CU2MG"], "output": prop + "_FORM", "reference": "Cu-Mg assessment", "weight": 100,
+    """CU2MG _FORM data per mole of atoms"""
+    return {"components": ["CU", "MG"], "phases": ["CU2MG"], "output": prop + "_FORM", "reference": "Cu-Mg assessment",
             "solver": {"mode": "manual", "sublattice_site_ratios": [2, 1], "sublattice_configurations": [["CU", "MG"]]},
             "conditions": {"P": 101325, "T": temperatures}, "values": [[[_value(_property(CU2MG_FORMATION, prop), T) + offset] for T in temperatures]]}
 

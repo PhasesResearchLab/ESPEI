@@ -45,13 +45,11 @@ class FittingStep():
     data_types_read: str
     features: [symengine.Expr]
     supported_reference_states: [str]
-    # Standard deviation of the data. If None, only the dataset weights are
-    # known and the scale of the standard deviation is estimated for each candidate.
-    data_std_deviation: Optional[float] = None
+    # Standard deviation of the data relative to the data of other steps
+    # that are fit together. The scale is estimated for each candidate.
+    data_std_deviation: float = 1.0
     # Steps whose data this step reads, e.g. data of several properties. If empty, only this step.
     data_steps: Tuple[Type["FittingStep"], ...] = ()
-    # True if the parameter and the response vector are per mole of formula units, rather than atoms
-    normalize_parameter_per_mole_formula: bool = True
     # Without data of this step, its features can only be fit to other data over this temperature range (K)
     min_temperature_range: float = 0.0
 
@@ -129,9 +127,9 @@ class FittingStep():
         return desired_data
 
     @classmethod
-    def get_linear_system(cls, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], configuration, features: [symengine.Expr]) -> Tuple[ArrayLike, ArrayLike, ArrayLike]:
+    def get_linear_system(cls, fixed_model: Model, fixed_portions: [symengine.Basic], data: [Dataset], configuration, features: [symengine.Expr]) -> Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
         """
-        Return the features at the data, the response vector and the standard deviation of each data point.
+        Return the features at the data, the response vector, and the standard deviation and weight of each data point.
 
         Parameters
         ----------
@@ -149,12 +147,12 @@ class FittingStep():
 
         Returns
         -------
-        Tuple[ArrayLike, ArrayLike, ArrayLike]
-            Feature matrix (data points by features), response vector and standard deviations.
+        Tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]
+            Feature matrix (data points by features), response vector, standard deviations and weights.
 
         """
         config_tup = tuple(map(tuplify, configuration))
-        feature_matrices, responses, std_deviations = [], [], []
+        feature_matrices, responses, std_deviations, weights = [], [], [], []
         for step in (cls.data_steps or (cls,)):
             outputs = [step.data_types_read + refstate for refstate in step.supported_reference_states]
             step_data = [ds for ds in data if ds['output'] in outputs]
@@ -164,13 +162,9 @@ class FittingStep():
             sample_condition_dicts = get_sample_condition_dicts(calculate_dict, config_tup, fixed_model.phase_name)
             responses.append(step.get_response_vector(fixed_model, fixed_portions, step_data, sample_condition_dicts))
             feature_matrices.append(build_feature_matrix(sample_condition_dicts, [step.transform_feature(f) for f in features]))
-            std_deviation = (step.data_std_deviation or 1.0) / np.asarray(calculate_dict['weights'], dtype=np.float64)
-            if step.normalize_parameter_per_mole_formula:
-                # standard deviations of data per mole of atoms, in the units of the response vector
-                moles = fixed_model._site_ratio_normalization
-                std_deviation = std_deviation * np.array([float(moles.xreplace({**{y: 0 for y in moles.free_symbols}, **sf})) for sf in _data_site_fractions(fixed_model.phase_name, step_data)])
-            std_deviations.append(std_deviation)
-        return np.vstack(feature_matrices), np.concatenate(responses), np.concatenate(std_deviations)
+            std_deviations.append(np.full(len(sample_condition_dicts), step.data_std_deviation))
+            weights.append(np.asarray(calculate_dict['weights'], dtype=np.float64))
+        return np.vstack(feature_matrices), np.concatenate(responses), np.concatenate(std_deviations), np.concatenate(weights)
 
 
 class AbstractLinearPropertyStep(FittingStep):
@@ -201,6 +195,7 @@ class AbstractLinearPropertyStep(FittingStep):
     """
     features: [symengine.Expr] = [symengine.S.One, v.T, v.T**2, v.T**3, v.T**(-1)]
     supported_reference_states: [str] = ["", "_MIX"]
+    normalize_parameter_per_mole_formula: bool = True
 
     @staticmethod
     def transform_data(d: ArrayLike, model: Optional[Model] = None) -> ArrayLike:  # np.object_

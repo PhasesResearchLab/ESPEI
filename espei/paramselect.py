@@ -199,7 +199,7 @@ def _select_parameters(fitting_step, fixed_model, fixed_portions, desired_data, 
     for step, feature_sets in groups:
         features.extend(itertools.chain(*build_redlich_kister_candidate_models(configuration, feature_sets)))
     features = list(dict.fromkeys(features))
-    feature_matrix, response, std_deviation = fitting_step.get_linear_system(fixed_model, fixed_portions, desired_data, configuration, features)
+    feature_matrix, response, std_deviation, weights = fitting_step.get_linear_system(fixed_model, fixed_portions, desired_data, configuration, features)
     column = {f: j for j, f in enumerate(features)}
     # A step feature (e.g. T*log(T)) that the data cannot tell apart
     # from the step features before it (e.g. a constant, for
@@ -229,8 +229,7 @@ def _select_parameters(fitting_step, fixed_model, fixed_portions, desired_data, 
     candidates = [candidate for candidate in candidates if len(candidate) > 0]
     if len(candidates) == 0:
         return None
-    estimate_scale = any(step.data_std_deviation is None for step in data_steps)
-    selected_columns, selected_values = select_model(feature_matrix, response, std_deviation, candidates, penalty_factors, ridge_alpha, estimate_scale)
+    selected_columns, selected_values = select_model(feature_matrix, response, std_deviation, weights, candidates, penalty_factors, ridge_alpha)
     return [features[j] for j in selected_columns], selected_values
 
 
