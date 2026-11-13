@@ -85,9 +85,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../site_libs/bootstrap/bootstrap-7d8f8980687bae4b33d568d349153310.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../../site_libs/bootstrap/bootstrap-dark-4f56578543b54082a99f9a6be5275dd1.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../../site_libs/bootstrap/bootstrap-7d8f8980687bae4b33d568d349153310.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../../site_libs/bootstrap/bootstrap-e89d78258451fb351220702b86b1e5c8.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../../site_libs/bootstrap/bootstrap-dark-3c1d863b054615dc5ca3ba6743fbc2d5.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../../site_libs/bootstrap/bootstrap-e89d78258451fb351220702b86b1e5c8.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "sidebar",
   "copy-button": false,
@@ -311,7 +311,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <img src="../../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../../">ESPEI v0.9.2.dev16+gfaeb2b19f</a> 
+      <a href="../../">ESPEI v0.9.2.dev17+gc9143c82c</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -409,14 +409,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../how-to/recipes/mcmc-parameter-traces/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">MCMC Parameter Trace Plots</span></a>
+  <a href="../../how-to/recipes/mcmc-probability-convergence/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Probability Convergence Plots</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../how-to/recipes/mcmc-probability-convergence/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">MCMC Probability Convergence Plots</span></a>
+  <a href="../../how-to/recipes/mcmc-parameter-traces/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Parameter Trace Plots</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -733,6 +733,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#classes" id="toc-classes" class="nav-link" data-scroll-target="#classes">Classes</a>
   <ul class="collapse">
   <li><a href="#espei.parameter_selection.fitting_steps.AbstractLinearPropertyStep" id="toc-espei.parameter_selection.fitting_steps.AbstractLinearPropertyStep" class="nav-link" data-scroll-target="#espei.parameter_selection.fitting_steps.AbstractLinearPropertyStep">AbstractLinearPropertyStep</a></li>
+  <li><a href="#espei.parameter_selection.fitting_steps.StepGM" id="toc-espei.parameter_selection.fitting_steps.StepGM" class="nav-link" data-scroll-target="#espei.parameter_selection.fitting_steps.StepGM">StepGM</a></li>
+  <li><a href="#espei.parameter_selection.fitting_steps.StepGibbsEnergy" id="toc-espei.parameter_selection.fitting_steps.StepGibbsEnergy" class="nav-link" data-scroll-target="#espei.parameter_selection.fitting_steps.StepGibbsEnergy">StepGibbsEnergy</a></li>
   </ul></li>
   </ul></li>
   </ul>
@@ -761,6 +763,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td><a href="#espei.parameter_selection.fitting_steps.AbstractLinearPropertyStep">AbstractLinearPropertyStep</a></td>
 <td>This class is a base class for generic linear properties.</td>
+</tr>
+<tr class="even">
+<td><a href="#espei.parameter_selection.fitting_steps.StepGM">StepGM</a></td>
+<td>Fit Gibbs energy parameters to Gibbs energy (GM) data.</td>
+</tr>
+<tr class="odd">
+<td><a href="#espei.parameter_selection.fitting_steps.StepGibbsEnergy">StepGibbsEnergy</a></td>
+<td>Fit Gibbs energy parameters to GM, HM, SM and CPM data together.</td>
 </tr>
 </tbody>
 </table>
@@ -798,10 +808,188 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Helper function to linearize data in terms of the model parameters.</p>
 <p>If data is already linear w.r.t. the parameters, the default implementation of identity (<code>return d</code> can be preserved).</p>
-
-
 </section>
 </section>
+</section>
+<section id="espei.parameter_selection.fitting_steps.StepGM" class="level3">
+<h3 class="anchored" data-anchor-id="espei.parameter_selection.fitting_steps.StepGM">StepGM</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>parameter_selection.fitting_steps.StepGM()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Fit Gibbs energy parameters to Gibbs energy (GM) data.</p>
+<section id="methods-1" class="level4">
+<h4 class="anchored" data-anchor-id="methods-1">Methods</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#espei.parameter_selection.fitting_steps.StepGM.get_formation_reference">get_formation_reference</a></td>
+<td>Return the Gibbs energy of the pure element reference state of</td>
+</tr>
+<tr class="even">
+<td><a href="#espei.parameter_selection.fitting_steps.StepGM.shift_reference_state">shift_reference_state</a></td>
+<td>Shift absolute, _MIX or _FORM data to absolute values in per mole-formula units.</td>
+</tr>
+</tbody>
+</table>
+<section id="espei.parameter_selection.fitting_steps.StepGM.get_formation_reference" class="level5">
+<h5 class="anchored" data-anchor-id="espei.parameter_selection.fitting_steps.StepGM.get_formation_reference">get_formation_reference</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>parameter_selection.fitting_steps.StepGM.get_formation_reference(fixed_model)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Return the Gibbs energy of the pure element reference state of <code>_FORM</code> data in J/mole-formula as a function of site fractions.</p>
+<p>The reference state is the stable element reference (SER) defined by the GHSER functions (e.g.&nbsp;<code>GHSERAL</code>) in the Database. Subclasses can override this to use a different definition of the reference state.</p>
+<section id="parameters" class="level6 doc-section doc-section-parameters">
+<h6 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h6>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 23%">
+<col style="width: 42%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>fixed_model</td>
+<td>pycalphad.Model</td>
+<td>Model of the phase being fit.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level6 doc-section doc-section-returns">
+<h6 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h6>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>symengine.Expr</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="espei.parameter_selection.fitting_steps.StepGM.shift_reference_state" class="level5">
+<h5 class="anchored" data-anchor-id="espei.parameter_selection.fitting_steps.StepGM.shift_reference_state">shift_reference_state</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>parameter_selection.fitting_steps.StepGM.shift_reference_state(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    desired_data,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    fixed_model,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    mole_atoms_per_mole_formula_unit,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Shift absolute, _MIX or _FORM data to absolute values in per mole-formula units.</p>
+<section id="parameters-1" class="level6 doc-section doc-section-parameters">
+<h6 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h6>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 19%">
+<col style="width: 47%">
+<col style="width: 8%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>desired_data</td>
+<td>List[Dict[str, Any]]</td>
+<td>ESPEI single phase dataset</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>fixed_model</td>
+<td>pycalphad.Model</td>
+<td>Model with all lower order (in composition) terms already fit.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>mole_atoms_per_mole_formula_unit</td>
+<td>float</td>
+<td>Number of moles of atoms in every mole atom unit.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-1" class="level6 doc-section doc-section-returns">
+<h6 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h6>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 16%">
+<col style="width: 73%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>np.ndarray</td>
+<td>Absolute data for this feature in [qty]/mole-formula.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="raises" class="level6 doc-section doc-section-raises">
+<h6 class="doc-section doc-section-raises anchored" data-anchor-id="raises">Raises</h6>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>ValueError</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes" class="level6 doc-section doc-section-notes">
+<h6 class="doc-section doc-section-notes anchored" data-anchor-id="notes">Notes</h6>
+<p>pycalphad Model parameters are stored as per mole-formula quantites, but the calculated properties and our data are all in [qty]/mole-atoms. We multiply by mole-atoms/mole-formula to convert the units to [qty]/mole-formula.</p>
+</section>
+</section>
+</section>
+</section>
+<section id="espei.parameter_selection.fitting_steps.StepGibbsEnergy" class="level3">
+<h3 class="anchored" data-anchor-id="espei.parameter_selection.fitting_steps.StepGibbsEnergy">StepGibbsEnergy</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>parameter_selection.fitting_steps.StepGibbsEnergy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Fit Gibbs energy parameters to GM, HM, SM and CPM data together.</p>
+
+
 </section>
 </section>
 </section>

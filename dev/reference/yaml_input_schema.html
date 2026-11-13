@@ -85,9 +85,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-7d8f8980687bae4b33d568d349153310.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-4f56578543b54082a99f9a6be5275dd1.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-7d8f8980687bae4b33d568d349153310.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-e89d78258451fb351220702b86b1e5c8.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-3c1d863b054615dc5ca3ba6743fbc2d5.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-e89d78258451fb351220702b86b1e5c8.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "sidebar",
   "copy-button": false,
@@ -340,7 +340,7 @@ window.Quarto = {
       <img src="../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../">ESPEI v0.9.2.dev16+gfaeb2b19f</a> 
+      <a href="../">ESPEI v0.9.2.dev17+gc9143c82c</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -438,14 +438,14 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../how-to/recipes/mcmc-parameter-traces/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">MCMC Parameter Trace Plots</span></a>
+  <a href="../how-to/recipes/mcmc-probability-convergence/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Probability Convergence Plots</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../how-to/recipes/mcmc-probability-convergence/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">MCMC Probability Convergence Plots</span></a>
+  <a href="../how-to/recipes/mcmc-parameter-traces/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Parameter Trace Plots</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -1122,13 +1122,16 @@ window.Quarto = {
 <p>espei.parameter_selection.fitting_descriptions.gibbs_energy_fitting_description</p>
 </dd>
 </dl>
-<p>This is a string for the fully qualified import path for a <code>ModelFittingDescription</code> instance. ESPEI currently provides three built-in fitting descriptions that are available to use:</p>
+<p>This is a string for the fully qualified import path for a <code>ModelFittingDescription</code> instance. ESPEI currently provides four built-in fitting descriptions that are available to use:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># the default, fit Gibbs energy (G/L) parameters to HM/SM/CPM data:</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">fitting-description</span><span class="kw">:</span><span class="at"> espei.parameter_selection.fitting_descriptions.gibbs_energy_fitting_description</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># fit molar volume (V0 and VA) parameters to V0/VM data:</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu">fitting-description</span><span class="kw">:</span><span class="at"> espei.parameter_selection.fitting_descriptions.molar_volume_fitting_description</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># a combination that fits volume and Gibbs energy parameters</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">fitting-description</span><span class="kw">:</span><span class="at"> espei.parameter_selection.fitting_descriptions.molar_volume_gibbs_energy_fitting_description</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># fit Gibbs energy (G/L) parameters to GM/HM/SM/CPM data in one step:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu">fitting-description</span><span class="kw">:</span><span class="at"> espei.parameter_selection.fitting_descriptions.simultaneous_gibbs_energy_fitting_description</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># fit molar volume (V0 and VA) parameters to V0/VM data:</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">fitting-description</span><span class="kw">:</span><span class="at"> espei.parameter_selection.fitting_descriptions.molar_volume_fitting_description</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># a combination that fits volume and Gibbs energy parameters</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="fu">fitting-description</span><span class="kw">:</span><span class="at"> espei.parameter_selection.fitting_descriptions.molar_volume_gibbs_energy_fitting_description</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The default fits CPM, then SM, then HM data. The simultaneous description also fits the temperature dependence of HM and SM data, e.g. heat capacity parameters to HM data at many temperatures. Parameters without data of their own type are only fit if the data of one <code>reference</code> determine them, since data of different references can disagree.</p>
 <p>The <code>ModelFittingDescription</code> instance can be from any module that is importable from the Python environment where ESPEI is installed. For example, the Gibbs energy fitting description is importable as:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> espei.parameter_selection.fitting_descriptions <span class="im">import</span> gibbs_energy_fitting_description</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Because the fitting description given can be in <em>any</em> importable module, users can provide their own fitting descriptions that use ESPEI's built-in <span class="title-ref">FittingStep</span> objects, custom fitting steps, or a combination ESPEI's fitting steps and custom fitting steps. The <a href="../tutorials/custom-model-parameter-selection/custom_model_parameter_selection.html">Generating Custom Model Parameters</a> tutorial gives an example of how to fit a custom PyCalphad model that uses custom parameters for BCC elastic constants.</p>
@@ -1321,7 +1324,7 @@ window.Quarto = {
 </dd>
 <dt>default</dt>
 <dd>
-<p>{'ZPF': 1.0, 'ACR': 1.0, 'HM': 1.0, 'SM': 1.0, 'CPM': 1.0}</p>
+<p>{'ZPF': 1.0, 'ACR': 1.0, 'GM': 1.0, 'HM': 1.0, 'SM': 1.0, 'CPM': 1.0}</p>
 </dd>
 </dl>
 <p>Each type of data can be weighted: zero phase fraction (<code>ZPF</code>), activity (<code>ACR</code>) and the different types of thermochemical error. These weights are used to modify the initial standard deviation of each data type by</p>
