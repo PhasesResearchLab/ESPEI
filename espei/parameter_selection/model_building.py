@@ -34,7 +34,7 @@ def make_successive(xs: List[object]):
 
 
 @cacheit  # This can be expensive if run from an inner loop, so it is cached
-def build_candidate_models(feature_sets: List[List[symengine.Symbol]], interaction_features: List[symengine.Symbol], complex_algorithm_candidate_limit=2000):
+def build_candidate_models(feature_sets: List[List[symengine.Symbol]], interaction_features: List[symengine.Symbol], complex_algorithm_candidate_limit=1000):
     """
     Return a list of broadcasted features
 
@@ -81,9 +81,11 @@ def build_candidate_models(feature_sets: List[List[symengine.Symbol]], interacti
     are :math:`M` total feature sets.
 
     Using this more complex algorithm generates significantly more candidates
-    for typical usage where M=4 (L0, L1, L2, L3). The default limit allows
-    the complex algorithm for up to six temperature features, e.g. all the
-    features of a Gibbs energy.
+    for typical usage where M=4 (L0, L1, L2, L3). Typically we are performance
+    limited at the build_feature_matrix step where we use
+    symengine to xreplace the symbolic features generated here with concrete
+    values. Significant performance gains in that function should allow us to
+    raise the `complex_algorithm_candidate_limit` ceiling.
 
     """
     N = len(feature_sets)
