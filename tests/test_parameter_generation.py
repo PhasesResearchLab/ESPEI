@@ -976,3 +976,21 @@ def test_species_parameters_in_input_database_are_not_duplicated(datasets_db):
     assert sorted(endmembers) == ['COMPA', 'COMPB', 'COMPC']
     # COMPB is CU1MG2 and has no parameter in the input database
     assert endmembers['COMPB'] == 1.0*Symbol('GHSERCU') + 2.0*Symbol('GHSERMG')
+
+
+def test_fitting_steps_that_share_features_add_their_coefficients(datasets_db):
+    """A step fitting a feature that a previous step fit (e.g. the constant of StepHM and StepGM) adds to it"""
+    from espei.parameter_selection.fitting_descriptions import ModelFittingDescription
+    from espei.parameter_selection.fitting_steps import StepSM, StepHM, StepGM
+    # CUMG2 Gibbs energy of formation is -28620 + 1.859733*T J/mol-formula with 3 mol-atoms/mol-formula
+    solver = {"mode": "manual", "sublattice_site_ratios": [1, 2], "sublattice_configurations": [["CU", "MG"]]}
+    for output, T, value in [("HM_FORM", 298.15, -28620/3), ("SM_FORM", 298.15, -1.859733/3), ("GM_FORM", [298.15, 600.0], [(-28620 + 1.859733*T)/3 for T in (298.15, 600.0)])]:
+        values = [[[val] for val in np.atleast_1d(value)]]
+        datasets_db.insert({"components": ["CU", "MG"], "phases": ["CUMG2"], "solver": solver, "output": output, "conditions": {"P": 101325, "T": T}, "values": values})
+    phase_models = {"components": ["CU", "MG"], "phases": {"CUMG2": {"sublattice_model": [["CU"], ["MG"]], "sublattice_site_ratios": [1, 2]}}}
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', fitting_description=ModelFittingDescription([StepSM, StepHM, StepGM]))
+    param = dbf._parameters.search(where('parameter_type') == 'G')[0]['parameter']
+    fitted = param.xreplace({Symbol(s): val for s, val in dbf.symbols.items() if s.startswith('VV')})
+    fitted = fitted.xreplace({Symbol('GHSERCU'): 0, Symbol('GHSERMG'): 0})
+    for T in (298.15, 600.0):
+        assert np.isclose(float(fitted.xreplace({v.T: T})), -28620 + 1.859733*T, atol=0.5)

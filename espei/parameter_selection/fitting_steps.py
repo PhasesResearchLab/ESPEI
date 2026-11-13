@@ -255,17 +255,17 @@ class AbstractLinearPropertyStep(FittingStep):
         return rhs
 
 
-class StepHM(FittingStep):
+class StepGM(FittingStep):
+    """Fit Gibbs energy parameters to Gibbs energy (GM) data."""
     parameter_name: str = "G"
-    data_types_read: str = "HM"
+    data_types_read: str = "GM"
     supported_reference_states: [str] = ["", "_MIX", "_FORM"]
-    features: [symengine.Expr] = [symengine.S.One]
+    features: [symengine.Expr] = [symengine.S.One, v.T]
 
     @classmethod
     def transform_feature(cls, expr: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
-        # expr is the AST for GM, so we need to transform GM features into HM
-        # H = G + T*S, with S = -dG/dT
-        return expr - v.T*symengine.diff(expr, v.T)
+        # expr is the AST for GM, so GM features need no transformation
+        return expr
 
     @classmethod
     def get_formation_reference(cls, fixed_model: Model) -> symengine.Expr:
@@ -389,7 +389,18 @@ class StepHM(FittingStep):
         return data_qtys
 
 
-class StepSM(StepHM):
+class StepHM(StepGM):
+    data_types_read: str = "HM"
+    features: [symengine.Expr] = [symengine.S.One]
+
+    @classmethod
+    def transform_feature(cls, expr: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
+        # expr is the AST for GM, so we need to transform GM features into HM
+        # H = G + T*S, with S = -dG/dT
+        return expr - v.T*symengine.diff(expr, v.T)
+
+
+class StepSM(StepGM):
     data_types_read: str = "SM"
     features: [symengine.Expr] = [v.T]
 
@@ -400,7 +411,7 @@ class StepSM(StepHM):
         return -symengine.diff(expr, v.T)
 
 
-class StepCPM(StepHM):
+class StepCPM(StepGM):
     data_types_read: str = "CPM"
     features: [symengine.Expr] = [v.T * symengine.log(v.T), v.T**2, v.T**-1, v.T**3]
 
@@ -409,23 +420,6 @@ class StepCPM(StepHM):
         # expr is the AST for GM, so we need to transform GM features into CPM
         # CP = T * dS/dT = - T * d^2G / dT^2
         return -v.T*symengine.diff(expr, v.T, 2)
-
-
-class StepGM(StepHM):
-    """
-    Fit Gibbs energy parameters to Gibbs energy (GM_FORM, GM_MIX) data.
-
-    Used as a sequential step, this fits the constant and linear in
-    temperature features (after any heat capacity features fit by previous
-    steps). It is also used by ``StepJointGibbsEnergy`` to read GM data.
-    """
-    data_types_read: str = "GM"
-    features: [symengine.Expr] = [symengine.S.One, v.T]
-
-    @classmethod
-    def transform_feature(cls, expr: symengine.Expr, model: Optional[Model] = None) -> symengine.Expr:
-        # expr is the AST for GM, so GM features need no transformation
-        return expr
 
 
 class _JointDataBlock(NamedTuple):
