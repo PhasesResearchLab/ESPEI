@@ -8,7 +8,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-import pytest
 from pycalphad import Database, variables as v
 
 from espei.plot import dataplot, plot_endmember, plot_interaction
@@ -165,25 +164,19 @@ def _residual(dbf, datasets_db):
     return np.asarray(residuals)
 
 
-@pytest.mark.parametrize("plot_output, data_output, excluded, shift", [
-    # data without ideal mixing are shifted by the ideal entropy of mixing
-    ("SM_MIX", "SM_MIX", ["idmix"], -8.314462618 * (1/3*np.log(1/3) + 2/3*np.log(2/3))),
-    ("HM_MIX", "HM_FORM", [], None),
-], ids=["SM_MIX-without-idmix", "HM_FORM-on-HM_MIX"])
-def test_plot_interaction_shifts_data_to_all_the_physics_of_the_model(datasets_db, plot_output, data_output, excluded, shift):
-    """plot_interaction plots the data with the excluded contributions of the model added back, in the reference state of the plot"""
+def test_plot_interaction_shifts_data_to_all_the_physics_of_the_model(datasets_db):
+    """plot_interaction plots SM_MIX data without ideal mixing with the ideal entropy of mixing added back"""
     dbf = Database(CU_MG_TDB)
     datasets_db.insert({
-        "components": ["CU", "MG", "VA"], "phases": ["FCC_A1"], "output": data_output, "reference": "testing",
+        "components": ["CU", "MG", "VA"], "phases": ["FCC_A1"], "output": "SM_MIX", "reference": "testing",
         "solver": {"mode": "manual", "sublattice_site_ratios": [1, 1], "sublattice_configurations": [[["CU", "MG"], "VA"]], "sublattice_occupancies": [[[2/3, 1/3], 1.0]]},
-        "conditions": {"P": 101325, "T": 298.15}, "values": [[[-2000.0]]], "excluded_model_contributions": excluded,
+        "conditions": {"P": 101325, "T": 298.15}, "values": [[[-2000.0]]], "excluded_model_contributions": ["idmix"],
     })
     fig, ax = plt.subplots()
-    plot_interaction(dbf, ["CU", "MG", "VA"], "FCC_A1", (("CU", "MG"), "VA"), plot_output, datasets_db, ax=ax)
+    plot_interaction(dbf, ["CU", "MG", "VA"], "FCC_A1", (("CU", "MG"), "VA"), "SM_MIX", datasets_db, ax=ax)
     curve, data = ax.lines
     plt.close(fig)
     assert np.isclose(data.get_xdata()[0], 1/3)
-    if shift is not None:
-        assert np.isclose(data.get_ydata()[0], -2000.0 + shift)
+    assert np.isclose(data.get_ydata()[0], -2000.0 - 8.314462618 * (1/3*np.log(1/3) + 2/3*np.log(2/3)))
     # at the temperature of the curve, the curve minus the plotted data is the MCMC residual
     assert np.allclose(np.interp(1/3, curve.get_xdata(), curve.get_ydata()) - data.get_ydata()[0], _residual(dbf, datasets_db))

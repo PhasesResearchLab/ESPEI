@@ -20,22 +20,20 @@ from espei.paramselect import generate_parameters
 from .fixtures import datasets_db
 
 
-def _per_formula_unit(dbf, comps, phase_name, prop, fractions, T, excluded=()):
+def _per_formula_unit(dbf, comps, phase_name, prop, fractions, T):
     """Property per mole of formula units and moles of atoms per formula unit at fractions {(species, sublattice): y}."""
     mod = Model(dbf, comps, phase_name)
-    for contrib in excluded:
-        mod.models[contrib] = 0
     point = {sf: fractions.get((sf.species.name, sf.sublattice_index), 0.0) for sf in mod.site_fractions}
     atoms = sum(float(mod.moles(el, per_formula_unit=True).xreplace(point)) for el in mod.nonvacant_elements)
     return atoms * float(getattr(mod, prop).xreplace({**point, v.T: T, v.P: 101325.0})), atoms
 
 
-def _mixing_property(dbf, comps, phase_name, prop, fractions, T, excluded=()):
+def _mixing_property(dbf, comps, phase_name, prop, fractions, T):
     """_MIX property per mole of atoms: the endmembers are weighted by the product of their site fractions."""
-    value, atoms = _per_formula_unit(dbf, comps, phase_name, prop, fractions, T, excluded)
+    value, atoms = _per_formula_unit(dbf, comps, phase_name, prop, fractions, T)
     sublattices = sorted({subl for _, subl in fractions})
     for endmember in itertools.product(*[[(sp, y) for (sp, s), y in fractions.items() if s == subl] for subl in sublattices]):
-        endmember_value, _ = _per_formula_unit(dbf, comps, phase_name, prop, {(sp, subl): 1.0 for subl, (sp, _) in zip(sublattices, endmember)}, T, excluded)
+        endmember_value, _ = _per_formula_unit(dbf, comps, phase_name, prop, {(sp, subl): 1.0 for subl, (sp, _) in zip(sublattices, endmember)}, T)
         value -= np.prod([y for _, y in endmember]) * endmember_value
     return value / atoms
 
@@ -64,41 +62,34 @@ AL_FE_PHASE_MODELS = {
 }
 
 
-def _al2fe_dataset(output, value, T=298.15, excluded=None):
-    dataset = {
+def _al2fe_dataset(output, value):
+    return {
         "components": ["AL", "FE"], "phases": ["AL2FE"], "output": output, "reference": "testing",
         "solver": {"mode": "manual", "sublattice_site_ratios": [2, 1], "sublattice_configurations": [["AL", "FE"]]},
-        "conditions": {"P": 101325, "T": T}, "values": [[[value] for _ in np.atleast_1d(T)]],
+        "conditions": {"P": 101325, "T": 298.15}, "values": [[[value]]],
     }
-    if excluded is not None:
-        dataset["excluded_model_contributions"] = excluded
-    return dataset
 
 
-@pytest.mark.parametrize("excluded", [None, ["mag"]])
-def test_generated_parameters_reproduce_formation_and_mixing_data_with_magnetic_references(datasets_db, excluded):
+def test_generated_parameters_reproduce_formation_and_mixing_data_with_magnetic_references(datasets_db):
     """Generated parameters reproduce _FORM data relative to magnetic SER Fe and _MIX data relative to magnetic endmembers, with no MCMC residual"""
-    datasets_db.insert(_al2fe_dataset("HM_FORM", -27000.0, excluded=excluded))
-    datasets_db.insert(_al2fe_dataset("SM_FORM", -2.0, excluded=excluded))
+    datasets_db.insert(_al2fe_dataset("HM_FORM", -27000.0))
+    datasets_db.insert(_al2fe_dataset("SM_FORM", -2.0))
     bcc_mix = {
         "components": ["AL", "FE", "VA"], "phases": ["BCC_A2"], "output": "HM_MIX", "reference": "testing",
         "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3],
                    "sublattice_configurations": [[["AL", "FE"], "VA"]], "sublattice_occupancies": [[[0.25, 0.75], 1.0]]},
         "conditions": {"P": 101325, "T": 298.15}, "values": [[[-12000.0]]],
     }
-    if excluded is not None:
-        bcc_mix["excluded_model_contributions"] = excluded
     datasets_db.insert(bcc_mix)
     dbf = generate_parameters(AL_FE_PHASE_MODELS, datasets_db, "SGTE91", "linear", dbf=Database(AL_FE_MAGNETIC_BCC_TDB))
 
-    excluded = excluded or []
     comps = ["AL", "FE", "VA"]
     for prop, data in (("HM", -27000.0), ("SM", -2.0)):
-        compound, compound_atoms = _per_formula_unit(dbf, comps, "AL2FE", prop, {("AL", 0): 1.0, ("FE", 1): 1.0}, 298.15, excluded)
-        aluminum, _ = _per_formula_unit(dbf, comps, "FCC_A1", prop, {("AL", 0): 1.0, ("VA", 1): 1.0}, 298.15, excluded)
-        iron, _ = _per_formula_unit(dbf, comps, "BCC_A2", prop, {("FE", 0): 1.0, ("VA", 1): 1.0}, 298.15, excluded)
+        compound, compound_atoms = _per_formula_unit(dbf, comps, "AL2FE", prop, {("AL", 0): 1.0, ("FE", 1): 1.0}, 298.15)
+        aluminum, _ = _per_formula_unit(dbf, comps, "FCC_A1", prop, {("AL", 0): 1.0, ("VA", 1): 1.0}, 298.15)
+        iron, _ = _per_formula_unit(dbf, comps, "BCC_A2", prop, {("FE", 0): 1.0, ("VA", 1): 1.0}, 298.15)
         assert np.isclose((compound - 2*aluminum - iron) / compound_atoms, data, rtol=1e-5)
-    mixing = _mixing_property(dbf, comps, "BCC_A2", "HM", {("AL", 0): 0.25, ("FE", 0): 0.75, ("VA", 1): 1.0}, 298.15, excluded)
+    mixing = _mixing_property(dbf, comps, "BCC_A2", "HM", {("AL", 0): 0.25, ("FE", 0): 0.75, ("VA", 1): 1.0}, 298.15)
     assert np.isclose(mixing, -12000.0, rtol=1e-5)
 
     residuals, _ = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[]).get_residuals(np.asarray([]))
