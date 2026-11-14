@@ -1,6 +1,7 @@
-from typing import Any, Literal, Union, TypeAlias, Self
+from typing import Any, Iterable, Literal, Optional, Union, TypeAlias, Self
 import warnings
-from pydantic import BaseModel, Field, model_validator, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, model_validator, field_validator
+from pycalphad import variables as v
 import numpy as np
 import fnmatch
 import json
@@ -18,8 +19,9 @@ __all__ = [
     "EquilibriumPropertyDataset",
     "ZPFDataset",
 
-    # Errors (when validating models)
+    # Errors and warnings (when validating models)
     "DatasetError",
+    "DatasetWarning",
 
     # User-facing API
     "load_datasets",
@@ -47,6 +49,30 @@ PhaseRegionType: TypeAlias = list[PhaseCompositionType]
 class DatasetError(Exception):
     """Exception raised when datasets are invalid."""
     pass
+
+
+class DatasetWarning(UserWarning):
+    """Warning for parts of a dataset that could not be checked."""
+    pass
+
+
+def _species_from_context(info: ValidationInfo) -> Optional[dict[str, v.Species]]:
+    """Return the species (by name) passed to model validation, or None if no species were given."""
+    context = info.context or {}
+    return context.get("species")
+
+
+def _constituent_elements(name, components, species):
+    """Return the elements of a sublattice constituent, resolved through the species if given, or None if unresolved."""
+    if species is None:
+        if name not in components and name != 'VA':
+            return None
+        return {name}
+    if name == 'VA':
+        return {'VA'}
+    if name not in species:
+        raise DatasetError(f'Species {name} is not defined in the phase models or the input database.')
+    return set(species[name].constituents)
 
 
 # Used by BroadcastSinglePhaseFixedConfigurationDataset to define internal DOF
@@ -86,6 +112,15 @@ class Dataset(BaseModel):
     bibtex: str = Field(default="")
     dataset_author: str = Field(default="")
 
+    @model_validator(mode="after")
+    def validate_components_are_not_species(self, info: ValidationInfo) -> Self:
+        species = _species_from_context(info)
+        if species is not None:
+            species_components = sorted(c for c in self.components if c in species and species[c].constituents != {c: 1})
+            if len(species_components) > 0:
+                raise DatasetError(f'Components {species_components} are species. Components must be elements.')
+        return self
+
 
 class BroadcastSinglePhaseFixedConfigurationDataset(Dataset):
     phases: list[PhaseName] = Field(min_length=1, max_length=1)
@@ -95,19 +130,28 @@ class BroadcastSinglePhaseFixedConfigurationDataset(Dataset):
     excluded_model_contributions: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def validate_components_entered_match_components_used(self) -> Self:
+    def validate_components_entered_match_components_used(self, info: ValidationInfo) -> Self:
+        species = _species_from_context(info)
         components_entered = set(self.components)
+        if species is not None and not (components_entered - {"VA"}).issubset(species):
+            # datasets outside the system being fit are never used, so species aren't resolved
+            return self
         components_used = set()
+        unresolved = set()
         for config in self.solver.sublattice_configurations:
             for subl in config:
-                if isinstance(subl, list):
-                    components_used.update(set(subl))
-                else:
-                    components_used.add(subl)
-        # Don't count vacancies as a component here
-        components_difference = components_entered.symmetric_difference(components_used) - {"VA"}
-        if len(components_difference) != 0:
-            raise DatasetError(f'Components entered {components_entered} do not match components used {components_used} ({components_difference} different).')
+                for constituent in (subl if isinstance(subl, list) else [subl]):
+                    elements = _constituent_elements(constituent, components_entered, species)
+                    if elements is None:
+                        unresolved.add(constituent)
+                    else:
+                        components_used.update(elements)
+        if len(unresolved) > 0:
+            # Without species, we can't tell a species from a misspelled component, so the components are not checked
+            warnings.warn(f"Species {', '.join(sorted(unresolved))} in the sublattice configurations were not checked. Provide the phase models (e.g. `espei --check-datasets PATH --phase-models FILE`) to check them.", DatasetWarning)
+            return self
+        if len(components_entered - components_used - {"VA"}) > 0 or len(components_used - components_entered) > 0:
+            raise DatasetError(f'Components entered {components_entered} do not match components used {components_used}.')
         return self
 
     @model_validator(mode="after")
@@ -306,13 +350,16 @@ class ZPFDataset(Dataset):
         return values
 
 
-def to_Dataset(candidate: dict[str, Any]) -> Dataset:
+def to_Dataset(candidate: dict[str, Any], species: Optional[Iterable[v.Species]] = None) -> Dataset:
     """Return a validated Dataset object for a dataset dict. Raises if a validated dataset cannot be created.
 
     Parameters
     ----------
     candidate : dict[str, Any]
         Dictionary describing an ESPEI dataset.
+    species : Optional[Iterable[v.Species]]
+        Species, e.g. from ``PhaseModelSpecification.get_species``, used to
+        resolve the names in sublattice configurations to their elements.
 
     Returns
     -------
@@ -322,15 +369,22 @@ def to_Dataset(candidate: dict[str, Any]) -> Dataset:
     ------
     DatasetError
         If an error is found in the dataset
+
+    Warns
+    -----
+    DatasetWarning
+        If names in the sublattice configurations can't be resolved without
+        ``species``. The components of such datasets are not checked.
     """
+    context = {"species": None if species is None else {sp.name: sp for sp in species}}
     if candidate["output"] == "ZPF":
-        return ZPFDataset.model_validate(candidate)
+        return ZPFDataset.model_validate(candidate, context=context)
     elif candidate['output'].startswith('ACR'):
-        return ActivityPropertyDataset.model_validate(candidate)
+        return ActivityPropertyDataset.model_validate(candidate, context=context)
     elif 'solver' in candidate.keys():
-        return BroadcastSinglePhaseFixedConfigurationDataset.model_validate(candidate)
+        return BroadcastSinglePhaseFixedConfigurationDataset.model_validate(candidate, context=context)
     else:
-        return EquilibriumPropertyDataset.model_validate(candidate)
+        return EquilibriumPropertyDataset.model_validate(candidate, context=context)
 
 
 def apply_tags(datasets: PickleableTinyDB, tags):
@@ -389,7 +443,7 @@ def apply_tags(datasets: PickleableTinyDB, tags):
                 datasets.update(match, doc_ids=[match.doc_id])
 
 
-def load_datasets(dataset_filenames, include_disabled=False) -> PickleableTinyDB:
+def load_datasets(dataset_filenames, include_disabled=False, species=None) -> PickleableTinyDB:
     """
     Create a PickelableTinyDB with the data from a list of filenames.
 
@@ -397,12 +451,15 @@ def load_datasets(dataset_filenames, include_disabled=False) -> PickleableTinyDB
     ----------
     dataset_filenames : [str]
         List of filenames to load as datasets
+    species : Optional[Iterable[v.Species]]
+        Species used to check the datasets, see ``to_Dataset``.
 
     Returns
     -------
     PickleableTinyDB
     """
     ds_database = PickleableTinyDB(storage=MemoryStorage)
+    species = None if species is None else set(species)
     for fname in dataset_filenames:
         with open(fname) as file_:
             try:
@@ -410,7 +467,16 @@ def load_datasets(dataset_filenames, include_disabled=False) -> PickleableTinyDB
                 if not include_disabled and d.get('disabled', False):
                     # The dataset is disabled and not included
                     continue
-                ds_database.insert(to_Dataset(d).model_dump())
+                # add the file name to dataset warnings, as for DatasetError
+                with warnings.catch_warnings(record=True) as caught:
+                    warnings.simplefilter("always", DatasetWarning)
+                    dataset_obj = to_Dataset(d, species=species)
+                for w in caught:
+                    if issubclass(w.category, DatasetWarning):
+                        warnings.warn(f"{fname}: {w.message}", DatasetWarning, stacklevel=2)
+                    else:
+                        warnings.warn_explicit(w.message, w.category, w.filename, w.lineno)
+                ds_database.insert(dataset_obj.model_dump())
             except ValueError as e:
                 raise ValueError('JSON Error in {}: {}'.format(fname, e))
             except DatasetError as e:
@@ -442,10 +508,10 @@ def recursive_glob(start, pattern='*.json'):
     return sorted(matches)
 
 
-def check_dataset(dataset: dict[str, Any]) -> dict[str, Any]:
+def check_dataset(dataset: dict[str, Any], species: Optional[Iterable[v.Species]] = None) -> dict[str, Any]:
     """Ensure that the dataset is valid and consistent by round-tripping through pydantic."""
     warnings.warn("check_dataset is deprecated will be removed in ESPEI 0.11. Behavior has been migrated to the pydantic dataset implementations in espei.datasets.dataset_models. To get a Dataset object, use espei.datasets.to_Dataset.", DeprecationWarning)
-    return to_Dataset(dataset).model_dump()
+    return to_Dataset(dataset, species=species).model_dump()
 
 
 def clean_dataset(dataset: dict[str, Any]) -> dict[str, Any]:
