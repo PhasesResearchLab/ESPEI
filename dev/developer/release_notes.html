@@ -49,9 +49,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-e89d78258451fb351220702b86b1e5c8.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-3c1d863b054615dc5ca3ba6743fbc2d5.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-e89d78258451fb351220702b86b1e5c8.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-7d8f8980687bae4b33d568d349153310.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-4f56578543b54082a99f9a6be5275dd1.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-7d8f8980687bae4b33d568d349153310.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "sidebar",
   "copy-button": false,
@@ -275,7 +275,7 @@ ul.task-list li input[type="checkbox"] {
       <img src="../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../">ESPEI v0.9.2.dev17+gc9143c82c</a> 
+      <a href="../">ESPEI v0.9.2.dev18+gd631e9372</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -373,14 +373,14 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../how-to/recipes/mcmc-probability-convergence/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">MCMC Probability Convergence Plots</span></a>
+  <a href="../how-to/recipes/mcmc-parameter-traces/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Parameter Trace Plots</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../how-to/recipes/mcmc-parameter-traces/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">MCMC Parameter Trace Plots</span></a>
+  <a href="../how-to/recipes/mcmc-probability-convergence/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Probability Convergence Plots</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -430,6 +430,12 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../reference/dataset_schema.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">ESPEI Dataset Schema</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/reference_states.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reference States</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -697,24 +703,25 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">Unreleased</a>
   <ul class="collapse">
   <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
+  <li><a href="#dependencies" id="toc-dependencies" class="nav-link" data-scroll-target="#dependencies">Dependencies</a></li>
   </ul></li>
   <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">0.9.1 (2026-06-05)</a>
   <ul class="collapse">
   <li><a href="#improvements-1" id="toc-improvements-1" class="nav-link" data-scroll-target="#improvements-1">Improvements</a></li>
   <li><a href="#bug-fixes" id="toc-bug-fixes" class="nav-link" data-scroll-target="#bug-fixes">Bug fixes</a></li>
-  <li><a href="#dependencies" id="toc-dependencies" class="nav-link" data-scroll-target="#dependencies">Dependencies</a></li>
+  <li><a href="#dependencies-1" id="toc-dependencies-1" class="nav-link" data-scroll-target="#dependencies-1">Dependencies</a></li>
   </ul></li>
   <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">0.9.0 (2024-08-12)</a>
   <ul class="collapse">
   <li><a href="#improvements-2" id="toc-improvements-2" class="nav-link" data-scroll-target="#improvements-2">Improvements</a></li>
-  <li><a href="#dependencies-1" id="toc-dependencies-1" class="nav-link" data-scroll-target="#dependencies-1">Dependencies</a></li>
+  <li><a href="#dependencies-2" id="toc-dependencies-2" class="nav-link" data-scroll-target="#dependencies-2">Dependencies</a></li>
   <li><a href="#deprecations" id="toc-deprecations" class="nav-link" data-scroll-target="#deprecations">Deprecations</a></li>
   </ul></li>
   <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">0.8.10 (2024-01-30)</a>
   <ul class="collapse">
   <li><a href="#improvements-3" id="toc-improvements-3" class="nav-link" data-scroll-target="#improvements-3">Improvements</a></li>
   <li><a href="#bug-fixes-1" id="toc-bug-fixes-1" class="nav-link" data-scroll-target="#bug-fixes-1">Bug fixes</a></li>
-  <li><a href="#dependencies-2" id="toc-dependencies-2" class="nav-link" data-scroll-target="#dependencies-2">Dependencies</a></li>
+  <li><a href="#dependencies-3" id="toc-dependencies-3" class="nav-link" data-scroll-target="#dependencies-3">Dependencies</a></li>
   </ul></li>
   <li><a href="#section-3" id="toc-section-3" class="nav-link" data-scroll-target="#section-3">0.8.9 (2022-08-04)</a>
   <ul class="collapse">
@@ -816,6 +823,13 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="improvements">Improvements</h3>
 <ul>
 <li>Fit Gibbs energy parameters to Gibbs energy (<code>GM</code>) data and to the temperature dependence of <code>HM</code> and <code>SM</code> data with the new <code>simultaneous_gibbs_energy_fitting_description</code>, and to absolute data without a reference state (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/304">issue 304</a>)</li>
+<li>Generalize reference states of fixed configuration data. Parameter selection and MCMC use the same <code>_FORM</code> and <code>_MIX</code> reference states, fixing bugs where excluded model contributions (e.g.&nbsp;magnetism) were handled differently between them. See the new <a href="https://espei.org/reference/reference_states.html">Reference States</a> page (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/81">issue 81</a>, <a href="https://github.com/phasesresearchlab/espei/issues/305">issue 305</a>)</li>
+</ul>
+</section>
+<section id="dependencies" class="level3">
+<h3 class="anchored" data-anchor-id="dependencies">Dependencies</h3>
+<ul>
+<li>Require pycalphad 0.12 or later.</li>
 </ul>
 </section>
 </section>
@@ -837,8 +851,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Fix a bug where duplicated excluded model contribution entries resulted in datasets being incorrectly filtered out (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/263">issue 263</a>)</li>
 </ul>
 </section>
-<section id="dependencies" class="level3">
-<h3 class="anchored" data-anchor-id="dependencies">Dependencies</h3>
+<section id="dependencies-1" class="level3">
+<h3 class="anchored" data-anchor-id="dependencies-1">Dependencies</h3>
 <ul>
 <li>Removed <code>pkg_resources</code> dependency for plugin discovery, preferring the currently reccomended <code>importlib.metadata.entry_points</code> (<a href="https://github.com/jmmshn">@jmmshn</a> - <a href="https://github.com/phasesresearchlab/espei/issues/266">issue 266</a>)</li>
 <li>Use <a href="https://docs.astral.sh/uv/">uv</a> for package management in CI. We reccomend using <code>uv</code> for development. (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/273">issue 273</a>)</li>
@@ -863,8 +877,8 @@ ul.task-list li input[type="checkbox"] {
 </ul></li>
 </ul>
 </section>
-<section id="dependencies-1" class="level3">
-<h3 class="anchored" data-anchor-id="dependencies-1">Dependencies</h3>
+<section id="dependencies-2" class="level3">
+<h3 class="anchored" data-anchor-id="dependencies-2">Dependencies</h3>
 <ul>
 <li>Update minimum required PyCalphad version to 0.11 (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/259">issue 259</a>)</li>
 <li>Add NumPy 2.0 support (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/255">issue 255</a>)</li>
@@ -900,8 +914,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Correctly pass parameters through <code>calculate_activity_error()</code> (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/246">issue 246</a>)</li>
 </ul>
 </section>
-<section id="dependencies-2" class="level3">
-<h3 class="anchored" data-anchor-id="dependencies-2">Dependencies</h3>
+<section id="dependencies-3" class="level3">
+<h3 class="anchored" data-anchor-id="dependencies-3">Dependencies</h3>
 <ul>
 <li>Update pycalphad minimum version to 0.10.4 to support new property modeling framework (<a href="https://github.com/bocklund">@bocklund</a>)</li>
 <li>Migrate to pydantic v2 (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/247">issue 247</a>, <a href="https://github.com/phasesresearchlab/espei/issues/248">issue 248</a>)</li>

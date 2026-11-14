@@ -90,7 +90,7 @@ div.csl-indent {
 <script src="../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
-<link href="../reference/yaml_input_schema.html" rel="next">
+<link href="../reference/reference_states.html" rel="next">
 <link href="../reference/phase_models_schema.html" rel="prev">
 <link href="../_static/ESPEI-logo.png" rel="icon" type="image/png">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
@@ -104,9 +104,9 @@ div.csl-indent {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-e89d78258451fb351220702b86b1e5c8.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-3c1d863b054615dc5ca3ba6743fbc2d5.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-e89d78258451fb351220702b86b1e5c8.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-7d8f8980687bae4b33d568d349153310.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-4f56578543b54082a99f9a6be5275dd1.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-7d8f8980687bae4b33d568d349153310.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "sidebar",
   "copy-button": false,
@@ -330,7 +330,7 @@ div.csl-indent {
       <img src="../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../">ESPEI v0.9.2.dev17+gc9143c82c</a> 
+      <a href="../">ESPEI v0.9.2.dev18+gd631e9372</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -428,14 +428,14 @@ div.csl-indent {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../how-to/recipes/mcmc-probability-convergence/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">MCMC Probability Convergence Plots</span></a>
+  <a href="../how-to/recipes/mcmc-parameter-traces/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Parameter Trace Plots</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../how-to/recipes/mcmc-parameter-traces/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">MCMC Parameter Trace Plots</span></a>
+  <a href="../how-to/recipes/mcmc-probability-convergence/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC Probability Convergence Plots</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -485,6 +485,12 @@ div.csl-indent {
   <div class="sidebar-item-container"> 
   <a href="../reference/dataset_schema.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">ESPEI Dataset Schema</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/reference_states.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reference States</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -816,17 +822,17 @@ div.csl-indent {
 <li><p>The <code>comment</code> key and value can be used anywhere in the data to keep notes for your reference. It takes no effect.</p></li>
 <li><p>In <code>solver</code> the site fractions and and site ratios are described for the phase.</p>
 <blockquote class="blockquote">
-<p><code>sublattice_configurations</code> is a list of different configurations, that should correspond to the sublattices for the phase descriptions. Non-mixing sublattices are represented as a string, while mixing sublattices are represented as a lists. Thus an endmember for <code>BCC_B2</code> (as in this example) is <code>["AL", "NI", VA"]</code> and if there were mixing (as in the next example) it might be <code>["AL", ["AL", "NI"], "VA"]</code>. Mixing also means that the <code>sublattice_occupancies</code> key must be specified, but that is not the case in this example. It is important to note that any mixing configurations must have any ideal mixing contributions removed. Regardless of whether there is mixing or not, the length of this list should always equal the number of sublattices in the phase, though the sub-lists can have mixing up to the number of components in that sublattice. Note that the <code>sublattice_configurations</code> is a <em>list</em> of these lists. That is, there can be multiple sublattice configurations in a single dataset. See the second example in this section for such an example. Constituents are species names, which can be elements or species that are declared in the either the <a href="../reference/phase_models_schema.html#species">phase models</a> or the input database.</p>
+<p><code>sublattice_configurations</code> is a list of different configurations, that should correspond to the sublattices for the phase descriptions. Non-mixing sublattices are represented as a string, while mixing sublattices are represented as a lists. Thus an endmember for <code>BCC_B2</code> (as in this example) is <code>["AL", "NI", VA"]</code> and if there were mixing (as in the next example) it might be <code>["AL", ["AL", "NI"], "VA"]</code>. Mixing also means that the <code>sublattice_occupancies</code> key must be specified, but that is not the case in this example. Regardless of whether there is mixing or not, the length of this list should always equal the number of sublattices in the phase, though the sub-lists can have mixing up to the number of components in that sublattice. Note that the <code>sublattice_configurations</code> is a <em>list</em> of these lists. That is, there can be multiple sublattice configurations in a single dataset. See the second example in this section for such an example. Constituents are species names, which can be elements or species that are declared in the either the <a href="../reference/phase_models_schema.html#species">phase models</a> or the input database.</p>
 </blockquote></li>
 <li><p>The <code>conditions</code> describe temperatures (<code>T</code>) and pressures (<code>P</code>) as either scalars or one-dimensional lists.</p></li>
-<li><p>The type of quantity is expressed using the <code>output</code> key. This can in principle be any thermodynamic quantity, but currently only <code>GM*</code>, <code>CPM*</code>, <code>SM*</code>, and <code>HM*</code> are supported, where <code>*</code> is the reference state:</p>
+<li><p>The type of quantity is expressed using the <code>output</code> key. This can in principle be any thermodynamic quantity, but currently only <code>GM*</code>, <code>CPM*</code>, <code>SM*</code>, and <code>HM*</code> are supported, where <code>*</code> is the reference state (see <a href="../reference/reference_states.html">Reference States</a>):</p>
 <ul>
 <li><code>_FORM</code>: formation quantities, relative to the pure elements in their stable element reference (SER) phases, e.g.&nbsp;<code>HM_FORM</code>.</li>
 <li><code>_MIX</code>: mixing quantities, relative to the endmembers of the phase weighted by their site fractions, e.g.&nbsp;<code>HM_MIX</code>.</li>
 <li>nothing: absolute quantities, e.g.&nbsp;<code>SM</code> for third law entropies. Absolute <code>HM</code> and <code>GM</code> are relative to the enthalpy of the pure elements in their SER phases at 298.15 K, as in the unary reference data. This requires the database to describe the SER phases fully, e.g.&nbsp;the magnetism of bcc Fe.</li>
 </ul></li>
 <li><p><code>values</code> is a 3-dimensional array where each value is the <code>output</code> for a specific condition of pressure, temperature, and sublattice configurations from outside to inside. Alternatively, the size of the array must be <code>(len(P), len(T), len(subl_config))</code>. In the example below, the shape of the <code>values</code> array is (1, 12, 1) as there is one pressure scalar, one sublattice configuration, and 12 temperatures.</p></li>
-<li><p>There is also a key, <code>excluded_model_contributions</code>, which will make those contributions of pycalphad's <code>Model</code> not be fit to when doing parameter selection or MCMC. This is useful for cases where the type of data used does not include some specific <code>Model</code> contributions that parameters may already exist for. For example, DFT formation energies do not include ideal mixing or (Calphad-type) magnetic model contributions, but formation energies from experiments would include these contributions so experimental formation energies should not be excluded.</p></li>
+<li><p>The optional <code>excluded_model_contributions</code> key lists contributions of pycalphad's <code>Model</code> (e.g.&nbsp;<code>"idmix"</code> or <code>"mag"</code>) that the data do not include. They are removed from both the phase and its reference state in parameter selection and MCMC. For example, 0 K DFT formation energies do not include ideal mixing or (Calphad-type) magnetic model contributions, but formation energies from experiments do, so experimental data should not exclude them. See <a href="../reference/reference_states.html">Reference States</a>.</p></li>
 </ul>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"reference"</span><span class="fu">:</span> <span class="st">"Yi Wang et al 2009"</span><span class="fu">,</span></span>
@@ -1036,7 +1042,7 @@ div.csl-indent {
 <ol type="1">
 <li>A single element sublattice is different in a phase model (<code>[["A", "B"], ["A"]]]</code>) than a sublattice configuration (<code>[["A", "B"], "A"]</code>).</li>
 <li>Make sure you use the right units (<code>J/mole-atom</code>, mole fractions, Kelvin, Pascal)</li>
-<li>Mixing configurations should not have ideal mixing contributions.</li>
+<li>Data that do not include some physics, e.g.&nbsp;DFT energies of mixing configurations without ideal mixing, should list it in <code>excluded_model_contributions</code>.</li>
 <li>All types of data can have a <code>weight</code> key at the top level that will weight the standard deviation parameter in parameter selection and MCMC runs for that dataset. If a single dataset should have different weights applied, multiple datasets should be created.</li>
 </ol>
 
@@ -1555,8 +1561,8 @@ e.g. a local quarto preview.
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../reference/yaml_input_schema.html" class="pagination-link" aria-label="YAML Input Schema">
-        <span class="nav-page-text">YAML Input Schema</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="../reference/reference_states.html" class="pagination-link" aria-label="Reference States">
+        <span class="nav-page-text">Reference States</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
