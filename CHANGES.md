@@ -10,6 +10,7 @@
 ### Dependencies
 
 - Require pycalphad 0.12 or later.
+- Support Python 3.14 and 3.15 ([\@bocklund](https://github.com/bocklund))
 
 ## 0.9.1 (2026-06-05)
 
