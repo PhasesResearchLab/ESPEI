@@ -31,11 +31,14 @@ def test_optimizer_can_fit():
     """Test that TestOptimizer can call fit with the proper API"""
     syms = ['A', 'B', 'C']
     targ = [-100, 0, 10]
-    opt = TestOptimizer(Database())
+    dbf = Database()
+    opt = TestOptimizer(dbf)
     opt.fit(syms, {}, targ)
     for sym, t in zip(syms, targ):
         assert sym in opt.dbf.symbols
         assert np.isclose(opt.dbf.symbols[sym], t)
+    # the optimizer fits a copy of the Database
+    assert len(dbf.symbols) == 0
 
 
 def test_scipy_optimizer_maximizes_the_likelihood(datasets_db):

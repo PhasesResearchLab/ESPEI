@@ -12,7 +12,7 @@ _log = logging.getLogger(__name__)
 class SciPyOptimizer(OptimizerBase):
     """ESPEI optimizer using SciPy's optimize.minimize function"""
     def _fit(self, symbols, ds, method='Powell', maxiter=50, verbose=False, data_weights=None, **kwargs):
-        # Use Scipy's minimize with the Powell method to minimize the negative log-likelihood
+        # Use Scipy's minimize with the Powell method to maximize the likelihood
         ctx = setup_context(self.dbf, ds, symbols, data_weights=data_weights)
 
         symbols_to_fit = ctx['symbols_to_fit']
@@ -21,7 +21,8 @@ class SciPyOptimizer(OptimizerBase):
             print('Fitting', symbols_to_fit)
             print('Initial guess', initial_guess)
         s = time.time()
-        out = minimize(self.predict, initial_guess, args=(ctx,), method=method,
+        # predict is the log-likelihood, as for the other optimizers, so minimize its negative
+        out = minimize(lambda params, ctx: -self.predict(params, ctx), initial_guess, args=(ctx,), method=method,
                        options={'maxiter': maxiter}, **kwargs)
         xs = np.atleast_1d(out.x).tolist()
         if verbose:
@@ -31,7 +32,7 @@ class SciPyOptimizer(OptimizerBase):
 
     @staticmethod
     def predict(params, ctx):
-        """Negative log-likelihood, for scipy.optimize.minimize."""
+        """Log-likelihood of the parameters."""
         starttime = time.time()
         lnlike = 0.0
         likelihoods = {}
@@ -42,4 +43,4 @@ class SciPyOptimizer(OptimizerBase):
         like_str = ". ".join([f"{ky}: {vl:0.3f}" for ky, vl in likelihoods.items()])
         _log.trace('Likelihood - %0.2fs. %s. Total: %0.3f.', time.time() - starttime, like_str, lnlike)
         error = np.array(lnlike, dtype=np.float64)
-        return -error
+        return error

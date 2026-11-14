@@ -40,7 +40,7 @@ class OptimizerBase(object):
 
     @staticmethod
     def predict(params, context):
-        """Given a set of parameters and a context, return the resulting sum of square error.
+        """Given a set of parameters and a context, return the log-probability that the optimizer maximizes.
 
         Parameters
         ----------
