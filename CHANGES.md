@@ -7,6 +7,12 @@
 - Fit Gibbs energy parameters to Gibbs energy (`GM`) data and to the temperature dependence of `HM` and `SM` data with the new `simultaneous_gibbs_energy_fitting_description`, and to absolute data without a reference state ([\@bocklund](https://github.com/bocklund) - [issue 304](https://github.com/phasesresearchlab/espei/issues/304))
 - Generalize reference states of fixed configuration data. Parameter selection and MCMC use the same `_FORM` and `_MIX` reference states, fixing bugs where excluded model contributions (e.g. magnetism) were handled differently between them. See the new [Reference States](https://espei.org/reference/reference_states.html) page ([\@bocklund](https://github.com/bocklund) - [issue 81](https://github.com/phasesresearchlab/espei/issues/81), [issue 305](https://github.com/phasesresearchlab/espei/issues/305))
 
+### Bug fixes
+
+- Fix `SciPyOptimizer` minimizing the log-likelihood instead of maximizing it, and pass its `data_weights` to the residual functions ([\@bocklund](https://github.com/bocklund))
+- Fix `setup_context` and the optimizers modifying the symbols of the Database passed to them ([\@bocklund](https://github.com/bocklund))
+- Fix `ZPFResidual` and `EquilibriumPropertyResidual` giving parameter values to the wrong symbols when `symbols_to_fit` is not sorted ([\@bocklund](https://github.com/bocklund))
+
 ### Dependencies
 
 - Require pycalphad 0.12 or later.
