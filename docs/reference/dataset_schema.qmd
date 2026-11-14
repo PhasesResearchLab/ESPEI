@@ -76,7 +76,7 @@ heat capacity for BCC_B2.
 -   The optional `excluded_model_contributions` key lists contributions
     of pycalphad\'s `Model` (e.g. `"idmix"` or `"mag"`) that the data do
     not include. They are removed from both the phase and its reference
-    state in parameter selection and MCMC. For example, DFT formation
+    state in parameter selection and MCMC. For example, 0 K DFT formation
     energies do not include ideal mixing or (Calphad-type) magnetic
     model contributions, but formation energies from experiments do, so
     experimental data should not exclude them. See
