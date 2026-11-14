@@ -51,6 +51,7 @@ quartodoc:
         contents:
           - reference/phase_models_schema.qmd
           - reference/dataset_schema.qmd
+          - reference/reference_states.qmd
           - reference/yaml_input_schema.qmd
           - section: "API Reference"
             href: reference/api/index.qmd

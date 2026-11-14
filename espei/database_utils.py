@@ -4,8 +4,11 @@
 import logging
 from typing import Dict, Union
 from pycalphad import Database, variables as v
+from symengine import Symbol
+from tinydb import where
 import espei.refdata
 from espei.phase_models import PhaseModelSpecification
+from espei.sublattice_tools import generate_endmembers, generate_symmetric_group, tuplify
 from espei.utils import extract_aliases
 
 _log = logging.getLogger(__name__)
@@ -48,7 +51,49 @@ def _missing_reference_data_message(element, ref_state):
     )
 
 
-def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="SGTE91"):
+def _param_present_in_database(dbf, phase_name, configuration, param_type):
+    species = {sp.name: sp for sp in dbf.species}
+    const_arr = tuple([tuple(species[name] for name in subl) for subl in map(tuplify, configuration)])
+    # parameter order doesn't matter here, since the generated might not exactly match. Always override.
+    query = (where('phase_name') == phase_name) & \
+            (where('parameter_type') == param_type) & \
+            (where('constituent_array') == const_arr)
+    search_result = dbf._parameters.search(query)
+    if len(search_result) > 0:
+        return True
+
+
+def _add_lattice_stabilities(dbf, phase_name, symmetry, refdata, aliases):
+    """Add the Gibbs energies of the pure element endmembers of a phase that are not in the Database from the reference data."""
+    phase_obj = dbf.phases[phase_name]
+    subl_model = [sorted([sp.name for sp in subl]) for subl in phase_obj.constituents]
+    site_ratios = phase_obj.sublattices
+    for endmember in generate_endmembers(subl_model, symmetry):
+        if _param_present_in_database(dbf, phase_name, endmember, "G"):
+            continue
+        endmember_comps = list(set(endmember))
+        # only one non-VA component, or two components but the other is VA and its only the last sublattice
+        if ((len(endmember_comps) == 1) and (endmember_comps[0] != 'VA')) or\
+                ((len(endmember_comps) == 2) and (endmember[-1] == 'VA') and (len(set(endmember[:-1])) == 1)):
+            # this is a "pure component endmember"
+            # try all phase name aliases until we get run out or get a hit
+            em_comp = list(set(endmember_comps) - {'VA'})[0]
+            sym_name = None
+            for name in sorted(alias for alias, database_phase in aliases.items() if database_phase == phase_name):
+                sym_name = 'G'+name[:3].upper()+em_comp.upper()
+                stability = refdata.get((em_comp.upper(), name.upper()), None)
+                if stability is not None:
+                    dbf.symbols[sym_name] = stability
+                    break
+            if dbf.symbols.get(sym_name, None) is not None:
+                num_moles = sum([sites for elem, sites in zip(endmember, site_ratios) if elem != 'VA'])
+                _log.trace("Found lattice stability: %s", sym_name)
+                _log.debug("%s = %s", sym_name, dbf.symbols[sym_name])
+                for em in generate_symmetric_group(endmember, symmetry):
+                    dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, num_moles * Symbol(sym_name))
+
+
+def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="SGTE91", lattice_stabilities=True):
     """Return a Database boostraped with elements, species, phases and unary lattice stabilities.
 
     Parameters
@@ -61,6 +106,9 @@ def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="S
         Initial pycalphad Database that can have parameters that would not be fit by ESPEI
     fallback_ref_state : str
         String of the reference data to use for SER data, defaults to 'SGTE91'
+    lattice_stabilities : bool
+        If True (the default), add the Gibbs energies of the pure element
+        endmembers of each phase from the reference data.
 
     Returns
     -------
@@ -70,7 +118,7 @@ def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="S
     """
     if dbf is None:
         dbf = Database()
-    lattice_stabilities = getattr(espei.refdata, ref_state)
+    refdata = getattr(espei.refdata, ref_state)
     ser_stability = getattr(espei.refdata, ref_state + "Stable")
     aliases = extract_aliases(phase_models)
     phases = sorted({ph.upper() for ph in phase_models["phases"].keys()})
@@ -127,4 +175,9 @@ def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="S
             if element not in ser_stability:
                 raise ValueError(_missing_reference_data_message(element, ref_state))
             dbf.symbols[sym_name] = ser_stability[element]
+
+    if lattice_stabilities:
+        for phase_name, phase_data in sorted(phase_models['phases'].items()):
+            if phase_name in dbf.phases:
+                _add_lattice_stabilities(dbf, phase_name, phase_data.get('equivalent_sublattices'), refdata, aliases)
     return dbf

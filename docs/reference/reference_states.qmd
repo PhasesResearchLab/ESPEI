@@ -1,0 +1,39 @@
+---
+title: "Reference States"
+---
+
+Fixed configuration thermochemical data (e.g. `HM_FORM`, `SM_MIX` or `CPM`) are used to compare the property of a phase at known site fractions to a reference state.
+As these types of data are often computed by atomistic methods ESPEI datasets allow you to describe both
+
+1.  the reference state (the suffix of `output`), and
+2.  the physics included in the data (via `excluded_model_contributions`)
+
+## Reference states
+
+Using enthalpy, `HM`, as an example (the same applies to `GM`, `SM` and `CPM`):
+
+| `output` | Reference state |
+|----------|-----------------|
+| `HM` | None. The data are absolute. |
+| `HM_FORM` | The pure elements in their stable element reference (SER) phases. |
+| `HM_MIX` | The endmembers of the phase of interest. |
+
+`_FORM` is the usual thermodynamic definition for formation energy, but ESPEI's use of "mixing" for fixed configuration data using the `_MIX` suffix is different than the conventional definition.
+Usually enthalpy of mixing is like enthalpy of formation, but with respect to the pure elements for the phase of interest.
+Here it is of the endmembers of the phase.
+For phases with a single sublattice with only pure element constituents (any number of pure vacancy sublattice), these are equivalent, which is why ESPEI datasets often use `_MIX` for experimental data of FCC, BCC, HCP and LIQUID phases.
+
+For phases with species or multiple sublattices, the `_MIX` reference state generalizes as in the following examples:
+
+- For a sublattice model `(A, A2B3, B)` at site fractions `[0.2, 0.5, 0.3]`, the reference is 0.2 of `A`, 0.5 of `A2B3` and 0.3 of `B`.
+- For a two sublattice phase `(A,B)1(A)1` with site fractions `[[0.25, 0.75], [1.0]]`, the subtracted reference is a mixture of 0.25 of `A:A` and 0.75 of `B:A`.
+
+## Excluded model contributions
+
+Unless a contribution is excluded, every contribution of PyCalphad's `Model` is included in both the phase and its reference state (`ref`, `idmix`, `xsmix`, `mag`, ...).
+Use exclusions when the data do not contain that physics, for example:
+
+- Formation enthalpies from experimental calorimetry of a compound in Al-Fe include all the physics of reality, so there should be no excluded model contributions.
+- Energies from typical DFT calculations do not include ideal configurational entropy or magnetic entropy (for the latter, see [Haglof et al., Calphad 2021](https://doi.org/10.1016/j.calphad.2021.102320)). Datasets from these calculations should exclude `["idmix", "mag"]`.
+
+[Tags](dataset_schema.qmd#tags) can add `excluded_model_contributions` to many datasets at once.

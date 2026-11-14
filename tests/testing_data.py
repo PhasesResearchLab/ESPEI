@@ -906,6 +906,8 @@ CR_FE_HM_MIX_EXCLUDED_MAG = {
 "excluded_model_contributions": ["mag"]
 }
 
+# Same mixture as CR_FE_HM_MIX_EXCLUDED_MAG, with the magnetic contribution of
+# CR_FE_INITIAL_TDB_CONTRIBUTIONS in both the mixture and the pure CR and FE endmembers
 CR_FE_HM_MIX_WITH_MAG = {
 "components": ["CR", "FE", "VA"],"phases": ["BCC_A2"],
 "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3],
@@ -913,7 +915,7 @@ CR_FE_HM_MIX_WITH_MAG = {
 "sublattice_occupancies": [[[0.5, 0.5], 1.0]]},
 "conditions": {"P": 101325, "T": 300},
 "output": "HM_MIX",
-"values": [[[7128.41104097]]]
+"values": [[[11647.39099434]]]
 }
 
 CR_FE_INITIAL_TDB_CONTRIBUTIONS = """$ Cr-Fe database with only magnetic parts
@@ -1578,4 +1580,15 @@ dataset_multi_valid_ternary_manyT_manyP = {
         [["AL3NI2", ["CR", "NI"], [0.2, 0.4114]], ["BCC_B2", ["CR", "NI"], [0.2, 0.4532]]]
     ],
     "reference": "testreference",
+}
+
+# With L_ALPHA = 0, A_B_REGULAR_SOLUTION_TDB is ideal: without idmix, A0.5B0.5 has no entropy of mixing or formation
+A_B_DATASET_SM_FORM_ALPHA_EXCLUDED_IDMIX = {
+    "components": ["A", "B"], "phases": ["ALPHA"], "output": "SM_FORM",
+    "solver": {"mode": "manual", "sublattice_site_ratios": [1],
+               "sublattice_configurations": [[["A", "B"]]], "sublattice_occupancies": [[[0.5, 0.5]]]},
+    "conditions": {"P": 101325, "T": 300},
+    "excluded_model_contributions": ["idmix"],
+    "values": [[[0.0]]],
+    "reference": "testing",
 }

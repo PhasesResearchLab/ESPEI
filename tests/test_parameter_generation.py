@@ -878,7 +878,11 @@ def test_molar_volume_model_fits(datasets_db):
     V0_tern_truth = 0.99e-5  # from data
     assert np.isclose(V0_tern, V0_tern_truth, atol=1e-14)
 
-    VM_tern_em_mix = float(mod.VM.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf()) - float(mod.endmember_reference_model.VM.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf())
+    # VM_MIX is relative to the mechanical mixture of the pure endmembers' VM
+    VM_tern_em_mix = float(mod.VM.subs({v.T: 298.15, **tern_Mo33_Ta33_W33, **mod._symbols}).evalf())
+    for el in ["MO", "TA", "W"]:
+        pure_el = {v.Y("BCC_A2", 0, sp): float(sp == el) for sp in ["MO", "TA", "W"]}
+        VM_tern_em_mix -= 0.333333 * float(mod.VM.subs({v.T: 298.15, **pure_el, **mod._symbols}).evalf())
     VM_tern_em_mix_truth = 1.0e-6  # from data
     assert np.isclose(VM_tern_em_mix, VM_tern_em_mix_truth, atol=1e-14)
 
@@ -932,6 +936,28 @@ def test_molar_volume_mixing_and_absolute_value_produce_the_same_parameter(datas
     assert np.isclose(dbf.symbols['VV0000'], 1e-5, atol=1e-14)
     assert np.isclose(dbf.symbols['VV0001'], 2e-5, atol=1e-14)
     assert np.isclose(dbf.symbols['VV0002'], 4 * -0.05e-5, atol=1e-14)
+
+
+def test_other_parameters_are_fit_for_endmembers_with_gibbs_energy_in_initial_database(datasets_db):
+    """Endmembers with a Gibbs energy in the initial database still have other parameter types fit"""
+    initial_dbf = Database("""
+    ELEMENT TA BCC_A2 180.95 5681.9 41.472 !
+    TYPE_DEFINITION % SEQ * !
+    PHASE BCC_A2 % 1 1 !
+    CONSTITUENT BCC_A2 :TA: !
+    PARAMETER G(BCC_A2,TA;0) 298.15 GHSERTA; 6000 N !
+    """)
+    datasets_db.insert({
+        "components": ["TA"], "phases": ["BCC_A2"],
+        "conditions": {"P": 101315, "T": 298.15},
+        "output": "V0", "values": [[[1e-5]]],
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [["TA"]], "sublattice_occupancies": [[1.0]]},
+    })
+    phase_models = {"components": ["TA"], "phases": {"BCC_A2": {"sublattice_model": [["TA"]], "sublattice_site_ratios": [1]}}}
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear', dbf=initial_dbf, fitting_description=molar_volume_gibbs_energy_fitting_description)
+    assert len(dbf._parameters.search(where('parameter_type') == 'G')) == 1
+    assert len(dbf._parameters.search(where('parameter_type') == 'V0')) == 1
+    assert np.isclose(dbf.symbols['VV0000'], 1e-5, atol=1e-14)
 
 
 def test_species_parameters_are_fit(datasets_db):
