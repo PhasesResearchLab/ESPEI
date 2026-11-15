@@ -275,7 +275,7 @@ ul.task-list li input[type="checkbox"] {
       <img src="../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../">ESPEI v0.9.2.dev19+gd3cbcf6b1</a> 
+      <a href="../">ESPEI v0.9.2.dev20+g88f9a6ed1</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -703,12 +703,13 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">Unreleased</a>
   <ul class="collapse">
   <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
+  <li><a href="#bug-fixes" id="toc-bug-fixes" class="nav-link" data-scroll-target="#bug-fixes">Bug fixes</a></li>
   <li><a href="#dependencies" id="toc-dependencies" class="nav-link" data-scroll-target="#dependencies">Dependencies</a></li>
   </ul></li>
   <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">0.9.1 (2026-06-05)</a>
   <ul class="collapse">
   <li><a href="#improvements-1" id="toc-improvements-1" class="nav-link" data-scroll-target="#improvements-1">Improvements</a></li>
-  <li><a href="#bug-fixes" id="toc-bug-fixes" class="nav-link" data-scroll-target="#bug-fixes">Bug fixes</a></li>
+  <li><a href="#bug-fixes-1" id="toc-bug-fixes-1" class="nav-link" data-scroll-target="#bug-fixes-1">Bug fixes</a></li>
   <li><a href="#dependencies-1" id="toc-dependencies-1" class="nav-link" data-scroll-target="#dependencies-1">Dependencies</a></li>
   </ul></li>
   <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">0.9.0 (2024-08-12)</a>
@@ -720,7 +721,7 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">0.8.10 (2024-01-30)</a>
   <ul class="collapse">
   <li><a href="#improvements-3" id="toc-improvements-3" class="nav-link" data-scroll-target="#improvements-3">Improvements</a></li>
-  <li><a href="#bug-fixes-1" id="toc-bug-fixes-1" class="nav-link" data-scroll-target="#bug-fixes-1">Bug fixes</a></li>
+  <li><a href="#bug-fixes-2" id="toc-bug-fixes-2" class="nav-link" data-scroll-target="#bug-fixes-2">Bug fixes</a></li>
   <li><a href="#dependencies-3" id="toc-dependencies-3" class="nav-link" data-scroll-target="#dependencies-3">Dependencies</a></li>
   </ul></li>
   <li><a href="#section-3" id="toc-section-3" class="nav-link" data-scroll-target="#section-3">0.8.9 (2022-08-04)</a>
@@ -779,7 +780,7 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#section-24" id="toc-section-24" class="nav-link" data-scroll-target="#section-24">0.7.1 (2019-06-03)</a>
   <ul class="collapse">
   <li><a href="#improvements-13" id="toc-improvements-13" class="nav-link" data-scroll-target="#improvements-13">Improvements</a></li>
-  <li><a href="#bug-fixes-2" id="toc-bug-fixes-2" class="nav-link" data-scroll-target="#bug-fixes-2">Bug fixes</a></li>
+  <li><a href="#bug-fixes-3" id="toc-bug-fixes-3" class="nav-link" data-scroll-target="#bug-fixes-3">Bug fixes</a></li>
   <li><a href="#other" id="toc-other" class="nav-link" data-scroll-target="#other">Other</a></li>
   </ul></li>
   <li><a href="#section-25" id="toc-section-25" class="nav-link" data-scroll-target="#section-25">0.6.2 (2018-11-27)</a></li>
@@ -826,11 +827,19 @@ ul.task-list li input[type="checkbox"] {
 <li>Generalize reference states of fixed configuration data. Parameter selection and MCMC use the same <code>_FORM</code> and <code>_MIX</code> reference states, fixing bugs where excluded model contributions (e.g.&nbsp;magnetism) were handled differently between them. See the new <a href="https://espei.org/reference/reference_states.html">Reference States</a> page (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/81">issue 81</a>, <a href="https://github.com/phasesresearchlab/espei/issues/305">issue 305</a>)</li>
 </ul>
 </section>
+<section id="bug-fixes" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes">Bug fixes</h3>
+<ul>
+<li>Fix <code>SciPyOptimizer</code> minimizing the log-likelihood instead of maximizing it, and pass its <code>data_weights</code> to the residual functions (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/307">issue 307</a>)</li>
+<li>Fix <code>setup_context</code> and the optimizers modifying the symbols of the Database passed to them (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/307">issue 307</a>)</li>
+<li>Fix <code>ZPFResidual</code> and <code>EquilibriumPropertyResidual</code> giving parameter values to the wrong symbols when <code>symbols_to_fit</code> is not sorted (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/307">issue 307</a>)</li>
+</ul>
+</section>
 <section id="dependencies" class="level3">
 <h3 class="anchored" data-anchor-id="dependencies">Dependencies</h3>
 <ul>
 <li>Require pycalphad 0.12 or later.</li>
-<li>Support Python 3.14 and 3.15 (<a href="https://github.com/bocklund">@bocklund</a>)</li>
+<li>Support Python 3.14 and 3.15 (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/306">issue 306</a>)</li>
 </ul>
 </section>
 </section>
@@ -844,8 +853,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Improve debug log messages in ZPF error to handle convergence failures due to underdetermined chemical potentials (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/274">issue 274</a>)</li>
 </ul>
 </section>
-<section id="bug-fixes" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes">Bug fixes</h3>
+<section id="bug-fixes-1" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-1">Bug fixes</h3>
 <ul>
 <li>Fix <code>TypeError</code> from expired deprecations in NumPy 2.4.2 (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/285">issue 285</a>)</li>
 <li>Support installing from Git URLs (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/287">issue 287</a>)</li>
@@ -907,8 +916,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Support checking only a single dataset from command line (<a href="https://github.com/zhyrek">@zhyrek</a> - <a href="https://github.com/phasesresearchlab/espei/issues/244">issue 244</a>)</li>
 </ul>
 </section>
-<section id="bug-fixes-1" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-1">Bug fixes</h3>
+<section id="bug-fixes-2" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-2">Bug fixes</h3>
 <ul>
 <li>Fix <code>dataplot()</code> for ternary cases with that use <code>__HYPERPLANE__</code> (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/252">issue 252</a>)</li>
 <li>Fix <code>Residual</code> protocol for MCMC for newer Python versions (3.11+) (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/253">issue 253</a>)</li>
@@ -1176,8 +1185,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Datasets and input YAML files now have a tag system where tags that are specified in the input YAML can override any keys/values in the JSON datasets at runtime. This is useful for tagging data with different weights/model contribution exclusions (e.g.&nbsp;DFT tags may get lower weights and can be set to exclude model contributions). If no tags are applied, removing ideal mixing from all thermochemical data is applied automatically for backwards compatibility. This backwards compatibility feature will be removed in the next major version of ESPEI (all model contributions will be included by default and exclusions must be specified manually).</li>
 </ul>
 </section>
-<section id="bug-fixes-2" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-2">Bug fixes</h3>
+<section id="bug-fixes-3" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-3">Bug fixes</h3>
 <ul>
 <li>Bug fixed where asymmetric ternary parameters were not properly replaced in SymPy</li>
 <li>Fixed error where ZPF error was considering the chemical potentials of stoichiometric phases in the target hyperplane (they are meaningless)</li>
