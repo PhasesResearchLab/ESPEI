@@ -66,43 +66,9 @@ def filter_temperatures(desired_data: List[Dataset]) -> List[Dataset]:
     return desired_data
 
 
-def _zpf_conditions_shape(zpf_values):
-    """
-    Calculate the shape of the conditions for ZPF values
-
-    Parameters
-    ----------
-    zpf_values : list
-        ZPF values. A multidimensional list where the innermost dimension looks like
-        ['PHASE_NAME', ['C1', 'C2'], [x1, x2]]
-
-    Returns
-    -------
-    Tuple
-        Shape of the conditions
-    """
-    # create a list of the length of each dimension, if that dimension is a list
-    # should terminate (return []) when we reach the 'PHASE_NAME'
-    def _recursive_shape(x):
-        if isinstance(x, list):
-            return [len(x)] + _recursive_shape(x[0])
-        else:
-            return []
-
-    shape = tuple(_recursive_shape(zpf_values))
-    # the dimensions are something like (..., x, y)
-    # x is the number of equilibria in the first equilibria set
-    # y is the length of the single equlibrium and should always be 3:
-    # (phase name, component names, component amounts)
-    # the shape of conditions is the shape where these last two dimensions are removed
-    return shape[-2]
-
-
-def ravel_conditions(values, *conditions, **kwargs):
+def ravel_conditions(values, *conditions):
     """
     Broadcast and flatten conditions to the shape dictated by the values.
-
-    Special handling for ZPF data that does not have nice array values.
 
     Parameters
     ----------
@@ -113,36 +79,12 @@ def ravel_conditions(values, *conditions, **kwargs):
         of dimensions of the values array. In code, the following must be True:
         `all([s == len(cond) for s, cond in zip(values.shape, conditions)])`
 
-    zpf : bool, optional
-        Whether to consider values as a special case of ZPF data (not an even grid of conditions)
-        Default is False
-
     Returns
     -------
     tuple
         Tuple of ravelled conditions
-
-    Notes
-    -----
-    The current implementation of ZPF data only has the shape for one condition
-    and this assumption is hardcoded in various places.
-
-    Here we try to be as general as possible by explicitly calculating the shape
-    of the ZPF values.
-
-    A complication of this is that the user of this function must pass the
-    correct conditions because usually T and P are specified in ZPF (but, again,
-    only one can actually be a condition given the current shape).
     """
-    # we have to parse the `zpf` kwarg manually because py27 does not allow named args after *args
-    zpf = kwargs.get('zpf')
-    if zpf:
-        values_shape = _zpf_conditions_shape(values)
-        # we have to make our integers tuples
-        if not isinstance(values_shape, tuple):
-            values_shape = tuple([values_shape])
-    else:
-        values_shape = np.array(values).shape
+    values_shape = np.array(values).shape
     ravelled_conditions = []
     for cond_idx, cond in enumerate(conditions):
         cond_shape = [1 for _ in values_shape]
@@ -186,11 +128,11 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
         data_temperatures = np.atleast_1d(data["conditions"]["T"])
         if data_temperatures.squeeze().ndim == 0:
             data_temperatures = np.asarray(len(data["values"]) * [data_temperatures[0]])
-        T = ravel_conditions(data['values'], data_temperatures.tolist(), zpf=True)[0]
+        T = data_temperatures.ravel()
         data_pressures = np.atleast_1d(data["conditions"]["P"])
         if data_pressures.squeeze().ndim == 0:
             data_pressures = np.asarray(len(data["values"]) * [data_pressures[0]])
-        P = ravel_conditions(data['values'], data_pressures.tolist(), zpf=True)[0]
+        P = data_pressures.ravel()
         for equilbrium, temperature, pressure in zip(values, T, P):
             if conditions is not None:
                 # make sure that the conditions match
