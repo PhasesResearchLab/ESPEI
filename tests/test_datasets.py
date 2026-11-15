@@ -2,11 +2,21 @@ from copy import deepcopy
 import json, re
 import pytest
 import numpy as np
-from espei.datasets import DatasetError, DatasetWarning, validate_dataset, apply_tags, load_datasets, FixedConfigurationDataset, ZPFDataset
+from espei.datasets import DatasetError, DatasetWarning, validate_dataset, apply_tags, load_datasets, check_dataset, clean_dataset
+from espei.datasets import FixedConfigurationDataset, EquilibriumPropertyDataset, ActivityDataset, ZPFDataset
+from espei.espei_script import main as espei_main
 from espei.phase_models import PhaseModelSpecification
 
 from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, LI_SN_LIQUID_DATA, dataset_multi_valid_ternary
 from .fixtures import datasets_db
+
+
+def load(tmp_path, *datasets, **kwargs):
+    """Load datasets from JSON files like ESPEI does."""
+    paths = [tmp_path / f"{i}.json" for i in range(len(datasets))]
+    for path, dataset in zip(paths, datasets):
+        path.write_text(json.dumps(dataset))
+    return load_datasets(list(map(str, paths)), **kwargs).all()
 
 dataset_single_valid = {
     "components": ["AL", "NI", "VA"],
@@ -67,7 +77,6 @@ dataset_multi_valid = {
         [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4456]]],
         [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4532]]]
     ],
-    "reference": "37ALE",
 }
 
 
@@ -537,22 +546,20 @@ def test_check_datasets_raises_with_unsorted_interactions():
         validate_dataset(dataset_single_unsorted_interaction)
 
 
-def test_datasets_convert_thermochemical_string_values_producing_correct_value(datasets_db):
+def test_datasets_convert_thermochemical_string_values_producing_correct_value(tmp_path):
     """Strings where floats are expected should give correct answers for thermochemical datasets"""
-    ds = validate_dataset(CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES)
-    assert isinstance(ds, FixedConfigurationDataset)
-    assert np.issubdtype(np.array(ds.values).dtype, np.number)
-    assert np.issubdtype(np.array(ds.conditions['T']).dtype, np.number)
-    assert np.issubdtype(np.array(ds.conditions['P']).dtype, np.number)
+    ds, = load(tmp_path, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES)
+    assert np.issubdtype(np.array(ds['values']).dtype, np.number)
+    assert np.issubdtype(np.array(ds['conditions']['T']).dtype, np.number)
+    assert np.issubdtype(np.array(ds['conditions']['P']).dtype, np.number)
 
 
-def test_datasets_convert_zpf_string_values_producing_correct_value(datasets_db):
+def test_datasets_convert_zpf_string_values_producing_correct_value(tmp_path):
     """Strings where floats are expected should give correct answers for ZPF datasets"""
-    ds = validate_dataset(CU_MG_DATASET_ZPF_STRING_VALUES)
-    assert isinstance(ds, ZPFDataset)
-    assert np.issubdtype(np.array([t[0].fractions for t in ds.values]).dtype, np.number)
-    assert np.issubdtype(np.array(ds.conditions['T']).dtype, np.number)
-    assert np.issubdtype(np.array(ds.conditions['P']).dtype, np.number)
+    ds, = load(tmp_path, CU_MG_DATASET_ZPF_STRING_VALUES)
+    assert np.issubdtype(np.array([t[0][2] for t in ds['values']]).dtype, np.number)
+    assert np.issubdtype(np.array(ds['conditions']['T']).dtype, np.number)
+    assert np.issubdtype(np.array(ds['conditions']['P']).dtype, np.number)
 
 def test_check_datasets_raises_if_configs_occupancies_not_aligned(datasets_db):
     """Checking datasets that don't have the same number/shape of configurations/occupancies should raise."""
@@ -609,85 +616,166 @@ def test_applying_tags(datasets_db):
     assert datasets_db.all()[0]["newkey_from_tag"] == ["tag", "values"]
 
 
-FIXED = {"components": ["CU", "MG"], "phases": ["CUMG2"], "output": "HM_FORM", "reference": "fixed", "conditions": {"P": 101325.0, "T": [298.15, 300.0]},
-         "solver": {"mode": "manual", "sublattice_site_ratios": [1.0, 2.0], "sublattice_configurations": [["CU", "MG"]]}, "values": [[[-15000.0], [-15001.0]]]}
-MIXING = {"components": ["CU", "MG", "VA"], "phases": ["FCC_A1"], "output": "HM_MIX", "reference": "mixing", "conditions": {"P": 101325.0, "T": 298.15},
-          "solver": {"mode": "manual", "sublattice_site_ratios": [1.0, 1.0], "sublattice_configurations": [[["CU", "MG"], "VA"]], "sublattice_occupancies": [[[0.5, 0.5], 1.0]]}, "values": [[[-1000.0]]]}
-EQ = {"components": ["CU", "MG"], "phases": ["LIQUID"], "output": "HM_MIX", "reference": "eq", "conditions": {"P": 101325.0, "T": 1400.0, "X_MG": [0.25, 0.5]}, "values": [[[-1000.0, -2000.0]]]}
-ACR = {**EQ, "output": "ACR_MG", "reference_state": {"phases": ["LIQUID"], "conditions": {"P": 101325.0, "T": 1400.0, "X_MG": 1.0}}, "values": [[[0.1, 0.3]]]}
-ZPF = {"components": ["CU", "MG"], "phases": ["LIQUID", "FCC_A1"], "output": "ZPF", "reference": "zpf", "conditions": {"P": 101325.0, "T": [1300.0, 1200.0]},
-       "values": [[["LIQUID", ["MG"], [0.02]], ["FCC_A1", ["MG"], [None], "disordered"]], [["LIQUID", ["MG"], [0.07]], ["FCC_A1", ["MG"], [0.03]]]]}
+# Datasets from ESPEI-datasets (Cu-Mg), Kawin (Cu-Ni mobility) and H in LaNi5
+HM_FORM_CUMG2 = {"components": ["CU", "MG"], "phases": ["CUMG2"], "conditions": {"P": 101325.0, "T": 299.0}, "output": "HM_FORM", "values": [[[-9539.5]]], "reference": "King1964",
+                 "solver": {"mode": "manual", "sublattice_site_ratios": [1.0, 2.0], "sublattice_configurations": [["CU", "MG"]]}}
+HM_MIX_FCC = {"components": ["CU", "MG", "VA"], "phases": ["FCC_A1"], "conditions": {"P": 101325.0, "T": 298.15}, "output": "HM_MIX", "values": [[[-566.0, -1944.0, -3611.0]]], "reference": "Gao2014first",
+              "solver": {"mode": "manual", "sublattice_site_ratios": [1.0, 1.0], "sublattice_configurations": [[["CU", "MG"], "VA"]] * 3,
+                         "sublattice_occupancies": [[[0.96875, 0.03125], 1.0], [[0.75, 0.25], 1.0], [[0.5, 0.5], 1.0]]}}
+HM_MIX_LIQUID = {"components": ["CU", "MG"], "phases": ["LIQUID"], "conditions": {"P": 101325.0, "T": 1100.0, "X_MG": [0.2, 0.4]}, "output": "HM_MIX", "values": [[[-3070.0, -4310.0]]], "reference": "sommer1983calorimetric_investigations"}
+ACR_MG = {"components": ["CU", "MG", "VA"], "phases": ["LIQUID"], "reference_state": {"phases": ["LIQUID"], "conditions": {"P": 101325.0, "T": 1200.0, "X_CU": 0.0}},
+          "conditions": {"P": 101325.0, "T": 1200.0, "X_CU": [0.9, 0.8]}, "output": "ACR_MG", "values": [[[0.0057, 0.0264]]], "reference": "garg1973thermodynamic"}
+ZPF_C15_LIQUID = {"components": ["CU", "MG", "VA"], "phases": ["LIQUID", "LAVES_C15"], "conditions": {"P": 101325.0, "T": [1056.11423, 1062.70164]}, "output": "ZPF", "reference": "Bagnoud1978",
+                  "values": [[["LIQUID", ["MG"], [0.29042]], ["LAVES_C15", ["MG"], [None]]], [["LIQUID", ["MG"], [0.30246]], ["LAVES_C15", ["MG"], [None], "disordered"]]]}
+TRACER_D0_CU = {"components": ["CU", "NI", "VA"], "phases": ["FCC_A1"], "conditions": {"P": 101325, "T": 1273}, "output": "TRACER_D0_CU", "values": [[[1.87e-4, 2.16e-4]]], "reference": "Monma1964",
+                "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3], "sublattice_configurations": [[["CU", "NI"], "VA"]] * 2, "sublattice_occupancies": [[[0.15, 0.85], 1], [[0.50, 0.50], 1]]}}
+INTER_DIFF = {"components": ["CU", "NI", "VA"], "phases": ["FCC_A1"], "ref_el": ["CU"], "dependent_el": ["NI", "NI"], "conditions": {"P": 101325, "T": 1273, "X_CU": [0.047, 0.101]},
+              "output": "INTER_DIFF", "values": [[[1.546e-15, 1.67e-15]]], "reference": "Heumann1972"}
+H_IN_LANI5 = {"components": ["LN", "H", "VA"], "phases": ["LAN5H7", "GAS"], "conditions": {"T": [293, 293], "P": [1103873.4, 954120.72], "N": [1.0, 1.0]}, "output": "ZPF", "reference": "Shang (2025)",
+              "values": [[["LAN5H7", ["H"], [0.5]], ["GAS", ["H"], [None]]], [["LAN5H7", ["H"], [0.4991]], ["GAS", ["H"], [None]]]]}
 
 
 def test_load_datasets_returns_the_datasets_as_written(tmp_path):
-    """Code using the loaded datasets sees the keys of the files, e.g. weight and comments, and no defaults for missing keys."""
+    """Loaded datasets keep the keys and values of their files and get no defaults (gh-269)."""
     datasets = [
-        {**FIXED, "weight": [0.5], "comment": "array weights broadcast to the values", "solver": {**FIXED["solver"], "comment": "kept"}},
-        {**MIXING, "excluded_model_contributions": ["idmix"], "tags": ["dft"]},
-        {**EQ, "weight": 2.0, "bibtex": "any metadata is kept"},
-        ACR,
-        ZPF,
+        {**HM_MIX_FCC, "weight": [0.5, 1.0, 2.0], "comment": "fully relaxed", "solver": {**HM_MIX_FCC["solver"], "comment": "SQS"}},
+        {**HM_FORM_CUMG2, "excluded_model_contributions": ["idmix"], "tags": ["dft"]},
+        {**HM_MIX_LIQUID, "weight": 2.0, "bibtex": "sommer1983", "dataset_author": "bocklund", "primary_source": ["a", "b"]},
+        ACR_MG,
+        ZPF_C15_LIQUID,
     ]
-    for i, dataset in enumerate(datasets):
-        (tmp_path / f"{i}.json").write_text(json.dumps(dataset))
-    assert load_datasets(sorted(map(str, tmp_path.glob("*.json")))).all() == datasets
+    assert load(tmp_path, *datasets) == datasets
 
 
 @pytest.mark.parametrize("dataset", [
-    {**FIXED, "solver": {k: v for k, v in FIXED["solver"].items() if k != "mode"}},  # mode is "manual" by default
-    {**ZPF, "conditions": {"P": [1e5, 2e5], "T": 1300}},  # conditions with one value per phase region or one value
-    {**EQ, "output": "HMR", "reference_states": {"CU": {"phase": "LIQUID"}, "MG": {"phase": "LIQUID"}, "NI": {"phase": "FCC_A1"}}},
+    pytest.param({**HM_FORM_CUMG2, "solver": {k: x for k, x in HM_FORM_CUMG2["solver"].items() if k != "mode"}}, id="fixed configuration without solver mode"),
+    pytest.param({k: x for k, x in ZPF_C15_LIQUID.items() if k != "reference"}, id="ZPF without reference"),
+    pytest.param({k: x for k, x in ACR_MG.items() if k != "reference"}, id="activity without reference"),
+    pytest.param({**ZPF_C15_LIQUID, "conditions": {"P": 101325.0, "T": 1060.0}}, id="ZPF with one condition for every phase region"),
+    pytest.param(H_IN_LANI5, id="ZPF with a pressure for each phase region"),
+    pytest.param({**HM_MIX_LIQUID, "output": "HMR", "reference_states": {"CU": {"phase": "LIQUID"}, "MG": {"phase": "LIQUID"}, "NI": {"phase": "FCC_A1"}}}, id="reference states of more components"),
+    pytest.param({"components": ["CU"], "phases": ["LIQUID"], "conditions": {"P": 101325, "T": [1400, 1500]}, "output": "HM", "values": [[[48262.0], [51399.0]]]}, id="equilibrium property of one component"),
+    pytest.param(TRACER_D0_CU, id="Kawin tracer diffusivity"),
+    pytest.param(INTER_DIFF, id="Kawin interdiffusivity"),
 ])
-def test_valid_datasets_pass(dataset):
-    validate_dataset(dataset)
+def test_datasets_load_in_every_supported_form(tmp_path, dataset):
+    """Datasets load in every form the code using them supports (gh-269)."""
+    load(tmp_path, dataset)
 
 
-@pytest.mark.parametrize("dataset, message", [
-    ({**EQ, "conditions": {"T": 1400, "X_MG": [0.25, 0.5]}}, "conditions must include T and P, missing ['P']"),
-    ({**FIXED, "phases": ["CUMG2", "LAVES_C15"]}, "phases: List should have at most 1 item"),
-    ({**FIXED, "weight": [1.0, 2.0, 3.0]}, "weight must be positive and broadcast to the shape of the values (1, 2, 1)"),
-    ({**FIXED, "weight": [[1.0, 2.0, 3.0]]}, "weight must be positive and broadcast to the shape of the values (1, 2, 1)"),
-    ({**FIXED, "weight": [[-1.0], [1.0]]}, "weight must be positive"),
-    ({**MIXING, "solver": {**MIXING["solver"], "sublattice_occupancies": [[[0.5, 0.25], 1.0]]}}, "must have the same shape as the sublattice ['CU', 'MG'] of configuration [['CU', 'MG'], 'VA'] and sum to one"),
-    ({**MIXING, "solver": {**MIXING["solver"], "sublattice_occupancies": [[[0.5, 0.5], [1.0]]]}}, "must have the same shape as the sublattice VA"),
-    ({**MIXING, "solver": {**MIXING["solver"], "sublattice_configurations": [[["CU", "CU"], "VA"]]}}, "must be sorted and unique"),
-    ({**EQ, "conditions": {**EQ["conditions"], "W_MG": [0.1, 0.2]}}, "conditions must be T, P, N or X_<component>, got ['W_MG']"),
-    ({**EQ, "components": ["CU"], "conditions": {"P": 101325, "T": 1400}, "values": [[[1.0]]]}, "X_ conditions must be given and have the same number of values"),
-    ({**EQ, "reference_states": {"CU": {"phase": "LIQUID"}, "MG": {"phase": "LIQUID"}}}, 'reference_states are only used for outputs referenced to them, ending in "R"'),
-    ({**EQ, "output": "HMR", "reference_states": {"CU": {"phase": "LIQUID"}}}, "reference_states must be given for every component, missing ['MG']"),
-    ({**ACR, "output": "ACR_NI"}, 'output must be "ACR_<component>" for one of the components'),
-    ({k: v for k, v in ACR.items() if k != "reference"}, "reference: Field required"),
-    ({k: v for k, v in ZPF.items() if k != "reference"}, "reference: Field required"),
-    ({**ZPF, "values": [ZPF["values"][0], [["LIQUID", ["MG"], [0.07]], ["FCC_A1", ["MG"], [0.03], "ordered"]]]}, "values[1][1].flag: Input should be 'disordered'"),
-    ({**ZPF, "values": [ZPF["values"][0], [["LIQUID", ["MG"], [None]], ["FCC_A1", ["MG"], [None]]]]}, "phase region values[1] needs a phase composition with known mole fractions"),
-    ({**ZPF, "values": [ZPF["values"][0], [["__HYPERPLANE__", ["MG"], [None]], ["FCC_A1", ["MG"], [0.1]]]]}, "__HYPERPLANE__ mole fractions must all be known"),
-    ({**ZPF, "conditions": {"P": [1e5, 2e5, 3e5], "T": 1300}}, "conditions must be T, P or N with one value or one value per phase region (2), got {'P': 3} values"),
+@pytest.mark.parametrize("dataset, location, rule", [
+    pytest.param({**HM_MIX_LIQUID, "conditions": {"T": 1100.0, "X_MG": [0.2, 0.4]}}, "", "conditions must include T and P", id="missing pressure"),
+    pytest.param({**HM_FORM_CUMG2, "phases": ["CUMG2", "LAVES_C15"]}, "phases", "", id="fixed configuration data of two phases"),
+    pytest.param({**HM_FORM_CUMG2, "tags": "dft"}, "tags", "", id="tags not a list"),
+    pytest.param({**HM_MIX_FCC, "weight": [1.0, 2.0]}, "", "weight must be positive and broadcast to the shape of the values (1, 1, 3)", id="weights not one per configuration"),
+    pytest.param({**HM_MIX_FCC, "weight": -1.0}, "", "weight must be positive", id="negative weight"),
+    pytest.param({**HM_MIX_FCC, "solver": {**HM_MIX_FCC["solver"], "sublattice_occupancies": [[[0.75, 0.75], 1.0]] * 3}}, "", "sum to one", id="mixing occupancies not summing to one"),
+    pytest.param({**HM_FORM_CUMG2, "solver": {**HM_FORM_CUMG2["solver"], "sublattice_occupancies": [[0.5, 1.0]]}}, "", "sum to one", id="occupancy of one species not one"),
+    pytest.param({**HM_MIX_FCC, "solver": {**HM_MIX_FCC["solver"], "sublattice_occupancies": [[[0.5, 0.5], [1.0]]] * 3}}, "", "must have the same shape as the sublattice VA", id="occupancies not shaped like the configuration"),
+    pytest.param({**HM_MIX_FCC, "solver": {**HM_MIX_FCC["solver"], "sublattice_configurations": [[["MG", "CU"], "VA"]] * 3}}, "", "must be sorted and unique", id="unsorted mixing sublattice"),
+    pytest.param({**HM_MIX_LIQUID, "conditions": {**HM_MIX_LIQUID["conditions"], "W_MG": [0.1, 0.2]}}, "", "conditions must be T, P, N or X_<component>", id="mass fraction condition"),
+    pytest.param({**HM_MIX_LIQUID, "conditions": {"P": 101325.0, "T": 1100.0}, "values": [[[-3070.0]]]}, "", "leaving one dependent component", id="binary without X_ condition"),
+    pytest.param({**HM_MIX_LIQUID, "components": ["CU", "MG", "NI"], "conditions": {**HM_MIX_LIQUID["conditions"], "X_NI": [0.1]}}, "", "X_ conditions must have the same number of values", id="X_ conditions of different lengths"),
+    pytest.param({**HM_MIX_LIQUID, "reference_states": {"CU": {"phase": "LIQUID"}, "MG": {"phase": "LIQUID"}}}, "", 'ending in "R"', id="reference states of an unreferenced output"),
+    pytest.param({**HM_MIX_LIQUID, "output": "HMR", "reference_states": {"CU": {"phase": "LIQUID"}}}, "", "reference_states must be given for every component, missing ['MG']", id="reference states missing a component"),
+    pytest.param({**ACR_MG, "output": "ACR_NI"}, "", 'output must be "ACR_<component>"', id="activity of a component not in the components"),
+    pytest.param({**ZPF_C15_LIQUID, "phases": ["LIQUID"]}, "", "must be the phases used in the values ['LAVES_C15', 'LIQUID']", id="ZPF phase not listed"),
+    pytest.param({**ZPF_C15_LIQUID, "values": [ZPF_C15_LIQUID["values"][0], [["LIQUID", ["MG"], [0.3]], ["LAVES_C15", ["MG"], [0.3], "ordered"]]]}, "values[1][1].flag", "", id="ZPF flag not disordered"),
+    pytest.param({**ZPF_C15_LIQUID, "values": [ZPF_C15_LIQUID["values"][0], [["LIQUID", ["MG"], [None]], ["LAVES_C15", ["MG"], [None]]]]}, "", "values[1] needs a phase composition with known mole fractions", id="ZPF phase region without known composition"),
+    pytest.param({**ZPF_C15_LIQUID, "values": [ZPF_C15_LIQUID["values"][0], [["__HYPERPLANE__", ["MG"], [None]], ["LIQUID", ["MG"], [0.3]], ["LAVES_C15", ["MG"], [None]]]]}, "values[1][0]", "__HYPERPLANE__", id="ZPF hyperplane with unknown composition"),
+    pytest.param({**ZPF_C15_LIQUID, "conditions": {"P": 101325.0, "T": [1056.0, 1060.0, 1062.0]}}, "", "one value per phase region (2)", id="ZPF temperatures not one per phase region"),
 ])
-def test_invalid_datasets_raise_a_descriptive_error(dataset, message):
-    with pytest.raises(DatasetError, match=re.escape(message)):
-        validate_dataset(dataset)
-
-
-def test_dataset_errors_list_every_error_with_its_location():
+def test_invalid_datasets_raise_with_the_file_location_and_rule(tmp_path, dataset, location, rule):
+    """Invalid datasets raise an error with the file, the location in the dataset and the rule (gh-269)."""
     with pytest.raises(DatasetError) as error:
-        validate_dataset({**ZPF, "phases": "LIQUID", "values": [[["LIQUID", ["MG"], ["abc"]], ["FCC_A1", "MG", [None]]]]})
-    assert str(error.value) == """3 error(s) in ZPFDataset:
-  phases: Input should be a valid list (got 'LIQUID')
-  values[0][0].fractions[0]: Input should be a valid number, unable to parse string as a number (got 'abc')
-  values[0][1].components: Input should be a valid list (got 'MG')"""
+        load(tmp_path, dataset)
+    header, *errors = str(error.value).split("\n")
+    assert header.startswith(f"Dataset Error in {tmp_path / '0.json'}: ")
+    assert any(e.startswith(f"  {location}: " if location else "  ") and rule in e for e in errors)
 
 
-@pytest.mark.parametrize("dataset, message", [
-    ({**ZPF, "phases": ["LIQUID"]}, "Phases ['FCC_A1'] in the values are not in phases ['LIQUID']"),
-    ({**MIXING, "solver": {**MIXING["solver"], "sublattice_configurations": [[["CU", "MG"], ["VA"]]], "sublattice_occupancies": [[[0.5, 0.5], [1.0]]]}}, "Sublattice ['VA'] of configuration [['CU', 'MG'], ['VA']] has one species"),
+def test_dataset_errors_list_every_error_with_its_location_and_value(tmp_path):
+    """All errors of a dataset are reported at once, each with its location and the given value (gh-269)."""
+    zpf = {**ZPF_C15_LIQUID, "phases": "LIQUID", "values": [[["LIQUID", ["MG"], ["0.3x"]], ["LAVES_C15", "MG", [None]]]]}
+    with pytest.raises(DatasetError) as error:
+        load(tmp_path, zpf)
+    header, *errors = str(error.value).split("\n")
+    assert header.endswith("3 error(s) in ZPFDataset:")
+    assert [e.split(": ")[0].strip() for e in errors] == ["phases", "values[0][0].fractions[0]", "values[0][1].components"]
+    assert [e.endswith(f"(got {value!r})") for e, value in zip(errors, ["LIQUID", "0.3x", "MG"])] == [True] * 3
+
+
+def test_disabled_datasets_are_not_checked(tmp_path):
+    """Disabled datasets are skipped without being checked, unless they are included."""
+    disabled = {**HM_FORM_CUMG2, "disabled": True, "values": [[[-9539.5, 0.0]]]}
+    assert load(tmp_path, disabled, HM_MIX_LIQUID) == [HM_MIX_LIQUID]
+    with pytest.raises(DatasetError):
+        load(tmp_path, disabled, HM_MIX_LIQUID, include_disabled=True)
+
+
+def test_check_datasets_reports_every_invalid_dataset(tmp_path, capsys, monkeypatch):
+    """espei --check-datasets reports the errors of every invalid dataset and exits with 1 (gh-269)."""
+    paths = [tmp_path / name for name in ("a-valid.json", "b-no-configurations.json", "c-misaligned.json")]
+    no_configurations = {**HM_FORM_CUMG2, "solver": {"mode": "manual", "sublattice_site_ratios": [1, 2]}}
+    for path, dataset in zip(paths, [HM_FORM_CUMG2, no_configurations, {**ZPF_C15_LIQUID, "conditions": {"P": 101325.0, "T": [1056.0, 1060.0, 1062.0]}}]):
+        path.write_text(json.dumps(dataset))
+    monkeypatch.setattr("sys.argv", ["espei", "--check-datasets", str(tmp_path)])
+    assert espei_main() == 1
+    output = capsys.readouterr().out
+    assert "b-no-configurations.json" in output and "solver.sublattice_configurations" in output
+    assert "c-misaligned.json" in output and "a-valid.json" not in output
+
+
+def test_deprecated_check_dataset_and_clean_dataset_work_like_espei_0_9():
+    """check_dataset and clean_dataset are deprecated, and check and clean datasets in place like ESPEI 0.9 (gh-269)."""
+    dataset = deepcopy(CU_MG_DATASET_ZPF_STRING_VALUES)
+    with pytest.warns(DeprecationWarning, match="validate_dataset"):
+        assert check_dataset(dataset) is None
+    with pytest.warns(DeprecationWarning, match="validate_dataset"):
+        assert clean_dataset(dataset) is dataset
+    assert dataset["conditions"]["T"] == [1337.97, 1262.238]
+    with pytest.warns(DeprecationWarning), pytest.raises(DatasetError):
+        check_dataset(dataset_multi_misaligned)
+
+
+@pytest.mark.parametrize("update, expected", [
+    pytest.param({"excluded_model_contributions": ["mag"]}, ["idmix", "mag"], id="list"),
+    pytest.param({"weight": 5.0}, 5.0, id="number"),
+    pytest.param({"reference_states": {"MG": {"phase": "HCP_A3"}}}, {"CU": {"phase": "FCC_A1"}, "MG": {"phase": "HCP_A3"}}, id="dict"),
 ])
-def test_likely_mistakes_in_datasets_warn(dataset, message):
-    with pytest.warns(DatasetWarning, match=re.escape(message)):
-        validate_dataset(dataset)
+def test_apply_tags_update_rules(datasets_db, update, expected):
+    """Tags extend lists, update dicts and replace other values of tagged datasets."""
+    datasets_db.insert({"tags": ["dft"], "excluded_model_contributions": ["idmix"], "weight": 1.0, "reference_states": {"CU": {"phase": "FCC_A1"}, "MG": {"phase": "LIQUID"}}})
+    apply_tags(datasets_db, {"dft": update})
+    key, = update
+    assert datasets_db.all()[0][key] == expected
 
 
-@pytest.mark.xfail(strict=True, reason="Bug: like ESPEI 0.9, the disordered flag is dropped from known compositions, where the ZPF residual uses it")
-def test_disordered_flag_of_known_compositions_is_loaded():
-    disordered = {**ZPF, "values": [ZPF["values"][0], [["LIQUID", ["MG"], [0.07]], ["FCC_A1", ["MG"], [0.03], "disordered"]]]}
-    assert validate_dataset(disordered).values[1][1].flag == "disordered"
-    assert validate_dataset(disordered).model_dump(exclude_unset=True) == disordered
+@pytest.mark.parametrize("dataset, model", [
+    pytest.param(HM_FORM_CUMG2, FixedConfigurationDataset, id="HM_FORM"), pytest.param(TRACER_D0_CU, FixedConfigurationDataset, id="TRACER_D0_CU"),
+    pytest.param(HM_MIX_LIQUID, EquilibriumPropertyDataset, id="HM_MIX"), pytest.param(INTER_DIFF, EquilibriumPropertyDataset, id="INTER_DIFF"),
+    pytest.param(ACR_MG, ActivityDataset, id="ACR_MG"), pytest.param(ZPF_C15_LIQUID, ZPFDataset, id="ZPF"),
+])
+def test_validate_dataset_returns_the_model_of_the_type_of_dataset(dataset, model):
+    """Datasets are validated by the model of their type, from their output and solver (gh-269)."""
+    assert type(validate_dataset(dataset)) is model
+
+
+def test_zpf_dataset_models_give_phase_compositions():
+    """ZPF dataset models give the phase, components, mole fractions and flag of each phase composition (gh-269)."""
+    vertex = validate_dataset({**ZPF_C15_LIQUID, "values": [[["LAVES_C15", ["MG"], [0.31], "disordered"], ["LIQUID", ["MG"], [0.43]]]] * 2}).values[0][0]
+    assert (vertex.phase, vertex.components, vertex.fractions, vertex.flag) == ("LAVES_C15", ["MG"], [0.31], "disordered")
+
+
+def test_one_species_sublattices_given_as_lists_warn(tmp_path):
+    """One species sublattices given as lists warn, because parameter selection ignores them."""
+    as_list = {**HM_MIX_FCC, "solver": {**HM_MIX_FCC["solver"], "sublattice_configurations": [[["CU", "MG"], ["VA"]]] * 3, "sublattice_occupancies": [[[0.5, 0.5], [1.0]]] * 3}}
+    with pytest.warns(DatasetWarning, match=re.escape("0.json: Sublattice ['VA'] of configuration [['CU', 'MG'], ['VA']] has one species")):
+        load(tmp_path, as_list)
+
+
+@pytest.mark.xfail(strict=True, reason="Bug: like ESPEI 0.9, load_datasets drops the disordered flag of known compositions")
+def test_load_datasets_keeps_the_disordered_flag_of_known_compositions(tmp_path):
+    """Loaded ZPF datasets keep the disordered flag of known compositions."""
+    zpf = {**ZPF_C15_LIQUID, "values": [[["LAVES_C15", ["MG"], [0.31], "disordered"], ["LIQUID", ["MG"], [0.43]]]] * 2}
+    assert load(tmp_path, zpf) == [zpf]

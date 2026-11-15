@@ -44,6 +44,8 @@ class Dataset(_Model):
     conditions: dict[str, float | list[float]]
     output: str
     reference: str = ""
+    bibtex: str = ""
+    dataset_author: str = ""
     weight: float = Field(1.0, gt=0)
     tags: list[str] = Field(default_factory=list)
     disabled: bool = False
@@ -98,7 +100,7 @@ class FixedConfigurationDataset(Dataset):
                     raise ValueError(f"sublattice {subl} of configuration {config} must be sorted and unique, i.e. {sorted(set(subl))}")
                 if isinstance(subl, list) != isinstance(occ, list) or len(_as_list(subl)) != len(_as_list(occ)) or abs(sum(_as_list(occ)) - 1) > 0.01:
                     raise ValueError(f"occupancies {occ} must have the same shape as the sublattice {subl} of configuration {config} and sum to one")
-                if isinstance(subl, list) and len(subl) == 1:
+                if isinstance(subl, list) and len(subl) == 1:  # Workaround: remove when parameter selection matches ["VA"] to "VA"
                     warnings.warn(f"Sublattice {subl} of configuration {config} has one species. Use {subl[0]!r} instead, because parameter selection only uses data with one species sublattices given as strings.", DatasetWarning)
         return self
 
@@ -143,9 +145,9 @@ class EquilibriumPropertyDataset(Dataset):
         dependent = set(self.components) - num_compositions.keys() - {"VA"}
         if not num_compositions.keys() <= set(self.components) or len(dependent) != 1:
             raise ValueError(f"X_ conditions {sorted(num_compositions)} must be components {self.components}, leaving one dependent component, got {sorted(dependent)}")
-        if len(set(num_compositions.values())) != 1:
-            raise ValueError(f"X_ conditions must be given and have the same number of values, because they are not broadcast, got {num_compositions}")
-        shape = (np.size(self.conditions["P"]), np.size(self.conditions["T"]), *set(num_compositions.values()))
+        if len(set(num_compositions.values())) > 1:
+            raise ValueError(f"X_ conditions must have the same number of values, because they are not broadcast, got {num_compositions}")
+        shape = (np.size(self.conditions["P"]), np.size(self.conditions["T"]), *(set(num_compositions.values()) or {1}))  # one composition for one component
         if np.shape(self.values) != shape:
             raise ValueError(f"values must have the shape (len(P), len(T), len(X)) = {shape}, got {np.shape(self.values)}")
         if self.reference_states is not None:
@@ -163,7 +165,6 @@ class ActivityReferenceState(_Model):
 
 class ActivityDataset(EquilibriumPropertyDataset):
     """Activities of a component (output "ACR_<component>") relative to its reference state."""
-    reference: str  # required by the activity residual
     reference_state: ActivityReferenceState
 
     @model_validator(mode="after")
@@ -205,7 +206,6 @@ class PhaseComposition(_Model):
 
 class ZPFDataset(Dataset):
     """Phase equilibria. Each phase region of the values lists the phases in equilibrium and their compositions."""
-    reference: str  # required by the ZPF residual
     values: list[list[PhaseComposition]] = Field(min_length=1)
 
     @model_validator(mode="after")
@@ -221,10 +221,8 @@ class ZPFDataset(Dataset):
                     raise ValueError(f"components {pc.components} of {pc.phase} in phase region values[{i}] must be all but one of the components {self.components}")
                 phases_used.add(pc.phase)
         phases_used.discard("__HYPERPLANE__")
-        if unused := set(self.phases) - phases_used:
-            raise ValueError(f"phases {sorted(unused)} are not used in the values")
-        if unlisted := phases_used - set(self.phases):
-            warnings.warn(f"Phases {sorted(unlisted)} in the values are not in phases {self.phases}. Datasets are only used when their phases are in the system.", DatasetWarning)
+        if phases_used != set(self.phases):
+            raise ValueError(f"phases {self.phases} must be the phases used in the values {sorted(phases_used)}")
         return self
 
 
