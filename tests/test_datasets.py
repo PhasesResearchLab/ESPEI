@@ -1,13 +1,12 @@
 from copy import deepcopy
-import json
+import json, re
 import pytest
 import numpy as np
-from espei.datasets import DatasetError, DatasetWarning, to_Dataset, apply_tags, load_datasets, BroadcastSinglePhaseFixedConfigurationDataset, ZPFDataset
+from espei.datasets import DatasetError, DatasetWarning, validate_dataset, apply_tags, load_datasets, FixedConfigurationDataset, ZPFDataset
 from espei.phase_models import PhaseModelSpecification
 
 from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, LI_SN_LIQUID_DATA, dataset_multi_valid_ternary
 from .fixtures import datasets_db
-from pydantic import ValidationError
 
 dataset_single_valid = {
     "components": ["AL", "NI", "VA"],
@@ -68,6 +67,7 @@ dataset_multi_valid = {
         [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4456]]],
         [["AL3NI2", ["NI"], [0.4114]], ["BCC_B2", ["NI"], [0.4532]]]
     ],
+    "reference": "37ALE",
 }
 
 
@@ -368,36 +368,36 @@ dataset_mismatched_configs_occupancies = {
 
 def test_check_datasets_run_on_good_data():
     """Passed valid datasets that should raise DatasetError."""
-    to_Dataset(dataset_single_valid)
-    to_Dataset(dataset_multi_valid)
-    to_Dataset(dataset_multi_valid_ternary)
+    validate_dataset(dataset_single_valid)
+    validate_dataset(dataset_multi_valid)
+    validate_dataset(dataset_multi_valid_ternary)
 
 
 def test_check_datasets_raises_on_misaligned_data():
     """Passed datasets that have misaligned data and conditions should raise DatasetError."""
     with pytest.raises(DatasetError):
-        to_Dataset(dataset_single_misaligned)
+        validate_dataset(dataset_single_misaligned)
     with pytest.raises(DatasetError):
-        to_Dataset(dataset_multi_misaligned)
+        validate_dataset(dataset_multi_misaligned)
 
 
 def test_check_datasets_raises_with_incorrect_zpf_phases():
     """Passed datasets that have incorrect phases entered than used should raise."""
     with pytest.raises(DatasetError):
-        to_Dataset(dataset_multi_incorrect_phases)
+        validate_dataset(dataset_multi_incorrect_phases)
 
 
 def test_check_datasets_raises_with_incorrect_components():
     """Passed datasets that have incorrect components entered vs. used should raise."""
     with pytest.raises(DatasetError):
-        to_Dataset(dataset_single_incorrect_components_overspecified)
+        validate_dataset(dataset_single_incorrect_components_overspecified)
     with pytest.raises(DatasetError):
         # without the phase models, NI can't be told apart from a species
-        to_Dataset(dataset_single_incorrect_components_underspecified, species=PhaseModelSpecification(components=["AL", "NI", "VA"], phases={}).get_species())
+        validate_dataset(dataset_single_incorrect_components_underspecified, species=PhaseModelSpecification(components=["AL", "NI", "VA"], phases={}).get_species())
     with pytest.raises(DatasetError):
-        to_Dataset(dataset_multi_incorrect_components_overspecified)
+        validate_dataset(dataset_multi_incorrect_components_overspecified)
     with pytest.raises(DatasetError):
-        to_Dataset(dataset_multi_incorrect_components_underspecified)
+        validate_dataset(dataset_multi_incorrect_components_underspecified)
 
     # equilibrium datasets underspecified
     ds_eq_underspecified = {
@@ -412,7 +412,7 @@ def test_check_datasets_raises_with_incorrect_components():
     "values": [[[-1000], [-900], [-800]]]
     }
     with pytest.raises(DatasetError):
-        to_Dataset(ds_eq_underspecified)
+        validate_dataset(ds_eq_underspecified)
 
     # equilibrium datasets overspecified
     ds_eq_overspecified = {
@@ -427,25 +427,25 @@ def test_check_datasets_raises_with_incorrect_components():
     "values": [[[-1000], [-900], [-800]]]
     }
     with pytest.raises(DatasetError):
-        to_Dataset(ds_eq_overspecified)
+        validate_dataset(ds_eq_overspecified)
 
 
 def test_check_datasets_raises_with_malformed_zpf():
     """Passed datasets that have malformed ZPF values should raise."""
-    with pytest.raises((DatasetError, ValidationError)):
-        to_Dataset(dataset_multi_malformed_zpfs_components_not_list)
     with pytest.raises(DatasetError):
-        to_Dataset(dataset_multi_malformed_zpfs_fractions_do_not_match_components)
+        validate_dataset(dataset_multi_malformed_zpfs_components_not_list)
     with pytest.raises(DatasetError):
-        to_Dataset(dataset_multi_malformed_zpfs_components_do_not_match_fractions)
+        validate_dataset(dataset_multi_malformed_zpfs_fractions_do_not_match_components)
+    with pytest.raises(DatasetError):
+        validate_dataset(dataset_multi_malformed_zpfs_components_do_not_match_fractions)
 
 
 def test_check_datasets_raises_with_malformed_sublattice_configurations():
     """Passed datasets that have malformed ZPF values should raise."""
     with pytest.raises(DatasetError):
-        to_Dataset(dataset_single_malformed_site_occupancies)
+        validate_dataset(dataset_single_malformed_site_occupancies)
     with pytest.raises(DatasetError):
-       to_Dataset(dataset_single_malformed_site_ratios)
+       validate_dataset(dataset_single_malformed_site_ratios)
 
 
 def test_check_datasets_raises_with_equilibrium_conditions_and_values_shapes_mismatch():
@@ -463,7 +463,7 @@ def test_check_datasets_raises_with_equilibrium_conditions_and_values_shapes_mis
         "reference": "equilibrium thermochemical tests",
     }
     # Good shape should not raise
-    to_Dataset(COND_VALS_SHAPE_GOOD)
+    validate_dataset(COND_VALS_SHAPE_GOOD)
 
     COND_VALS_SHAPE_DISAGREEMENT_1_1_2 = {
         "components": ["CU", "MG", "NI"],
@@ -479,7 +479,7 @@ def test_check_datasets_raises_with_equilibrium_conditions_and_values_shapes_mis
         "reference": "equilibrium thermochemical tests",
     }
     with pytest.raises(DatasetError):
-        to_Dataset(COND_VALS_SHAPE_DISAGREEMENT_1_1_2)
+        validate_dataset(COND_VALS_SHAPE_DISAGREEMENT_1_1_2)
 
     COND_VALS_SHAPE_DISAGREEMENT_1_2_2 = {
         "components": ["CU", "MG"],
@@ -494,7 +494,7 @@ def test_check_datasets_raises_with_equilibrium_conditions_and_values_shapes_mis
         "reference": "equilibrium thermochemical tests",
     }
     with pytest.raises(DatasetError):
-        to_Dataset(COND_VALS_SHAPE_DISAGREEMENT_1_2_2)
+        validate_dataset(COND_VALS_SHAPE_DISAGREEMENT_1_2_2)
 
     # we don't broadcast over compositions, so composition conditions shapes need to match
     MISMATCHED_COMPOSITION_CONDS = {
@@ -511,36 +511,36 @@ def test_check_datasets_raises_with_equilibrium_conditions_and_values_shapes_mis
         "reference": "equilibrium thermochemical tests",
     }
     with pytest.raises(DatasetError):
-        to_Dataset(MISMATCHED_COMPOSITION_CONDS)
+        validate_dataset(MISMATCHED_COMPOSITION_CONDS)
 
 
 def test_check_datasets_works_on_activity_data():
     """Passed activity datasets should work correctly."""
-    to_Dataset(CU_MG_EXP_ACTIVITY)
+    validate_dataset(CU_MG_EXP_ACTIVITY)
 
 
 def test_check_datasets_raises_with_zpf_fractions_greater_than_one():
     """Passed datasets that have mole fractions greater than one should raise."""
     with pytest.raises(DatasetError):
-        to_Dataset(dataset_multi_mole_fractions_as_percents)
+        validate_dataset(dataset_multi_mole_fractions_as_percents)
 
 
 def test_check_datasets_raises_with_negative_zpf_fractions():
     """Passed datasets that have negative mole fractions should raise."""
     with pytest.raises(DatasetError):
-        to_Dataset(dataset_zpf_negative_mole_fraction)
+        validate_dataset(dataset_zpf_negative_mole_fraction)
 
 
 def test_check_datasets_raises_with_unsorted_interactions():
     """Passed datasets that have sublattice interactions not in sorted order should raise."""
     with pytest.raises(DatasetError):
-        to_Dataset(dataset_single_unsorted_interaction)
+        validate_dataset(dataset_single_unsorted_interaction)
 
 
 def test_datasets_convert_thermochemical_string_values_producing_correct_value(datasets_db):
     """Strings where floats are expected should give correct answers for thermochemical datasets"""
-    ds = to_Dataset(CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES)
-    assert isinstance(ds, BroadcastSinglePhaseFixedConfigurationDataset)
+    ds = validate_dataset(CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES)
+    assert isinstance(ds, FixedConfigurationDataset)
     assert np.issubdtype(np.array(ds.values).dtype, np.number)
     assert np.issubdtype(np.array(ds.conditions['T']).dtype, np.number)
     assert np.issubdtype(np.array(ds.conditions['P']).dtype, np.number)
@@ -548,16 +548,16 @@ def test_datasets_convert_thermochemical_string_values_producing_correct_value(d
 
 def test_datasets_convert_zpf_string_values_producing_correct_value(datasets_db):
     """Strings where floats are expected should give correct answers for ZPF datasets"""
-    ds = to_Dataset(CU_MG_DATASET_ZPF_STRING_VALUES)
+    ds = validate_dataset(CU_MG_DATASET_ZPF_STRING_VALUES)
     assert isinstance(ds, ZPFDataset)
-    assert np.issubdtype(np.array([t[0][2] for t in ds.values]).dtype, np.number)
+    assert np.issubdtype(np.array([t[0].fractions for t in ds.values]).dtype, np.number)
     assert np.issubdtype(np.array(ds.conditions['T']).dtype, np.number)
     assert np.issubdtype(np.array(ds.conditions['P']).dtype, np.number)
 
 def test_check_datasets_raises_if_configs_occupancies_not_aligned(datasets_db):
     """Checking datasets that don't have the same number/shape of configurations/occupancies should raise."""
     with pytest.raises(DatasetError):
-        to_Dataset(dataset_mismatched_configs_occupancies)
+        validate_dataset(dataset_mismatched_configs_occupancies)
 
 
 LI_SN_SPECIES = PhaseModelSpecification(components=["LI", "SN"], species={"LI4SN": {"constituents": {"LI": 4, "SN": 1}}}, phases={}).get_species()
@@ -569,7 +569,7 @@ LI_SN_SPECIES = PhaseModelSpecification(components=["LI", "SN"], species={"LI4SN
 ])
 def test_non_equilibrium_thermo_data_with_species_passes_checker(dataset):
     """Non-equilibrium thermochemical data that use species in the configurations should pass the dataset checker."""
-    to_Dataset(dataset, species=LI_SN_SPECIES)
+    validate_dataset(dataset, species=LI_SN_SPECIES)
 
 
 @pytest.mark.parametrize("dataset, species, message", [
@@ -579,16 +579,16 @@ def test_non_equilibrium_thermo_data_with_species_passes_checker(dataset):
 def test_non_equilibrium_thermo_data_with_invalid_species_raises(dataset, species, message):
     """Species in configurations must be defined, and species can't be components."""
     with pytest.raises(DatasetError, match=message):
-        to_Dataset(dataset, species=species)
+        validate_dataset(dataset, species=species)
 
 
 def test_species_without_phase_models_are_reported_not_checked(tmp_path):
     """Without phase models, species in configurations give a DatasetWarning, and the other checks still run."""
     endmember = {**LI_SN_LIQUID_DATA, "solver": {"mode": "manual", "sublattice_site_ratios": [1], "sublattice_configurations": [["LI4SN"]]}, "values": [[[0]]]}
     with pytest.warns(DatasetWarning, match="LI4SN.*--phase-models"):
-        to_Dataset(endmember)
+        validate_dataset(endmember)
     with pytest.raises(DatasetError, match="sorted"):
-        to_Dataset({**LI_SN_LIQUID_DATA, "solver": {**LI_SN_LIQUID_DATA["solver"], "sublattice_configurations": [[["LI4SN", "LI"]], [["LI4SN", "SN"]]]}})
+        validate_dataset({**LI_SN_LIQUID_DATA, "solver": {**LI_SN_LIQUID_DATA["solver"], "sublattice_configurations": [[["LI4SN", "LI"]], [["LI4SN", "SN"]]]}})
     path = tmp_path / "li-sn.json"
     path.write_text(json.dumps(LI_SN_LIQUID_DATA))
     with pytest.warns(DatasetWarning, match="li-sn.json: Species LI4SN"):
@@ -607,3 +607,87 @@ def test_applying_tags(datasets_db):
     assert len(datasets_db.all()) == 1
     assert "newkey_from_tag" in datasets_db.all()[0]
     assert datasets_db.all()[0]["newkey_from_tag"] == ["tag", "values"]
+
+
+FIXED = {"components": ["CU", "MG"], "phases": ["CUMG2"], "output": "HM_FORM", "reference": "fixed", "conditions": {"P": 101325.0, "T": [298.15, 300.0]},
+         "solver": {"mode": "manual", "sublattice_site_ratios": [1.0, 2.0], "sublattice_configurations": [["CU", "MG"]]}, "values": [[[-15000.0], [-15001.0]]]}
+MIXING = {"components": ["CU", "MG", "VA"], "phases": ["FCC_A1"], "output": "HM_MIX", "reference": "mixing", "conditions": {"P": 101325.0, "T": 298.15},
+          "solver": {"mode": "manual", "sublattice_site_ratios": [1.0, 1.0], "sublattice_configurations": [[["CU", "MG"], "VA"]], "sublattice_occupancies": [[[0.5, 0.5], 1.0]]}, "values": [[[-1000.0]]]}
+EQ = {"components": ["CU", "MG"], "phases": ["LIQUID"], "output": "HM_MIX", "reference": "eq", "conditions": {"P": 101325.0, "T": 1400.0, "X_MG": [0.25, 0.5]}, "values": [[[-1000.0, -2000.0]]]}
+ACR = {**EQ, "output": "ACR_MG", "reference_state": {"phases": ["LIQUID"], "conditions": {"P": 101325.0, "T": 1400.0, "X_MG": 1.0}}, "values": [[[0.1, 0.3]]]}
+ZPF = {"components": ["CU", "MG"], "phases": ["LIQUID", "FCC_A1"], "output": "ZPF", "reference": "zpf", "conditions": {"P": 101325.0, "T": [1300.0, 1200.0]},
+       "values": [[["LIQUID", ["MG"], [0.02]], ["FCC_A1", ["MG"], [None], "disordered"]], [["LIQUID", ["MG"], [0.07]], ["FCC_A1", ["MG"], [0.03]]]]}
+
+
+def test_load_datasets_returns_the_datasets_as_written(tmp_path):
+    """Code using the loaded datasets sees the keys of the files, e.g. weight and comments, and no defaults for missing keys."""
+    datasets = [
+        {**FIXED, "weight": [0.5], "comment": "array weights broadcast to the values", "solver": {**FIXED["solver"], "comment": "kept"}},
+        {**MIXING, "excluded_model_contributions": ["idmix"], "tags": ["dft"]},
+        {**EQ, "weight": 2.0, "bibtex": "any metadata is kept"},
+        ACR,
+        ZPF,
+    ]
+    for i, dataset in enumerate(datasets):
+        (tmp_path / f"{i}.json").write_text(json.dumps(dataset))
+    assert load_datasets(sorted(map(str, tmp_path.glob("*.json")))).all() == datasets
+
+
+@pytest.mark.parametrize("dataset", [
+    {**FIXED, "solver": {k: v for k, v in FIXED["solver"].items() if k != "mode"}},  # mode is "manual" by default
+    {**ZPF, "conditions": {"P": [1e5, 2e5], "T": 1300}},  # conditions with one value per phase region or one value
+    {**EQ, "output": "HMR", "reference_states": {"CU": {"phase": "LIQUID"}, "MG": {"phase": "LIQUID"}, "NI": {"phase": "FCC_A1"}}},
+])
+def test_valid_datasets_pass(dataset):
+    validate_dataset(dataset)
+
+
+@pytest.mark.parametrize("dataset, message", [
+    ({**EQ, "conditions": {"T": 1400, "X_MG": [0.25, 0.5]}}, "conditions must include T and P, missing ['P']"),
+    ({**FIXED, "phases": ["CUMG2", "LAVES_C15"]}, "phases: List should have at most 1 item"),
+    ({**FIXED, "weight": [1.0, 2.0, 3.0]}, "weight must be positive and broadcast to the shape of the values (1, 2, 1)"),
+    ({**FIXED, "weight": [[1.0, 2.0, 3.0]]}, "weight must be positive and broadcast to the shape of the values (1, 2, 1)"),
+    ({**FIXED, "weight": [[-1.0], [1.0]]}, "weight must be positive"),
+    ({**MIXING, "solver": {**MIXING["solver"], "sublattice_occupancies": [[[0.5, 0.25], 1.0]]}}, "must have the same shape as the sublattice ['CU', 'MG'] of configuration [['CU', 'MG'], 'VA'] and sum to one"),
+    ({**MIXING, "solver": {**MIXING["solver"], "sublattice_occupancies": [[[0.5, 0.5], [1.0]]]}}, "must have the same shape as the sublattice VA"),
+    ({**MIXING, "solver": {**MIXING["solver"], "sublattice_configurations": [[["CU", "CU"], "VA"]]}}, "must be sorted and unique"),
+    ({**EQ, "conditions": {**EQ["conditions"], "W_MG": [0.1, 0.2]}}, "conditions must be T, P, N or X_<component>, got ['W_MG']"),
+    ({**EQ, "components": ["CU"], "conditions": {"P": 101325, "T": 1400}, "values": [[[1.0]]]}, "X_ conditions must have the same number of values"),
+    ({**EQ, "reference_states": {"CU": {"phase": "LIQUID"}, "MG": {"phase": "LIQUID"}}}, 'reference_states are only used for outputs referenced to them, ending in "R"'),
+    ({**EQ, "output": "HMR", "reference_states": {"CU": {"phase": "LIQUID"}}}, "reference_states must be given for every component, missing ['MG']"),
+    ({**ACR, "output": "ACR_NI"}, 'output must be "ACR_<component>" for one of the components'),
+    ({k: v for k, v in ACR.items() if k != "reference"}, "reference: Field required"),
+    ({k: v for k, v in ZPF.items() if k != "reference"}, "reference: Field required"),
+    ({**ZPF, "values": [ZPF["values"][0], [["LIQUID", ["MG"], [0.07]], ["FCC_A1", ["MG"], [0.03], "ordered"]]]}, "values[1][1].flag: Input should be 'disordered'"),
+    ({**ZPF, "values": [ZPF["values"][0], [["LIQUID", ["MG"], [None]], ["FCC_A1", ["MG"], [None]]]]}, "phase region values[1] needs a phase composition with known mole fractions"),
+    ({**ZPF, "values": [ZPF["values"][0], [["__HYPERPLANE__", ["MG"], [None]], ["FCC_A1", ["MG"], [0.1]]]]}, "__HYPERPLANE__ mole fractions must all be known"),
+    ({**ZPF, "conditions": {"P": [1e5, 2e5, 3e5], "T": 1300}}, "conditions must be T, P or N with one value or one value per phase region (2), got {'P': 3} values"),
+])
+def test_invalid_datasets_raise_a_descriptive_error(dataset, message):
+    with pytest.raises(DatasetError, match=re.escape(message)):
+        validate_dataset(dataset)
+
+
+def test_dataset_errors_list_every_error_with_its_location():
+    with pytest.raises(DatasetError) as error:
+        validate_dataset({**ZPF, "phases": "LIQUID", "values": [[["LIQUID", ["MG"], ["abc"]], ["FCC_A1", "MG", [None]]]]})
+    assert str(error.value) == """3 error(s) in ZPFDataset:
+  phases: Input should be a valid list (got 'LIQUID')
+  values[0][0].fractions[0]: Input should be a valid number, unable to parse string as a number (got 'abc')
+  values[0][1].components: Input should be a valid list (got 'MG')"""
+
+
+@pytest.mark.parametrize("dataset, message", [
+    ({**ZPF, "phases": ["LIQUID"]}, "Phases ['FCC_A1'] in the values are not in phases ['LIQUID']"),
+    ({**MIXING, "solver": {**MIXING["solver"], "sublattice_configurations": [[["CU", "MG"], ["VA"]]], "sublattice_occupancies": [[[0.5, 0.5], [1.0]]]}}, "Sublattice ['VA'] of configuration [['CU', 'MG'], ['VA']] has one species"),
+])
+def test_likely_mistakes_in_datasets_warn(dataset, message):
+    with pytest.warns(DatasetWarning, match=re.escape(message)):
+        validate_dataset(dataset)
+
+
+@pytest.mark.xfail(strict=True, reason="Bug: like ESPEI 0.9, the disordered flag is dropped from known compositions, where the ZPF residual uses it")
+def test_disordered_flag_of_known_compositions_is_loaded():
+    disordered = {**ZPF, "values": [ZPF["values"][0], [["LIQUID", ["MG"], [0.07]], ["FCC_A1", ["MG"], [0.03], "disordered"]]]}
+    assert validate_dataset(disordered).values[1][1].flag == "disordered"
+    assert validate_dataset(disordered).model_dump(exclude_unset=True) == disordered
