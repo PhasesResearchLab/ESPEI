@@ -16,7 +16,7 @@
 ### Dependencies
 
 - Require pycalphad 0.12 or later.
-- Support Python 3.14 and 3.15 ([\@bocklund](https://github.com/bocklund))
+- Support Python 3.14 and 3.15 ([\@bocklund](https://github.com/bocklund) - [issue 306](https://github.com/phasesresearchlab/espei/issues/306))
 
 ## 0.9.1 (2026-06-05)
 
