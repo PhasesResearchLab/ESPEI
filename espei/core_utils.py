@@ -166,7 +166,7 @@ def ravel_zpf_values(desired_data, independent_comps, conditions=None):
                         x = None if any([xx is None for xx in compositions]) else 1 - sum(compositions)
                     comp_dict[c] = x
 
-                this_equilibrium.append((phase_name, comp_dict, data['reference']))
+                this_equilibrium.append((phase_name, comp_dict, data.get('reference', '')))
 
             # add this set of equilibrium phases to the correct key in the equilibria dict
             # don't count __HYPERPLANE__ meta phases towards dimensionality of tie-region

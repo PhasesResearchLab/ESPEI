@@ -51,6 +51,13 @@ def test_activity_residual_function(datasets_db):
     assert np.isclose(likelihood, -257.41020886970756, rtol=1e-6)
 
 
+def test_activity_data_without_reference(datasets_db):
+    """Activity data without a reference give a likelihood (gh-269)."""
+    datasets_db.insert({k: x for k, x in CR_NI_ACTIVITY.items() if k != "reference"})
+    dbf = Database(CR_NI_TDB)
+    assert np.isfinite(calculate_activity_error(dbf, ['CR', 'NI', 'VA'], list(dbf.phases.keys()), datasets_db, {}, {}, {}))
+
+
 def test_subsystem_activity_probability(datasets_db):
     """Test binary Cr-Ni data produces the same probability regardless of whether the main system is a binary or ternary."""
 
@@ -354,6 +361,14 @@ def test_subsystem_non_equilibrium_thermochemcial_probability(datasets_db):
     thermochemical_data = get_thermochemical_data(dbf_tern, ['CR', 'FE', 'NI', 'VA'], phases, datasets_db)
     prob = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf_tern)
     assert np.isclose(prob, bin_prob)
+
+
+def test_zpf_data_without_reference(datasets_db):
+    """ZPF data without a reference give a likelihood (gh-269)."""
+    datasets_db.insert({k: x for k, x in CU_MG_DATASET_ZPF_ZERO_ERROR.items() if k != "reference"})
+    dbf = Database(CU_MG_TDB)
+    zpf_data = get_zpf_data(dbf, ['CU', 'MG', 'VA'], list(dbf.phases.keys()), datasets_db, {})
+    assert np.isclose(calculate_zpf_error(zpf_data, np.array([])), 2 * scipy.stats.norm(loc=0, scale=1000.0).logpdf(0.0), rtol=1e-6)
 
 
 def test_zpf_error_zero(datasets_db):

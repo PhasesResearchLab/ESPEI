@@ -197,7 +197,7 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
         data_dict = {
             'weight': data.get('weight', 1.0),
             'phase_regions': phase_regions,
-            'dataset_reference': data['reference'],
+            'dataset_reference': data.get('reference', ''),
             'dbf': dbf,  # TODO: not ideal to ship databases across the wire, but we can accept it for now.
             'parameter_dict': parameters
         }

@@ -1,16 +1,12 @@
 """
 ESPEI datasets and the pydantic models of each type of dataset.
-
-The models are the contract between dataset files and the rest of ESPEI. They
-validate datasets, convert numbers given as strings, and keep keys that are
-not part of the schema, such as ``comment``.
 """
 import fnmatch, json, os, warnings
 from typing import Any, Iterable, Literal, Optional, Self
 
 import numpy as np
 from pycalphad import variables as v
-from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, ValidationError, ValidationInfo, model_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationInfo, model_serializer, model_validator
 from tinydb.storages import MemoryStorage
 from tinydb import where
 
@@ -100,8 +96,6 @@ class FixedConfigurationDataset(Dataset):
                     raise ValueError(f"sublattice {subl} of configuration {config} must be sorted and unique, i.e. {sorted(set(subl))}")
                 if isinstance(subl, list) != isinstance(occ, list) or len(_as_list(subl)) != len(_as_list(occ)) or abs(sum(_as_list(occ)) - 1) > 0.01:
                     raise ValueError(f"occupancies {occ} must have the same shape as the sublattice {subl} of configuration {config} and sum to one")
-                if isinstance(subl, list) and len(subl) == 1:  # Workaround: remove when parameter selection matches ["VA"] to "VA"
-                    warnings.warn(f"Sublattice {subl} of configuration {config} has one species. Use {subl[0]!r} instead, because parameter selection only uses data with one species sublattices given as strings.", DatasetWarning)
         return self
 
     @model_validator(mode="after")
@@ -178,7 +172,7 @@ class PhaseComposition(_Model):
     """[phase, components, mole fractions] of a phase in a phase region, with an optional "disordered" flag."""
     phase: str
     components: list[str]
-    fractions: list[Optional[NonNegativeFloat]]  # None for unknown
+    fractions: list[Optional[float]]  # None for unknown
     flag: Optional[Literal["disordered"]] = None
 
     @model_validator(mode="before")
@@ -199,9 +193,7 @@ class PhaseComposition(_Model):
 
     @model_serializer
     def _to_list(self) -> list:
-        # FIXME: like ESPEI 0.9, drop the flag from known compositions, the only ones where it is used
-        keep_flag = self.flag and all(x is None for x in self.fractions)
-        return [self.phase, self.components, self.fractions] + ([self.flag] if keep_flag else [])
+        return [self.phase, self.components, self.fractions] + ([self.flag] if self.flag else [])
 
 
 class ZPFDataset(Dataset):
