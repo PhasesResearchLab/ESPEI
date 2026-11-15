@@ -26,7 +26,8 @@ class DatasetWarning(UserWarning):
 
 
 class _Model(BaseModel):
-    model_config = ConfigDict(extra="allow")  # keep keys that are not part of the schema, e.g. "comment"
+    # Keep keys that are not part of the schema, e.g. "comment". Build validators when first used, not on import.
+    model_config = ConfigDict(extra="allow", defer_build=True)
 
 
 Values = list[list[list[float]]]  # shape of (len(P), len(T), number of configurations or compositions)
@@ -172,7 +173,7 @@ class ActivityDataset(EquilibriumPropertyDataset):
         return self
 
 
-class PhaseComposition(BaseModel):
+class PhaseComposition(_Model):
     """[phase, components, mole fractions] of a phase in a phase region, with an optional "disordered" flag."""
     phase: str
     components: list[str]
