@@ -10,9 +10,10 @@ _log = logging.getLogger(__name__)
 
 
 class SciPyOptimizer(OptimizerBase):
-    def _fit(self, symbols, ds, method='Powell', maxiter=50, verbose=False, **kwargs):
-        # Use Scipy's minimize with the Powell method to optimize Lnprob
-        ctx = setup_context(self.dbf, ds, symbols)
+    """ESPEI optimizer using SciPy's optimize.minimize function"""
+    def _fit(self, symbols, ds, method='Powell', maxiter=50, verbose=False, data_weights=None, **kwargs):
+        # Use Scipy's minimize with the Powell method to maximize the likelihood
+        ctx = setup_context(self.dbf, ds, symbols, data_weights=data_weights)
 
         symbols_to_fit = ctx['symbols_to_fit']
         initial_guess = np.array([unpack_piecewise(self.dbf.symbols[s]) for s in symbols_to_fit])
@@ -20,7 +21,8 @@ class SciPyOptimizer(OptimizerBase):
             print('Fitting', symbols_to_fit)
             print('Initial guess', initial_guess)
         s = time.time()
-        out = minimize(self.predict, initial_guess, args=(ctx,), method=method,
+        # predict is the log-likelihood, as for the other optimizers, so minimize its negative
+        out = minimize(lambda params, ctx: -self.predict(params, ctx), initial_guess, args=(ctx,), method=method,
                        options={'maxiter': maxiter}, **kwargs)
         xs = np.atleast_1d(out.x).tolist()
         if verbose:
@@ -30,6 +32,7 @@ class SciPyOptimizer(OptimizerBase):
 
     @staticmethod
     def predict(params, ctx):
+        """Log-likelihood of the parameters."""
         starttime = time.time()
         lnlike = 0.0
         likelihoods = {}
