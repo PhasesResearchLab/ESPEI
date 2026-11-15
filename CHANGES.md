@@ -9,9 +9,9 @@
 
 ### Bug fixes
 
-- Fix `SciPyOptimizer` minimizing the log-likelihood instead of maximizing it, and pass its `data_weights` to the residual functions ([\@bocklund](https://github.com/bocklund))
-- Fix `setup_context` and the optimizers modifying the symbols of the Database passed to them ([\@bocklund](https://github.com/bocklund))
-- Fix `ZPFResidual` and `EquilibriumPropertyResidual` giving parameter values to the wrong symbols when `symbols_to_fit` is not sorted ([\@bocklund](https://github.com/bocklund))
+- Fix `SciPyOptimizer` minimizing the log-likelihood instead of maximizing it, and pass its `data_weights` to the residual functions ([\@bocklund](https://github.com/bocklund) - [issue 307](https://github.com/phasesresearchlab/espei/issues/307))
+- Fix `setup_context` and the optimizers modifying the symbols of the Database passed to them ([\@bocklund](https://github.com/bocklund) - [issue 307](https://github.com/phasesresearchlab/espei/issues/307))
+- Fix `ZPFResidual` and `EquilibriumPropertyResidual` giving parameter values to the wrong symbols when `symbols_to_fit` is not sorted ([\@bocklund](https://github.com/bocklund) - [issue 307](https://github.com/phasesresearchlab/espei/issues/307))
 
 ### Dependencies
 
