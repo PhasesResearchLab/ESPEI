@@ -652,7 +652,7 @@ def test_valid_datasets_pass(dataset):
     ({**MIXING, "solver": {**MIXING["solver"], "sublattice_occupancies": [[[0.5, 0.5], [1.0]]]}}, "must have the same shape as the sublattice VA"),
     ({**MIXING, "solver": {**MIXING["solver"], "sublattice_configurations": [[["CU", "CU"], "VA"]]}}, "must be sorted and unique"),
     ({**EQ, "conditions": {**EQ["conditions"], "W_MG": [0.1, 0.2]}}, "conditions must be T, P, N or X_<component>, got ['W_MG']"),
-    ({**EQ, "components": ["CU"], "conditions": {"P": 101325, "T": 1400}, "values": [[[1.0]]]}, "X_ conditions must have the same number of values"),
+    ({**EQ, "components": ["CU"], "conditions": {"P": 101325, "T": 1400}, "values": [[[1.0]]]}, "X_ conditions must be given and have the same number of values"),
     ({**EQ, "reference_states": {"CU": {"phase": "LIQUID"}, "MG": {"phase": "LIQUID"}}}, 'reference_states are only used for outputs referenced to them, ending in "R"'),
     ({**EQ, "output": "HMR", "reference_states": {"CU": {"phase": "LIQUID"}}}, "reference_states must be given for every component, missing ['MG']"),
     ({**ACR, "output": "ACR_NI"}, 'output must be "ACR_<component>" for one of the components'),

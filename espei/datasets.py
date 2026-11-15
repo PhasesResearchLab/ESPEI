@@ -143,7 +143,7 @@ class EquilibriumPropertyDataset(Dataset):
         if not num_compositions.keys() <= set(self.components) or len(dependent) != 1:
             raise ValueError(f"X_ conditions {sorted(num_compositions)} must be components {self.components}, leaving one dependent component, got {sorted(dependent)}")
         if len(set(num_compositions.values())) != 1:
-            raise ValueError(f"X_ conditions must have the same number of values, because they are not broadcast, got {num_compositions}")
+            raise ValueError(f"X_ conditions must be given and have the same number of values, because they are not broadcast, got {num_compositions}")
         shape = (np.size(self.conditions["P"]), np.size(self.conditions["T"]), *set(num_compositions.values()))
         if np.shape(self.values) != shape:
             raise ValueError(f"values must have the shape (len(P), len(T), len(X)) = {shape}, got {np.shape(self.values)}")
