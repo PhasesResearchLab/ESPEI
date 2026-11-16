@@ -311,7 +311,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <img src="../../../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../../../">ESPEI v0.9.2.dev20+g88f9a6ed1</a> 
+      <a href="../../../">ESPEI v0.9.2.dev21+g141a638cb</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -539,6 +539,36 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">datasets.recursive_glob</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../reference/api/datasets.validate_dataset.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">datasets.validate_dataset</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../reference/api/datasets.FixedConfigurationDataset.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">datasets.FixedConfigurationDataset</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../reference/api/datasets.EquilibriumPropertyDataset.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">datasets.EquilibriumPropertyDataset</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../reference/api/datasets.ActivityDataset.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">datasets.ActivityDataset</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../../reference/api/datasets.ZPFDataset.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">datasets.ZPFDataset</span></a>
+  </div>
+</li>
       </ul>
   </li>
           <li class="sidebar-item sidebar-item-section">
@@ -757,7 +787,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <p>Looking at how each parameter chain evolves across the chains can show if any particular chains are diverging from the rest, if there are multiple modes being explored, or how wide the distribution of parameters are relative to each other.</p>
 <p>Each line corresponds to one chain in the ensemble.</p>
-<div id="a90c52bf" class="cell" data-execution_count="1">
+<div id="439719c3" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> espei.analysis <span class="im">import</span> truncate_arrays</span>
@@ -788,7 +818,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>and if we plot again after 500 iterations of burn-in:</p>
-<div id="f6871a51" class="cell" data-execution_count="2">
+<div id="e8974685" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>burn_in_iterations <span class="op">=</span> <span class="dv">500</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(nrows<span class="op">=</span>num_parameters, gridspec_kw<span class="op">=</span><span class="bu">dict</span>(hspace<span class="op">=</span><span class="fl">0.4</span>), figsize<span class="op">=</span>(<span class="dv">4</span>, <span class="dv">3</span><span class="op">*</span>num_parameters))</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> parameter <span class="kw">in</span> <span class="bu">range</span>(num_parameters):</span>
