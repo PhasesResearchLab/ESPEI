@@ -17,6 +17,7 @@
 ### Deprecations
 
 - `espei.datasets.check_dataset` and `espei.datasets.clean_dataset` are deprecated and will be removed in ESPEI 0.11. Use `espei.datasets.validate_dataset` instead. `espei.datasets.recursive_map` is removed.
+- Configurations given to `plot_interaction` and `plot_endmember` with sublattices of one species given as the species, e.g. `(("CU", "MG"), "VA")`, are deprecated. Give every sublattice as a tuple, e.g. `(("CU", "MG"), ("VA",))`.
 
 ### Dependencies
 

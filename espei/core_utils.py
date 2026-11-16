@@ -6,12 +6,7 @@ from typing import List
 import numpy as np
 import tinydb
 from espei.datasets import Dataset
-from espei.sublattice_tools import canonicalize, tuplify
-
-
-def _canonical_configuration(configuration, symmetry):
-    """Canonicalize a sublattice configuration with every sublattice as a tuple of species, e.g. "VA" as ("VA",)."""
-    return canonicalize([tuplify(subl) for subl in configuration], symmetry)
+from espei.sublattice_tools import canonicalize
 
 
 def select_configurations(data: Dataset, selected) -> None:
@@ -31,7 +26,7 @@ def filter_configurations(desired_data: List[Dataset], configuration, symmetry) 
     desired_data : List[Dataset]
         List of non-equilibrium thermochemical datasets
     configuration : tuple
-        Sublattice configuration as a tuple, e.g. ("CU", ("CU", "MG"))
+        Sublattice configuration as a tuple, e.g. (("CU",), ("CU", "MG"))
     symmetry : list of lists
         List of sublattice indices with symmetry
 
@@ -40,9 +35,9 @@ def filter_configurations(desired_data: List[Dataset], configuration, symmetry) 
     List[Dataset]
 
     """
-    canonical_config = _canonical_configuration(configuration, symmetry)
+    canonical_config = canonicalize(configuration, symmetry)
     for data in desired_data:
-        select_configurations(data, [_canonical_configuration(config, symmetry) == canonical_config for config in data['solver']['sublattice_configurations']])
+        select_configurations(data, [canonicalize(config, symmetry) == canonical_config for config in data['solver']['sublattice_configurations']])
     return desired_data
 
 
@@ -194,7 +189,7 @@ def symmetry_filter(x, config, symmetry):
     x : dict
         the candidate dataset 'solver' dict. Must contain the "sublattice_configurations" key
     config : list
-        the configuration of interest: e.g. ['AL', ['AL', 'NI'], 'VA']
+        the configuration of interest: e.g. [['AL'], ['AL', 'NI'], ['VA']]
     symmetry : list
         tuple of tuples where each inner tuple is a group of equivalent
         sublattices. A value of ((0, 1), (2, 3, 4)) means that sublattices
@@ -211,8 +206,8 @@ def symmetry_filter(x, config, symmetry):
         return False
     # If even one matches, it's a match
     # We do more filtering downstream
-    canonical_config = _canonical_configuration(config, symmetry)
-    return any(_canonical_configuration(data_config, symmetry) == canonical_config for data_config in x['sublattice_configurations'])
+    canonical_config = canonicalize(config, symmetry)
+    return any(canonicalize(data_config, symmetry) == canonical_config for data_config in x['sublattice_configurations'])
 
 
 def get_prop_data(comps, phase_name, prop, datasets, additional_query=None) -> List[Dataset]:

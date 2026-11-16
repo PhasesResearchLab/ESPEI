@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
+import pytest
 from pycalphad import Database, variables as v
 
 from espei.plot import dataplot, plot_endmember, plot_interaction
@@ -116,7 +117,7 @@ def test_plot_interaction_runs(datasets_db):
     """Test that plot_interaction runs without an error."""
     dbf = Database(CU_MG_TDB)
     comps = ['CU', 'MG', 'VA']
-    config = (('CU', 'MG'), ('VA'))
+    config = (('CU', 'MG'), ('VA',))
 
     # Plot HM_MIX without datasets
     fig = plt.figure()  # explictly do NOT pass axes to make sure they are created
@@ -144,7 +145,7 @@ def test_plot_endmember_runs(datasets_db):
     """Test that plot_endmember runs without an error."""
     dbf = Database(CU_MG_TDB)
     comps = ['CU', 'MG', 'VA']
-    config = ('CU', 'MG')
+    config = (('CU',), ('MG',))
 
     endmember_dataset = {
         "components": ["CU", "MG", "VA"],
@@ -166,6 +167,19 @@ def test_plot_endmember_runs(datasets_db):
     plt.close(fig)
 
 
+
+def test_plot_endmember_with_sublattices_of_one_species_given_as_the_species():
+    """Configurations with sublattices of one species given as the species are deprecated, and plot the same."""
+    dbf = Database(CU_MG_TDB)
+    fig, ax = plt.subplots()
+    with pytest.warns(DeprecationWarning, match="are deprecated"):
+        plot_endmember(dbf, ['CU', 'MG', 'VA'], 'CUMG2', ('CU', 'MG'), 'HM_FORM', ax=ax)
+    plot_endmember(dbf, ['CU', 'MG', 'VA'], 'CUMG2', (('CU',), ('MG',)), 'HM_FORM', ax=ax)
+    deprecated, current = ax.lines
+    plt.close(fig)
+    assert np.array_equal(deprecated.get_xydata(), current.get_xydata())
+
+
 def _residual(dbf, datasets_db):
     from espei.error_functions.non_equilibrium_thermochemical_error import FixedConfigurationPropertyResidual
     residuals, _ = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[]).get_residuals(np.asarray([]))
@@ -181,7 +195,7 @@ def test_plot_interaction_shifts_data_to_all_the_physics_of_the_model(datasets_d
         "conditions": {"P": 101325, "T": 298.15}, "values": [[[-2000.0]]], "excluded_model_contributions": ["idmix"],
     })
     fig, ax = plt.subplots()
-    plot_interaction(dbf, ["CU", "MG", "VA"], "FCC_A1", (("CU", "MG"), "VA"), "SM_MIX", datasets_db, ax=ax)
+    plot_interaction(dbf, ["CU", "MG", "VA"], "FCC_A1", (("CU", "MG"), ("VA",)), "SM_MIX", datasets_db, ax=ax)
     curve, data = ax.lines
     plt.close(fig)
     assert np.isclose(data.get_xdata()[0], 1/3)

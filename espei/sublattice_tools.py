@@ -6,14 +6,6 @@ from typing import Any, Sequence, Union
 import itertools
 
 
-def tuplify(x):
-    """Convert a list to a tuple, or wrap an object in a tuple if it's not a list or tuple."""
-    if isinstance(x, list) or isinstance(x, tuple):
-        return tuple(x)
-    else:
-        return tuple([x])
-
-
 def recursive_tuplify(x):
     """Recursively convert a nested list to a tuple"""
     def _tuplify(y):
@@ -24,23 +16,6 @@ def recursive_tuplify(x):
     return tuple(map(_tuplify, x))
 
 
-def canonical_sort_key(x):
-    """
-    Wrap strings in tuples so they'll sort.
-
-    Parameters
-    ----------
-    x : list
-        List of strings to sort
-
-    Returns
-    -------
-    tuple
-        tuple of strings that can be sorted
-    """
-    return [tuple(i) if isinstance(i, (tuple, list)) else (i,) for i in x]
-
-
 def canonicalize(configuration, equivalent_sublattices):
     """
     Sort a sequence with symmetry. This routine gives the sequence
@@ -48,8 +23,8 @@ def canonicalize(configuration, equivalent_sublattices):
 
     Parameters
     ----------
-    configuration : [str]
-        Sublattice configuration to sort.
+    configuration : [[str]]
+        Sublattice configuration to sort, the species of each sublattice.
     equivalent_sublattices : {{int}}
         Indices of 'configuration' which should be equivalent by symmetry, i.e.,
         [[0, 4], [1, 2, 3]] means permuting elements 0 and 4, or 1, 2 and 3, respectively,
@@ -57,21 +32,16 @@ def canonicalize(configuration, equivalent_sublattices):
 
     Returns
     -------
-    str
-        sorted tuple that has been canonicalized.
+    tuple
+        Tuple of the species of each sublattice, sorted among equivalent sublattices.
 
     """
-    canonicalized = list(configuration)
-    if equivalent_sublattices is not None:
-        for subl in equivalent_sublattices:
-            subgroup = sorted([configuration[idx] for idx in sorted(subl)], key=canonical_sort_key)
-            for subl_idx, conf_idx in enumerate(sorted(subl)):
-                if isinstance(subgroup[subl_idx], list):
-                    canonicalized[conf_idx] = tuple(subgroup[subl_idx])
-                else:
-                    canonicalized[conf_idx] = subgroup[subl_idx]
-
-    return recursive_tuplify(canonicalized)
+    canonicalized = list(recursive_tuplify(configuration))
+    for subl in equivalent_sublattices or []:
+        indices = sorted(subl)
+        for conf_idx, sublattice in zip(indices, sorted(canonicalized[idx] for idx in indices)):
+            canonicalized[conf_idx] = sublattice
+    return tuple(canonicalized)
 
 
 def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None, Sequence[Sequence[int]]]):
@@ -143,7 +113,7 @@ def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None,
         for fixed_idx in fixed_subl_indices:
             new_config.insert(fixed_idx, configuration[fixed_idx])
         symmetrically_distinct_configurations.add(tuple(new_config))
-    return sorted(symmetrically_distinct_configurations, key=canonical_sort_key)
+    return sorted(symmetrically_distinct_configurations)
 
 
 def sorted_interactions(interactions, max_interaction_order, symmetry):
@@ -177,13 +147,11 @@ def sorted_interactions(interactions, max_interaction_order, symmetry):
     def int_sort_key(x):
         # Each interaction is given a sort score for the number of interactions
         # it has at each level. For example, a 4 sublattice phase with
-        # interaction of (A:A:A,B:A,B,C) has 2 order-1 interactions, 1 order-2
-        # interaction and 1 order-3 interaction. It's sort score would be (1, 1, 2).
-        # thus it should sort below a (2, 1, 2), for example.
-        sort_score = []
-        for interaction_order in reversed(range(1, max_interaction_order+1)):
-            sort_score.append(sum((isinstance(n, (list, tuple)) and len(n) == interaction_order) for n in x))
-        return canonical_sort_key(recursive_tuplify(sort_score) + x)
+        # interaction of (A:A:A,B:A,B,C) has 1 order-2 interaction and 1
+        # order-3 interaction. It's sort score would be (1, 1), thus it should
+        # sort below a (2, 1), for example.
+        sort_score = tuple(sum(len(subl) == interaction_order for subl in x) for interaction_order in reversed(range(2, max_interaction_order+1)))
+        return sort_score, x
 
     interactions = sorted(set(canonicalize(i, symmetry) for i in interactions), key=int_sort_key)
     # filter out interactions that have ternary and binary parameters (cross interactions)
@@ -210,7 +178,7 @@ def generate_interactions(endmembers, order, symmetry, forbid_cross_interactions
     Parameters
     ----------
     endmembers : list
-        List of tuples/strings of all endmembers (including symmetrically equivalent)
+        List of all endmember configurations (including symmetrically equivalent)
     order : int
         Highest expected interaction order, e.g. ternary interactions should be 3
     symmetry : list of lists
@@ -227,7 +195,7 @@ def generate_interactions(endmembers, order, symmetry, forbid_cross_interactions
     Returns
     -------
     list
-        List of interaction tuples, e.g. [('A', ('A', 'B'))]
+        List of interaction tuples, e.g. [(('A',), ('A', 'B'))]
 
     """
     if forbid_cross_interactions is None:
@@ -241,18 +209,15 @@ def generate_interactions(endmembers, order, symmetry, forbid_cross_interactions
     for endmembers in itertools.combinations(endmembers, order):
         config = []
         has_desired_order = False  # Some interactions make for degenerate endmember
-        for subl in zip(*endmembers):
-            subl = set(subl)
-            num_constit = len(subl)
-            if num_constit == 1:
-                config.append(tuple(subl)[0])  # Canonical form: a pure sublattice is not a sequence
-            else:
+        for sublattices in zip(*endmembers):
+            species = tuple(sorted({sp for subl in sublattices for sp in subl}))
+            if len(species) > 1:
                 if has_desired_order and forbid_cross_interactions:
                     has_desired_order = False  # setting this to false ensures the interaction won't be added
                     break
-                if num_constit == order:
+                if len(species) == order:
                     has_desired_order = True
-                config.append(tuple(sorted(subl)))
+            config.append(species)
         if has_desired_order:
             interactions.append(config)
     return sorted_interactions(interactions, order, symmetry)
@@ -283,22 +248,15 @@ def interaction_test(configuration, order=None):
     False
 
     """
-    interacting_species = [len(subl) for subl in configuration if isinstance(subl, (tuple,list))]
     if order is None:  # checking for any interaction
-        return any([subl_occupation > 1 for subl_occupation in interacting_species])
+        return any(len(subl) > 1 for subl in configuration)
     else:
-        return any([subl_occupation == order for subl_occupation in interacting_species])
+        return any(len(subl) == order for subl in configuration)
 
 
 def endmembers_from_interaction(configuration):
     """For a given configuration with possible interactions, return all the endmembers"""
-    config = []
-    for c in configuration:
-        if isinstance(c, (list, tuple)):
-            config.append(c)
-        else:
-            config.append([c])
-    return list(itertools.product(*[tuple(c) for c in config]))
+    return [tuple((sp,) for sp in species) for species in itertools.product(*configuration)]
 
 
 def generate_endmembers(sublattice_model, symmetry=None):
@@ -321,10 +279,10 @@ def generate_endmembers(sublattice_model, symmetry=None):
     --------
     >>> subl_model = [['A', 'B'], ['A','B']]
     >>> generate_endmembers(subl_model)  # four endmembers
-    [('A', 'A'), ('A', 'B'), ('B', 'A'), ('B', 'B')]
-    >>> # three endmembers, ('A', 'B') is equivalent to ('B', 'A') by symmetry.
+    [(('A',), ('A',)), (('A',), ('B',)), (('B',), ('A',)), (('B',), ('B',))]
+    >>> # three endmembers, A:B is equivalent to B:A by symmetry.
     >>> generate_endmembers(subl_model, [[0, 1]])  # the first and second sublattices are symmetrically equivalent.
-    [('A', 'A'), ('A', 'B'), ('B', 'B')]
+    [(('A',), ('A',)), (('A',), ('B',)), (('B',), ('B',))]
 
     """
-    return sorted(set(canonicalize(i, symmetry) for i in list(itertools.product(*sublattice_model))))
+    return sorted(set(canonicalize(endmember, symmetry) for endmember in endmembers_from_interaction(sublattice_model)))

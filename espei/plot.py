@@ -301,6 +301,13 @@ def _data_shift_model(dbf, comps, phase_name, output, data):
     return plot_model
 
 
+def _sublattices_as_tuples(configuration):
+    """Return the configuration with the species of each sublattice as a tuple, from the deprecated form with a sublattice of one species given as the species."""
+    if any(isinstance(subl, str) for subl in configuration):
+        warnings.warn('Sublattices of one species given as the species, e.g. "VA" in (("CU", "MG"), "VA"), are deprecated. Give them as tuples, e.g. (("CU", "MG"), ("VA",)).', DeprecationWarning, stacklevel=3)
+    return tuple((subl,) if isinstance(subl, str) else tuple(subl) for subl in configuration)
+
+
 def _get_interaction_predicted_values(dbf, comps, phase_name, configuration, output):
     mod = Model(dbf, comps, phase_name)
     endpoints = endmembers_from_interaction(configuration)
@@ -328,8 +335,8 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
         Names of components to consider in the calculation.
     phase_name : str
         Name of the considered phase phase
-    configuration : Tuple[Tuple[str]]
-        ESPEI-style configuration
+    configuration : Sequence[Sequence[str]]
+        Species of each sublattice, e.g. ``(("CU", "MG"), ("VA",))``.
     output : str
         Model property to plot on the y-axis e.g. ``'HM_MIX'``, or ``'SM_MIX'``.
         Must be a ``'_MIX'`` property.
@@ -350,6 +357,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     """
     if not output.endswith('_MIX'):
         raise ValueError("`plot_interaction` only supports HM_MIX, SM_MIX, or CPM_MIX outputs.")
+    configuration = _sublattices_as_tuples(configuration)
     if not plot_kwargs:
         plot_kwargs = {}
     if not dataplot_kwargs:
@@ -384,7 +392,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     subl_dof = list(map(len, constituents))
     calculate_dict = get_prop_samples(desired_data, constituents)
     sample_condition_dicts = get_sample_condition_dicts(calculate_dict, canonicalize(constituents, symmetry), phase_name)
-    interacting_subls = [c for c in recursive_tuplify(configuration) if isinstance(c, tuple)]
+    interacting_subls = [subl for subl in configuration if len(subl) > 1]
     if (len(set(interacting_subls)) == 1) and (len(interacting_subls[0]) == 2):
         # This configuration describes all sublattices with the same two elements interacting
         # In general this is a high-dimensional space; just plot the diagonal to see the disordered mixing
@@ -440,7 +448,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
         dataplot_kwargs['fillstyle'] = symbol_map[ref]['markers']['fillstyle']
         ax.plot(indep_var_data, response_data, **dataplot_kwargs)
     ax.set_xlim((0, 1))
-    ax.set_xlabel(str(':'.join(endpoints[0])) + ' to ' + str(':'.join(endpoints[1])))
+    ax.set_xlabel(' to '.join(':'.join(name for name, in endpoint) for endpoint in endpoints))
     ax.set_ylabel(plot_mapping.get(output, output))
     leg = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))  # legend outside
     leg.get_frame().set_edgecolor('black')
@@ -459,8 +467,8 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
         Names of components to consider in the calculation.
     phase_name : str
         Name of the considered phase phase
-    configuration : Tuple[Tuple[str]]
-        ESPEI-style configuration
+    configuration : Sequence[Sequence[str]]
+        Species of each sublattice, e.g. ``(("CU", "MG"), ("VA",))``.
     output : str
         Model property to plot on the y-axis e.g. ``'HM_MIX'``, or ``'SM_MIX'``.
         Must be a ``'_MIX'`` property.
@@ -483,6 +491,7 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
         raise ValueError("`plot_interaction` only supports HM, HM_FORM, SM, SM_FORM or CPM, CPM_FORM outputs.")
     if x not in ('T',):
         raise ValueError(f'`x` passed to `plot_endmember` must be "T" got {x}')
+    configuration = _sublattices_as_tuples(configuration)
     if not plot_kwargs:
         plot_kwargs = {}
     if not dataplot_kwargs:
@@ -553,6 +562,6 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
 def _translate_endmember_to_array(endmember, variables):
     site_fractions = sorted(variables, key=str)
     frac_array = np.zeros(len(site_fractions))
-    for idx, component in enumerate(endmember):
+    for idx, (component,) in enumerate(endmember):
         frac_array[site_fractions.index(v.SiteFraction(site_fractions[0].phase_name, idx, component))] = 1
     return frac_array

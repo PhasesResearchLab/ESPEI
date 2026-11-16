@@ -32,7 +32,7 @@ def calc_interaction_product(site_fractions):
     >>> # interaction product for [(A,B), (A,B)(A)] site fractions that are equal
     >>> calc_interaction_product([[0.5, 0.5]])  # doctest: +ELLIPSIS
     0.0
-    >>> calc_interaction_product([[0.5, 0.5], 1])  # doctest: +ELLIPSIS
+    >>> calc_interaction_product([[0.5, 0.5], [1.0]])  # doctest: +ELLIPSIS
     0.0
     >>> # interaction product for an [(A,B)] site_fractions
     >>> calc_interaction_product([[0.1, 0.9]])  # doctest: +ELLIPSIS
@@ -44,16 +44,16 @@ def calc_interaction_product(site_fractions):
     >>> calc_interaction_product([[0.333, 0.333, 0.334]])
     [0.333, 0.333, 0.334]
     >>> # ternary 2SL case, (A,B,C)(A) interaction
-    >>> calc_interaction_product([[0.333, 0.333, 0.334], 1.0])
+    >>> calc_interaction_product([[0.333, 0.333, 0.334], [1.0]])
     [0.333, 0.333, 0.334]
 
     """
-    # config is the list of site fractions for each sublattice, e.g. [[0.25, 0.25, 0.5], 1] for an [[A,B,C], A] site_fractions
+    # site fractions of each sublattice, e.g. [[0.25, 0.25, 0.5], [1.0]] for an [[A,B,C], [A]] configuration
     is_ternary = interaction_test(site_fractions, 3)
     if not is_ternary:
         prod = 1.0
         for subl in site_fractions:
-            if isinstance(subl, list) and len(subl) == 2:
+            if len(subl) == 2:
                 # must be in sorted order!!
                 prod *= subl[0] - subl[1]
         return prod
@@ -61,7 +61,7 @@ def calc_interaction_product(site_fractions):
         # we need to generate v_i, v_j, or v_k for the ternary case, which v we are calculating depends on the parameter order
         prod = [1, 1, 1]  # product for V_I, V_J, V_K
         for subl in site_fractions:
-            if isinstance(subl, list) and (len(subl) >= 3):
+            if len(subl) >= 3:
                 muggianu_correction = (1 - sum(subl)) / len(subl)
                 for i in range(len(subl)):
                     prod[i] *= subl[i] + muggianu_correction

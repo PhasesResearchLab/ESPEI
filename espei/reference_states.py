@@ -50,7 +50,7 @@ def _ser_value(dbf: Database, element: str, per_formula_unit, gibbs_energy: bool
                   if sum(sp.number_of_atoms for sp in em) > 0]
     if len(endmembers) != 1:
         raise NotImplementedError(f"The SER phase of {element}, {phase_name}, has {len(endmembers)} configurations of pure {element}. Only one is supported.")
-    if not _param_present_in_database(dbf, phase_name, [sp.name for sp in endmembers[0]], "G"):
+    if not _param_present_in_database(dbf, phase_name, [(sp.name,) for sp in endmembers[0]], "G"):
         raise ValueError(f"The SER phase of {element}, {phase_name}, has no Gibbs energy parameter for pure {element}.")
     point = _endmember_point(model, endmembers[0])
     return per_formula_unit(model).xreplace(point) / model._site_ratio_normalization.xreplace(point)

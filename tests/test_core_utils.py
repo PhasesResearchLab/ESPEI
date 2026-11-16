@@ -32,7 +32,7 @@ def test_get_data_for_a_minimal_example(datasets_db):
     datasets_db.insert(SAMPLE_DATASET)
     comps = ['CU', 'MG', 'VA']
     phase_name = 'LAVES_C15'
-    configuration = ('MG', 'CU')
+    configuration = (('MG',), ('CU',))
     symmetry = None
     desired_props = ['HM_FORM']
 

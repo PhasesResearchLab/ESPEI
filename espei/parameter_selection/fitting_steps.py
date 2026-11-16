@@ -10,7 +10,7 @@ from espei.core_utils import get_prop_data, filter_configurations, filter_temper
 from espei.error_functions.non_equilibrium_thermochemical_error import PROPERTY_STD_DEVIATION, get_prop_samples, get_sample_condition_dicts
 from espei.parameter_selection.model_building import make_successive, build_feature_matrix
 from espei.reference_states import _split_property_reference, _reference_property
-from espei.sublattice_tools import interaction_test, recursive_tuplify, tuplify
+from espei.sublattice_tools import interaction_test, recursive_tuplify
 from espei.utils import build_sitefractions
 
 _log = logging.getLogger(__name__)
@@ -110,7 +110,7 @@ class FittingStep():
             Names of the relevant components.
         phase_name : str
             Name of the phase being fit.
-        configuration : Tuple[Union[str, Tuple[str]]]
+        configuration : Tuple[Tuple[str, ...], ...]
             Sublattice configuration being fit.
         symmetry : Optional[List[List[int]]]
             Symmetry of the sublattice configuration.
@@ -149,7 +149,7 @@ class FittingStep():
             fit, in [qty]/mole-formula.
         data : [Dataset]
             Datasets returned by ``get_data``.
-        configuration : Tuple[Union[str, Tuple[str]]]
+        configuration : Tuple[Tuple[str, ...], ...]
             Sublattice configuration being fit.
         features : [symengine.Expr]
             Features of the parameter, e.g. ``YS*v.T``.
@@ -160,15 +160,14 @@ class FittingStep():
             Feature matrix (data points by features), response vector, standard deviations and weights.
 
         """
-        config_tup = tuple(map(tuplify, configuration))
         feature_matrices, responses, std_deviations, weights = [], [], [], []
         for step in (cls.data_steps or (cls,)):
             outputs = [step.data_types_read + refstate for refstate in step.supported_reference_states]
             step_data = [ds for ds in data if ds['output'] in outputs]
             if len(step_data) == 0:
                 continue
-            calculate_dict = get_prop_samples(step_data, config_tup)
-            sample_condition_dicts = get_sample_condition_dicts(calculate_dict, config_tup, fixed_model.phase_name)
+            calculate_dict = get_prop_samples(step_data, configuration)
+            sample_condition_dicts = get_sample_condition_dicts(calculate_dict, configuration, fixed_model.phase_name)
             responses.append(step.get_response_vector(fixed_model, fixed_portions, step_data, sample_condition_dicts))
             feature_matrices.append(build_feature_matrix(sample_condition_dicts, [step.transform_feature(f) for f in features]))
             std_deviations.append(np.full(len(sample_condition_dicts), step.data_std_deviation))

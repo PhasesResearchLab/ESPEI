@@ -2,7 +2,7 @@
 Building candidate models
 """
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 import itertools
 import numpy as np
 from pycalphad.core.cache import cacheit
@@ -109,7 +109,7 @@ def build_candidate_models(feature_sets: List[List[symengine.Symbol]], interacti
 
 
 def build_redlich_kister_candidate_models(
-        configuration: Tuple[Union[Tuple[str], str]],
+        configuration: Tuple[Tuple[str, ...], ...],
         feature_sets: List[List[symengine.Symbol]],
         max_binary_redlich_kister_order: Optional[int] = 3,
         ternary_symmetric_parameter: Optional[bool] = True,
@@ -131,8 +131,8 @@ def build_redlich_kister_candidate_models(
 
     Parameters
     ----------
-    configuration : Tuple[Union[Tuple[str], str]]
-        Configuration tuple, e.g. (('A', 'B', 'C'), 'A')
+    configuration : Tuple[Tuple[str, ...], ...]
+        Configuration tuple, e.g. (('A', 'B', 'C'), ('A',))
     feature_sets : List[List[Symbol]]
         Each entry is a list of non-mixing features, for example: temperature
         features [symengine.S.One, v.T, v.T**2, v.T**3] or pressure features
