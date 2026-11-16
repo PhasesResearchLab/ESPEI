@@ -228,6 +228,8 @@ def validate_dataset(dataset: dict[str, Any], species: Optional[Iterable[v.Speci
     species : Optional[Iterable[v.Species]]
         Species, e.g. from ``PhaseModelSpecification.get_species``, used to
         resolve the names in sublattice configurations to their elements.
+        Without them, names that are not components give a ``DatasetWarning``
+        and the components of the dataset are not checked.
 
     Returns
     -------
@@ -239,11 +241,6 @@ def validate_dataset(dataset: dict[str, Any], species: Optional[Iterable[v.Speci
     ------
     DatasetError
         Listing every error found in the dataset, with its location.
-
-    Warns
-    -----
-    DatasetWarning
-        For parts of the dataset that could not be checked or are likely mistakes.
     """
     output = str(dataset.get("output", ""))
     model = (ZPFDataset if output == "ZPF" else
