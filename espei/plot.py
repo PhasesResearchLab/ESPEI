@@ -403,7 +403,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
             # Because it's disordered all sublattices should be equivalent
             # TODO: Fix this to filter because we need to guarantee the plot points are disordered
             occ = data['solver']['sublattice_occupancies']
-            subl_idx = np.nonzero([isinstance(c, (list, tuple)) for c in occ[0]])[0]
+            subl_idx = np.nonzero([len(c) > 1 for c in occ[0]])[0]
             # Always take the first matching sublattice index
             subl_idx = int(subl_idx[0])
             indep_var_data = [c[subl_idx][1] for c in occ]

@@ -29,11 +29,12 @@ heat capacity for BCC_B2.
 
     > `sublattice_configurations` is a list of different configurations,
     > that should correspond to the sublattices for the phase
-    > descriptions. Non-mixing sublattices are represented as a string,
-    > while mixing sublattices are represented as a lists. Thus an
-    > endmember for `BCC_B2` (as in this example) is `["AL", "NI", VA"]`
+    > descriptions. Each sublattice is a list of its species. Thus an
+    > endmember for `BCC_B2` (as in this example) is `[["AL"], ["NI"], ["VA"]]`
     > and if there were mixing (as in the next example) it might be
-    > `["AL", ["AL", "NI"], "VA"]`. Mixing also means that the
+    > `[["AL"], ["AL", "NI"], ["VA"]]`. A sublattice of one species can
+    > also be given as the species, e.g. `["AL", ["AL", "NI"], "VA"]`, as
+    > in older datasets. Mixing also means that the
     > `sublattice_occupancies` key must be specified, but that is not
     > the case in this example.
     > Regardless of whether there is mixing or not, the length of this
@@ -90,7 +91,7 @@ heat capacity for BCC_B2.
   "solver": {
     "mode": "manual",
       "sublattice_site_ratios": [0.5, 0.5, 1],
-      "sublattice_configurations": [["AL", "NI", "VA"]],
+      "sublattice_configurations": [[["AL"], ["NI"], ["VA"]]],
       "comment": "NiAl sublattice configuration (2SL)"
   },
   "conditions": {
@@ -122,10 +123,10 @@ comparing `HM_FORM` values for different sublattice configurations. The
 key differences from the previous example are that there are 9 different
 sublattice configurations described by `sublattice_configurations` and
 `sublattice_occupancies`. Note that the `sublattice_configurations` and
-`sublattice_occupancies` should have exactly the same shape. Sublattices
-without mixing should have single strings and occupancies of one.
-Sublattices that do have mixing should have a site ratio for each active
-component in that sublattice. If the sublattice of a phase is
+`sublattice_occupancies` should have exactly the same shape: each
+sublattice has a site fraction for each of its species. Sublattices
+without mixing have an occupancy of one, `[1]`, which can also be given
+as `1`. If the sublattice of a phase is
 `["AL", "NI", "VA"]`, it should only have two occupancies if only
 `["AL", "NI"]` are active in the sublattice configuration.
 
@@ -140,27 +141,27 @@ to give a shape of (1, 1, 9).
   "phases": ["BCC_B2"],
   "solver": {
       "sublattice_occupancies": [
-                     [1, [0.5, 0.5], 1],
-                     [1, [0.75, 0.25], 1],
-                     [1, [0.75, 0.25], 1],
-                     [1, [0.5, 0.5], 1],
-                     [1, [0.5, 0.5], 1],
-                     [1, [0.25, 0.75], 1],
-                     [1, [0.75, 0.25], 1],
-                     [1, [0.5, 0.5], 1],
-                     [1, [0.5, 0.5], 1]
+                     [[1], [0.5, 0.5], [1]],
+                     [[1], [0.75, 0.25], [1]],
+                     [[1], [0.75, 0.25], [1]],
+                     [[1], [0.5, 0.5], [1]],
+                     [[1], [0.5, 0.5], [1]],
+                     [[1], [0.25, 0.75], [1]],
+                     [[1], [0.75, 0.25], [1]],
+                     [[1], [0.5, 0.5], [1]],
+                     [[1], [0.5, 0.5], [1]]
                     ],
       "sublattice_site_ratios": [0.5, 0.5, 1],
       "sublattice_configurations": [
-                        ["AL", ["NI", "VA"], "VA"],
-                        ["AL", ["NI", "VA"], "VA"],
-                        ["NI", ["AL", "NI"], "VA"],
-                        ["NI", ["AL", "NI"], "VA"],
-                        ["AL", ["AL", "NI"], "VA"],
-                        ["AL", ["AL", "NI"], "VA"],
-                        ["NI", ["AL", "VA"], "VA"],
-                        ["NI", ["AL", "VA"], "VA"],
-                        ["VA", ["AL", "NI"], "VA"]
+                        [["AL"], ["NI", "VA"], ["VA"]],
+                        [["AL"], ["NI", "VA"], ["VA"]],
+                        [["NI"], ["AL", "NI"], ["VA"]],
+                        [["NI"], ["AL", "NI"], ["VA"]],
+                        [["AL"], ["AL", "NI"], ["VA"]],
+                        [["AL"], ["AL", "NI"], ["VA"]],
+                        [["NI"], ["AL", "VA"], ["VA"]],
+                        [["NI"], ["AL", "VA"], ["VA"]],
+                        [["VA"], ["AL", "NI"], ["VA"]]
                        ],
       "comment": "BCC_B2 sublattice configuration (2SL)"
   },
@@ -351,8 +352,8 @@ mixing energy. An example of using the tags in an input file looks like:
 {
   "components": ["CR", "FE", "VA"],"phases": ["BCC_A2"],
   "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3],
-             "sublattice_configurations": [[["CR", "FE"], "VA"]],
-  "sublattice_occupancies": [[[0.5, 0.5], 1.0]]},
+             "sublattice_configurations": [[["CR", "FE"], ["VA"]]],
+  "sublattice_occupancies": [[[0.5, 0.5], [1.0]]]},
   "conditions": {"P": 101325, "T": 300},
   "output": "HM_MIX",
   "values": [[[10000]]],
@@ -386,8 +387,8 @@ that have the `"dft"` tag:
 {
   "components": ["CR", "FE", "VA"],"phases": ["BCC_A2"],
   "solver": {"mode": "manual", "sublattice_site_ratios": [1, 3],
-             "sublattice_configurations": [[["CR", "FE"], "VA"]],
-  "sublattice_occupancies": [[[0.5, 0.5], 1.0]]},
+             "sublattice_configurations": [[["CR", "FE"], ["VA"]]],
+  "sublattice_occupancies": [[[0.5, 0.5], [1.0]]]},
   "conditions": {"P": 101325, "T": 300},
   "output": "HM_MIX",
   "values": [[[10000]]],

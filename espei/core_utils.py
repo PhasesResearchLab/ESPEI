@@ -6,7 +6,21 @@ from typing import List
 import numpy as np
 import tinydb
 from espei.datasets import Dataset
-from espei.sublattice_tools import canonicalize, recursive_tuplify
+from espei.sublattice_tools import canonicalize, tuplify
+
+
+def _canonical_configuration(configuration, symmetry):
+    """Canonicalize a sublattice configuration with every sublattice as a tuple of species, e.g. "VA" as ("VA",)."""
+    return canonicalize([tuplify(subl) for subl in configuration], symmetry)
+
+
+def select_configurations(data: Dataset, selected) -> None:
+    """Keep the values, sublattice configurations and occupancies of the selected configurations of a fixed configuration dataset."""
+    solver = data['solver']
+    data['values'] = np.array(data['values'], dtype=np.float64)[..., np.asarray(selected, dtype=np.bool_)]
+    solver['sublattice_configurations'] = [config for config, keep in zip(solver['sublattice_configurations'], selected) if keep]
+    solver['sublattice_occupancies'] = [occupancies for occupancies, keep in zip(solver['sublattice_occupancies'], selected) if keep]
+
 
 def filter_configurations(desired_data: List[Dataset], configuration, symmetry) -> List[Dataset]:
     """
@@ -26,16 +40,9 @@ def filter_configurations(desired_data: List[Dataset], configuration, symmetry) 
     List[Dataset]
 
     """
+    canonical_config = _canonical_configuration(configuration, symmetry)
     for data in desired_data:
-        # Filter output values to only contain data for matching sublattice configurations
-        matching_configs = np.array([(canonicalize(sblconf, symmetry) == canonicalize(configuration, symmetry))
-                                     for sblconf in data['solver']['sublattice_configurations']])
-        matching_configs = np.arange(len(data['solver']['sublattice_configurations']))[matching_configs]
-        # Rewrite output values with filtered data
-        data['values'] = np.array(data['values'], dtype=np.float64)[..., matching_configs]
-        data['solver']['sublattice_configurations'] = recursive_tuplify(np.array(data['solver']['sublattice_configurations'], dtype=np.object_)[matching_configs].tolist())
-        if 'sublattice_occupancies' in data['solver']:
-            data['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'], dtype=np.object_)[matching_configs].tolist()
+        select_configurations(data, [_canonical_configuration(config, symmetry) == canonical_config for config in data['solver']['sublattice_configurations']])
     return desired_data
 
 
@@ -204,10 +211,8 @@ def symmetry_filter(x, config, symmetry):
         return False
     # If even one matches, it's a match
     # We do more filtering downstream
-    for data_config in x['sublattice_configurations']:
-        if canonicalize(config, symmetry) == canonicalize(data_config, symmetry):
-            return True
-    return False
+    canonical_config = _canonical_configuration(config, symmetry)
+    return any(_canonical_configuration(data_config, symmetry) == canonical_config for data_config in x['sublattice_configurations'])
 
 
 def get_prop_data(comps, phase_name, prop, datasets, additional_query=None) -> List[Dataset]:

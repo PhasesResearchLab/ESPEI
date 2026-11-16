@@ -34,10 +34,8 @@ def _data_site_fractions(phase_name: str, data: [Dataset]) -> List[Dict[v.SiteFr
     """Site fractions of each data point of the datasets, in the order of their ravelled values."""
     site_fractions = []
     for ds in data:
-        configurations = ds['solver']['sublattice_configurations']
-        occupancies = ds['solver'].get('sublattice_occupancies', np.ones((len(configurations), len(configurations[0])), dtype=np.float64))
         for _ in ds['conditions']['T']:
-            site_fractions.extend(build_sitefractions(phase_name, configurations, occupancies))
+            site_fractions.extend(build_sitefractions(phase_name, ds['solver']['sublattice_configurations'], ds['solver']['sublattice_occupancies']))
     return site_fractions
 
 

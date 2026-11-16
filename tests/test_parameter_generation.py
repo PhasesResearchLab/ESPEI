@@ -10,10 +10,9 @@ from symengine import S, Symbol, log
 
 from espei.logger import config_logger
 from espei.paramselect import generate_parameters
-from espei.utils import PickleableTinyDB
 from espei.parameter_selection.fitting_descriptions import molar_volume_gibbs_energy_fitting_description, molar_volume_fitting_description
 from .testing_data import *
-from .fixtures import datasets_db
+from .fixtures import ValidatedDatasets, datasets_db
 
 import pytest
 
@@ -189,6 +188,18 @@ def test_mixing_energies_are_fit(datasets_db):
     thermochemical_data = get_thermochemical_data(dbf, sorted(read_dbf.elements), list(read_dbf.phases.keys()), datasets_db, symbols_to_fit=[])
     error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
+
+
+def test_mixing_energies_are_fit_with_one_species_sublattices_as_lists(datasets_db):
+    """A sublattice with one species given as a list, e.g. ["VA"], is the same configuration as the species."""
+    phase_models = {"components": ["CU", "MG", "VA"], "phases": {"FCC_A1": {"sublattice_model": [["CU", "MG"], ["VA"]], "sublattice_site_ratios": [1, 1]}}}
+    # Enthalpy of L0(FCC_A1, CU,MG:VA) = -22279.28 + 5.868*T (pycalphad's cumg.tdb)
+    datasets_db.insert({"components": ["CU", "MG", "VA"], "phases": ["FCC_A1"], "output": "HM_MIX", "conditions": {"P": 101325, "T": 298.15},
+                        "solver": {"sublattice_site_ratios": [1, 1], "sublattice_configurations": [[["CU", "MG"], ["VA"]]], "sublattice_occupancies": [[[0.5, 0.5], [1.0]]]},
+                        "values": [[[-5569.82]]]})
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    assert dbf.symbols['VV0000'] == -22279.3
+
 
 def test_duplicate_parameters_are_not_added_with_input_database(datasets_db):
     phase_models = {
@@ -605,7 +616,7 @@ def test_weighting_invariance():
     }
 
     # Perfect L0, no weight
-    datasets_db = PickleableTinyDB(storage=MemoryStorage)
+    datasets_db = ValidatedDatasets(storage=MemoryStorage)
     datasets_db.insert(L0_data)
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
     datasets_db.close()
@@ -616,7 +627,7 @@ def test_weighting_invariance():
     assert dbf.symbols['VV0000'] == -4000
 
     # Perfect L0, with weight
-    datasets_db = PickleableTinyDB(storage=MemoryStorage)
+    datasets_db = ValidatedDatasets(storage=MemoryStorage)
     L0_data['weight'] = 0.1  # lower weight
     datasets_db.insert(L0_data)
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
@@ -629,7 +640,7 @@ def test_weighting_invariance():
 
 
     # Perfect L1, no weight
-    datasets_db = PickleableTinyDB(storage=MemoryStorage)
+    datasets_db = ValidatedDatasets(storage=MemoryStorage)
     datasets_db.insert(L1_data)
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
     datasets_db.close()
@@ -641,7 +652,7 @@ def test_weighting_invariance():
     assert np.isclose(dbf.symbols['VV0001'], 0)  # L0
 
     # Perfect L1, with weight
-    datasets_db = PickleableTinyDB(storage=MemoryStorage)
+    datasets_db = ValidatedDatasets(storage=MemoryStorage)
     L1_data['weight'] = 0.1  # lower weight
     datasets_db.insert(L1_data)
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')

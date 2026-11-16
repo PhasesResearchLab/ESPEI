@@ -22,11 +22,10 @@ from pycalphad.core.solver import Solver, SolverResult
 
 
 from espei.datasets import Dataset
-from espei.core_utils import ravel_conditions, get_prop_data, filter_temperatures
+from espei.core_utils import ravel_conditions, get_prop_data, filter_temperatures, select_configurations
 from espei.parameter_selection.redlich_kister import calc_interaction_product
 from espei.phase_models import PhaseModelSpecification
 from espei.reference_states import _set_referenced_property
-from espei.sublattice_tools import canonicalize, recursive_tuplify, tuplify
 from espei.typing import SymbolName
 from espei.utils import database_symbols_to_fit, PickleableTinyDB
 from .residual_base import ResidualFunction, residual_function_registry
@@ -87,41 +86,26 @@ def filter_sublattice_configurations(desired_data: List[Dataset], subl_model) ->
     """Modify the desired_data to remove any configurations that cannot be represented by the sublattice model."""
     subl_model_sets = [set(subl) for subl in subl_model]
     for data in desired_data:
-        matching_configs = []  # binary mask of whether a configuration is represented by the sublattice model
-        for config in data['solver']['sublattice_configurations']:
-            config = recursive_tuplify(canonicalize(config, None))
-            if (
-                len(config) == len(subl_model) and
-                all(subl.issuperset(tuplify(config_subl)) for subl, config_subl in zip(subl_model_sets, config))
-            ):
-                matching_configs.append(True)
-            else:
-                matching_configs.append(False)
-        matching_configs = np.asarray(matching_configs, dtype=np.bool_)
-
-        # Rewrite output values with filtered data
-        data['values'] = np.array(data['values'], dtype=np.float64)[..., matching_configs]
-        data['solver']['sublattice_configurations'] = np.array(data['solver']['sublattice_configurations'], dtype=np.object_)[matching_configs].tolist()
-        if 'sublattice_occupancies' in data['solver']:
-            data['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'], dtype=np.object_)[matching_configs].tolist()
+        select_configurations(data, [len(config) == len(subl_model) and all(subl.issuperset(config_subl) for subl, config_subl in zip(subl_model_sets, config))
+                                     for config in data['solver']['sublattice_configurations']])
     return desired_data
 
 
-def calculate_points_array(phase_constituents, configuration, occupancies=None):
+def calculate_points_array(phase_constituents, configuration, occupancies):
     """
     Calculate the points array to use in pycalphad calculate calls.
 
-    Converts the configuration data (and occupancies for mixing data) into the
-    points array by looking up the indices in the active phase constituents.
+    Converts the configuration data and occupancies into the points array by
+    looking up the indices in the active phase constituents.
 
     Parameters
     ----------
     phase_constituents : list
         List of active constituents in a phase
     configuration : list
-        List of the sublattice configuration
+        Species of each sublattice
     occupancies : list
-        List of sublattice occupancies. Required for mixing sublattices, otherwise takes no effect.
+        Site fractions of the species of each sublattice
 
     Returns
     -------
@@ -132,21 +116,12 @@ def calculate_points_array(phase_constituents, configuration, occupancies=None):
     Errors will be raised if components in the configuration are not in the
     corresponding phase constituents sublattice.
     """
-    # pad the occupancies for zipping if none were passed (the case for non-mixing)
-    if occupancies is None:
-        occupancies = [0] * len(configuration)
-
-    # construct the points array from zeros
     points = np.zeros(sum(len(subl) for subl in phase_constituents))
     current_subl_idx = 0  # index that marks the beginning of the sublattice
     for phase_subl, config_subl, subl_occupancies in zip(phase_constituents, configuration, occupancies):
         phase_subl = list(phase_subl)
-        if isinstance(config_subl, (tuple, list)):
-            # we have mixing on the sublattice
-            for comp, comp_occupancy in zip(config_subl, subl_occupancies):
-                points[current_subl_idx + phase_subl.index(comp)] = comp_occupancy
-        else:
-            points[current_subl_idx + phase_subl.index(config_subl)] = 1
+        for comp, comp_occupancy in zip(config_subl, subl_occupancies):
+            points[current_subl_idx + phase_subl.index(comp)] = comp_occupancy
         current_subl_idx += len(phase_subl)
     return points
 
@@ -188,7 +163,7 @@ def get_prop_samples(desired_data, constituents):
         # TODO: fix this when N different from 1 allowed in pycalphad
         datum_N = np.full_like(datum['values'], 1.0)
         configurations = datum['solver']['sublattice_configurations']
-        occupancies = datum['solver'].get('sublattice_occupancies')
+        occupancies = datum['solver']['sublattice_occupancies']
         values = np.array(datum['values'])
         if values.size == 0:
             # Skip any data that don't have any values left (e.g. after filtering)
@@ -200,8 +175,6 @@ def get_prop_samples(desired_data, constituents):
 
         # broadcast and flatten the conditions arrays
         P, T, N = ravel_conditions(values, datum_P, datum_T, datum_N)
-        if occupancies is None:
-            occupancies = [None] * len(configurations)
 
         # calculate the points arrays, should be 2d array of points arrays
         points = np.array([calculate_points_array(constituents, config, occup) for config, occup in zip(configurations, occupancies)])

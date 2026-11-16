@@ -508,10 +508,10 @@ CU_MG_CPM_MIX_X_HCP_A3 = yaml.load("""{
 
 CU_MG_HM_MIX_SINGLE_FCC_A1 = yaml.load("""
 {
-    "components": ["CU", "MG"],
+    "components": ["CU", "MG", "VA"],
     "phases": ["FCC_A1"],
     "solver": {
-        "sublattice_site_ratios": [1],
+        "sublattice_site_ratios": [1, 1],
         "sublattice_occupancies": [[[0.5, 0.5], 1]],
         "sublattice_configurations": [[["CU", "MG"], "VA"]],
         "mode": "manual"
@@ -650,7 +650,7 @@ A_B_DATASET_ALPHA_WITH_HYPERPLANE = yaml.load("""{
 
 A_B_C_DATASET_TERNARY_PHASE_EQUILIBRIA = yaml.load("""{
   "components": ["A", "B", "C"],
-  "phases": ["PHASE_1", "PHASE_2", "PHASE_3"],
+  "phases": ["PHASE_1", "PHASE_2"],
   "conditions": {
     "P": 101325,
     "T": [300, 300, 300]
@@ -791,7 +791,7 @@ AL_CO_CR_BCC_A2_TERNARY_NON_SYMMETRIC_DATASET = {
     "phases": ["BCC_A2"],
     "solver": {
         "mode": "manual",
-        "sublattice_site_ratios": [1, 1],
+        "sublattice_site_ratios": [1],
         "sublattice_occupancies": [
             [[0.25, 0.25, 0.5]],
             [[0.25, 0.5, 0.25]],
