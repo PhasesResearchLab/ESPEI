@@ -274,7 +274,7 @@ specified by `c-1` components. There is an implicit `N=1` condition.
 ``` JSON
 {
   "components": ["AL", "NI"],
-  "phases": ["AL3NI2", "BCC_B2", "LIQUID"],
+  "phases": ["AL3NI2", "BCC_B2", "FCC_L12", "LIQUID"],
   "conditions": {
     "P": 101325,
      "T": [2500, 1348, 1176, 977]

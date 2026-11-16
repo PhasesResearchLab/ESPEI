@@ -73,6 +73,11 @@ quartodoc:
     contents:
       - name: datasets.load_datasets
       - name: datasets.recursive_glob
+      - name: datasets.validate_dataset
+      - name: datasets.FixedConfigurationDataset
+      - name: datasets.EquilibriumPropertyDataset
+      - name: datasets.ActivityDataset
+      - name: datasets.ZPFDataset
   - title: espei.analsys
     contents:
       - name: analysis.truncate_arrays

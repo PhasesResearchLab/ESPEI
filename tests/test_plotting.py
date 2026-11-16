@@ -30,6 +30,14 @@ def test_dataplot_runs(datasets_db):
     plt.close(fig)
 
 
+def test_dataplot_runs_without_reference(datasets_db):
+    """dataplot plots ZPF data without a reference (gh-269)."""
+    datasets_db.insert({k: x for k, x in CU_MG_DATASET_ZPF_WORKING.items() if k != "reference"})
+    fig = plt.figure()
+    dataplot(['CU', 'MG', 'VA'], ['FCC_A1', 'LIQUID'], {v.P: 101325, v.T: (300, 2000, 10), v.X('MG'): (0, 1, 0.01)}, datasets_db)
+    plt.close(fig)
+
+
 def test_dataplot_runs_ternary_isothermal(datasets_db):
     """Test that dataplot runs without an error for a ternary isothermal case."""
 

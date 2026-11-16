@@ -121,7 +121,7 @@ def calculate_activity_residuals(dbf, comps, phases, datasets, parameters=None, 
         dataset_activities = np.array(ds['values']).flatten()
         dataset_target_chempots = target_chempots_from_activity(acr_component, dataset_activities, conditions[v.T], wks_ref)
         dataset_residuals = (np.asarray(dataset_computed_chempots) - np.asarray(dataset_target_chempots, dtype=float)).tolist()
-        _log.debug('Data: %s, chemical potential difference: %s, reference: %s', dataset_activities, dataset_residuals, ds["reference"])
+        _log.debug('Data: %s, chemical potential difference: %s, reference: %s', dataset_activities, dataset_residuals, ds.get("reference", ""))
         residuals.extend(dataset_residuals)
         weights.extend(dataset_weights)
     return residuals, weights
