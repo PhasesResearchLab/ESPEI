@@ -537,6 +537,16 @@ def test_equilibrium_thermochemical_error_unsupported_property(datasets_db):
     assert np.all(np.isclose(residuals, EXPECTED_VALUES, atol=1e-3))
 
 
+def test_equilibrium_property_data_of_one_component(datasets_db):
+    """Equilibrium property data of one component, which have no X conditions, are calculated."""
+    # Enthalpy of liquid Cu from the SGTE unary data
+    datasets_db.insert({"components": ["CU"], "phases": ["LIQUID"], "output": "HM", "conditions": {"P": 101325, "T": [1400.0, 1500.0]}, "values": [[[43885.0], [47023.0]]]})
+    residual_func = EquilibriumPropertyResidual(Database(CU_MG_TDB), datasets_db, phase_models=None, symbols_to_fit=[])
+    residuals, weights = residual_func.get_residuals(np.asarray([]))
+    assert np.allclose(residuals, 0.455, atol=1e-3)
+    assert len(weights) == 2
+
+
 def test_equilibrium_property_residual_function(datasets_db):
     dbf = Database(CR_NI_TDB)
     datasets_db.insert(CR_NI_LIQUID_EQ_TC_DATA)
