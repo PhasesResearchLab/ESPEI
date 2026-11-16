@@ -4,32 +4,6 @@ title: "ESPEI Dataset Schema"
 
 {{< include _json_callout.qmd >}}
 
-## Checking Datasets
-
-Each type of dataset below is described by a model in `espei.datasets`
-(`FixedConfigurationDataset`, `EquilibriumPropertyDataset`,
-`ActivityDataset` and `ZPFDataset`). `espei --check-datasets PATH` and
-`load_datasets` check every dataset against its model and report all the
-errors in a dataset with their location, for example:
-
-``` text
-Dataset Error in input-data/zpf/jones1931.json: 2 error(s) in ZPFDataset:
-  values[0][0].fractions[0]: Input should be a valid number, unable to parse string as a number (got 'abc')
-  values[0][1].components: Input should be a valid list (got 'MG')
-```
-
-Numbers given as strings are converted to numbers and keys that are not
-part of the schema, such as `comment`, are kept. In Python,
-`espei.datasets.validate_dataset` returns the validated model of a
-dataset:
-
-``` python
-import json
-from espei.datasets import validate_dataset
-with open("input-data/zpf/jones1931.json") as fp:
-    dataset = validate_dataset(json.load(fp))  # a ZPFDataset
-```
-
 
 
 ## Fixed Configuration Thermochemical Data {#non_equilibrium_thermochemical_data}
