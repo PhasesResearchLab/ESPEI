@@ -200,14 +200,13 @@ def symmetry_filter(x, config, symmetry):
     bool
 
     """
-    if x['mode'] == 'manual':
-        if len(config) != len(x['sublattice_configurations'][0]):
-            return False
-        # If even one matches, it's a match
-        # We do more filtering downstream
-        for data_config in x['sublattice_configurations']:
-            if canonicalize(config, symmetry) == canonicalize(data_config, symmetry):
-                return True
+    if len(config) != len(x['sublattice_configurations'][0]):
+        return False
+    # If even one matches, it's a match
+    # We do more filtering downstream
+    for data_config in x['sublattice_configurations']:
+        if canonicalize(config, symmetry) == canonicalize(data_config, symmetry):
+            return True
     return False
 
 

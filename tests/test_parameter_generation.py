@@ -91,6 +91,15 @@ def test_formation_energies_are_fit(datasets_db):
     assert dbf.symbols['VV0002'] == -15268.3  # enthalpy
 
 
+def test_formation_energies_are_fit_without_solver_mode(datasets_db):
+    """Fixed configuration data without a solver mode, which defaults to "manual", are fit."""
+    phase_models = {"components": ["CU", "MG"], "phases": {"CUMG2": {"sublattice_model": [["CU"], ["MG"]], "sublattice_site_ratios": [1, 2]}}}
+    datasets_db.insert({"components": ["CU", "MG"], "phases": ["CUMG2"], "solver": {"sublattice_site_ratios": [1, 2], "sublattice_configurations": [["CU", "MG"]]},
+                        "conditions": {"P": 101325, "T": 298.15}, "output": "HM_FORM", "values": [[[-9540.0]]]})
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    assert dbf.symbols['VV0000'] == -28620.0
+
+
 def test_heat_capacity_terms_of_different_magnitudes_are_fit(datasets_db):
     """Heat capacity terms spanning many orders of magnitude are all recovered from exact formation data."""
     # Formation Gibbs energy of Cu2Mg (G - 2*GHSERCU - GHSERMG for 298.15 K < T < 923 K) from
