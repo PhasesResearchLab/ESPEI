@@ -495,16 +495,16 @@ def test_zpf_error_works_for_stoichiometric_cmpd_tielines(datasets_db):
 
 
 def test_zpf_driving_force_of_disordered_phase_compositions(datasets_db):
-    """Disordered phase compositions of order-disorder models are calculated with the disordered phase and the parameters being fit."""
-    # gamma'/gamma boundary (Jia 1990), with gamma as disordered FCC_L12, as FCC_A1 and as FCC_L12, whose minimum is disordered there
+    """Disordered phase compositions of order-disorder models are calculated with the disordered phase, also when the parameters being fit order the phase."""
+    # gamma'/gamma boundary (Jia 1990), with gamma as disordered FCC_L12, as FCC_A1 and as FCC_L12, which orders there with the fit parameter
     gamma_prime, gamma = ["FCC_L12", ["NI"], [0.755]], [["NI"], [0.874]]
     datasets_db.insert({"components": ["AL", "NI"], "phases": ["FCC_A1", "FCC_L12"], "conditions": {"P": 101325, "T": 973}, "output": "ZPF", "reference": "90JIA",
                         "values": [[gamma_prime, ["FCC_L12", *gamma, "disordered"]], [gamma_prime, ["FCC_A1", *gamma]], [gamma_prime, ["FCC_L12", *gamma]]]})
-    # Fit the enthalpy of L0(FCC_A1, AL,NI:VA), the disordered part of FCC_L12
-    dbf = Database(AL_NI_FCC_TDB.replace("-162407.75+16.212965*T", "VV0000+16.212965*T") + "FUNCTION VV0000 298.15 -162407.75; 6000 N !")
-    zpf_data = get_zpf_data(dbf, ['AL', 'NI', 'VA'], ['FCC_L12'], datasets_db, {'VV0000': -162407.75})
-    driving_forces, weights = calculate_zpf_driving_forces(zpf_data, np.array([-170000.0]))
-    assert np.allclose(driving_forces[0], [-10.6, -347.5] * 3, atol=0.1)
+    # Fit the L12 ordering energy, UALNI = -22212.8931 + 4.39570389*T in the assessment
+    dbf = Database(AL_NI_FCC_TDB.replace("-22212.8931+4.39570389*T", "VV0000+4.39570389*T") + "FUNCTION VV0000 298.15 -22212.8931; 6000 N !")
+    zpf_data = get_zpf_data(dbf, ['AL', 'NI', 'VA'], ['FCC_L12'], datasets_db, {'VV0000': -22212.8931})
+    driving_forces, weights = calculate_zpf_driving_forces(zpf_data, np.array([-30000.0]))
+    assert np.allclose(driving_forces[0], [-1.2, -948.2, -1.2, -948.2, -1.2, -505.9], atol=0.1)
 
 
 def test_zpf_data_with_disordered_phase_without_disordered_phase_raises(datasets_db):
