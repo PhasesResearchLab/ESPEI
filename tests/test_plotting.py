@@ -180,6 +180,26 @@ def test_plot_endmember_with_sublattices_of_one_species_given_as_the_species():
     assert np.array_equal(deprecated.get_xydata(), current.get_xydata())
 
 
+
+def test_plot_interaction_on_several_sublattices_plots_the_disordered_configurations():
+    """plot_interaction of an interaction on several sublattices plots the configurations with the same site fractions on each."""
+    fig, ax = plt.subplots()
+    plot_interaction(Database(CU_MG_TDB), ['CU', 'MG', 'VA'], 'LAVES_C15', (('CU', 'MG'), ('CU', 'MG')), 'SM_MIX', ax=ax)
+    curve, = ax.lines
+    plt.close(fig)
+    # Ideal mixing on every site, as LAVES_C15 has no excess entropy
+    assert np.isclose(np.interp(0.5, curve.get_xdata(), curve.get_ydata()), 8.314462618 * np.log(2), atol=1e-3)
+
+
+@pytest.mark.parametrize("tdb, comps, phase_name, configuration", [
+    pytest.param(CU_MG_TDB, ['CU', 'MG', 'VA'], 'CUMG2', (('CU',), ('MG',)), id="endmember"),
+    pytest.param(CR_FE_NI_TDB, ['CR', 'FE', 'NI', 'VA'], 'BCC_A2', (('CR', 'FE', 'NI'), ('VA',)), id="ternary interaction"),
+])
+def test_plot_interaction_of_configurations_that_are_not_binary_interactions_raises(tdb, comps, phase_name, configuration):
+    """plot_interaction raises for configurations that are not binary interactions."""
+    with pytest.raises(ValueError, match="plots binary interactions"):
+        plot_interaction(Database(tdb), comps, phase_name, configuration, 'HM_MIX')
+
 def _residual(dbf, datasets_db):
     from espei.error_functions.non_equilibrium_thermochemical_error import FixedConfigurationPropertyResidual
     residuals, _ = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[]).get_residuals(np.asarray([]))
