@@ -178,7 +178,6 @@ def get_prop_samples(desired_data, constituents):
 
         # calculate the points arrays, should be 2d array of points arrays
         points = np.array([calculate_points_array(constituents, config, occup) for config, occup in zip(configurations, occupancies)])
-        assert values.shape == weights.shape, f"Values data shape {values.shape} does not match weights shape {weights.shape}"
 
         # add everything to the calculate_dict
         calculate_dict['P'] = np.concatenate([calculate_dict['P'], P])

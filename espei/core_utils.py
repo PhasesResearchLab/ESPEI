@@ -9,12 +9,19 @@ from espei.datasets import Dataset
 from espei.sublattice_tools import canonicalize
 
 
+def _select_values(data: Dataset, index) -> None:
+    """Keep the values at an index, e.g. np.s_[..., selected_configurations], and the weights of those values."""
+    values = np.asarray(data['values'], dtype=np.float64)
+    data['values'] = values[index]
+    data['weight'] = np.broadcast_to(data.get('weight', 1.0), values.shape)[index]  # weights broadcast to the values, e.g. one for each configuration
+
+
 def select_configurations(data: Dataset, selected) -> None:
-    """Keep the values, sublattice configurations and occupancies of the selected configurations of a fixed configuration dataset."""
-    solver = data['solver']
-    data['values'] = np.array(data['values'], dtype=np.float64)[..., np.asarray(selected, dtype=np.bool_)]
-    solver['sublattice_configurations'] = [config for config, keep in zip(solver['sublattice_configurations'], selected) if keep]
-    solver['sublattice_occupancies'] = [occupancies for occupancies, keep in zip(solver['sublattice_occupancies'], selected) if keep]
+    """Keep the values, weights, sublattice configurations and occupancies of the selected configurations of a fixed configuration dataset."""
+    selected = np.asarray(selected, dtype=np.bool_)
+    _select_values(data, np.s_[..., selected])
+    for key in ('sublattice_configurations', 'sublattice_occupancies'):
+        data['solver'][key] = [x for x, keep in zip(data['solver'][key], selected) if keep]
 
 
 def filter_configurations(desired_data: List[Dataset], configuration, symmetry) -> List[Dataset]:
@@ -64,7 +71,7 @@ def filter_temperatures(desired_data: List[Dataset]) -> List[Dataset]:
     for data in desired_data:
         temp_filter = np.atleast_1d(data['conditions']['T']) >= 298.15
         data['conditions']['T'] = np.atleast_1d(data['conditions']['T'])[temp_filter]
-        data['values'] = np.array(data['values'], dtype=np.float64)[..., temp_filter, :].tolist()
+        _select_values(data, np.s_[..., temp_filter, :])
     return desired_data
 
 

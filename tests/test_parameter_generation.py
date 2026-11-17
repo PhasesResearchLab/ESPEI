@@ -99,6 +99,17 @@ def test_formation_energies_are_fit_without_solver_mode(datasets_db):
     assert dbf.symbols['VV0000'] == -28620.0
 
 
+
+def test_formation_energies_are_fit_with_a_weight_for_each_configuration(datasets_db):
+    """Fixed configuration data with a weight for each configuration are fit one configuration at a time, above 298.15 K."""
+    phase_models = {"components": ["CU", "MG"], "phases": {"LAVES_C15": {"sublattice_model": [["CU", "MG"], ["CU", "MG"]], "sublattice_site_ratios": [2, 1]}}}
+    # Formation enthalpies of the Cu2Mg Laves phase endmembers (P. Liang et al., Calphad 22 (1998) 527), per mole of atoms
+    datasets_db.insert({"components": ["CU", "MG"], "phases": ["LAVES_C15"], "output": "HM_FORM", "conditions": {"P": 101325, "T": [0, 298.15]},
+                        "solver": {"sublattice_site_ratios": [2, 1], "sublattice_configurations": [[["CU"], ["CU"]], [["MG"], ["CU"]], [["MG"], ["MG"]]]},
+                        "values": [[[21014.88/3, 105000/3, 27357.33/3]] * 2], "weight": [1.0, 0.1, 1.0]})
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    assert {name: value for name, value in dbf.symbols.items() if name.startswith('VV')} == {'VV0000': 21014.9, 'VV0001': 105000.0, 'VV0002': 27357.3}
+
 def test_heat_capacity_terms_of_different_magnitudes_are_fit(datasets_db):
     """Heat capacity terms spanning many orders of magnitude are all recovered from exact formation data."""
     # Formation Gibbs energy of Cu2Mg (G - 2*GHSERCU - GHSERMG for 298.15 K < T < 923 K) from
