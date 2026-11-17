@@ -3,12 +3,13 @@ import tinydb
 
 from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter, ravel_zpf_values
 from espei.sublattice_tools import recursive_tuplify
-from espei.utils import PickleableTinyDB, MemoryStorage
+from espei.utils import MemoryStorage
 from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
+from .fixtures import ValidatedDatasets, datasets_db
 from .testing_data import dataset_multi_valid_ternary, dataset_multi_valid_ternary_fixedT_manyP, dataset_multi_valid_ternary_manyT_manyP
 
 
-def test_get_data_for_a_minimal_example():
+def test_get_data_for_a_minimal_example(datasets_db):
     """Given a dataset and the congfiguration pertaining to that dataset, we should find the values."""
     SAMPLE_DATASET = {
         "components": ["CU", "MG", "VA"],
@@ -28,17 +29,16 @@ def test_get_data_for_a_minimal_example():
         "output": "HM_FORM",
             "values":   [[[-15720, 34720, 7000, 15500]]]
     }
-    datasets = PickleableTinyDB(storage=MemoryStorage)
-    datasets.insert(SAMPLE_DATASET)
+    datasets_db.insert(SAMPLE_DATASET)
     comps = ['CU', 'MG', 'VA']
     phase_name = 'LAVES_C15'
-    configuration = ('MG', 'CU')
+    configuration = (('MG',), ('CU',))
     symmetry = None
     desired_props = ['HM_FORM']
 
     # The following lines replace "get_data" in a more functional form
     solver_qry = (tinydb.where('solver').test(symmetry_filter, configuration, recursive_tuplify(symmetry) if symmetry else symmetry))
-    desired_data = get_prop_data(comps, phase_name, desired_props, datasets, additional_query=solver_qry)
+    desired_data = get_prop_data(comps, phase_name, desired_props, datasets_db, additional_query=solver_qry)
     desired_data = filter_configurations(desired_data, configuration, symmetry)
     desired_data = filter_temperatures(desired_data)
 
@@ -47,7 +47,7 @@ def test_get_data_for_a_minimal_example():
     assert desired_data['components'] == comps
     assert desired_data['phases'][0] == phase_name
     assert desired_data['solver']['sublattice_site_ratios'] == [2, 1]
-    assert desired_data['solver']['sublattice_configurations'] == (('MG', 'CU'),)
+    assert desired_data['solver']['sublattice_configurations'] == [(('MG',), ('CU',))]
     assert desired_data['conditions']['P'] == 101325
     assert desired_data['conditions']['T'] == 298.15
     assert desired_data['output'] == 'HM_FORM'
@@ -56,7 +56,7 @@ def test_get_data_for_a_minimal_example():
 
 def test_get_prop_data_matches_property_names_exactly():
     """An absolute property (e.g. HM) is distinct from the same property in another reference state (e.g. HM_FORM)"""
-    datasets = PickleableTinyDB(storage=MemoryStorage)
+    datasets = ValidatedDatasets(storage=MemoryStorage)
     for output in ["HM", "HM_FORM", "HM_MIX"]:
         datasets.insert({
             "components": ["CU", "MG"],

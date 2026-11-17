@@ -8,13 +8,12 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import numpy as np
 import tinydb
-from symengine import Symbol
 from pycalphad import Model, calculate, equilibrium, variables as v
 from pycalphad.core.utils import unpack_species
 from pycalphad.plot.utils import phase_legend
 from pycalphad.plot.eqplot import eqplot, _map_coord_to_variable, unpack_condition
 
-from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples, get_sample_condition_dicts
+from espei.error_functions.non_equilibrium_thermochemical_error import get_prop_samples
 from espei.utils import bib_marker_map
 from espei.core_utils import get_prop_data, filter_configurations, filter_temperatures, symmetry_filter, ravel_zpf_values
 from espei.reference_states import _set_referenced_property
@@ -301,19 +300,11 @@ def _data_shift_model(dbf, comps, phase_name, output, data):
     return plot_model
 
 
-def _get_interaction_predicted_values(dbf, comps, phase_name, configuration, output):
-    mod = Model(dbf, comps, phase_name)
-    endpoints = endmembers_from_interaction(configuration)
-    first_endpoint = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))
-    second_endpoint = _translate_endmember_to_array(endpoints[1], mod.ast.atoms(v.SiteFraction))
-    grid = np.linspace(0, 1, num=100)
-    point_matrix = grid[None].T * second_endpoint + (1 - grid)[None].T * first_endpoint
-    prop = _set_referenced_property(mod, output, dbf=dbf)
-    # TODO: Real temperature support
-    predicted_values = calculate(
-        dbf, comps, [phase_name], output=prop,
-        T=298.15, P=101325, points=point_matrix, model=mod)[prop].values.flatten()
-    return grid, predicted_values
+def _sublattices_as_tuples(configuration):
+    """Return the configuration with the species of each sublattice as a tuple, from the deprecated form with a sublattice of one species given as the species."""
+    if any(isinstance(subl, str) for subl in configuration):
+        warnings.warn('Sublattices of one species given as the species, e.g. "VA" in (("CU", "MG"), "VA"), are deprecated. Give them as tuples, e.g. (("CU", "MG"), ("VA",)).', DeprecationWarning, stacklevel=3)
+    return tuple((subl,) if isinstance(subl, str) else tuple(subl) for subl in configuration)
 
 
 def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=None, symmetry=None, ax=None, plot_kwargs=None, dataplot_kwargs=None) -> plt.Axes:
@@ -328,8 +319,9 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
         Names of components to consider in the calculation.
     phase_name : str
         Name of the considered phase phase
-    configuration : Tuple[Tuple[str]]
-        ESPEI-style configuration
+    configuration : Sequence[Sequence[str]]
+        Species of each sublattice of a binary interaction, i.e. the same two
+        species mixing on one or more sublattices, e.g. ``(("CU", "MG"), ("VA",))``.
     output : str
         Model property to plot on the y-axis e.g. ``'HM_MIX'``, or ``'SM_MIX'``.
         Must be a ``'_MIX'`` property.
@@ -350,6 +342,13 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     """
     if not output.endswith('_MIX'):
         raise ValueError("`plot_interaction` only supports HM_MIX, SM_MIX, or CPM_MIX outputs.")
+    configuration = canonicalize(_sublattices_as_tuples(configuration), symmetry)
+    interactions = {subl for subl in configuration if len(subl) > 1}
+    if [len(subl) for subl in interactions] != [2]:
+        raise ValueError(f"`plot_interaction` plots binary interactions, the same two species mixing on one or more sublattices, e.g. (('CU', 'MG'), ('VA',)), got {configuration}")
+    # From the first to the last endmember, i.e. along the configurations with the same site fractions on every sublattice with the interaction
+    endmembers = endmembers_from_interaction(configuration)
+    endpoints = [endmembers[0], endmembers[-1]]
     if not plot_kwargs:
         plot_kwargs = {}
     if not dataplot_kwargs:
@@ -359,7 +358,12 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
         ax = plt.subplot()
 
     # Plot predicted values from the database
-    grid, predicted_values = _get_interaction_predicted_values(dbf, comps, phase_name, configuration, output)
+    mod = Model(dbf, comps, phase_name)
+    referenced_property = _set_referenced_property(mod, output, dbf=dbf)
+    first_endpoint, last_endpoint = (_translate_endmember_to_array(endpoint, mod.ast.atoms(v.SiteFraction)) for endpoint in endpoints)
+    grid = np.linspace(0, 1, num=100)
+    # TODO: Real temperature support
+    predicted_values = calculate(dbf, comps, [phase_name], output=referenced_property, T=298.15, P=101325, points=np.outer(1 - grid, first_endpoint) + np.outer(grid, last_endpoint), model=mod)[referenced_property].values.flatten()
     plot_kwargs.setdefault('label', 'This work')
     plot_kwargs.setdefault('color', 'k')
     ax.plot(grid, predicted_values, **plot_kwargs)
@@ -376,40 +380,14 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     else:
         desired_data = []
 
-    species = unpack_species(dbf, comps)
-    # phase constituents are Species objects, so we need to be doing intersections with those
-    phase_constituents = dbf.phases[phase_name].constituents
-    # phase constituents must be filtered to only active
-    constituents = [[sp.name for sp in sorted(subl_constituents.intersection(species))] for subl_constituents in phase_constituents]
-    subl_dof = list(map(len, constituents))
-    calculate_dict = get_prop_samples(desired_data, constituents)
-    sample_condition_dicts = get_sample_condition_dicts(calculate_dict, canonicalize(constituents, symmetry), phase_name)
-    interacting_subls = [c for c in recursive_tuplify(configuration) if isinstance(c, tuple)]
-    if (len(set(interacting_subls)) == 1) and (len(interacting_subls[0]) == 2):
-        # This configuration describes all sublattices with the same two elements interacting
-        # In general this is a high-dimensional space; just plot the diagonal to see the disordered mixing
-        endpoints = endmembers_from_interaction(configuration)
-        endpoints = [endpoints[0], endpoints[-1]]
-        disordered_config = True
-    else:
-        disordered_config = False
+    # The data are at the site fraction of the second species on the first sublattice with the interaction
+    # TODO: Fix this to filter because we need to guarantee the plot points are disordered
+    interaction_idx = next(idx for idx, subl in enumerate(configuration) if len(subl) > 1)
     bib_reference_keys = sorted({entry.get('reference', '') for entry in desired_data})
     symbol_map = bib_marker_map(bib_reference_keys)
     for data in desired_data:
-        indep_var_data = None
+        indep_var_data = np.broadcast_to([occupancies[interaction_idx][1] for occupancies in data['solver']['sublattice_occupancies']], np.shape(data['values'])).flatten()
         response_data = np.zeros_like(data['values'], dtype=np.float64)
-        if disordered_config:
-            # Take the second element of the first interacting sublattice as the coordinate
-            # Because it's disordered all sublattices should be equivalent
-            # TODO: Fix this to filter because we need to guarantee the plot points are disordered
-            occ = data['solver']['sublattice_occupancies']
-            subl_idx = np.nonzero([isinstance(c, (list, tuple)) for c in occ[0]])[0]
-            # Always take the first matching sublattice index
-            subl_idx = int(subl_idx[0])
-            indep_var_data = [c[subl_idx][1] for c in occ]
-        else:
-            interactions = np.array([cond_dict[Symbol('YS')] for cond_dict in sample_condition_dicts])
-            indep_var_data = 1 - (interactions+1)/2
         if data['output'] != output or len(data.get('excluded_model_contributions', [])) > 0:
             # Shift the data to the plotted property with all the physics of the model
             temps = data['conditions'].get('T', 298.15)
@@ -440,7 +418,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
         dataplot_kwargs['fillstyle'] = symbol_map[ref]['markers']['fillstyle']
         ax.plot(indep_var_data, response_data, **dataplot_kwargs)
     ax.set_xlim((0, 1))
-    ax.set_xlabel(str(':'.join(endpoints[0])) + ' to ' + str(':'.join(endpoints[1])))
+    ax.set_xlabel(' to '.join(':'.join(name for name, in endpoint) for endpoint in endpoints))
     ax.set_ylabel(plot_mapping.get(output, output))
     leg = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))  # legend outside
     leg.get_frame().set_edgecolor('black')
@@ -459,8 +437,8 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
         Names of components to consider in the calculation.
     phase_name : str
         Name of the considered phase phase
-    configuration : Tuple[Tuple[str]]
-        ESPEI-style configuration
+    configuration : Sequence[Sequence[str]]
+        Species of each sublattice, e.g. ``(("CU", "MG"), ("VA",))``.
     output : str
         Model property to plot on the y-axis e.g. ``'HM_MIX'``, or ``'SM_MIX'``.
         Must be a ``'_MIX'`` property.
@@ -483,6 +461,7 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
         raise ValueError("`plot_interaction` only supports HM, HM_FORM, SM, SM_FORM or CPM, CPM_FORM outputs.")
     if x not in ('T',):
         raise ValueError(f'`x` passed to `plot_endmember` must be "T" got {x}')
+    configuration = _sublattices_as_tuples(configuration)
     if not plot_kwargs:
         plot_kwargs = {}
     if not dataplot_kwargs:
@@ -553,6 +532,6 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
 def _translate_endmember_to_array(endmember, variables):
     site_fractions = sorted(variables, key=str)
     frac_array = np.zeros(len(site_fractions))
-    for idx, component in enumerate(endmember):
+    for idx, (component,) in enumerate(endmember):
         frac_array[site_fractions.index(v.SiteFraction(site_fractions[0].phase_name, idx, component))] = 1
     return frac_array

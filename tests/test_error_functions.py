@@ -494,6 +494,37 @@ def test_zpf_error_works_for_stoichiometric_cmpd_tielines(datasets_db):
     assert np.isclose(likelihood, zero_error_probability, rtol=1e-6)
 
 
+def test_zpf_driving_force_of_disordered_phase_compositions(datasets_db):
+    """Disordered phase compositions of order-disorder models are calculated with the disordered phase, also when the parameters being fit order the phase."""
+    # gamma'/gamma boundary (Jia 1990), with gamma as disordered FCC_L12, as FCC_A1 and as FCC_L12, which orders there with the fit parameter
+    gamma_prime, gamma = ["FCC_L12", ["NI"], [0.755]], [["NI"], [0.874]]
+    datasets_db.insert({"components": ["AL", "NI"], "phases": ["FCC_A1", "FCC_L12"], "conditions": {"P": 101325, "T": 973}, "output": "ZPF", "reference": "90JIA",
+                        "values": [[gamma_prime, ["FCC_L12", *gamma, "disordered"]], [gamma_prime, ["FCC_A1", *gamma]], [gamma_prime, ["FCC_L12", *gamma]]]})
+    # Fit the L12 ordering energy, UALNI = -22212.8931 + 4.39570389*T in the assessment
+    dbf = Database(AL_NI_FCC_TDB.replace("-22212.8931+4.39570389*T", "VV0000+4.39570389*T") + "FUNCTION VV0000 298.15 -22212.8931; 6000 N !")
+    zpf_data = get_zpf_data(dbf, ['AL', 'NI', 'VA'], ['FCC_L12'], datasets_db, {'VV0000': -22212.8931})
+    driving_forces, weights = calculate_zpf_driving_forces(zpf_data, np.array([-30000.0]))
+    assert np.allclose(driving_forces[0], [-1.2, -948.2, -1.2, -948.2, -1.2, -505.9], atol=0.1)
+
+
+def test_zpf_data_with_disordered_phase_without_disordered_phase_raises(datasets_db):
+    """Disordered phase compositions of phases without a disordered phase raise."""
+    datasets_db.insert({"components": ["CU", "MG"], "phases": ["CUMG2", "LIQUID"], "conditions": {"P": 101325, "T": 758}, "output": "ZPF",
+                        "values": [[["CUMG2", ["MG"], [0.667], "disordered"], ["LIQUID", ["MG"], [0.855]]]]})
+    dbf = Database(CU_MG_TDB)
+    with pytest.raises(ValueError, match="CUMG2 is \"disordered\""):
+        get_zpf_data(dbf, ['CU', 'MG', 'VA'], sorted(dbf.phases), datasets_db, {})
+
+
+def test_zpf_data_with_phases_that_are_not_in_the_system_are_not_used(datasets_db):
+    """ZPF datasets are only used if all their phases are in the system."""
+    datasets_db.insert(CU_MG_DATASET_ZPF_WORKING)
+    datasets_db.insert({"components": ["CU", "MG"], "phases": ["LAVES_C15", "LIQUID"], "conditions": {"P": 101325, "T": 1003}, "output": "ZPF", "reference": "bagnoud1978",
+                        "values": [[["LAVES_C15", ["MG"], [0.31]], ["LIQUID", ["MG"], [0.44]]]]})
+    zpf_data = get_zpf_data(Database(CU_MG_TDB), ['CU', 'MG', 'VA'], ['FCC_A1', 'LIQUID'], datasets_db, {})
+    assert [data['dataset_reference'] for data in zpf_data] == ['Sahmen1908']
+
+
 def test_non_equilibrium_thermochemcial_species(datasets_db):
     """Test species work for non-equilibrium thermochemical data."""
 
@@ -535,6 +566,16 @@ def test_equilibrium_thermochemical_error_unsupported_property(datasets_db):
     eqdata = get_equilibrium_thermochemical_data(dbf, ['CR', 'NI'], phases, datasets_db)
     residuals, weights = calc_prop_differences(eqdata[0], np.array([]))
     assert np.all(np.isclose(residuals, EXPECTED_VALUES, atol=1e-3))
+
+
+def test_equilibrium_property_data_of_one_component(datasets_db):
+    """Equilibrium property data of one component, which have no X conditions, are calculated."""
+    # Enthalpy of liquid Cu from the SGTE unary data
+    datasets_db.insert({"components": ["CU"], "phases": ["LIQUID"], "output": "HM", "conditions": {"P": 101325, "T": [1400.0, 1500.0]}, "values": [[[43885.0], [47023.0]]]})
+    residual_func = EquilibriumPropertyResidual(Database(CU_MG_TDB), datasets_db, phase_models=None, symbols_to_fit=[])
+    residuals, weights = residual_func.get_residuals(np.asarray([]))
+    assert np.allclose(residuals, 0.455, atol=1e-3)
+    assert len(weights) == 2
 
 
 def test_equilibrium_property_residual_function(datasets_db):

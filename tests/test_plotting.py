@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
+import pytest
 from pycalphad import Database, variables as v
 
 from espei.plot import dataplot, plot_endmember, plot_interaction
@@ -116,7 +117,7 @@ def test_plot_interaction_runs(datasets_db):
     """Test that plot_interaction runs without an error."""
     dbf = Database(CU_MG_TDB)
     comps = ['CU', 'MG', 'VA']
-    config = (('CU', 'MG'), ('VA'))
+    config = (('CU', 'MG'), ('VA',))
 
     # Plot HM_MIX without datasets
     fig = plt.figure()  # explictly do NOT pass axes to make sure they are created
@@ -144,7 +145,7 @@ def test_plot_endmember_runs(datasets_db):
     """Test that plot_endmember runs without an error."""
     dbf = Database(CU_MG_TDB)
     comps = ['CU', 'MG', 'VA']
-    config = ('CU', 'MG')
+    config = (('CU',), ('MG',))
 
     endmember_dataset = {
         "components": ["CU", "MG", "VA"],
@@ -166,6 +167,52 @@ def test_plot_endmember_runs(datasets_db):
     plt.close(fig)
 
 
+
+def test_plot_endmember_with_sublattices_of_one_species_given_as_the_species():
+    """Configurations with sublattices of one species given as the species are deprecated, and plot the same."""
+    dbf = Database(CU_MG_TDB)
+    fig, ax = plt.subplots()
+    with pytest.warns(DeprecationWarning, match="are deprecated"):
+        plot_endmember(dbf, ['CU', 'MG', 'VA'], 'CUMG2', ('CU', 'MG'), 'HM_FORM', ax=ax)
+    plot_endmember(dbf, ['CU', 'MG', 'VA'], 'CUMG2', (('CU',), ('MG',)), 'HM_FORM', ax=ax)
+    deprecated, current = ax.lines
+    plt.close(fig)
+    assert np.array_equal(deprecated.get_xydata(), current.get_xydata())
+
+
+
+def test_plot_interaction_on_several_sublattices_plots_the_disordered_configurations():
+    """plot_interaction of an interaction on several sublattices plots the configurations with the same site fractions on each."""
+    fig, ax = plt.subplots()
+    plot_interaction(Database(CU_MG_TDB), ['CU', 'MG', 'VA'], 'LAVES_C15', (('CU', 'MG'), ('CU', 'MG')), 'SM_MIX', ax=ax)
+    curve, = ax.lines
+    plt.close(fig)
+    # Ideal mixing on every site, as LAVES_C15 has no excess entropy
+    assert np.isclose(np.interp(0.5, curve.get_xdata(), curve.get_ydata()), 8.314462618 * np.log(2), atol=1e-3)
+
+
+
+def test_plot_interaction_plots_data_at_several_temperatures(datasets_db):
+    """plot_interaction plots the data of every temperature."""
+    # Enthalpy of L0(FCC_A1, CU,MG:VA) = -22279.28 + 5.868*T (pycalphad's cumg.tdb)
+    datasets_db.insert({"components": ["CU", "MG", "VA"], "phases": ["FCC_A1"], "output": "HM_MIX", "conditions": {"P": 101325, "T": [300, 600]},
+                        "solver": {"sublattice_site_ratios": [1, 1], "sublattice_configurations": [[["CU", "MG"], ["VA"]]] * 2, "sublattice_occupancies": [[[0.9, 0.1], [1.0]], [[0.75, 0.25], [1.0]]]},
+                        "values": [[[-2005.14, -4177.37]] * 2]})
+    fig, ax = plt.subplots()
+    plot_interaction(Database(CU_MG_TDB), ['CU', 'MG', 'VA'], 'FCC_A1', (('CU', 'MG'), ('VA',)), 'HM_MIX', datasets_db, ax=ax)
+    curve, data = ax.lines
+    plt.close(fig)
+    assert np.allclose(data.get_xydata(), [[0.1, -2005.14], [0.25, -4177.37]] * 2)
+
+@pytest.mark.parametrize("tdb, comps, phase_name, configuration", [
+    pytest.param(CU_MG_TDB, ['CU', 'MG', 'VA'], 'CUMG2', (('CU',), ('MG',)), id="endmember"),
+    pytest.param(CR_FE_NI_TDB, ['CR', 'FE', 'NI', 'VA'], 'BCC_A2', (('CR', 'FE', 'NI'), ('VA',)), id="ternary interaction"),
+])
+def test_plot_interaction_of_configurations_that_are_not_binary_interactions_raises(tdb, comps, phase_name, configuration):
+    """plot_interaction raises for configurations that are not binary interactions."""
+    with pytest.raises(ValueError, match="plots binary interactions"):
+        plot_interaction(Database(tdb), comps, phase_name, configuration, 'HM_MIX')
+
 def _residual(dbf, datasets_db):
     from espei.error_functions.non_equilibrium_thermochemical_error import FixedConfigurationPropertyResidual
     residuals, _ = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[]).get_residuals(np.asarray([]))
@@ -181,7 +228,7 @@ def test_plot_interaction_shifts_data_to_all_the_physics_of_the_model(datasets_d
         "conditions": {"P": 101325, "T": 298.15}, "values": [[[-2000.0]]], "excluded_model_contributions": ["idmix"],
     })
     fig, ax = plt.subplots()
-    plot_interaction(dbf, ["CU", "MG", "VA"], "FCC_A1", (("CU", "MG"), "VA"), "SM_MIX", datasets_db, ax=ax)
+    plot_interaction(dbf, ["CU", "MG", "VA"], "FCC_A1", (("CU", "MG"), ("VA",)), "SM_MIX", datasets_db, ax=ax)
     curve, data = ax.lines
     plt.close(fig)
     assert np.isclose(data.get_xdata()[0], 1/3)

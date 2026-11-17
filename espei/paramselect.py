@@ -34,15 +34,11 @@ from espei.database_utils import initialize_database, _param_present_in_database
 from espei.parameter_selection.model_building import build_redlich_kister_candidate_models
 from espei.parameter_selection.selection import select_model
 from espei.sublattice_tools import generate_symmetric_group, generate_interactions, \
-    tuplify, interaction_test, endmembers_from_interaction, generate_endmembers
+    interaction_test, endmembers_from_interaction, generate_endmembers
 from espei.utils import PickleableTinyDB, sigfigs
 from espei.parameter_selection.fitting_descriptions import gibbs_energy_fitting_description
 
 _log = logging.getLogger(__name__)
-
-
-def _stable_sort_key(x):
-    return str(sorted(x[0].args, key=str))
 
 
 def _poly_degrees(expr):
@@ -98,7 +94,7 @@ def _endmember_reference(dbf, phase_name, configuration):
     # TODO: generalize for models with composition dependent site ratios, e.g. ionic liquids
     species = {sp.name: sp for sp in dbf.species}
     reference = 0
-    for name, ratio in zip(configuration, dbf.phases[phase_name].sublattices):
+    for (name,), ratio in zip(configuration, dbf.phases[phase_name].sublattices):
         for el, amount in species[name].constituents.items():
             if el not in ("VA", "/-"):
                 # e.g. GHSERAL for AL and GHSERBB for B
@@ -166,7 +162,7 @@ def insert_parameter(dbf, phase_name, configuration, parameter_name, parameters,
     for degree in np.arange(degree_polys.shape[0]):
         if degree_polys[degree] != 0:
             for symmetric_config in symmetric_configurations:
-                dbf.add_parameter(parameter_name, phase_name, tuple(map(tuplify, symmetric_config)), degree, degree_polys[degree])
+                dbf.add_parameter(parameter_name, phase_name, symmetric_config, degree, degree_polys[degree])
 
 
 def _resolved_columns(feature_matrix, columns):
@@ -321,7 +317,7 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
         if (i == len(fitting_description.fitting_steps) - 1) or (fitting_step.parameter_name != fitting_description.fitting_steps[i+1].parameter_name):
             # we're either on the last fitting step or the next step is a
             # different parameter type, so we insert and reset the state.
-            parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=_stable_sort_key)])
+            parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=lambda item: str(sorted(item[0].args, key=str)))])
             insert_parameter(dbf, phase_name, configuration, fitting_step.parameter_name, parameters, symmetry)
             fixed_model = None
             fixed_portions = [0]

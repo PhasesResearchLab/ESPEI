@@ -23,7 +23,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from pycalphad import Database, Model, Workspace, variables as v
 from pycalphad.property_framework import IsolatedPhase
-from pycalphad.core.utils import filter_phases, unpack_species
+from pycalphad.core.utils import filter_phases, instantiate_models, unpack_species
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from scipy.stats import norm
 import tinydb
@@ -43,7 +43,6 @@ class RegionVertex:
     composition: ArrayLike  # 1D of size (number nonvacant pure elements)
     comp_conds: Dict[v.X, float]
     phase_record_factory: PhaseRecordFactory
-    is_disordered: bool
     has_missing_comp_cond: bool
 
 @dataclass
@@ -60,62 +59,10 @@ class PhaseRegion:
         return f"conds: ({self.potential_conds}), comps: ({phase_compositions})"
 
 
-def _extract_pot_conds(all_conditions: Dict[v.StateVariable, np.ndarray], idx: int) -> Dict[v.StateVariable, float]:
-    """Conditions are either scalar or 1d arrays for the conditions in the entire dataset.
-    This function extracts the condition corresponding to the current region,
-    based on the index in the 1d condition array.
-    """
-    pot_conds = {}  # e.g. v.P, v.T
-    for cond_key, cond_val in all_conditions.items():
-        cond_val = np.atleast_1d(np.asarray(cond_val))
-        # If the conditions is an array, we want the corresponding value
-        # Otherwise treat it as a scalar
-        if len(cond_val) > 1:
-            cond_val = cond_val[idx]
-        else:
-            cond_val = cond_val[0]  # need to explictly extract scalar for NumPy type conversion
-        pot_conds[getattr(v, cond_key)] = float(cond_val)
-    return pot_conds
-
-
-def _extract_phases_comps(vertex):
-    """Extract the phase name, phase compositions and disordered flag from a vertex
-    """
-    if len(vertex) == 4:  # phase_flag within
-        phase_name, components, compositions, flag = vertex
-        if flag == "disordered":
-            disordered_flag = True
-        else:
-            disordered_flag = False
-    elif len(vertex) == 3:  # no phase_flag within
-        phase_name, components, compositions = vertex
-        disordered_flag = False
-    else:
-        raise ValueError("Wrong number of data in tie-line point")
-    comp_conds = dict(zip(map(v.X, map(str.upper, components)), compositions))
-    return phase_name, comp_conds, disordered_flag
-
-
-def _phase_is_stoichiometric(mod):
-    return all(len(subl) == 1 for subl in mod.constituents)
-
-
-def _compute_vertex_composition(comps: Sequence[str], comp_conds: Dict[str, float]):
-    """Compute the overall composition in a vertex assuming an N=1 normalization condition"""
-    pure_elements = sorted(c for c in comps if c != 'VA')
-    vertex_composition = np.empty(len(pure_elements), dtype=np.float64)
-    unknown_indices = []
-    for idx, el in enumerate(pure_elements):
-        amt = comp_conds.get(v.X(el), None)
-        if amt is None:
-            unknown_indices.append(idx)
-            vertex_composition[idx] = np.nan
-        else:
-            vertex_composition[idx] = amt
-    if len(unknown_indices) == 1:
-        # Determine the dependent component by mass balance
-        vertex_composition[unknown_indices[0]] = 1 - np.nansum(vertex_composition)
-    return vertex_composition
+def _disordered_phase(dbf: Database, phase_name: str) -> Optional[str]:
+    """Return the disordered phase of an order-disorder model that can disorder, which is the energy of its disordered configurations, otherwise None."""
+    hints = dbf.phases[phase_name].model_hints
+    return None if hints.get('never_disorder') else hints.get('disordered_phase')
 
 
 def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], datasets: PickleableTinyDB, parameters: Dict[str, float], model: Optional[Dict[str, Type[Model]]] = None):
@@ -139,59 +86,63 @@ def get_zpf_data(dbf: Database, comps: Sequence[str], phases: Sequence[str], dat
     -------
     list
         List of data dictionaries with keys ``weight``, ``phase_regions`` and ``dataset_references``.
+
+    Raises
+    ------
+    ValueError
+        If a phase composition is "disordered" for a phase without a disordered phase.
     """
+    wks = Workspace(dbf, sorted(set(comps) | {'VA'}), phases, parameters=parameters)
+    # Disordered phases, e.g. FCC_A1 of FCC_L12, are phases of the system even though pycalphad hides them with their ordered phase
+    modeled_phases = set(wks.phases) | {_disordered_phase(dbf, name) for name in wks.phases} - {None}
     desired_data = datasets.search((tinydb.where('output') == 'ZPF') &
                                    (tinydb.where('components').test(lambda x: set(x).issubset(comps))) &
-                                   (tinydb.where('phases').test(lambda x: len(set(phases).intersection(x)) > 0)))
-    wks = Workspace(dbf, comps, phases, parameters=parameters)
-    if model is None:
-        model = {}
+                                   (tinydb.where('phases').test(lambda x: set(x).issubset(modeled_phases))))
 
     zpf_data = []  # 1:1 correspondence with each dataset
     for data in desired_data:
         current_wks = wks.copy()
         data_comps = list(set(data['components']).union({'VA'}))
+        pure_elements = sorted(set(data_comps) - {'VA'})
         all_regions = data['values']
         conditions = data['conditions']
         current_wks.components = data_comps
         current_wks.conditions = conditions
         current_wks.phases = phases
-        # only init models that are defined for the phases; fallback to default pycalphad behavior if no custom model defined
-        current_wks.models = {phase_name: model.get(phase_name, current_wks.models[phase_name])
-                              for phase_name in current_wks.phases}
+        # The system's phases, and the disordered phases of the dataset's phases for their disordered phase compositions
+        model_phases = set(current_wks.phases) | {_disordered_phase(dbf, name) or name for name in data['phases']}
+        models = instantiate_models(dbf, current_wks.components, sorted(model_phases), model=model, parameters=current_wks.parameters)
+        phase_record_factory = PhaseRecordFactory(dbf, current_wks.components, current_wks.conditions, models, parameters=current_wks.parameters)
         phase_regions = []
         # Each phase_region is one set of phases in equilibrium (on a tie-line),
         # e.g. [["ALPHA", ["B"], [0.25]], ["BETA", ["B"], [0.5]]]
         for idx, phase_region in enumerate(all_regions):
-            # Extract the conditions for entire phase region
-            pot_conds = _extract_pot_conds(conditions, idx)
+            # Conditions are one value for the dataset or one value for each phase region
+            pot_conds = {getattr(v, key): float(np.atleast_1d(value)[idx if np.size(value) > 1 else 0]) for key, value in conditions.items()}
             pot_conds.setdefault(v.N, 1.0) # Add v.N condition, if missing
             # Extract all the phases and compositions from the tie-line points
             vertices = []
             hyperplane_vertices = []
-            for vertex in phase_region:
-                phase_name, comp_conds, disordered_flag = _extract_phases_comps(vertex)
-                composition = _compute_vertex_composition(data_comps, comp_conds)
+            for phase_name, components, fractions, *flag in phase_region:
+                comp_conds = dict(zip(map(v.X, map(str.upper, components)), fractions))
+                if flag == ["disordered"]:
+                    if _disordered_phase(dbf, phase_name) is None:
+                        raise ValueError(f'{phase_name} is "disordered" in values[{idx}] of the ZPF dataset "{data.get("reference", "")}", but it has no disordered phase that it can disorder to')
+                    phase_name = _disordered_phase(dbf, phase_name)
+                # Composition of the pure elements, with unknown mole fractions as NaN and the dependent element by mass balance (N=1)
+                composition = np.array([comp_conds.get(v.X(el)) for el in pure_elements], dtype=np.float64)
+                if np.isnan(composition).sum() == 1:
+                    composition[np.isnan(composition)] = 1 - np.nansum(composition)
+                vtx = RegionVertex(phase_name, composition, comp_conds, phase_record_factory, bool(np.any(np.isnan(composition))))
                 # TODO: should maybe have different types of RegionVertex that are semantic for __HYPERPLANE__, known phase composition, unknown phase composition
                 if phase_name.upper() == '__HYPERPLANE__':
-                    if np.any(np.isnan(composition)):  # TODO: make this a part of the dataset checker
-                        raise ValueError(f"__HYPERPLANE__ vertex ({vertex}) must have all independent compositions defined to make a well-defined hyperplane (from dataset: {data})")
-                    vtx = RegionVertex(phase_name, composition, comp_conds, current_wks.phase_record_factory, disordered_flag, False)
                     hyperplane_vertices.append(vtx)
-                    continue
-                mod = current_wks.models[phase_name]
-                if np.any(np.isnan(composition)):
-                    has_missing_comp_cond = True
-                elif _phase_is_stoichiometric(mod):
-                    has_missing_comp_cond = False
                 else:
-                    has_missing_comp_cond = False
-                vtx = RegionVertex(phase_name, composition, comp_conds, current_wks.phase_record_factory, disordered_flag, has_missing_comp_cond)
-                vertices.append(vtx)
+                    vertices.append(vtx)
             if len(hyperplane_vertices) == 0:
                 # Define the hyperplane at the vertices of the ZPF points
                 hyperplane_vertices = vertices
-            region = PhaseRegion(hyperplane_vertices, vertices, pot_conds, current_wks.components, current_wks.phases, current_wks.models.unwrap())
+            region = PhaseRegion(hyperplane_vertices, vertices, pot_conds, current_wks.components, current_wks.phases, models)
             phase_regions.append(region)
 
         data_dict = {
@@ -278,32 +229,6 @@ def driving_force_to_hyperplane(target_hyperplane_chempots: np.ndarray,
         single_eqdata = calculate_(species, [current_phase], str_statevar_dict, models, phase_record_factory, pdens=50)
         df = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
         driving_force = float(df.max())
-    elif vertex.is_disordered:
-        # Construct disordered sublattice configuration from composition dict
-        # Compute energy
-        # Compute residual driving force
-        # TODO: Check that it actually makes sense to declare this phase 'disordered'
-        num_dof = sum([len(subl) for subl in models[current_phase].constituents])
-        desired_sitefracs = np.ones(num_dof, dtype=np.float64)
-        dof_idx = 0
-        for subl in models[current_phase].constituents:
-            dof = sorted(subl, key=str)
-            num_subl_dof = len(subl)
-            if v.Species("VA") in dof:
-                if num_subl_dof == 1:
-                    _log.debug('Cannot predict the site fraction of vacancies in the disordered configuration %s of %s. Returning driving force of zero.', subl, current_phase)
-                    return 0
-                else:
-                    sitefracs_to_add = [1.0]
-            else:
-                sitefracs_to_add = np.array([cond_dict.get(v.X(d)) for d in dof], dtype=np.float64)
-                # Fix composition of dependent component
-                sitefracs_to_add[np.isnan(sitefracs_to_add)] = 1 - np.nansum(sitefracs_to_add)
-            desired_sitefracs[dof_idx:dof_idx + num_subl_dof] = sitefracs_to_add
-            dof_idx += num_subl_dof
-        single_eqdata = calculate_(species, [current_phase], str_statevar_dict, models, phase_record_factory, points=np.asarray([desired_sitefracs]))
-        driving_force = np.multiply(target_hyperplane_chempots, single_eqdata.X).sum(axis=-1) - single_eqdata.GM
-        driving_force = float(np.squeeze(driving_force))
     else:
         wks = Workspace(database=dbf, components=species, phases=current_phase, models=models, phase_record_factory=phase_record_factory, conditions=cond_dict, parameters=parameters_dict)
         constrained_energy = wks.get(IsolatedPhase(current_phase,wks=wks)('GM'))

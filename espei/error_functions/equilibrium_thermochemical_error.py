@@ -102,7 +102,10 @@ def build_eqpropdata(data: tinydb.database.Document,
     # each other. Each individual composition needs to be computed
     # independently, since broadcasting over composition cannot be turned off
     # in pycalphad.
-    rav_comp_conds = [OrderedDict(zip(comp_conds.keys(), pt_comps)) for pt_comps in zip(*comp_conds.values())]
+    if len(comp_conds) > 0:
+        rav_comp_conds = [OrderedDict(zip(comp_conds.keys(), pt_comps)) for pt_comps in zip(*comp_conds.values())]
+    else:
+        rav_comp_conds = [OrderedDict()]  # one component has one composition, with no X conditions
 
     # Build weights, should be the same size as the values
     total_num_calculations = len(rav_comp_conds)*np.prod([len(vals) for vals in pot_conds.values()])

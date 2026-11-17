@@ -6,18 +6,38 @@ from typing import List
 import numpy as np
 import tinydb
 from espei.datasets import Dataset
-from espei.sublattice_tools import canonicalize, recursive_tuplify
+from espei.sublattice_tools import canonical_order, canonicalize
+
+
+def _select_values(data: Dataset, index) -> None:
+    """Keep the values at an index, e.g. np.s_[..., selected_configurations], and the weights of those values."""
+    values = np.asarray(data['values'], dtype=np.float64)
+    data['values'] = values[index]
+    data['weight'] = np.broadcast_to(data.get('weight', 1.0), values.shape)[index]  # weights broadcast to the values, e.g. one for each configuration
+
+
+def select_configurations(data: Dataset, selected) -> None:
+    """Keep the values, weights, sublattice configurations and occupancies of the selected configurations of a fixed configuration dataset."""
+    selected = np.asarray(selected, dtype=np.bool_)
+    _select_values(data, np.s_[..., selected])
+    for key in ('sublattice_configurations', 'sublattice_occupancies'):
+        data['solver'][key] = [x for x, keep in zip(data['solver'][key], selected) if keep]
+
 
 def filter_configurations(desired_data: List[Dataset], configuration, symmetry) -> List[Dataset]:
     """
-    Return non-equilibrium thermochemical datasets with invalid configurations removed.
+    Return non-equilibrium thermochemical datasets with only the configurations that are the configuration by symmetry.
+
+    The sublattices of the configurations and their occupancies are in
+    canonical order (see ``canonicalize``), which is the order of the
+    sublattices of the canonical configuration.
 
     Parameters
     ----------
     desired_data : List[Dataset]
         List of non-equilibrium thermochemical datasets
     configuration : tuple
-        Sublattice configuration as a tuple, e.g. ("CU", ("CU", "MG"))
+        Sublattice configuration as a tuple, e.g. (("CU",), ("CU", "MG"))
     symmetry : list of lists
         List of sublattice indices with symmetry
 
@@ -26,16 +46,13 @@ def filter_configurations(desired_data: List[Dataset], configuration, symmetry) 
     List[Dataset]
 
     """
+    canonical_config = canonicalize(configuration, symmetry)
     for data in desired_data:
-        # Filter output values to only contain data for matching sublattice configurations
-        matching_configs = np.array([(canonicalize(sblconf, symmetry) == canonicalize(configuration, symmetry))
-                                     for sblconf in data['solver']['sublattice_configurations']])
-        matching_configs = np.arange(len(data['solver']['sublattice_configurations']))[matching_configs]
-        # Rewrite output values with filtered data
-        data['values'] = np.array(data['values'], dtype=np.float64)[..., matching_configs]
-        data['solver']['sublattice_configurations'] = recursive_tuplify(np.array(data['solver']['sublattice_configurations'], dtype=np.object_)[matching_configs].tolist())
-        if 'sublattice_occupancies' in data['solver']:
-            data['solver']['sublattice_occupancies'] = np.array(data['solver']['sublattice_occupancies'], dtype=np.object_)[matching_configs].tolist()
+        solver = data['solver']
+        orders = [canonical_order(config, symmetry) for config in solver['sublattice_configurations']]
+        for key in ('sublattice_configurations', 'sublattice_occupancies'):
+            solver[key] = [tuple(sublattices[i] for i in order) for sublattices, order in zip(solver[key], orders)]
+        select_configurations(data, [config == canonical_config for config in solver['sublattice_configurations']])
     return desired_data
 
 
@@ -62,7 +79,7 @@ def filter_temperatures(desired_data: List[Dataset]) -> List[Dataset]:
     for data in desired_data:
         temp_filter = np.atleast_1d(data['conditions']['T']) >= 298.15
         data['conditions']['T'] = np.atleast_1d(data['conditions']['T'])[temp_filter]
-        data['values'] = np.array(data['values'], dtype=np.float64)[..., temp_filter, :].tolist()
+        _select_values(data, np.s_[..., temp_filter, :])
     return desired_data
 
 
@@ -187,7 +204,7 @@ def symmetry_filter(x, config, symmetry):
     x : dict
         the candidate dataset 'solver' dict. Must contain the "sublattice_configurations" key
     config : list
-        the configuration of interest: e.g. ['AL', ['AL', 'NI'], 'VA']
+        the configuration of interest: e.g. [['AL'], ['AL', 'NI'], ['VA']]
     symmetry : list
         tuple of tuples where each inner tuple is a group of equivalent
         sublattices. A value of ((0, 1), (2, 3, 4)) means that sublattices
@@ -200,15 +217,12 @@ def symmetry_filter(x, config, symmetry):
     bool
 
     """
-    if x['mode'] == 'manual':
-        if len(config) != len(x['sublattice_configurations'][0]):
-            return False
-        # If even one matches, it's a match
-        # We do more filtering downstream
-        for data_config in x['sublattice_configurations']:
-            if canonicalize(config, symmetry) == canonicalize(data_config, symmetry):
-                return True
-    return False
+    if len(config) != len(x['sublattice_configurations'][0]):
+        return False
+    # If even one matches, it's a match
+    # We do more filtering downstream
+    canonical_config = canonicalize(config, symmetry)
+    return any(canonicalize(data_config, symmetry) == canonical_config for data_config in x['sublattice_configurations'])
 
 
 def get_prop_data(comps, phase_name, prop, datasets, additional_query=None) -> List[Dataset]:

@@ -10,10 +10,9 @@ from symengine import S, Symbol, log
 
 from espei.logger import config_logger
 from espei.paramselect import generate_parameters
-from espei.utils import PickleableTinyDB
 from espei.parameter_selection.fitting_descriptions import molar_volume_gibbs_energy_fitting_description, molar_volume_fitting_description
 from .testing_data import *
-from .fixtures import datasets_db
+from .fixtures import ValidatedDatasets, datasets_db
 
 import pytest
 
@@ -90,6 +89,26 @@ def test_formation_energies_are_fit(datasets_db):
     assert dbf.symbols['VV0001'] == 12.0278  # entropy
     assert dbf.symbols['VV0002'] == -15268.3  # enthalpy
 
+
+def test_formation_energies_are_fit_without_solver_mode(datasets_db):
+    """Fixed configuration data without a solver mode, which defaults to "manual", are fit."""
+    phase_models = {"components": ["CU", "MG"], "phases": {"CUMG2": {"sublattice_model": [["CU"], ["MG"]], "sublattice_site_ratios": [1, 2]}}}
+    datasets_db.insert({"components": ["CU", "MG"], "phases": ["CUMG2"], "solver": {"sublattice_site_ratios": [1, 2], "sublattice_configurations": [["CU", "MG"]]},
+                        "conditions": {"P": 101325, "T": 298.15}, "output": "HM_FORM", "values": [[[-9540.0]]]})
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    assert dbf.symbols['VV0000'] == -28620.0
+
+
+
+def test_formation_energies_are_fit_with_a_weight_for_each_configuration(datasets_db):
+    """Fixed configuration data with a weight for each configuration are fit one configuration at a time, above 298.15 K."""
+    phase_models = {"components": ["CU", "MG"], "phases": {"LAVES_C15": {"sublattice_model": [["CU", "MG"], ["CU", "MG"]], "sublattice_site_ratios": [2, 1]}}}
+    # Formation enthalpies of the Cu2Mg Laves phase endmembers (P. Liang et al., Calphad 22 (1998) 527), per mole of atoms
+    datasets_db.insert({"components": ["CU", "MG"], "phases": ["LAVES_C15"], "output": "HM_FORM", "conditions": {"P": 101325, "T": [0, 298.15]},
+                        "solver": {"sublattice_site_ratios": [2, 1], "sublattice_configurations": [[["CU"], ["CU"]], [["MG"], ["CU"]], [["MG"], ["MG"]]]},
+                        "values": [[[21014.88/3, 105000/3, 27357.33/3]] * 2], "weight": [1.0, 0.1, 1.0]})
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    assert {name: value for name, value in dbf.symbols.items() if name.startswith('VV')} == {'VV0000': 21014.9, 'VV0001': 105000.0, 'VV0002': 27357.3}
 
 def test_heat_capacity_terms_of_different_magnitudes_are_fit(datasets_db):
     """Heat capacity terms spanning many orders of magnitude are all recovered from exact formation data."""
@@ -180,6 +199,33 @@ def test_mixing_energies_are_fit(datasets_db):
     thermochemical_data = get_thermochemical_data(dbf, sorted(read_dbf.elements), list(read_dbf.phases.keys()), datasets_db, symbols_to_fit=[])
     error = calculate_non_equilibrium_thermochemical_probability(thermochemical_data, dbf)
     assert np.isclose(error, zero_error_prob, atol=1e-6)
+
+
+def test_mixing_energies_are_fit_with_one_species_sublattices_as_lists(datasets_db):
+    """A sublattice with one species given as a list, e.g. ["VA"], is the same configuration as the species."""
+    phase_models = {"components": ["CU", "MG", "VA"], "phases": {"FCC_A1": {"sublattice_model": [["CU", "MG"], ["VA"]], "sublattice_site_ratios": [1, 1]}}}
+    # Enthalpy of L0(FCC_A1, CU,MG:VA) = -22279.28 + 5.868*T (pycalphad's cumg.tdb)
+    datasets_db.insert({"components": ["CU", "MG", "VA"], "phases": ["FCC_A1"], "output": "HM_MIX", "conditions": {"P": 101325, "T": 298.15},
+                        "solver": {"sublattice_site_ratios": [1, 1], "sublattice_configurations": [[["CU", "MG"], ["VA"]]], "sublattice_occupancies": [[[0.5, 0.5], [1.0]]]},
+                        "values": [[[-5569.82]]]})
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    assert dbf.symbols['VV0000'] == -22279.3
+
+
+
+@pytest.mark.parametrize("configuration, occupancies", [
+    pytest.param([["NI"], ["AL", "NI"], ["VA"]], [[[1.0], [0.75, 0.25], [1.0]], [[1.0], [0.5, 0.5], [1.0]]], id="NI:(AL,NI):VA"),
+    pytest.param([["AL", "NI"], ["NI"], ["VA"]], [[[0.75, 0.25], [1.0], [1.0]], [[0.5, 0.5], [1.0], [1.0]]], id="(AL,NI):NI:VA"),
+])
+def test_mixing_energies_are_fit_in_either_order_of_equivalent_sublattices(datasets_db, configuration, occupancies):
+    """Configurations of equivalent sublattices fit the same parameters in either order of the sublattices."""
+    phase_models = {"components": ["AL", "NI", "VA"], "phases": {"BCC_B2": {"sublattice_model": [["AL", "NI"], ["AL", "NI"], ["VA"]], "sublattice_site_ratios": [0.5, 0.5, 1], "equivalent_sublattices": [[0, 1]]}}}
+    # Formation enthalpies of B2 SQS (C. Jiang 2009, constrained SQS), as in the example of docs/reference/dataset_schema.qmd
+    datasets_db.insert({"components": ["AL", "NI", "VA"], "phases": ["BCC_B2"], "output": "HM_FORM", "conditions": {"P": 101325, "T": 300}, "excluded_model_contributions": ["idmix"],
+                        "solver": {"sublattice_site_ratios": [0.5, 0.5, 1], "sublattice_configurations": [configuration] * 2, "sublattice_occupancies": occupancies},
+                        "values": [[[-49636.39281, -32471.25149]]]})
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    assert {name: value for name, value in dbf.symbols.items() if name.startswith('VV')} == {'VV0000': -269685.0, 'VV0001': -129885.0}
 
 def test_duplicate_parameters_are_not_added_with_input_database(datasets_db):
     phase_models = {
@@ -596,7 +642,7 @@ def test_weighting_invariance():
     }
 
     # Perfect L0, no weight
-    datasets_db = PickleableTinyDB(storage=MemoryStorage)
+    datasets_db = ValidatedDatasets(storage=MemoryStorage)
     datasets_db.insert(L0_data)
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
     datasets_db.close()
@@ -607,7 +653,7 @@ def test_weighting_invariance():
     assert dbf.symbols['VV0000'] == -4000
 
     # Perfect L0, with weight
-    datasets_db = PickleableTinyDB(storage=MemoryStorage)
+    datasets_db = ValidatedDatasets(storage=MemoryStorage)
     L0_data['weight'] = 0.1  # lower weight
     datasets_db.insert(L0_data)
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
@@ -620,7 +666,7 @@ def test_weighting_invariance():
 
 
     # Perfect L1, no weight
-    datasets_db = PickleableTinyDB(storage=MemoryStorage)
+    datasets_db = ValidatedDatasets(storage=MemoryStorage)
     datasets_db.insert(L1_data)
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
     datasets_db.close()
@@ -632,7 +678,7 @@ def test_weighting_invariance():
     assert np.isclose(dbf.symbols['VV0001'], 0)  # L0
 
     # Perfect L1, with weight
-    datasets_db = PickleableTinyDB(storage=MemoryStorage)
+    datasets_db = ValidatedDatasets(storage=MemoryStorage)
     L1_data['weight'] = 0.1  # lower weight
     datasets_db.insert(L1_data)
     dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')

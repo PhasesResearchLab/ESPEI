@@ -251,31 +251,31 @@ def test_generating_symmetric_group_works_with_interstitial_sublattice():
 def test_interaction_sorting_is_correct():
     """High order (order >= 3) interactions should sort correctly"""
     # Correct sorting of n-order interactions should sort first by number of
-    # interactions of order n, then n-1, then n-2... to 1
+    # interactions of order n, then n-1, then n-2... to 2
     unsorted_interactions = [
-        ('AL', ('AL', 'CO', 'CR')),
+        (('AL',), ('AL', 'CO', 'CR')),
         (('AL', 'CO'), ('AL', 'CO', 'CR')),
         (('AL', 'CO', 'CR'), ('AL', 'CO', 'CR')),
-        (('AL', 'CO', 'CR'), 'AL'),
+        (('AL', 'CO', 'CR'), ('AL',)),
         (('AL', 'CO', 'CR'), ('AL', 'CO')),
         (('AL', 'CO', 'CR'), ('AL', 'CR')),
-        (('AL', 'CO', 'CR'), 'CO'),
+        (('AL', 'CO', 'CR'), ('CO',)),
         (('AL', 'CO', 'CR'), ('CO', 'CR')),
-        (('AL', 'CO', 'CR'), 'CR'),
+        (('AL', 'CO', 'CR'), ('CR',)),
         (('AL', 'CR'), ('AL', 'CO', 'CR')),
-        ('CO', ('AL', 'CO', 'CR')),
+        (('CO',), ('AL', 'CO', 'CR')),
         (('CO', 'CR'), ('AL', 'CO', 'CR')),
-        ('CR', ('AL', 'CO', 'CR')),
+        (('CR',), ('AL', 'CO', 'CR')),
     ]
     interactions = sorted_interactions(unsorted_interactions, max_interaction_order=3, symmetry=None)
 
     # the numbers are the different sort scores. Two of the same sort scores mean
     # the order doesn't matter
     assert interactions == [
-        ('AL', ('AL', 'CO', 'CR')),                # (1, 0, 1)
-        (('AL', 'CO', 'CR'), 'AL'),                # (1, 0, 1)
-        (('AL', 'CO', 'CR'), 'CO'),                # (1, 0, 1)
-        (('AL', 'CO', 'CR'), 'CR'),                # (1, 0, 1)
-        ('CO', ('AL', 'CO', 'CR')),                # (1, 0, 1)
-        ('CR', ('AL', 'CO', 'CR')),                # (1, 0, 1)
+        (('AL',), ('AL', 'CO', 'CR')),  # (1, 0)
+        (('AL', 'CO', 'CR'), ('AL',)),  # (1, 0)
+        (('AL', 'CO', 'CR'), ('CO',)),  # (1, 0)
+        (('AL', 'CO', 'CR'), ('CR',)),  # (1, 0)
+        (('CO',), ('AL', 'CO', 'CR')),  # (1, 0)
+        (('CR',), ('AL', 'CO', 'CR')),  # (1, 0)
     ]

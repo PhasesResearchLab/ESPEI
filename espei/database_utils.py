@@ -8,7 +8,7 @@ from symengine import Symbol
 from tinydb import where
 import espei.refdata
 from espei.phase_models import PhaseModelSpecification
-from espei.sublattice_tools import generate_endmembers, generate_symmetric_group, tuplify
+from espei.sublattice_tools import generate_endmembers, generate_symmetric_group
 from espei.utils import extract_aliases
 
 _log = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ def _missing_reference_data_message(element, ref_state):
 
 def _param_present_in_database(dbf, phase_name, configuration, param_type):
     species = {sp.name: sp for sp in dbf.species}
-    const_arr = tuple([tuple(species[name] for name in subl) for subl in map(tuplify, configuration)])
+    const_arr = tuple(tuple(species[name] for name in subl) for subl in configuration)
     # parameter order doesn't matter here, since the generated might not exactly match. Always override.
     query = (where('phase_name') == phase_name) & \
             (where('parameter_type') == param_type) & \
@@ -71,10 +71,11 @@ def _add_lattice_stabilities(dbf, phase_name, symmetry, refdata, aliases):
     for endmember in generate_endmembers(subl_model, symmetry):
         if _param_present_in_database(dbf, phase_name, endmember, "G"):
             continue
-        endmember_comps = list(set(endmember))
+        names = [name for name, in endmember]
+        endmember_comps = list(set(names))
         # only one non-VA component, or two components but the other is VA and its only the last sublattice
         if ((len(endmember_comps) == 1) and (endmember_comps[0] != 'VA')) or\
-                ((len(endmember_comps) == 2) and (endmember[-1] == 'VA') and (len(set(endmember[:-1])) == 1)):
+                ((len(endmember_comps) == 2) and (names[-1] == 'VA') and (len(set(names[:-1])) == 1)):
             # this is a "pure component endmember"
             # try all phase name aliases until we get run out or get a hit
             em_comp = list(set(endmember_comps) - {'VA'})[0]
@@ -86,11 +87,11 @@ def _add_lattice_stabilities(dbf, phase_name, symmetry, refdata, aliases):
                     dbf.symbols[sym_name] = stability
                     break
             if dbf.symbols.get(sym_name, None) is not None:
-                num_moles = sum([sites for elem, sites in zip(endmember, site_ratios) if elem != 'VA'])
+                num_moles = sum([sites for elem, sites in zip(names, site_ratios) if elem != 'VA'])
                 _log.trace("Found lattice stability: %s", sym_name)
                 _log.debug("%s = %s", sym_name, dbf.symbols[sym_name])
                 for em in generate_symmetric_group(endmember, symmetry):
-                    dbf.add_parameter('G', phase_name, tuple(map(tuplify, em)), 0, num_moles * Symbol(sym_name))
+                    dbf.add_parameter('G', phase_name, em, 0, num_moles * Symbol(sym_name))
 
 
 def initialize_database(phase_models, ref_state, dbf=None, fallback_ref_state="SGTE91", lattice_stabilities=True):

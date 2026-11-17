@@ -1,7 +1,7 @@
 """
 ESPEI datasets and the pydantic models of each type of dataset.
 """
-import fnmatch, json, os, warnings
+import fnmatch, json, os, sys, warnings
 from typing import Any, Iterable, Literal, Optional, Self
 
 import numpy as np
@@ -21,16 +21,21 @@ class DatasetWarning(UserWarning):
     """Warning for parts of a dataset that could not be checked or are likely mistakes."""
 
 
+class DatasetDeprecationWarning(DatasetWarning, DeprecationWarning):
+    """Warning for parts of a dataset that are deprecated."""
+
+
+# DeprecationWarnings are not shown by default, but users must see these to update their datasets
+if not sys.warnoptions:
+    warnings.filterwarnings("default", category=DatasetDeprecationWarning)
+
+
 class _Model(BaseModel):
     # Keep keys that are not part of the schema, e.g. "comment". Build validators when first used, not on import.
     model_config = ConfigDict(extra="allow", defer_build=True)
 
 
 Values = list[list[list[float]]]  # shape of (len(P), len(T), number of configurations or compositions)
-
-
-def _as_list(x):
-    return x if isinstance(x, list) else [x]
 
 
 class Dataset(_Model):
@@ -59,9 +64,24 @@ class Dataset(_Model):
 class Solver(_Model):
     mode: Literal["manual"] = "manual"
     sublattice_site_ratios: list[float] = Field(min_length=1)
-    # Lists are sublattices with mixing, strings are sublattices with one species
-    sublattice_configurations: list[list[str | list[str]]] = Field(min_length=1)
-    sublattice_occupancies: Optional[list[list[float | list[float]]]] = None
+    sublattice_configurations: list[tuple[tuple[str, ...], ...]] = Field(min_length=1)  # species of each sublattice
+    sublattice_occupancies: Optional[list[tuple[tuple[float, ...], ...]]] = None  # site fractions of the species of each sublattice
+
+    @model_validator(mode="before")
+    @classmethod
+    def _sublattices_of_one_species(cls, solver: Any) -> Any:
+        # Deprecated: a sublattice of one species given as the species, e.g. "VA" for ["VA"], with the occupancy 1.0 for [1.0]
+        keys = [key for key in ("sublattice_configurations", "sublattice_occupancies") if isinstance(solver, dict) and isinstance(solver.get(key), list)]
+        if all(isinstance(subl, (list, tuple)) for key in keys for row in solver[key] if isinstance(row, (list, tuple)) for subl in row):
+            return solver
+        warnings.warn('Sublattices of one species given as the species, e.g. "VA", with their occupancies as numbers are deprecated. Give them as lists, e.g. ["VA"] with the occupancy [1.0].', DatasetDeprecationWarning)
+        return {**solver, **{key: [[subl if isinstance(subl, (list, tuple)) else [subl] for subl in row] if isinstance(row, (list, tuple)) else row for row in solver[key]] for key in keys}}
+
+    @model_validator(mode="after")
+    def _occupancies_without_mixing(self) -> Self:
+        if self.sublattice_occupancies is None and all(len(subl) == 1 for config in self.sublattice_configurations for subl in config):
+            self.sublattice_occupancies = [tuple((1.0,) for _ in config) for config in self.sublattice_configurations]
+        return self
 
 
 class FixedConfigurationDataset(Dataset):
@@ -81,21 +101,20 @@ class FixedConfigurationDataset(Dataset):
         weight = np.asarray(self.weight)  # broadcast to the values, e.g. one weight per configuration
         if np.any(weight <= 0) or weight.ndim > 3 or any(w not in (1, s) for w, s in zip(weight.shape[::-1], shape[::-1])):
             raise ValueError(f"weight must be positive and broadcast to the shape of the values {shape}, got {self.weight}")
-        if occupancies is None and any(isinstance(subl, list) for config in configurations for subl in config):
+        if occupancies is None:
             raise ValueError("sublattice_occupancies are required when there is mixing in a sublattice")
-        if occupancies is not None and len(occupancies) != len(configurations):
+        if len(occupancies) != len(configurations):
             raise ValueError(f"sublattice_occupancies must have one entry per sublattice configuration ({len(configurations)}), got {len(occupancies)}")
         num_sublattices = len(self.solver.sublattice_site_ratios)
-        for i, config in enumerate(configurations):
-            occupancy = occupancies[i] if occupancies else [1.0] * len(config)
+        for config, occupancy in zip(configurations, occupancies):
             if not len(config) == len(occupancy) == num_sublattices:
                 raise ValueError(f"sublattice configuration {config} and occupancies {occupancy} must have one entry for each of the {num_sublattices} sublattices")
             for subl, occ in zip(config, occupancy):
                 # Interactions are sorted, e.g. for espei.core_utils.get_samples
-                if isinstance(subl, list) and subl != sorted(set(subl)):
+                if subl != tuple(sorted(set(subl))):
                     raise ValueError(f"sublattice {subl} of configuration {config} must be sorted and unique, i.e. {sorted(set(subl))}")
-                if isinstance(subl, list) != isinstance(occ, list) or len(_as_list(subl)) != len(_as_list(occ)) or abs(sum(_as_list(occ)) - 1) > 0.01:
-                    raise ValueError(f"occupancies {occ} must have the same shape as the sublattice {subl} of configuration {config} and sum to one")
+                if len(subl) != len(occ) or abs(sum(occ) - 1) > 0.01:
+                    raise ValueError(f"occupancies {occ} must have one site fraction per species of the sublattice {subl} of configuration {config} and sum to one")
         return self
 
     @model_validator(mode="after")
@@ -105,7 +124,7 @@ class FixedConfigurationDataset(Dataset):
         if species is not None and not entered - {"VA"} <= species.keys():
             return self  # datasets outside the system being fit are never used, so their species aren't resolved
         used, unresolved = set(), set()
-        for name in {sp for config in self.solver.sublattice_configurations for subl in config for sp in _as_list(subl)}:
+        for name in {sp for config in self.solver.sublattice_configurations for subl in config for sp in subl}:
             if name == "VA" or (species is None and name in entered):
                 used.add(name)
             elif species is None:

@@ -335,47 +335,30 @@ def formatted_parameter(dbf, symbol, unique=True):
 
 
 def build_sitefractions(phase_name, sublattice_configurations, sublattice_occupancies):
-    """Convert nested lists of sublattice configurations and occupancies to a list
-    of dictionaries. The dictionaries map SiteFraction symbols to occupancy
-    values. Note that zero occupancy site fractions will need to be added
-    separately since the total degrees of freedom aren't known in this function.
+    """Convert sublattice configurations and their occupancies to dictionaries
+    mapping SiteFraction symbols to site fractions. Site fractions of species
+    that are not in a configuration (zero) are not included, since the species
+    of the phase aren't known in this function.
 
     Parameters
     ----------
     phase_name : str
         Name of the phase
-    sublattice_configurations : [[str]]
-        sublattice configuration
-    sublattice_occupancies : [[float]]
-        occupancy of each sublattice
+    sublattice_configurations : [[[str]]]
+        Species of each sublattice of each configuration
+    sublattice_occupancies : [[[float]]]
+        Site fractions of the species of each sublattice of each configuration
 
     Returns
     -------
-    [[float]]
-        a list of site fractions over sublattices
+    [Dict[v.SiteFraction, float]]
+        Site fractions of each configuration
 
     """
-    result = []
-    for config, occ in zip(sublattice_configurations, sublattice_occupancies):
-        sitefracs = {}
-        config = [[c] if not isinstance(c, (list, tuple)) else c for c in config]
-        occ = [[o] if not isinstance(o, (list, tuple)) else o for o in occ]
-        if len(config) != len(occ):
-            raise ValueError('Sublattice configuration length differs from occupancies')
-        for sublattice_idx in range(len(config)):
-            if isinstance(config[sublattice_idx], (list, tuple)) != isinstance(occ[sublattice_idx], (list, tuple)):
-                raise ValueError('Sublattice configuration type differs from occupancies')
-            if not isinstance(config[sublattice_idx], (list, tuple)):
-                # This sublattice is fully occupied by one component
-                sitefracs[v.SiteFraction(phase_name, sublattice_idx, config[sublattice_idx])] = occ[sublattice_idx]
-            else:
-                # This sublattice is occupied by multiple elements
-                if len(config[sublattice_idx]) != len(occ[sublattice_idx]):
-                    raise ValueError('Length mismatch in sublattice configuration')
-                for comp, val in zip(config[sublattice_idx], occ[sublattice_idx]):
-                    sitefracs[v.SiteFraction(phase_name, sublattice_idx, comp)] = val
-        result.append(sitefracs)
-    return result
+    return [{v.SiteFraction(phase_name, subl_idx, species): site_fraction
+             for subl_idx, (subl, subl_occupancies) in enumerate(zip(config, occupancies))
+             for species, site_fraction in zip(subl, subl_occupancies)}
+            for config, occupancies in zip(sublattice_configurations, sublattice_occupancies)]
 
 
 def extract_aliases(phase_models):
@@ -464,10 +447,6 @@ class ModelTestException(Exception):
     ...
 
 
-def _raise_model_test_exception(*args, **kwargs):
-    raise ModelTestException()
-
-
 class ErrorModel(Model):
     """
     The only purpose of this class is to raise an exception when getting the molar Gibbs energy
@@ -477,4 +456,4 @@ class ErrorModel(Model):
     def __init__(self, dbe, comps, phase_name, parameters=None):
         super().__init__(dbe, comps, phase_name, parameters)
 
-        self.GM = _raise_model_test_exception()
+        raise ModelTestException()

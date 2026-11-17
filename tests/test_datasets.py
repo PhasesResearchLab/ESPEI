@@ -1,10 +1,11 @@
 from copy import deepcopy
-import json, re
+import json, re, warnings
 import pytest
 import numpy as np
-from espei.datasets import DatasetError, DatasetWarning, validate_dataset, apply_tags, load_datasets, check_dataset, clean_dataset
+from espei.datasets import DatasetError, DatasetWarning, DatasetDeprecationWarning, validate_dataset, apply_tags, load_datasets, check_dataset, clean_dataset
 from espei.datasets import FixedConfigurationDataset, EquilibriumPropertyDataset, ActivityDataset, ZPFDataset
 from espei.phase_models import PhaseModelSpecification
+from espei.utils import PickleableTinyDB, MemoryStorage
 
 from .testing_data import CU_MG_EXP_ACTIVITY, CU_MG_DATASET_THERMOCHEMICAL_STRING_VALUES, CU_MG_DATASET_ZPF_STRING_VALUES, LI_SN_LIQUID_DATA, dataset_multi_valid_ternary
 from .fixtures import datasets_db
@@ -592,6 +593,9 @@ HM_FORM_CUMG2 = {"components": ["CU", "MG"], "phases": ["CUMG2"], "conditions": 
 HM_MIX_FCC = {"components": ["CU", "MG", "VA"], "phases": ["FCC_A1"], "conditions": {"P": 101325.0, "T": 298.15}, "output": "HM_MIX", "values": [[[-566.0, -1944.0, -3611.0]]], "reference": "Gao2014first",
               "solver": {"mode": "manual", "sublattice_site_ratios": [1.0, 1.0], "sublattice_configurations": [[["CU", "MG"], "VA"]] * 3,
                          "sublattice_occupancies": [[[0.96875, 0.03125], 1.0], [[0.75, 0.25], 1.0], [[0.5, 0.5], 1.0]]}}
+HM_MIX_FCC_LISTS = {**HM_MIX_FCC, "solver": {**HM_MIX_FCC["solver"], "sublattice_configurations": [[["CU", "MG"], ["VA"]]] * 3,
+                                             "sublattice_occupancies": [[mixing, [one]] for mixing, one in HM_MIX_FCC["solver"]["sublattice_occupancies"]]}}
+HM_FORM_CUMG2_LISTS = {**HM_FORM_CUMG2, "solver": {**HM_FORM_CUMG2["solver"], "sublattice_configurations": [[["CU"], ["MG"]]], "sublattice_occupancies": [[[1.0], [1.0]]]}}
 HM_MIX_LIQUID = {"components": ["CU", "MG"], "phases": ["LIQUID"], "conditions": {"P": 101325.0, "T": 1100.0, "X_MG": [0.2, 0.4]}, "output": "HM_MIX", "values": [[[-3070.0, -4310.0]]], "reference": "sommer1983calorimetric_investigations"}
 ACR_MG = {"components": ["CU", "MG", "VA"], "phases": ["LIQUID"], "reference_state": {"phases": ["LIQUID"], "conditions": {"P": 101325.0, "T": 1200.0, "X_CU": 0.0}},
           "conditions": {"P": 101325.0, "T": 1200.0, "X_CU": [0.9, 0.8]}, "output": "ACR_MG", "values": [[[0.0057, 0.0264]]], "reference": "garg1973thermodynamic"}
@@ -608,15 +612,25 @@ H_IN_LANI5 = {"components": ["LN", "H", "VA"], "phases": ["LAN5H7", "GAS"], "con
 def test_load_datasets_returns_the_datasets_as_written(tmp_path):
     """Loaded datasets keep the keys and values of their files and get no defaults (gh-269)."""
     datasets = [
-        {**HM_MIX_FCC, "weight": [0.5, 1.0, 2.0], "comment": "fully relaxed", "solver": {**HM_MIX_FCC["solver"], "comment": "SQS"}},
-        {**HM_FORM_CUMG2, "excluded_model_contributions": ["idmix"], "tags": ["dft"]},
+        {**HM_MIX_FCC_LISTS, "weight": [0.5, 1.0, 2.0], "comment": "fully relaxed", "solver": {**HM_MIX_FCC_LISTS["solver"], "comment": "SQS"}},
+        {**HM_FORM_CUMG2_LISTS, "excluded_model_contributions": ["idmix"], "tags": ["dft"]},
         {**HM_MIX_LIQUID, "weight": 2.0, "bibtex": "sommer1983", "dataset_author": "bocklund", "primary_source": ["a", "b"]},
         ACR_MG,
         ZPF_C15_LIQUID,
     ]
     for i, dataset in enumerate(datasets):
         (tmp_path / f"{i}.json").write_text(json.dumps(dataset))
-    assert load_datasets([str(tmp_path / f"{i}.json") for i in range(len(datasets))]).all() == datasets
+    assert json.loads(json.dumps(load_datasets([str(tmp_path / f"{i}.json") for i in range(len(datasets))]).all())) == datasets
+
+
+@pytest.mark.parametrize("deprecated, dataset", [pytest.param(HM_MIX_FCC, HM_MIX_FCC_LISTS, id="mixing"), pytest.param(HM_FORM_CUMG2, HM_FORM_CUMG2_LISTS, id="no mixing")])
+def test_sublattices_of_one_species_given_as_the_species_are_deprecated(deprecated, dataset):
+    """Sublattices of one species given as the species are deprecated, and are the same as lists of one species, with occupancies of one if there is no mixing."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        expected = validate_dataset(dataset).model_dump(exclude_unset=True)
+    with pytest.warns(DatasetDeprecationWarning, match="are deprecated"):
+        assert validate_dataset(deprecated).model_dump(exclude_unset=True) == expected
 
 
 def test_load_datasets_skips_disabled_datasets_without_checking_them(tmp_path):
@@ -629,8 +643,7 @@ def test_load_datasets_skips_disabled_datasets_without_checking_them(tmp_path):
 
 @pytest.mark.parametrize("dataset", [
     pytest.param({**HM_FORM_CUMG2, "solver": {k: x for k, x in HM_FORM_CUMG2["solver"].items() if k != "mode"}}, id="fixed configuration without solver mode"),
-    pytest.param({**HM_MIX_FCC, "solver": {**HM_MIX_FCC["solver"], "sublattice_configurations": [[["CU", "MG"], ["VA"]]] * 3,
-                                           "sublattice_occupancies": [[mixing, [one]] for mixing, one in HM_MIX_FCC["solver"]["sublattice_occupancies"]]}}, id="one species sublattice as a list"),
+    pytest.param(HM_MIX_FCC_LISTS, id="one species sublattice as a list"),
     pytest.param({k: x for k, x in ZPF_C15_LIQUID.items() if k != "reference"}, id="ZPF without reference"),
     pytest.param({k: x for k, x in ACR_MG.items() if k != "reference"}, id="activity without reference"),
     pytest.param({**ZPF_C15_LIQUID, "conditions": {"P": 101325.0, "T": 1060.0}}, id="ZPF with one condition for every phase region"),
@@ -702,12 +715,13 @@ def test_deprecated_check_dataset_and_clean_dataset_work_like_espei_0_9():
     pytest.param({"weight": 5.0}, 5.0, id="number"),
     pytest.param({"reference_states": {"MG": {"phase": "HCP_A3"}}}, {"CU": {"phase": "FCC_A1"}, "MG": {"phase": "HCP_A3"}}, id="dict"),
 ])
-def test_apply_tags_update_rules(datasets_db, update, expected):
+def test_apply_tags_update_rules(update, expected):
     """Tags extend lists, update dicts and replace other values of tagged datasets."""
-    datasets_db.insert({"tags": ["dft"], "excluded_model_contributions": ["idmix"], "weight": 1.0, "reference_states": {"CU": {"phase": "FCC_A1"}, "MG": {"phase": "LIQUID"}}})
-    apply_tags(datasets_db, {"dft": update})
+    datasets = PickleableTinyDB(storage=MemoryStorage)
+    datasets.insert({"tags": ["dft"], "excluded_model_contributions": ["idmix"], "weight": 1.0, "reference_states": {"CU": {"phase": "FCC_A1"}, "MG": {"phase": "LIQUID"}}})
+    apply_tags(datasets, {"dft": update})
     key, = update
-    assert datasets_db.all()[0][key] == expected
+    assert datasets.all()[0][key] == expected
 
 
 @pytest.mark.parametrize("dataset, model", [
