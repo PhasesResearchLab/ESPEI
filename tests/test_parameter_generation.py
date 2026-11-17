@@ -212,6 +212,21 @@ def test_mixing_energies_are_fit_with_one_species_sublattices_as_lists(datasets_
     assert dbf.symbols['VV0000'] == -22279.3
 
 
+
+@pytest.mark.parametrize("configuration, occupancies", [
+    pytest.param([["NI"], ["AL", "NI"], ["VA"]], [[[1.0], [0.75, 0.25], [1.0]], [[1.0], [0.5, 0.5], [1.0]]], id="NI:(AL,NI):VA"),
+    pytest.param([["AL", "NI"], ["NI"], ["VA"]], [[[0.75, 0.25], [1.0], [1.0]], [[0.5, 0.5], [1.0], [1.0]]], id="(AL,NI):NI:VA"),
+])
+def test_mixing_energies_are_fit_in_either_order_of_equivalent_sublattices(datasets_db, configuration, occupancies):
+    """Configurations of equivalent sublattices fit the same parameters in either order of the sublattices."""
+    phase_models = {"components": ["AL", "NI", "VA"], "phases": {"BCC_B2": {"sublattice_model": [["AL", "NI"], ["AL", "NI"], ["VA"]], "sublattice_site_ratios": [0.5, 0.5, 1], "equivalent_sublattices": [[0, 1]]}}}
+    # Formation enthalpies of B2 SQS (C. Jiang 2009, constrained SQS), as in the example of docs/reference/dataset_schema.qmd
+    datasets_db.insert({"components": ["AL", "NI", "VA"], "phases": ["BCC_B2"], "output": "HM_FORM", "conditions": {"P": 101325, "T": 300}, "excluded_model_contributions": ["idmix"],
+                        "solver": {"sublattice_site_ratios": [0.5, 0.5, 1], "sublattice_configurations": [configuration] * 2, "sublattice_occupancies": occupancies},
+                        "values": [[[-49636.39281, -32471.25149]]]})
+    dbf = generate_parameters(phase_models, datasets_db, 'SGTE91', 'linear')
+    assert {name: value for name, value in dbf.symbols.items() if name.startswith('VV')} == {'VV0000': -269685.0, 'VV0001': -129885.0}
+
 def test_duplicate_parameters_are_not_added_with_input_database(datasets_db):
     phase_models = {
         "components": ["AL", "B"],

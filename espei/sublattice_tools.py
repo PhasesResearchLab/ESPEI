@@ -16,6 +16,38 @@ def recursive_tuplify(x):
     return tuple(map(_tuplify, x))
 
 
+def canonical_order(configuration, equivalent_sublattices):
+    """
+    Return the order of the sublattices of a configuration that sorts equivalent sublattices by their species.
+
+    Parameters
+    ----------
+    configuration : [[str]]
+        Sublattice configuration, the species of each sublattice.
+    equivalent_sublattices : {{int}}
+        Indices of 'configuration' which should be equivalent by symmetry, i.e.,
+        [[0, 4], [1, 2, 3]] means permuting elements 0 and 4, or 1, 2 and 3, respectively,
+        has no effect on the equivalence of the sequence.
+
+    Returns
+    -------
+    list
+        Index of the sublattice of the configuration at each position of the canonical configuration.
+
+    Examples
+    --------
+    >>> canonical_order([['NI'], ['AL', 'NI'], ['VA']], [[0, 1]])
+    [1, 0, 2]
+
+    """
+    order = list(range(len(configuration)))
+    for subl in equivalent_sublattices or []:
+        indices = sorted(subl)
+        for idx, sorted_idx in zip(indices, sorted(indices, key=lambda i: tuple(configuration[i]))):
+            order[idx] = sorted_idx
+    return order
+
+
 def canonicalize(configuration, equivalent_sublattices):
     """
     Sort a sequence with symmetry. This routine gives the sequence
@@ -26,9 +58,7 @@ def canonicalize(configuration, equivalent_sublattices):
     configuration : [[str]]
         Sublattice configuration to sort, the species of each sublattice.
     equivalent_sublattices : {{int}}
-        Indices of 'configuration' which should be equivalent by symmetry, i.e.,
-        [[0, 4], [1, 2, 3]] means permuting elements 0 and 4, or 1, 2 and 3, respectively,
-        has no effect on the equivalence of the sequence.
+        Indices of 'configuration' which should be equivalent by symmetry, see ``canonical_order``.
 
     Returns
     -------
@@ -36,12 +66,8 @@ def canonicalize(configuration, equivalent_sublattices):
         Tuple of the species of each sublattice, sorted among equivalent sublattices.
 
     """
-    canonicalized = list(recursive_tuplify(configuration))
-    for subl in equivalent_sublattices or []:
-        indices = sorted(subl)
-        for conf_idx, sublattice in zip(indices, sorted(canonicalized[idx] for idx in indices)):
-            canonicalized[conf_idx] = sublattice
-    return tuple(canonicalized)
+    configuration = recursive_tuplify(configuration)
+    return tuple(configuration[i] for i in canonical_order(configuration, equivalent_sublattices))
 
 
 def generate_symmetric_group(configuration: Sequence[Any], symmetry: Union[None, Sequence[Sequence[int]]]):

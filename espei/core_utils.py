@@ -6,7 +6,7 @@ from typing import List
 import numpy as np
 import tinydb
 from espei.datasets import Dataset
-from espei.sublattice_tools import canonicalize
+from espei.sublattice_tools import canonical_order, canonicalize
 
 
 def _select_values(data: Dataset, index) -> None:
@@ -26,7 +26,11 @@ def select_configurations(data: Dataset, selected) -> None:
 
 def filter_configurations(desired_data: List[Dataset], configuration, symmetry) -> List[Dataset]:
     """
-    Return non-equilibrium thermochemical datasets with invalid configurations removed.
+    Return non-equilibrium thermochemical datasets with only the configurations that are the configuration by symmetry.
+
+    The sublattices of the configurations and their occupancies are in
+    canonical order (see ``canonicalize``), which is the order of the
+    sublattices of the canonical configuration.
 
     Parameters
     ----------
@@ -44,7 +48,11 @@ def filter_configurations(desired_data: List[Dataset], configuration, symmetry) 
     """
     canonical_config = canonicalize(configuration, symmetry)
     for data in desired_data:
-        select_configurations(data, [canonicalize(config, symmetry) == canonical_config for config in data['solver']['sublattice_configurations']])
+        solver = data['solver']
+        orders = [canonical_order(config, symmetry) for config in solver['sublattice_configurations']]
+        for key in ('sublattice_configurations', 'sublattice_occupancies'):
+            solver[key] = [tuple(sublattices[i] for i in order) for sublattices, order in zip(solver[key], orders)]
+        select_configurations(data, [config == canonical_config for config in solver['sublattice_configurations']])
     return desired_data
 
 
