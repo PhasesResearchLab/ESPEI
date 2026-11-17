@@ -191,6 +191,19 @@ def test_plot_interaction_on_several_sublattices_plots_the_disordered_configurat
     assert np.isclose(np.interp(0.5, curve.get_xdata(), curve.get_ydata()), 8.314462618 * np.log(2), atol=1e-3)
 
 
+
+def test_plot_interaction_plots_data_at_several_temperatures(datasets_db):
+    """plot_interaction plots the data of every temperature."""
+    # Enthalpy of L0(FCC_A1, CU,MG:VA) = -22279.28 + 5.868*T (pycalphad's cumg.tdb)
+    datasets_db.insert({"components": ["CU", "MG", "VA"], "phases": ["FCC_A1"], "output": "HM_MIX", "conditions": {"P": 101325, "T": [300, 600]},
+                        "solver": {"sublattice_site_ratios": [1, 1], "sublattice_configurations": [[["CU", "MG"], ["VA"]]] * 2, "sublattice_occupancies": [[[0.9, 0.1], [1.0]], [[0.75, 0.25], [1.0]]]},
+                        "values": [[[-2005.14, -4177.37]] * 2]})
+    fig, ax = plt.subplots()
+    plot_interaction(Database(CU_MG_TDB), ['CU', 'MG', 'VA'], 'FCC_A1', (('CU', 'MG'), ('VA',)), 'HM_MIX', datasets_db, ax=ax)
+    curve, data = ax.lines
+    plt.close(fig)
+    assert np.allclose(data.get_xydata(), [[0.1, -2005.14], [0.25, -4177.37]] * 2)
+
 @pytest.mark.parametrize("tdb, comps, phase_name, configuration", [
     pytest.param(CU_MG_TDB, ['CU', 'MG', 'VA'], 'CUMG2', (('CU',), ('MG',)), id="endmember"),
     pytest.param(CR_FE_NI_TDB, ['CR', 'FE', 'NI', 'VA'], 'BCC_A2', (('CR', 'FE', 'NI'), ('VA',)), id="ternary interaction"),

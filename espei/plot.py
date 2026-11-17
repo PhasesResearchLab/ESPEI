@@ -386,7 +386,7 @@ def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=Non
     bib_reference_keys = sorted({entry.get('reference', '') for entry in desired_data})
     symbol_map = bib_marker_map(bib_reference_keys)
     for data in desired_data:
-        indep_var_data = [occupancies[interaction_idx][1] for occupancies in data['solver']['sublattice_occupancies']]
+        indep_var_data = np.broadcast_to([occupancies[interaction_idx][1] for occupancies in data['solver']['sublattice_occupancies']], np.shape(data['values'])).flatten()
         response_data = np.zeros_like(data['values'], dtype=np.float64)
         if data['output'] != output or len(data.get('excluded_model_contributions', [])) > 0:
             # Shift the data to the plotted property with all the physics of the model
