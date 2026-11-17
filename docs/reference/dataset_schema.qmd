@@ -326,13 +326,9 @@ two-phase equilibrium in a three component system could be described by
 ::: {.admonition .Tip}
 Tip: Disordered phase compositions
 
-The ordered phase of an order-disorder model, e.g. `FCC_L12` with the
-disordered phase `FCC_A1`, can also be disordered. Adding `"disordered"`
-to a phase composition of the ordered phase,
-e.g. `["FCC_L12", ["NI"], [0.874], "disordered"]`, gives the phase
-composition of the disordered phase, the same as
-`["FCC_A1", ["NI"], [0.874]]`. Phases that never disorder can't be
-`"disordered"`.
+The ordered phase of an order-disorder model, e.g. `FCC_L12` with the disordered phase `FCC_A1`, can also be disordered.
+Adding `"disordered"` to a phase composition of the ordered phase, e.g. `["FCC_L12", ["NI"], [0.874], "disordered"]`, gives the phase composition of the disordered phase, the same as `["FCC_A1", ["NI"], [0.874]]`.
+Phases that use the never disorder model can't be `"disordered"`.
 :::
 
 ## Tags
