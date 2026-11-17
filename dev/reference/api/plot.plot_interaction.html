@@ -311,7 +311,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <img src="../../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../../">ESPEI v0.9.2.dev21+g141a638cb</a> 
+      <a href="../../">ESPEI v0.9.2.dev22+gc1848945f</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -798,10 +798,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 10%">
-<col style="width: 18%">
-<col style="width: 64%">
-<col style="width: 7%">
+<col style="width: 8%">
+<col style="width: 14%">
+<col style="width: 71%">
+<col style="width: 5%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -832,8 +832,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td>configuration</td>
-<td>Tuple[Tuple[str]]</td>
-<td>ESPEI-style configuration</td>
+<td>Sequence[Sequence[str]]</td>
+<td>Species of each sublattice of a binary interaction, i.e.&nbsp;the same two species mixing on one or more sublattices, e.g.&nbsp;<code>(("CU", "MG"), ("VA",))</code>.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
