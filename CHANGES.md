@@ -13,12 +13,12 @@
 - Fix `SciPyOptimizer` minimizing the log-likelihood instead of maximizing it, and pass its `data_weights` to the residual functions ([\@bocklund](https://github.com/bocklund) - [issue 307](https://github.com/phasesresearchlab/espei/issues/307))
 - Fix `setup_context` and the optimizers modifying the symbols of the Database passed to them ([\@bocklund](https://github.com/bocklund) - [issue 307](https://github.com/phasesresearchlab/espei/issues/307))
 - Fix `ZPFResidual` and `EquilibriumPropertyResidual` giving parameter values to the wrong symbols when `symbols_to_fit` is not sorted ([\@bocklund](https://github.com/bocklund) - [issue 307](https://github.com/phasesresearchlab/espei/issues/307))
+- Fix the `"disordered"` flag of ZPF data, and fitting data of phases with equivalent sublattices, data with a weight for each configuration, fixed configuration data without `solver.mode` and equilibrium property data of one component ([\@bocklund](https://github.com/bocklund) - [issue 308](https://github.com/phasesresearchlab/espei/issues/308))
 
 ### Deprecations
 
 - `espei.datasets.check_dataset` and `espei.datasets.clean_dataset` are deprecated and will be removed in ESPEI 0.11. Use `espei.datasets.validate_dataset` instead. `espei.datasets.recursive_map` is removed.
-- Configurations given to `plot_interaction` and `plot_endmember` with sublattices of one species given as the species, e.g. `(("CU", "MG"), "VA")`, are deprecated. Give every sublattice as a tuple, e.g. `(("CU", "MG"), ("VA",))`.
-- Sublattices of one species given as the species in the `sublattice_configurations` of datasets, e.g. `[["CU", "MG"], "VA"]`, and their `sublattice_occupancies` given as numbers, e.g. `[[0.5, 0.5], 1.0]`, are deprecated. Give every sublattice as a list, e.g. `[["CU", "MG"], ["VA"]]` with `[[0.5, 0.5], [1.0]]`. `espei --check-datasets` lists the datasets that use the deprecated form.
+- Sublattices of one species given as the species in fixed configuration datasets are deprecated. Give every sublattice as a list, e.g. `[["CU"], ["CU", "MG"]]` with occupancies `[[1.0], [0.25, 0.75]]` rather than `["CU", ["CU", "MG"]]` with `[1.0, [0.25, 0.75]]`. `espei --check-datasets` lists the datasets to update ([\@bocklund](https://github.com/bocklund) - [issue 308](https://github.com/phasesresearchlab/espei/issues/308))
 
 ### Dependencies
 
