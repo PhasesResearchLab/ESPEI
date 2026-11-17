@@ -447,10 +447,6 @@ class ModelTestException(Exception):
     ...
 
 
-def _raise_model_test_exception(*args, **kwargs):
-    raise ModelTestException()
-
-
 class ErrorModel(Model):
     """
     The only purpose of this class is to raise an exception when getting the molar Gibbs energy
@@ -460,4 +456,4 @@ class ErrorModel(Model):
     def __init__(self, dbe, comps, phase_name, parameters=None):
         super().__init__(dbe, comps, phase_name, parameters)
 
-        self.GM = _raise_model_test_exception()
+        raise ModelTestException()

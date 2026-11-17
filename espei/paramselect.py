@@ -41,10 +41,6 @@ from espei.parameter_selection.fitting_descriptions import gibbs_energy_fitting_
 _log = logging.getLogger(__name__)
 
 
-def _stable_sort_key(x):
-    return str(sorted(x[0].args, key=str))
-
-
 def _poly_degrees(expr):
     poly_dict = {}
     for at in expr.atoms(symengine.Symbol):
@@ -321,7 +317,7 @@ def fit_parameters(dbf, comps, phase_name, configuration, symmetry, datasets, ri
         if (i == len(fitting_description.fitting_steps) - 1) or (fitting_step.parameter_name != fitting_description.fitting_steps[i+1].parameter_name):
             # we're either on the last fitting step or the next step is a
             # different parameter type, so we insert and reset the state.
-            parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=_stable_sort_key)])
+            parameters = OrderedDict([(ky, vl) for ky, vl in sorted(parameters.items(), key=lambda item: str(sorted(item[0].args, key=str)))])
             insert_parameter(dbf, phase_name, configuration, fitting_step.parameter_name, parameters, symmetry)
             fixed_model = None
             fixed_portions = [0]
