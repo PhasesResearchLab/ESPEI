@@ -257,7 +257,7 @@ def compare_data_to_model(dbf, comps, phase_name, configuration, output_property
     x_comp_config_idx = canonicalize(configuration, None)[0].index(x_axis_component)
     num_points = 1001
     calc_x_data = np.linspace(0, 1, num_points)
-    # assumption about the configuration being ((A, B,), VA)
+    # assumption about the configuration being ((A, B), (VA,))
     points = np.empty((num_points, 3))
     points[:, x_comp_config_idx] = calc_x_data
     points[:, 1 - x_comp_config_idx] = 1 - calc_x_data
@@ -274,24 +274,24 @@ def compare_data_to_model(dbf, comps, phase_name, configuration, output_property
 
 output_property = "C11"
 fig, (ax_TiMo, ax_TiZr) = plt.subplots(ncols=2, figsize=(8,3))
-compare_data_to_model(dbf, ["MO", "TI", "VA"], "BCC_A2", (("MO", "TI"), "VA"), output_property, datasets, "MO", ax_TiMo)
-compare_data_to_model(dbf, ["TI", "ZR", "VA"], "BCC_A2", (("TI", "ZR"), "VA"), output_property, datasets, "ZR", ax_TiZr)
+compare_data_to_model(dbf, ["MO", "TI", "VA"], "BCC_A2", (("MO", "TI"), ("VA",)), output_property, datasets, "MO", ax_TiMo)
+compare_data_to_model(dbf, ["TI", "ZR", "VA"], "BCC_A2", (("TI", "ZR"), ("VA",)), output_property, datasets, "ZR", ax_TiZr)
 ax_TiMo.set_ylim(0, 500)
 ax_TiZr.set_ylim(0, 200)
 fig.show()
 
 output_property = "C12"
 fig, (ax_TiMo, ax_TiZr) = plt.subplots(ncols=2, figsize=(8,3))
-compare_data_to_model(dbf, ["MO", "TI", "VA"], "BCC_A2", (("MO", "TI"), "VA"), output_property, datasets, "MO", ax_TiMo)
-compare_data_to_model(dbf, ["TI", "ZR", "VA"], "BCC_A2", (("TI", "ZR"), "VA"), output_property, datasets, "ZR", ax_TiZr)
+compare_data_to_model(dbf, ["MO", "TI", "VA"], "BCC_A2", (("MO", "TI"), ("VA",)), output_property, datasets, "MO", ax_TiMo)
+compare_data_to_model(dbf, ["TI", "ZR", "VA"], "BCC_A2", (("TI", "ZR"), ("VA",)), output_property, datasets, "ZR", ax_TiZr)
 ax_TiMo.set_ylim(0, 200)
 ax_TiZr.set_ylim(0, 140)
 fig.show()
 
 output_property = "C44"
 fig, (ax_TiMo, ax_TiZr) = plt.subplots(ncols=2, figsize=(8,3))
-compare_data_to_model(dbf, ["MO", "TI", "VA"], "BCC_A2", (("MO", "TI"), "VA"), output_property, datasets, "MO", ax_TiMo)
-compare_data_to_model(dbf, ["TI", "ZR", "VA"], "BCC_A2", (("TI", "ZR"), "VA"), output_property, datasets, "ZR", ax_TiZr)
+compare_data_to_model(dbf, ["MO", "TI", "VA"], "BCC_A2", (("MO", "TI"), ("VA",)), output_property, datasets, "MO", ax_TiMo)
+compare_data_to_model(dbf, ["TI", "ZR", "VA"], "BCC_A2", (("TI", "ZR"), ("VA",)), output_property, datasets, "ZR", ax_TiZr)
 ax_TiMo.set_ylim(0, 120)
 ax_TiZr.set_ylim(0, 70)
 fig.show()
