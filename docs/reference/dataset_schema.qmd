@@ -32,9 +32,9 @@ heat capacity for BCC_B2.
     > descriptions. Each sublattice is a list of its species. Thus an
     > endmember for `BCC_B2` (as in this example) is `[["AL"], ["NI"], ["VA"]]`
     > and if there were mixing (as in the next example) it might be
-    > `[["AL"], ["AL", "NI"], ["VA"]]`. A sublattice of one species can
-    > also be given as the species, e.g. `["AL", ["AL", "NI"], "VA"]`, as
-    > in older datasets. Mixing also means that the
+    > `[["AL"], ["AL", "NI"], ["VA"]]`. Giving a sublattice of one species
+    > as the species, e.g. `["AL", ["AL", "NI"], "VA"]`, as in older
+    > datasets, is deprecated. Mixing also means that the
     > `sublattice_occupancies` key must be specified, but that is not
     > the case in this example.
     > Regardless of whether there is mixing or not, the length of this
@@ -125,8 +125,8 @@ sublattice configurations described by `sublattice_configurations` and
 `sublattice_occupancies`. Note that the `sublattice_configurations` and
 `sublattice_occupancies` should have exactly the same shape: each
 sublattice has a site fraction for each of its species. Sublattices
-without mixing have an occupancy of one, `[1]`, which can also be given
-as `1`. If the sublattice of a phase is
+without mixing have an occupancy of one, `[1]`. Giving it as `1`, as in
+older datasets, is deprecated. If the sublattice of a phase is
 `["AL", "NI", "VA"]`, it should only have two occupancies if only
 `["AL", "NI"]` are active in the sublattice configuration.
 

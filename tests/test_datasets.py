@@ -1,8 +1,8 @@
 from copy import deepcopy
-import json, re
+import json, re, warnings
 import pytest
 import numpy as np
-from espei.datasets import DatasetError, DatasetWarning, validate_dataset, apply_tags, load_datasets, check_dataset, clean_dataset
+from espei.datasets import DatasetError, DatasetWarning, DatasetDeprecationWarning, validate_dataset, apply_tags, load_datasets, check_dataset, clean_dataset
 from espei.datasets import FixedConfigurationDataset, EquilibriumPropertyDataset, ActivityDataset, ZPFDataset
 from espei.phase_models import PhaseModelSpecification
 from espei.utils import PickleableTinyDB, MemoryStorage
@@ -623,10 +623,14 @@ def test_load_datasets_returns_the_datasets_as_written(tmp_path):
     assert json.loads(json.dumps(load_datasets([str(tmp_path / f"{i}.json") for i in range(len(datasets))]).all())) == datasets
 
 
-def test_sublattices_of_one_species_can_be_given_as_the_species():
-    """Sublattices of one species can be given as the species, and occupancies are one if there is no mixing."""
-    assert validate_dataset(HM_MIX_FCC).model_dump(exclude_unset=True) == validate_dataset(HM_MIX_FCC_LISTS).model_dump(exclude_unset=True)
-    assert validate_dataset(HM_FORM_CUMG2).model_dump(exclude_unset=True) == validate_dataset(HM_FORM_CUMG2_LISTS).model_dump(exclude_unset=True)
+@pytest.mark.parametrize("deprecated, dataset", [pytest.param(HM_MIX_FCC, HM_MIX_FCC_LISTS, id="mixing"), pytest.param(HM_FORM_CUMG2, HM_FORM_CUMG2_LISTS, id="no mixing")])
+def test_sublattices_of_one_species_given_as_the_species_are_deprecated(deprecated, dataset):
+    """Sublattices of one species given as the species are deprecated, and are the same as lists of one species, with occupancies of one if there is no mixing."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        expected = validate_dataset(dataset).model_dump(exclude_unset=True)
+    with pytest.warns(DatasetDeprecationWarning, match="are deprecated"):
+        assert validate_dataset(deprecated).model_dump(exclude_unset=True) == expected
 
 
 def test_load_datasets_skips_disabled_datasets_without_checking_them(tmp_path):

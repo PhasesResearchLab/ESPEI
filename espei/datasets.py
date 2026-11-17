@@ -1,7 +1,7 @@
 """
 ESPEI datasets and the pydantic models of each type of dataset.
 """
-import fnmatch, json, os, warnings
+import fnmatch, json, os, sys, warnings
 from typing import Any, Iterable, Literal, Optional, Self
 
 import numpy as np
@@ -19,6 +19,15 @@ class DatasetError(Exception):
 
 class DatasetWarning(UserWarning):
     """Warning for parts of a dataset that could not be checked or are likely mistakes."""
+
+
+class DatasetDeprecationWarning(DatasetWarning, DeprecationWarning):
+    """Warning for parts of a dataset that are deprecated."""
+
+
+# DeprecationWarnings are not shown by default, but users must see these to update their datasets
+if not sys.warnoptions:
+    warnings.filterwarnings("default", category=DatasetDeprecationWarning)
 
 
 class _Model(BaseModel):
@@ -61,12 +70,12 @@ class Solver(_Model):
     @model_validator(mode="before")
     @classmethod
     def _sublattices_of_one_species(cls, solver: Any) -> Any:
-        # A sublattice of one species can also be given as the species, e.g. "VA" for ["VA"], with the occupancy 1.0 for [1.0]
-        if not isinstance(solver, dict):
+        # Deprecated: a sublattice of one species given as the species, e.g. "VA" for ["VA"], with the occupancy 1.0 for [1.0]
+        keys = [key for key in ("sublattice_configurations", "sublattice_occupancies") if isinstance(solver, dict) and isinstance(solver.get(key), list)]
+        if all(isinstance(subl, (list, tuple)) for key in keys for row in solver[key] if isinstance(row, (list, tuple)) for subl in row):
             return solver
-        sublattices = {key: [[subl if isinstance(subl, (list, tuple)) else [subl] for subl in row] if isinstance(row, (list, tuple)) else row for row in solver[key]]
-                       for key in ("sublattice_configurations", "sublattice_occupancies") if isinstance(solver.get(key), list)}
-        return {**solver, **sublattices}
+        warnings.warn('Sublattices of one species given as the species, e.g. "VA", with their occupancies as numbers are deprecated. Give them as lists, e.g. ["VA"] with the occupancy [1.0].', DatasetDeprecationWarning)
+        return {**solver, **{key: [[subl if isinstance(subl, (list, tuple)) else [subl] for subl in row] if isinstance(row, (list, tuple)) else row for row in solver[key]] for key in keys}}
 
     @model_validator(mode="after")
     def _occupancies_without_mixing(self) -> Self:
