@@ -4,7 +4,7 @@
   "solver": {
     "mode": "manual",
     "sublattice_site_ratios": [2, 1],
-    "sublattice_configurations": [["CU", "MG"]]
+    "sublattice_configurations": [[["CU"], ["MG"]]]
   },
   "conditions": {
     "P": 101325,

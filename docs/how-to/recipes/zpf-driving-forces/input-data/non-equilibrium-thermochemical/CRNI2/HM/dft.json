@@ -5,10 +5,10 @@
     "mode": "manual",
     "sublattice_site_ratios": [2, 1],
     "sublattice_configurations": [
-      ["NI", "CR"]
+      [["NI"], ["CR"]]
     ],
     "sublattice_occupancies": [
-      [1.0, 1.0]
+      [[1.0], [1.0]]
     ]
   },
   "conditions": {

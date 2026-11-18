@@ -7,6 +7,8 @@ import copy
 import numpy as np
 from scipy.stats import norm, uniform, triang
 
+from espei.utils import docs_url
+
 
 class rv_zero(object):
     """
@@ -129,7 +131,7 @@ class PriorSpec(object):
 
         """
         if name not in self.SUPPORTED_PRIORS:
-            raise ValueError("Selected prior is not ")
+            raise ValueError(f'Prior "{name}" is not supported. Use one of {self.SUPPORTED_PRIORS}. Read more at {docs_url("how-to/specifying_priors.html")}')
         self.name = name
         self.prior_generator = getattr(self, '_prior_'+name)
 

@@ -29,6 +29,12 @@ def unpack_piecewise(x):
         return float(x)
 
 
+def docs_url(page: str) -> str:
+    """Return the URL of a page of the documentation of this ESPEI release, or of dev for other versions."""
+    from espei import __version__
+    return f"https://espei.org/{__version__ if re.fullmatch(r'\d+(\.\d+)*', __version__) else 'dev'}/{page}"
+
+
 class PickleableTinyDB(TinyDB):
     """A pickleable version of TinyDB that uses MemoryStorage as a default."""
     def __getstate__(self):

@@ -4,10 +4,10 @@
   "solver": {
     "mode": "manual",
     "sublattice_site_ratios": [2, 1],
-      "sublattice_configurations": [["CU", "MG"],
-                                    ["MG", "CU"],
-                                    ["MG", "MG"],
-                                    ["CU", "CU"]]
+      "sublattice_configurations": [[["CU"], ["MG"]],
+                                    [["MG"], ["CU"]],
+                                    [["MG"], ["MG"]],
+                                    [["CU"], ["CU"]]]
   },
   "conditions": {
     "P": 101325,

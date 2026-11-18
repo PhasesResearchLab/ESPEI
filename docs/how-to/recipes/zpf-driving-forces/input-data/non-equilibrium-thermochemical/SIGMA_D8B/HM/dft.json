@@ -5,14 +5,14 @@
     "mode": "manual",
     "sublattice_site_ratios": [10, 4, 16],
     "sublattice_configurations": [
-      ["CR", "CR", "NI"],
-      ["NI", "CR", "CR"],
-      ["NI", "CR", "NI"]
+      [["CR"], ["CR"], ["NI"]],
+      [["NI"], ["CR"], ["CR"]],
+      [["NI"], ["CR"], ["NI"]]
     ],
     "sublattice_occupancies": [
-      [1.0, 1.0, 1.0],
-      [1.0, 1.0, 1.0],
-      [1.0, 1.0, 1.0]
+      [[1.0], [1.0], [1.0]],
+      [[1.0], [1.0], [1.0]],
+      [[1.0], [1.0], [1.0]]
     ]
   },
   "conditions": {

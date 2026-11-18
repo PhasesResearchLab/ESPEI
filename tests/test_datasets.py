@@ -625,11 +625,11 @@ def test_load_datasets_returns_the_datasets_as_written(tmp_path):
 
 @pytest.mark.parametrize("deprecated, dataset", [pytest.param(HM_MIX_FCC, HM_MIX_FCC_LISTS, id="mixing"), pytest.param(HM_FORM_CUMG2, HM_FORM_CUMG2_LISTS, id="no mixing")])
 def test_sublattices_of_one_species_given_as_the_species_are_deprecated(deprecated, dataset):
-    """Sublattices of one species given as the species are deprecated, and are the same as lists of one species, with occupancies of one if there is no mixing."""
+    """Sublattices of one species given as the species are deprecated, shown as lists in the first configuration, and are the same as lists of one species."""
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         expected = validate_dataset(dataset).model_dump(exclude_unset=True)
-    with pytest.warns(DatasetDeprecationWarning, match="are deprecated"):
+    with pytest.warns(DatasetDeprecationWarning, match=re.escape(json.dumps(dataset["solver"]["sublattice_configurations"][0]))):
         assert validate_dataset(deprecated).model_dump(exclude_unset=True) == expected
 
 
@@ -667,7 +667,7 @@ def test_valid_datasets(dataset):
     pytest.param({**HM_MIX_FCC, "weight": -1.0}, "", "weight must be positive", id="negative weight"),
     pytest.param({**HM_MIX_FCC, "solver": {**HM_MIX_FCC["solver"], "sublattice_occupancies": [[[0.75, 0.75], 1.0]] * 3}}, "", "sum to one", id="mixing occupancies not summing to one"),
     pytest.param({**HM_FORM_CUMG2, "solver": {**HM_FORM_CUMG2["solver"], "sublattice_occupancies": [[0.5, 1.0]]}}, "", "sum to one", id="occupancy of one species not one"),
-    pytest.param({**HM_MIX_FCC, "solver": {**HM_MIX_FCC["solver"], "sublattice_configurations": [[["MG", "CU"], "VA"]] * 3}}, "", "must be sorted and unique", id="unsorted mixing sublattice"),
+    pytest.param({**HM_MIX_FCC, "solver": {**HM_MIX_FCC["solver"], "sublattice_configurations": [[["MG", "CU"], "VA"]] * 3}}, "", "should be [[0.03125, 0.96875], [1.0]]", id="unsorted mixing sublattice"),
     pytest.param({**HM_MIX_LIQUID, "conditions": {**HM_MIX_LIQUID["conditions"], "W_MG": [0.1, 0.2]}}, "", "conditions must be T, P, N or X_<component>", id="mass fraction condition"),
     pytest.param({**HM_MIX_LIQUID, "conditions": {"P": 101325.0, "T": 1100.0}, "values": [[[-3070.0]]]}, "", "leaving one dependent component", id="binary without X_ condition"),
     pytest.param({**HM_MIX_LIQUID, "components": ["CU"], "conditions": {**HM_MIX_LIQUID["conditions"], "X_CU": [0.2, 0.4]}}, "", "leaving one dependent component", id="composition condition of one component"),
