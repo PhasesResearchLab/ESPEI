@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationIn
 from tinydb.storages import MemoryStorage
 from tinydb import where
 
-from espei.utils import PickleableTinyDB
+from espei.utils import PickleableTinyDB, docs_url
 
 
 class DatasetError(Exception):
@@ -72,10 +72,15 @@ class Solver(_Model):
     def _sublattices_of_one_species(cls, solver: Any) -> Any:
         # Deprecated: a sublattice of one species given as the species, e.g. "VA" for ["VA"], with the occupancy 1.0 for [1.0]
         keys = [key for key in ("sublattice_configurations", "sublattice_occupancies") if isinstance(solver, dict) and isinstance(solver.get(key), list)]
-        if all(isinstance(subl, (list, tuple)) for key in keys for row in solver[key] if isinstance(row, (list, tuple)) for subl in row):
+        deprecated = [(key, i) for key in keys for i, row in enumerate(solver[key]) if isinstance(row, (list, tuple)) and not all(isinstance(subl, (list, tuple)) for subl in row)]
+        if not deprecated:
             return solver
-        warnings.warn('Sublattices of one species given as the species, e.g. "VA", with their occupancies as numbers are deprecated. Give them as lists, e.g. ["VA"] with the occupancy [1.0].', DatasetDeprecationWarning)
-        return {**solver, **{key: [[subl if isinstance(subl, (list, tuple)) else [subl] for subl in row] if isinstance(row, (list, tuple)) else row for row in solver[key]] for key in keys}}
+        updated = {key: [[subl if isinstance(subl, (list, tuple)) else [subl] for subl in row] if isinstance(row, (list, tuple)) else row for row in solver[key]] for key in keys}
+        i = deprecated[0][1]
+        warnings.warn("Every sublattice must be a list of species, even if it has one species. Giving a single species without a list is deprecated. Update this dataset, for example:" +
+                      "".join(f"\n  {key}[{i}] {json.dumps(solver[key][i])} should be {json.dumps(updated[key][i])}" for key in keys if (key, i) in deprecated) +
+                      f"\nRead more at {docs_url('reference/dataset_schema.html#non_equilibrium_thermochemical_data')}", DatasetDeprecationWarning)
+        return {**solver, **updated}
 
     @model_validator(mode="after")
     def _occupancies_without_mixing(self) -> Self:
@@ -106,15 +111,19 @@ class FixedConfigurationDataset(Dataset):
         if len(occupancies) != len(configurations):
             raise ValueError(f"sublattice_occupancies must have one entry per sublattice configuration ({len(configurations)}), got {len(occupancies)}")
         num_sublattices = len(self.solver.sublattice_site_ratios)
-        for config, occupancy in zip(configurations, occupancies):
-            if not len(config) == len(occupancy) == num_sublattices:
-                raise ValueError(f"sublattice configuration {config} and occupancies {occupancy} must have one entry for each of the {num_sublattices} sublattices")
-            for subl, occ in zip(config, occupancy):
-                # Interactions are sorted, e.g. for espei.core_utils.get_samples
-                if subl != tuple(sorted(set(subl))):
-                    raise ValueError(f"sublattice {subl} of configuration {config} must be sorted and unique, i.e. {sorted(set(subl))}")
-                if len(subl) != len(occ) or abs(sum(occ) - 1) > 0.01:
-                    raise ValueError(f"occupancies {occ} must have one site fraction per species of the sublattice {subl} of configuration {config} and sum to one")
+        for i, (config, occupancy) in enumerate(zip(configurations, occupancies)):
+            if len(config) != num_sublattices:
+                raise ValueError(f"sublattice_configurations[{i}] {json.dumps(config)} must have one entry for each of the {num_sublattices} sublattices")
+            if [len(occ) for occ in occupancy] != [len(subl) for subl in config] or any(abs(sum(occ) - 1) > 0.01 for occ in occupancy):
+                raise ValueError(f"sublattice_occupancies[{i}] {json.dumps(occupancy)} must have one site fraction per species of sublattice_configurations[{i}] {json.dumps(config)} and sum to one in each sublattice")
+            if any(len(set(subl)) != len(subl) for subl in config):
+                raise ValueError(f"sublattice_configurations[{i}] {json.dumps(config)} must list each species of a sublattice once")
+            # Interactions are sorted, e.g. for espei.core_utils.get_samples
+            if any(subl != tuple(sorted(subl)) for subl in config):
+                pairs = [sorted(zip(subl, occ)) for subl, occ in zip(config, occupancy)]
+                raise ValueError("the species of each sublattice must be sorted, with their occupancies in the same order:\n"
+                                 f"    sublattice_configurations[{i}] {json.dumps(config)} should be {json.dumps([[sp for sp, _ in p] for p in pairs])}\n"
+                                 f"    sublattice_occupancies[{i}] {json.dumps(occupancy)} should be {json.dumps([[x for _, x in p] for p in pairs])}")
         return self
 
     @model_validator(mode="after")

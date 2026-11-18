@@ -302,9 +302,10 @@ def _data_shift_model(dbf, comps, phase_name, output, data):
 
 def _sublattices_as_tuples(configuration):
     """Return the configuration with the species of each sublattice as a tuple, from the deprecated form with a sublattice of one species given as the species."""
+    updated = tuple((subl,) if isinstance(subl, str) else tuple(subl) for subl in configuration)
     if any(isinstance(subl, str) for subl in configuration):
-        warnings.warn('Sublattices of one species given as the species, e.g. "VA" in (("CU", "MG"), "VA"), are deprecated. Give them as tuples, e.g. (("CU", "MG"), ("VA",)).', DeprecationWarning, stacklevel=3)
-    return tuple((subl,) if isinstance(subl, str) else tuple(subl) for subl in configuration)
+        warnings.warn(f"Every sublattice must be a tuple of species, even if it has one species. Giving a single species without a tuple is deprecated. The configuration {configuration} should be {updated}.", DeprecationWarning, stacklevel=3)
+    return updated
 
 
 def plot_interaction(dbf, comps, phase_name, configuration, output, datasets=None, symmetry=None, ax=None, plot_kwargs=None, dataplot_kwargs=None) -> plt.Axes:
@@ -458,7 +459,7 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
 
     """
     if output.endswith('_MIX'):
-        raise ValueError("`plot_interaction` only supports HM, HM_FORM, SM, SM_FORM or CPM, CPM_FORM outputs.")
+        raise ValueError("`plot_endmember` only supports HM, HM_FORM, SM, SM_FORM or CPM, CPM_FORM outputs.")
     if x not in ('T',):
         raise ValueError(f'`x` passed to `plot_endmember` must be "T" got {x}')
     configuration = _sublattices_as_tuples(configuration)
@@ -481,7 +482,7 @@ def plot_endmember(dbf, comps, phase_name, configuration, output, datasets=None,
     # Plot predicted values from the database
     endpoints = endmembers_from_interaction(configuration)
     if len(endpoints) != 1:
-        raise ValueError(f"The configuration passed to `plot_endmember` must be an endmebmer configuration. Got {configuration}")
+        raise ValueError(f"The configuration passed to `plot_endmember` must be an endmember configuration. Got {configuration}")
     mod = Model(dbf, comps, phase_name)
     prop = _set_referenced_property(mod, output, dbf=dbf)
     endmember = _translate_endmember_to_array(endpoints[0], mod.ast.atoms(v.SiteFraction))

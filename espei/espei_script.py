@@ -201,9 +201,9 @@ def run_espei(run_settings):
         # check that the MCMC output files do not already exist
         # only matters if we are actually running MCMC
         if tracefile is not None and os.path.exists(tracefile):
-            raise OSError('Tracefile "%s" exists and would be overwritten by a new run. Use the ``output.tracefile`` setting to set a different name.', tracefile)
+            raise OSError(f'Tracefile "{tracefile}" exists and would be overwritten by a new run. Use the `output.tracefile` setting to set a different name.')
         if probfile is not None and os.path.exists(probfile):
-            raise OSError('Probfile "%s" exists and would be overwritten by a new run. Use the ``output.probfile`` setting to set a different name.', probfile)
+            raise OSError(f'Probfile "{probfile}" exists and would be overwritten by a new run. Use the `output.probfile` setting to set a different name.')
 
         # scheduler setup
         if mcmc_settings['scheduler'] is not None:
@@ -333,7 +333,7 @@ def main():
         with open(input_file) as f:
             input_settings = json.load(f)
     else:
-        raise ValueError('Unknown file type %s for input file %s. YAML and JSON are supported', ext, input_file)
+        raise ValueError(f'Unknown file type "{ext}" of the input file {input_file}. Use a YAML (.yaml or .yml) or JSON (.json) file.')
 
     run_espei(input_settings)
 

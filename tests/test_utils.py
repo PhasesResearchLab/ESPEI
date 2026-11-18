@@ -5,8 +5,9 @@ import pickle
 
 import pytest
 from tinydb import where
+import espei
 from espei.utils import ImmediateClient, PickleableTinyDB, MemoryStorage, \
-    bib_marker_map, extract_aliases
+    bib_marker_map, docs_url, extract_aliases
 
 from .fixtures import datasets_db, tmp_file
 from .testing_data import CU_MG_TDB
@@ -104,3 +105,10 @@ def test_extract_aliases(reason, phase_models, expected_aliases):
             print(aliases)
     else:
         assert extract_aliases(phase_models) == expected_aliases, reason
+
+
+@pytest.mark.parametrize("version, url", [("0.10.0", "https://espei.org/0.10.0/index.html"), ("0.10.1.dev3+gc184894", "https://espei.org/dev/index.html")])
+def test_docs_url_of_releases_and_development_versions(monkeypatch, version, url):
+    """Documentation links go to the docs of a release, or to dev for other versions."""
+    monkeypatch.setattr(espei, "__version__", version)
+    assert docs_url("index.html") == url

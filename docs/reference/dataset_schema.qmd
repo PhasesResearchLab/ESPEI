@@ -394,9 +394,10 @@ that have the `"dft"` tag:
 
 ## Common Mistakes and Notes
 
-1.  A single element sublattice is different in a phase model
-    (`[["A", "B"], ["A"]]]`) than a sublattice configuration
-    (`[["A", "B"], "A"]`).
+1.  A sublattice of one species is a list of that species, e.g. `["A"]` in
+    `[["A", "B"], ["A"]]`, in both phase models and sublattice configurations.
+    Giving it as the species, e.g. `[["A", "B"], "A"]`, is deprecated in
+    sublattice configurations.
 2.  Make sure you use the right units (`J/mole-atom`, mole fractions,
     Kelvin, Pascal)
 3.  Data that do not include some physics, e.g. DFT energies of mixing

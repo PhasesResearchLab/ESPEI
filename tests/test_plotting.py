@@ -4,6 +4,7 @@ Tests for plotting functions.
 Mostly integration tests that don't validate the plots themselves, but rather that the
 internal usage and matplotlib usage is correct.
 """
+import re
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -172,7 +173,7 @@ def test_plot_endmember_with_sublattices_of_one_species_given_as_the_species():
     """Configurations with sublattices of one species given as the species are deprecated, and plot the same."""
     dbf = Database(CU_MG_TDB)
     fig, ax = plt.subplots()
-    with pytest.warns(DeprecationWarning, match="are deprecated"):
+    with pytest.warns(DeprecationWarning, match=re.escape("(('CU',), ('MG',))")):
         plot_endmember(dbf, ['CU', 'MG', 'VA'], 'CUMG2', ('CU', 'MG'), 'HM_FORM', ax=ax)
     plot_endmember(dbf, ['CU', 'MG', 'VA'], 'CUMG2', (('CU',), ('MG',)), 'HM_FORM', ax=ax)
     deprecated, current = ax.lines
