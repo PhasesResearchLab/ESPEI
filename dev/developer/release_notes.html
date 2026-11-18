@@ -275,7 +275,7 @@ ul.task-list li input[type="checkbox"] {
       <img src="../_static/ESPEI-logo-withtext.png" alt="" class="sidebar-logo dark-content py-0 d-lg-inline d-none">
       </a>
     <div class="sidebar-title mb-0 py-0">
-      <a href="../">ESPEI v0.9.2.dev22+gc1848945f</a> 
+      <a href="../">ESPEI v0.9.2.dev23+gde6f5925c</a> 
         <div class="sidebar-tools-main">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
@@ -855,7 +855,7 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="improvements">Improvements</h3>
 <ul>
 <li>Fit Gibbs energy parameters to Gibbs energy (<code>GM</code>) data and to the temperature dependence of <code>HM</code> and <code>SM</code> data with the new <code>simultaneous_gibbs_energy_fitting_description</code>, and to absolute data without a reference state (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/304">issue 304</a>)</li>
-<li>Generalize reference states of fixed configuration data. Parameter selection and MCMC use the same <code>_FORM</code> and <code>_MIX</code> reference states, fixing bugs where excluded model contributions (e.g.&nbsp;magnetism) were handled differently between them. See the new <a href="https://espei.org/reference/reference_states.html">Reference States</a> page (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/81">issue 81</a>, <a href="https://github.com/phasesresearchlab/espei/issues/305">issue 305</a>)</li>
+<li>Generalize reference states of fixed configuration data. Parameter selection and MCMC use the same <code>_FORM</code> and <code>_MIX</code> reference states, fixing bugs where excluded model contributions (e.g.&nbsp;magnetism) were handled differently between them. See the new <a href="https://espei.org/dev/reference/reference_states.html">Reference States</a> page (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/81">issue 81</a>, <a href="https://github.com/phasesresearchlab/espei/issues/305">issue 305</a>)</li>
 <li>Datasets are checked by pydantic models of each type of dataset (<code>FixedConfigurationDataset</code>, <code>EquilibriumPropertyDataset</code>, <code>ActivityDataset</code> and <code>ZPFDataset</code> in <code>espei.datasets</code>), and <code>espei.datasets.validate_dataset</code> returns the model of a dataset. Errors in a dataset are reported together, each with its location in the dataset. New checks catch datasets that were silently ignored, gave silently wrong results, or failed later with unclear errors, e.g.&nbsp;occupancies that don’t sum to one, <code>reference_states</code> with outputs that don’t use them, phase regions without a known phase composition, ZPF values with phases that are not in <code>phases</code>, and conditions that can’t be used. ZPF mole fractions given as strings and equilibrium property data of one component can now be loaded (<a href="https://github.com/bocklund">@bocklund</a> - <a href="https://github.com/phasesresearchlab/espei/issues/269">issue 269</a>)</li>
 </ul>
 </section>
