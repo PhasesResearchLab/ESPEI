@@ -32,7 +32,8 @@ def unpack_piecewise(x):
 def docs_url(page: str) -> str:
     """Return the URL of a page of the documentation of this ESPEI release, or of dev for other versions."""
     from espei import __version__
-    return f"https://espei.org/{__version__ if re.fullmatch(r'\d+(\.\d+)*', __version__) else 'dev'}/{page}"
+    version = __version__ if re.fullmatch(r"\d+(\.\d+)*", __version__) else "dev"
+    return f"https://espei.org/{version}/{page}"
 
 
 class PickleableTinyDB(TinyDB):
