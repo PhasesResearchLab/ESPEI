@@ -221,38 +221,11 @@ def bib_marker_map(bib_keys, markers=None):
 
 
 def parameter_term(expression, symbol):
-    """
-    Determine the term, e.g. T*log(T) that belongs to the symbol in expression
-
-    Parameters
-    ----------
-    expression :
-    symbol :
-
-    Returns
-    -------
-
-    """
-    if expression == symbol:
-        # the parameter is the symbol, so the multiplicative term is 1.
-        term = 1
-    else:
-        if isinstance(expression, symengine.Piecewise):
-            expression = expression.args[0]
-        if isinstance(expression, symengine.Symbol):
-            # this is not mathematically correct, but we just need to be able to split it into args
-            expression = symengine.Add(expression, 1)
-        if not isinstance(expression, symengine.Add):
-            raise ValueError('Parameter {} is a {} not a symengine.Add or a Piecewise Add'.format(expression, type(expression)))
-
-        expression_terms = expression.args
-        term = None
-        for term_coeff in expression_terms:
-            coeff, root = term_coeff.as_coeff_mul(symbol)
-            if root == (symbol,):
-                term = coeff
-                break
-    if term is None:
+    """Return the term, e.g. T*log(T), that multiplies a symbol in a parameter linear in that symbol."""
+    if isinstance(expression, symengine.Piecewise):
+        expression = expression.args[0]
+    term = expression.diff(symbol)
+    if term == 0 or symbol in term.free_symbols:
         raise ValueError('No multiplicative terms found for Symbol {} in parameter {}'.format(symbol, expression))
     return term
 
