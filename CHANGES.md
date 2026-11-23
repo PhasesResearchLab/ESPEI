@@ -23,7 +23,7 @@
 ### Dependencies
 
 - Require pycalphad 0.12 or later.
-- dask and distributed are now optional and are only imported when MCMC uses a dask scheduler ([\@bocklund](https://github.com/bocklund))
+- dask and distributed are now optional and are only imported when MCMC uses a dask scheduler ([\@bocklund](https://github.com/bocklund) - [issue 311](https://github.com/phasesresearchlab/espei/issues/311))
 - Support Python 3.14 and 3.15 ([\@bocklund](https://github.com/bocklund) - [issue 306](https://github.com/phasesresearchlab/espei/issues/306))
 
 ## 0.9.1 (2026-06-05)
