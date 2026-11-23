@@ -196,6 +196,8 @@ def run_espei(run_settings):
                     _log.info("Install bokeh to use the dask bokeh server.")
             else: # we were passed a scheduler file name
                 client = ImmediateClient(scheduler_file=mcmc_settings['scheduler'])
+                if client.run_on_scheduler(lambda dask_scheduler: 'stealing' in dask_scheduler.extensions):
+                    _log.warning("Work stealing is on in the dask scheduler and can kill runs. Turn it off with the environment variable DASK_DISTRIBUTED__SCHEDULER__WORK_STEALING=False.")
             client.run(espei.logger.config_logger, verbosity=log_verbosity, filename=log_filename)
             client.run(np.set_printoptions, linewidth=sys.maxsize)
             _log.info("Running with dask scheduler: %s [%s cores, distributed version %s]" % (client.scheduler, sum(client.ncores().values()), distributed_version))
