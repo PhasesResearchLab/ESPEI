@@ -15,7 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v7
       with:
-        fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
+        fetch-depth: 0  # fetch the entire repo history, required to guarantee setuptools_scm will pick up the tags
     - uses: astral-sh/setup-uv@v7
       with:
         python-version: ${{ matrix.python-version }}
@@ -34,10 +34,25 @@ jobs:
     steps:
     - uses: actions/checkout@v7
       with:
-        fetch-depth: 0  # fetch the entire repo history, required to guarantee versioneer will pick up the tags
+        fetch-depth: 0  # fetch the entire repo history, required to guarantee setuptools_scm will pick up the tags
     - uses: astral-sh/setup-uv@v7
       with:
         python-version: ${{ matrix.python-version }}
         enable-cache: true
     - run: uv sync --dev -P "pycalphad @ git+https://github.com/pycalphad/pycalphad.git@develop"
     - run: uv run pytest -v
+
+# dask/distributed are optional
+  PyTest-no-dask:
+    name: Test Python 3.13 - without dask
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0  # fetch the entire repo history, required to guarantee setuptools_scm will pick up the tags
+    - uses: astral-sh/setup-uv@v7
+      with:
+        python-version: "3.13"
+        enable-cache: true
+    - run: uv sync --dev --no-install-package dask --no-install-package distributed
+    - run: uv run --no-sync pytest -v --ignore=espei/dask_utils.py

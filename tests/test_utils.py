@@ -8,7 +8,7 @@ import symengine
 from pycalphad import Database, variables as v
 from tinydb import where
 import espei
-from espei.utils import ImmediateClient, PickleableTinyDB, MemoryStorage, \
+from espei.utils import PickleableTinyDB, MemoryStorage, \
     bib_marker_map, docs_url, extract_aliases, formatted_parameter, parameter_term
 
 from .fixtures import datasets_db, tmp_file
@@ -17,7 +17,9 @@ from .testing_data import CU_MG_TDB
 
 def test_immediate_client_returns_map_results_directly():
     """Calls ImmediateClient.map should return the results, instead of Futures."""
+    pytest.importorskip("distributed")
     from distributed import LocalCluster
+    from espei.dask_utils import ImmediateClient
     cli = ImmediateClient(LocalCluster(n_workers=1))
     num_list = range(0, 11)
 #    square = lambda x: x**2
