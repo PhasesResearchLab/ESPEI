@@ -246,7 +246,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                     'phase_name': phase_name,
                     'prop': prop,
                     # needs the following keys to be added:
-                    # calculate_dict, phase_record_factory, model, output, weights
+                    # calculate_dict, phase_record_factory, dof, output, weights
                 }
                 # get all the data with these model exclusions
                 exc_search = where('excluded_model_contributions').test(lambda x: tuple(sorted(set(x))) == exclusion)
@@ -270,31 +270,25 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                 statevar_dict = OrderedDict(sorted(statevar_dict.items(), key=lambda x: str(x[0])))
                 phase_record_factory = PhaseRecordFactory(dbf, species, statevar_dict, model_dict,
                                                    parameters={s: 0 for s in symbols_to_fit})
-                str_statevar_dict = OrderedDict((str(k), vals) for k, vals in statevar_dict.items())
-                data_dict['str_statevar_dict'] = str_statevar_dict
+                # The phase record's degrees of freedom of each sample: points are in the order of the constituents, the phase record takes site fractions in the order of Model.site_fractions
+                constituent_site_fractions = [v.Y(phase_name, idx, const) for idx, subl in enumerate(constituents) for const in subl]
+                site_fractions = calculate_dict['points'][:, [constituent_site_fractions.index(y) for y in mod.site_fractions]]
+                data_dict['dof'] = np.ascontiguousarray(np.column_stack([statevar_dict[sv] for sv in phase_record_factory.state_variables] + [site_fractions]), dtype=np.float64)
                 data_dict['phase_record_factory'] = phase_record_factory
                 data_dict['calculate_dict'] = calculate_dict
-                data_dict['model'] = model_dict
                 data_dict['output'] = output
                 data_dict['weights'] = np.array(property_std_deviation[prop.split('_')[0]])/np.array(calculate_dict.pop('weights'))
-                data_dict['constituents'] = constituents
                 all_data_dicts.append(data_dict)
     return all_data_dicts
 
 
 def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfigurationCalculationData, parameters):
     """Property at the fixed configuration of each sample minus the data"""
-    phase_name = calc_data['phase_name']
     phase_record_factory = calc_data['phase_record_factory']
     phase_record_factory.update_parameters(parameters)
-    phase_record = phase_record_factory[phase_name]
-    # points are in the order of the constituents, the phase record takes site fractions in the order of Model.site_fractions
-    constituent_site_fractions = [v.Y(phase_name, idx, const) for idx, subl in enumerate(calc_data['constituents']) for const in subl]
-    site_fractions = calc_data['calculate_dict']['points'][:, [constituent_site_fractions.index(y) for y in calc_data['model'][phase_name].site_fractions]]
-    state_variables = [calc_data['str_statevar_dict'][str(sv)] for sv in phase_record.state_variables]
-    dof = np.ascontiguousarray(np.column_stack(state_variables + [site_fractions]), dtype=np.float64)
-    values = np.zeros(dof.shape[0])
-    phase_record.prop_2d(values, dof, calc_data['output'].encode('utf-8'))
+    phase_record = phase_record_factory[calc_data['phase_name']]
+    values = np.zeros(len(calc_data['dof']))
+    phase_record.prop_2d(values, calc_data['dof'], calc_data['output'].encode('utf-8'))
     return values - calc_data['calculate_dict']['values']
 
 
