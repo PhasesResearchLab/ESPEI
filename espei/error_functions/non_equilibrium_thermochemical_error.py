@@ -15,10 +15,6 @@ from tinydb import where
 from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
 from pycalphad import Database, Model, variables as v
 from pycalphad.core.utils import unpack_species, filter_phases
-from pycalphad import Workspace
-from pycalphad.property_framework import IsolatedPhase
-from pycalphad.property_framework.metaproperties import find_first_compset
-from pycalphad.core.solver import Solver, SolverResult
 
 
 from espei.datasets import Dataset
@@ -39,45 +35,6 @@ PROPERTY_STD_DEVIATION = {
     'SM': 0.2,  # J/K-mol
     'CPM': 0.2,  # J/K-mol
 }
-
-class NoSolveSolver(Solver):
-    def solve(self, composition_sets, conditions):
-        """
-        Initialize a solver, but don't actually do anything - i.e. return the SolverResult as if the calculation converged.
-
-        """
-        spec = self.get_system_spec(composition_sets, conditions)
-        self._fix_state_variables_in_compsets(composition_sets, conditions)
-        state = spec.get_new_state(composition_sets)
-        # DO NOT: converged = spec.run_loop(state, 1000)
-
-        if self.remove_metastable:
-            phase_idx = 0
-            compsets_to_remove = []
-            for compset in composition_sets:
-                # Mark unstable phases for removal
-                if compset.NP <= 0.0 and not compset.fixed:
-                    compsets_to_remove.append(int(phase_idx))
-                phase_idx += 1
-            # Watch removal order here, as the indices of composition_sets are changing!
-            for idx in reversed(compsets_to_remove):
-                del composition_sets[idx]
-
-        phase_amt = [compset.NP for compset in composition_sets]
-
-        x = composition_sets[0].dof
-        state_variables = composition_sets[0].phase_record.state_variables
-        num_statevars = len(state_variables)
-        for compset in composition_sets[1:]:
-            x = np.r_[x, compset.dof[num_statevars:]]
-        x = np.r_[x, phase_amt]
-        chemical_potentials = np.array(state.chemical_potentials)
-
-        if self.verbose:
-            print('Chemical Potentials', chemical_potentials)
-            print(np.asarray(x))
-        return SolverResult(converged=True, x=x, chemical_potentials=chemical_potentials)
-
 
 # TODO: make into an object similar to how ZPF data works?
 FixedConfigurationCalculationData = NewType("FixedConfigurationCalculationData", Dict[str, Any])
@@ -160,8 +117,6 @@ def get_prop_samples(desired_data, constituents):
         # extract the data we care about
         datum_T = datum['conditions']['T']
         datum_P = datum['conditions']['P']
-        # TODO: fix this when N different from 1 allowed in pycalphad
-        datum_N = np.full_like(datum['values'], 1.0)
         configurations = datum['solver']['sublattice_configurations']
         occupancies = datum['solver']['sublattice_occupancies']
         values = np.array(datum['values'])
@@ -174,7 +129,8 @@ def get_prop_samples(desired_data, constituents):
         weights = np.broadcast_to(np.asarray(datum.get('weight', 1.0)), values.shape)
 
         # broadcast and flatten the conditions arrays
-        P, T, N = ravel_conditions(values, datum_P, datum_T, datum_N)
+        P, T = ravel_conditions(values, datum_P, datum_T)
+        N = np.ones(T.size)  # TODO: fix this when N different from 1 allowed in pycalphad
 
         # calculate the points arrays, should be 2d array of points arrays
         points = np.array([calculate_points_array(constituents, config, occup) for config, occup in zip(configurations, occupancies)])
@@ -290,7 +246,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                     'phase_name': phase_name,
                     'prop': prop,
                     # needs the following keys to be added:
-                    # species, calculate_dict, phase_record_factory, model, output, weights
+                    # calculate_dict, phase_record_factory, dof, output, weights
                 }
                 # get all the data with these model exclusions
                 exc_search = where('excluded_model_contributions').test(lambda x: tuple(sorted(set(x))) == exclusion)
@@ -310,81 +266,30 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                 output = _set_referenced_property(mod, prop, exclusion, dbf=dbf, model_classes=model, parameters=symbols_to_fit)
                 model_dict = {phase_name: mod}
                 species = sorted(unpack_species(dbf, comps), key=str)
-                data_dict['species'] = species
                 statevar_dict = {getattr(v, c, None): vals for c, vals in calculate_dict.items() if isinstance(getattr(v, c, None), v.StateVariable)}
                 statevar_dict = OrderedDict(sorted(statevar_dict.items(), key=lambda x: str(x[0])))
                 phase_record_factory = PhaseRecordFactory(dbf, species, statevar_dict, model_dict,
                                                    parameters={s: 0 for s in symbols_to_fit})
-                str_statevar_dict = OrderedDict((str(k), vals) for k, vals in statevar_dict.items())
-                data_dict['str_statevar_dict'] = str_statevar_dict
+                # Build DOF in PhaseRecord order
+                constituent_site_fractions = [v.Y(phase_name, idx, const) for idx, subl in enumerate(constituents) for const in subl]
+                site_fractions = calculate_dict['points'][:, [constituent_site_fractions.index(y) for y in mod.site_fractions]]
+                data_dict['dof'] = np.ascontiguousarray(np.column_stack([statevar_dict[sv] for sv in phase_record_factory.state_variables] + [site_fractions]), dtype=np.float64)
                 data_dict['phase_record_factory'] = phase_record_factory
                 data_dict['calculate_dict'] = calculate_dict
-                data_dict['model'] = model_dict
                 data_dict['output'] = output
                 data_dict['weights'] = np.array(property_std_deviation[prop.split('_')[0]])/np.array(calculate_dict.pop('weights'))
-                data_dict['constituents'] = constituents
                 all_data_dicts.append(data_dict)
     return all_data_dicts
 
 
 def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfigurationCalculationData, parameters):
-    species = calc_data['species']
-    phase_name = calc_data['phase_name']
-    models = calc_data['model']  # Dict[PhaseName: Model]
-    output = calc_data['output']
+    """Property at the fixed configuration of each sample minus the data"""
     phase_record_factory = calc_data['phase_record_factory']
-    sample_values = calc_data['calculate_dict']['values']
-    str_statevar_dict = calc_data['str_statevar_dict']
-
-    constituent_list = []
-    sublattice_list = []
-    counter = 0
-    for sublattice in calc_data['constituents']:
-        for const in sublattice:
-            sublattice_list.append(counter)
-            constituent_list.append(const)
-        counter = counter + 1
-
-    differences = []
-    for index in range(len(sample_values)):
-        cond_dict = {}
-        for sv_key, sv_val in str_statevar_dict.items():
-            cond_dict.update({sv_key: sv_val[index]})
-
-        # Build internal DOF as if they were used in conditions
-        dof = {}
-        for site_frac in range(len(constituent_list)):
-            comp = constituent_list[site_frac]
-            occupancy = calc_data['calculate_dict']['points'][index,site_frac]
-            sublattice = sublattice_list[site_frac]
-            dof.update({v.Y(phase_name,sublattice,comp): occupancy})
-
-        # TODO: active_pure_elements should be replaced with wks.components when wks.components no longer includes phase constituent Species
-        # Build composition conditions, probably not necessary given that we don't actually solve anything, but still useful in terms of derivatives probably.
-        active_pure_elements = [list(x.constituents.keys()) for x in species]
-        active_pure_elements = sorted(set(el.upper() for constituents in active_pure_elements for el in constituents) - {"VA"})
-        ind_comps = len(active_pure_elements) - 1
-        for comp in active_pure_elements:
-            if v.Species(comp) != v.Species('VA') and ind_comps > 0:
-                cond_dict[v.X(comp)] = float(models[phase_name].moles(comp).xreplace(dof))
-                ind_comps = ind_comps - 1
-        # Need to be careful here. Making a workspace erases the custom models that have some contributions excluded (which are passed in). Not sure exactly why.
-        # The models themselves are preserved, but the ones inside the workspace's phase_record_factory get clobbered.
-        # We workaround this by replacing the phase_record_factory models with ours, but this is definitely a hack we'd like to avoid.
-        wks = Workspace(database=dbf, components=species, phases=[phase_name], conditions={**cond_dict}, models=models, phase_record_factory=phase_record_factory, parameters=parameters, solver=NoSolveSolver())
-        # We then get a composition set and we use a special "NoSolveSolver" to
-        # ensure that we don't change from the data-specified DOF.
-        compset = find_first_compset(phase_name, wks)
-        # same order as Model.site_fractions
-        new_sitefracs = np.array([sf for _, sf in sorted(dof.items(), key=lambda y: str(y[0]))])
-        new_statevars = np.array(compset.dof[:len(compset.phase_record.state_variables)])  # no updates expected
-        compset.update(new_sitefracs, 1.0, new_statevars)
-        iso_phase = IsolatedPhase(compset, wks=wks)
-        iso_phase.solver = NoSolveSolver()
-        results = wks.get(iso_phase(output))
-        sample_differences = results - sample_values[index]
-        differences.append(sample_differences)
-    return differences
+    phase_record_factory.update_parameters(parameters)
+    phase_record = phase_record_factory[calc_data['phase_name']]
+    values = np.zeros(len(calc_data['dof']))
+    phase_record.prop_2d(values, calc_data['dof'], calc_data['output'].encode('utf-8'))
+    return values - calc_data['calculate_dict']['values']
 
 
 def calculate_non_equilibrium_thermochemical_probability(thermochemical_data: List[FixedConfigurationCalculationData], dbf, parameters=None):
