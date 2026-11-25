@@ -270,7 +270,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
                 statevar_dict = OrderedDict(sorted(statevar_dict.items(), key=lambda x: str(x[0])))
                 phase_record_factory = PhaseRecordFactory(dbf, species, statevar_dict, model_dict,
                                                    parameters={s: 0 for s in symbols_to_fit})
-                # The phase record's degrees of freedom of each sample: points are in the order of the constituents, the phase record takes site fractions in the order of Model.site_fractions
+                # Build DOF in PhaseRecord order
                 constituent_site_fractions = [v.Y(phase_name, idx, const) for idx, subl in enumerate(constituents) for const in subl]
                 site_fractions = calculate_dict['points'][:, [constituent_site_fractions.index(y) for y in mod.site_fractions]]
                 data_dict['dof'] = np.ascontiguousarray(np.column_stack([statevar_dict[sv] for sv in phase_record_factory.state_variables] + [site_fractions]), dtype=np.float64)
