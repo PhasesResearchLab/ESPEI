@@ -14,6 +14,7 @@
 - Fix `setup_context` and the optimizers modifying the symbols of the Database passed to them ([\@bocklund](https://github.com/bocklund) - [issue 307](https://github.com/phasesresearchlab/espei/issues/307))
 - Fix `ZPFResidual` and `EquilibriumPropertyResidual` giving parameter values to the wrong symbols when `symbols_to_fit` is not sorted ([\@bocklund](https://github.com/bocklund) - [issue 307](https://github.com/phasesresearchlab/espei/issues/307))
 - Fix the `"disordered"` flag of ZPF data, and fitting data of phases with equivalent sublattices, data with a weight for each configuration, fixed configuration data without `solver.mode` and equilibrium property data of one component ([\@bocklund](https://github.com/bocklund) - [issue 308](https://github.com/phasesresearchlab/espei/issues/308))
+- Fix ZPF data of pure elements giving zero driving forces so unary phase transitions can be fit ([\@bocklund](https://github.com/bocklund) - [issue 312](https://github.com/phasesresearchlab/espei/issues/312))
 
 ### Deprecations
 

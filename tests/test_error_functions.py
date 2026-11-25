@@ -494,6 +494,17 @@ def test_zpf_error_works_for_stoichiometric_cmpd_tielines(datasets_db):
     assert np.isclose(likelihood, zero_error_probability, rtol=1e-6)
 
 
+def test_zpf_residual_of_a_unary_melting_point(datasets_db):
+    """Below the melting point of Cu, the driving force of its liquid is minus the Gibbs energy of melting"""
+    datasets_db.insert({"components": ["CU"], "phases": ["FCC_A1", "LIQUID"], "output": "ZPF", "conditions": {"P": 101325, "T": 1300},
+                        "values": [[["FCC_A1", [], []], ["LIQUID", [], []]]], "reference": "Cu melts at 1357.77 K in the Database"})
+    residual_func = ZPFResidual(Database(CU_MG_TDB), datasets_db, phase_models=None, symbols_to_fit=[])
+    residuals = np.ravel(residual_func.get_residuals(np.asarray([]))[0])
+    T = 1300
+    # GLIQCU - GHSERCU
+    assert np.allclose(residuals, [0.0, -(12964.735 - 9.511904*T - 5.8489E-21*T**7)])
+
+
 def test_zpf_driving_force_of_disordered_phase_compositions(datasets_db):
     """Disordered phase compositions of order-disorder models are calculated with the disordered phase, also when the parameters being fit order the phase."""
     # gamma'/gamma boundary (Jia 1990), with gamma as disordered FCC_L12, as FCC_A1 and as FCC_L12, which orders there with the fit parameter
