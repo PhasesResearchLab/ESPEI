@@ -164,6 +164,33 @@ def test_fixed_configuration_residual_with_charged_species(datasets_db):
     assert np.allclose(residuals, [-20000 * 0.2 * 0.8 / (0.2 + 3 * 0.8)])
 
 
+ELEVEN_SUBLATTICE_TDB = """ELEMENT A BLANK 0 0 0 !
+ELEMENT B BLANK 0 0 0 !
+PHASE BIG % 11 1 1 1 1 1 1 1 1 1 1 1 !
+CONSTITUENT BIG :A,B:A:A:A:A:A:A:A:A:A:A,B: !
+PARAMETER G(BIG,B:A:A:A:A:A:A:A:A:A:A;0) 1 -1000; 6000 N !
+PARAMETER G(BIG,A:A:A:A:A:A:A:A:A:A:B;0) 1 -5000; 6000 N !
+"""
+
+
+def test_fixed_configuration_residual_with_more_than_ten_sublattices(datasets_db):
+    """Site fractions of sublattice 10, whose names sort before those of sublattice 2, are not swapped"""
+    dbf = Database(ELEVEN_SUBLATTICE_TDB)
+    datasets_db.insert({
+        "components": ["A", "B"], "phases": ["BIG"], "output": "HM",
+        "solver": {"mode": "manual", "sublattice_site_ratios": [1] * 11,
+                   "sublattice_configurations": [[["A", "B"]] + ["A"] * 9 + [["A", "B"]]],
+                   "sublattice_occupancies": [[[0.2, 0.8]] + [1] * 9 + [[0.9, 0.1]]]},
+        "conditions": {"P": 101325, "T": 298.15}, "values": [[[0.0]]], "reference": "eleven sublattices",
+    })
+
+    residual_func = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[])
+
+    # HM = y(B, 0) y(A, 10) G(B:A:...:A) + y(A, 0) y(B, 10) G(A:...:A:B) per mole of atoms
+    residuals, weights = residual_func.get_residuals(np.asarray([]))
+    assert np.allclose(residuals, [(0.8 * 0.9 * -1000 + 0.2 * 0.1 * -5000) / 11])
+
+
 def test_fixed_configuration_residual_with_electron_element(datasets_db):
     """Fixed configuration residuals work for databases that declare the electron (/-)"""
     dbf = Database("ELEMENT /- ELECTRON_GAS 0.0 0.0 0.0 !\n" + A_B_REGULAR_SOLUTION_TDB)
@@ -189,7 +216,7 @@ def test_get_thermochemical_data_filters_configurations_when_all_configurations_
     dbf = Database(CU_MG_TDB)
     comps = ["CU", "MG", "VA"]
     phases = ["CUMG2"]
-    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db)
+    thermochemical_data = get_thermochemical_data(dbf, comps, phases, datasets_db, symbols_to_fit=[])
     print('thermochemical data:', thermochemical_data)
     assert thermochemical_data[0]["calculate_dict"]["values"].shape == (0,)
 
