@@ -283,7 +283,7 @@ def get_thermochemical_data(dbf, comps, phases, datasets, model=None, weight_dic
 
 
 def compute_fixed_configuration_property_differences(dbf, calc_data: FixedConfigurationCalculationData, parameters):
-    """Property at the fixed configuration of each sample minus the data, which needs no equilibrium calculation."""
+    """Property at the fixed configuration of each sample minus the data"""
     phase_name = calc_data['phase_name']
     phase_record_factory = calc_data['phase_record_factory']
     phase_record_factory.update_parameters(parameters)
