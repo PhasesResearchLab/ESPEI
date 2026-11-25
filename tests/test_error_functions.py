@@ -187,7 +187,7 @@ def test_fixed_configuration_residual_with_more_than_ten_sublattices(datasets_db
     residual_func = FixedConfigurationPropertyResidual(dbf, datasets_db, phase_models=None, symbols_to_fit=[])
 
     # HM = y(B, 0) y(A, 10) G(B:A:...:A) + y(A, 0) y(B, 10) G(A:...:A:B) per mole of atoms
-    residuals, weights = residual_func.get_residuals(np.asarray([]))
+    residuals = residual_func.get_residuals(np.asarray([]))[0]
     assert np.allclose(residuals, [(0.8 * 0.9 * -1000 + 0.2 * 0.1 * -5000) / 11])
 
 
