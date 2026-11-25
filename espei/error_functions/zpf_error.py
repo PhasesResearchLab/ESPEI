@@ -197,7 +197,7 @@ def estimate_hyperplane(phase_region: PhaseRegion, dbf: Database, parameters: np
             # two stoichiometric phases in a ternary or a single phase
             # pseudo-binary in a ternary (and higher order generalizations).
             no_internal_dof = np.all((np.isclose(Y_values, 1.)) | np.isnan(Y_values))
-            if (num_phases == 1) and no_internal_dof:
+            if (num_phases == 1) and no_internal_dof and len(active_pure_elements) > 1:
                 _log.trace("The equilibrium computed at the vertex for %s with composition conditions %s in the phase region %s has underdetermined chemical potentials and will not be considered in the target hyperplane", vertex.phase_name, vertex.comp_conds, phase_region.eq_str())
                 target_hyperplane_chempots.append(np.full_like(MU_values, np.nan))
             else:
